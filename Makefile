@@ -13,13 +13,13 @@
 # limitations under the License.
 
 # The binary to build (just the basename).
-BIN := myapp
+BIN := markus-ninja-api
 
 # This repo's root import path (under GOPATH).
-PKG := github.com/thockin/go-build-template
+PKG := codecommit/marksauter/markus-ninja-api
 
 # Where to push the docker image.
-REGISTRY ?= thockin
+REGISTRY ?= marksauter
 
 # Which architecture to build - see $(ALL_ARCH) for options.
 ARCH ?= amd64

@@ -14,7 +14,7 @@
 
 FROM ARG_FROM
 
-MAINTAINER Tim Hockin <thockin@google.com>
+MAINTAINER Mark Sauter <m@rkus.ninja>
 
 ADD bin/ARG_ARCH/ARG_BIN /ARG_BIN
 
