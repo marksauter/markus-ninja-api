@@ -19,7 +19,7 @@ BIN := markus-ninja-api
 PKG := github.com/marksauter/markus-ninja-api
 
 # Where to push the docker image.
-REGISTRY ?= funkmark
+REGISTRY ?= 184274575036.dkr.ecr.us-east-1.amazonaws.com
 
 # Which architecture to build - see $(ALL_ARCH) for options.
 ARCH ?= amd64
@@ -28,7 +28,7 @@ ARCH ?= amd64
 VERSION := $(shell git describe --tags --always --dirty)
 #
 # This version-strategy uses a manual value to set the version string
-#VERSION := 1.2.3
+# VERSION := 0.0.1
 
 ###
 ### These variables should not need tweaking.

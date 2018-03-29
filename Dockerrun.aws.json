@@ -1,0 +1,19 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "184274575036.dkr.ecr.us-east-1.amazonaws.com/markus-ninja-api-amd64:0.0.1",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": "5000"
+    }
+  ],
+  "Volumes": [
+    {
+      "HostDirectory": "/var/app/current",
+      "ContainerDirectory": "/go/src/github.com/marksauter/markus-ninja-api"
+    }
+  ],
+  "Logging": "/var/log/nginx"
+}
