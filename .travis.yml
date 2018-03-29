@@ -3,7 +3,7 @@ services:
   - docker
 script:
 - make build
-- test -f bin/amd64/myapp
+- test -f bin/amd64/markus-ninja-api
 - make container
-- docker images | grep thockin/myapp-amd64
+- docker images | grep funkmark/markus-ninja-api-amd64
 - make test

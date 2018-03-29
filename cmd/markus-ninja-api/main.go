@@ -16,8 +16,18 @@ limitations under the License.
 
 package main
 
-import "log"
+import (
+	"log"
+	"net/http"
+
+	"github.com/marksauter/markus-ninja-api/pkg/utils"
+)
 
 func main() {
-	log.Printf("hello, world!")
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello, world!"))
+	}))
+	port := utils.GetOptionalEnv("PORT", "5000")
+	address := ":" + port
+	log.Fatal(http.ListenAndServe(address, nil))
 }

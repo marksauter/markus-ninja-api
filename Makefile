@@ -16,10 +16,10 @@
 BIN := markus-ninja-api
 
 # This repo's root import path (under GOPATH).
-PKG := codecommit/marksauter/markus-ninja-api
+PKG := github.com/marksauter/markus-ninja-api
 
 # Where to push the docker image.
-REGISTRY ?= marksauter
+REGISTRY ?= funkmark
 
 # Which architecture to build - see $(ALL_ARCH) for options.
 ARCH ?= amd64
