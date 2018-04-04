@@ -3,8 +3,8 @@ package jwt
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 )
@@ -14,11 +14,16 @@ type Payload struct {
 	Exp string
 	// RFC3339 formatted time string, identifies when token was issued.
 	Iat string
-	Id  string
+	// User ID
+	Id string
 }
 
 func (p Payload) ExpiresAt() time.Time {
-	t, err := time.Parse(time.RFC3339, p.Exp)
+	var t time.Time
+	var err error
+	if p.Exp != "" {
+		t, err = time.Parse(time.RFC3339, p.Exp)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +31,11 @@ func (p Payload) ExpiresAt() time.Time {
 }
 
 func (p Payload) IssuedAt() time.Time {
-	t, err := time.Parse(time.RFC3339, p.Iat)
+	var t time.Time
+	var err error
+	if p.Iat != "" {
+		t, err = time.Parse(time.RFC3339, p.Iat)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -67,22 +76,26 @@ func (t Token) GetPlainText() string {
 	return t.Payload.String()
 }
 
-func ParseTokenString(token string) Token {
+var ErrInvalidTokenFormat = errors.New(`Invalid token: expected format "payload.signature"`)
+var ErrInvalidTokenEncoding = errors.New("Invalid token: expected base64 encoded")
+var ErrInvalidTokenPayload = errors.New("Invalid Token Payload")
+
+func ParseTokenString(token string) (*Token, error) {
 	components := strings.Split(token, ".")
+	if len(components) != 2 {
+		return new(Token), ErrInvalidTokenFormat
+	}
 	decodedPayload, err := base64.URLEncoding.DecodeString(components[0])
 	if err != nil {
-		panic(err)
+		return new(Token), ErrInvalidTokenEncoding
 	}
 
-	p := Payload{}
+	p := new(Payload)
 
-	err = json.Unmarshal(decodedPayload, &p)
+	err = json.Unmarshal(decodedPayload, p)
 	if err != nil {
-		log.Fatal("Invalid Token Payload")
-		panic(err)
+		return new(Token), ErrInvalidTokenPayload
 	}
 
-	s := components[1]
-
-	return Token{Payload: p, Signature: s}
+	return &Token{Payload: *p, Signature: components[1]}, nil
 }

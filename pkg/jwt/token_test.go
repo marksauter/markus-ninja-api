@@ -10,18 +10,21 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/jwt"
 )
 
-var testPayload = jwt.NewPayload(&jwt.NewPayloadInput{
+var mockPayload = jwt.NewPayload(&jwt.NewPayloadInput{
 	Iat: time.Now(),
 	Exp: time.Now().Add(time.Minute * time.Duration(10)),
 	Id:  "asdf",
 })
-var testToken = jwt.Token{Payload: testPayload, Signature: "signature"}
+var mockToken = jwt.Token{Payload: mockPayload, Signature: mockPayload.String()}
+var mockTokenString = base64.URLEncoding.EncodeToString([]byte("foo")) +
+	"." +
+	base64.URLEncoding.EncodeToString([]byte("bar"))
 
 func TestPayloadString(t *testing.T) {
-	ps, _ := json.Marshal(testPayload)
+	ps, _ := json.Marshal(mockPayload)
 
 	expected := base64.URLEncoding.EncodeToString([]byte(ps))
-	actual := testPayload.String()
+	actual := mockPayload.String()
 	if actual != expected {
 		t.Errorf(
 			"TestPayloadString(): expected %s, actual %s",
@@ -32,8 +35,8 @@ func TestPayloadString(t *testing.T) {
 }
 
 func TestTokenString(t *testing.T) {
-	expected := fmt.Sprintf("%v.%v", testToken.Payload, testToken.Signature)
-	actual := testToken.String()
+	expected := fmt.Sprintf("%v.%v", mockToken.Payload, mockToken.Signature)
+	actual := mockToken.String()
 	if actual != expected {
 		t.Errorf(
 			"TestTokenString(): expected %s, actual %s",
@@ -44,8 +47,8 @@ func TestTokenString(t *testing.T) {
 }
 
 func TestGetPlainText(t *testing.T) {
-	expected := testToken.Payload.String()
-	actual := testToken.GetPlainText()
+	expected := mockToken.Payload.String()
+	actual := mockToken.GetPlainText()
 	if actual != expected {
 		t.Errorf(
 			"TestGetPlainText(): expected %s, actual %s",
@@ -55,14 +58,39 @@ func TestGetPlainText(t *testing.T) {
 	}
 }
 
-func TestParseTokenString(t *testing.T) {
-	expected := testToken
-	actual := jwt.ParseTokenString(testToken.String())
-	if actual != expected {
+func TestParseTokenStringSuccess(t *testing.T) {
+	expected := mockToken
+	actual, _ := jwt.ParseTokenString(mockToken.String())
+	if *actual != expected {
 		t.Errorf(
 			"TestParseTokenString(): expected %#v, actual %#v",
 			expected,
 			actual,
 		)
+	}
+}
+
+var parseTokenStringFailureTests = []struct {
+	t        string
+	expected error
+}{
+	// Token expected to be headless with format "payload.signature"
+	{"", jwt.ErrInvalidTokenFormat},
+	{"foo.bar.baz", jwt.ErrInvalidTokenFormat},
+	{"foo.bar", jwt.ErrInvalidTokenEncoding},
+	{mockTokenString, jwt.ErrInvalidTokenPayload},
+}
+
+func TestParseTokenStringFailure(t *testing.T) {
+	for _, tt := range parseTokenStringFailureTests {
+		_, actual := jwt.ParseTokenString(tt.t)
+		if actual != tt.expected {
+			t.Errorf(
+				"TestParseTokenString(%s): expected %#v, actual %#v",
+				tt.t,
+				tt.expected,
+				actual,
+			)
+		}
 	}
 }

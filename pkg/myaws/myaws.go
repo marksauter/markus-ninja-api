@@ -1,4 +1,4 @@
-package aws
+package myaws
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
@@ -7,6 +7,7 @@ import (
 )
 
 var AwsRegion = utils.GetOptionalEnv("AWS_REGION", "us-east-1")
+var AwsSession = NewSession()
 
 func NewSession() *session.Session {
 	sess, err := session.NewSession(&aws.Config{

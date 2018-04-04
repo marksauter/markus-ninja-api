@@ -20,14 +20,37 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
+	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myaws"
+	"github.com/marksauter/markus-ninja-api/pkg/resolver"
+	"github.com/marksauter/markus-ninja-api/pkg/schema"
+	"github.com/marksauter/markus-ninja-api/pkg/server"
 	"github.com/marksauter/markus-ninja-api/pkg/utils"
 )
 
+var JwtKms = myaws.NewJwtKms()
+
 func main() {
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello, world!"))
-	}))
+	r := mux.NewRouter()
+	r.Handle("/", server.CommonHandlers.Then(server.RootRouteHandler{}))
+
+	graphqlSchema := graphql.MustParseSchema(
+		schema.GetRootSchema(),
+		&resolver.Resolver{},
+	)
+
+	r.Handle("/graphql", server.CommonHandlers.Then(
+		server.GraphQLHandler{Schema: graphqlSchema},
+	))
+
+	r.Handle("/graphiql", server.CommonHandlers.ThenFunc(
+		func(rw http.ResponseWriter, req *http.Request) {
+			http.ServeFile(rw, req, "static/graphiql.html")
+		},
+	))
+
 	port := utils.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
-	log.Fatal(http.ListenAndServe(address, nil))
+	log.Fatal(http.ListenAndServe(address, r))
 }

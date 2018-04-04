@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	// "github.com/joho/godotenv"
 )
 
@@ -53,4 +54,9 @@ func CheckDatabaseVersion(w http.ResponseWriter, r *http.Request) {
 	default:
 		fmt.Fprintf(w, "Connected to: %s", version)
 	}
+}
+
+func ResolveType(Id string) string {
+	parsedId := strings.Split(Id, "_")
+	return parsedId[0]
 }
