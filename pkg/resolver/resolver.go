@@ -2,15 +2,15 @@ package resolver
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/marksauter/markus-ninja-api/pkg/context/ctxrepo"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
 type Resolver struct{}
 
-func (r *Resolver) Hello(ctx context.Context) *string {
+func (r *Resolver) Hello() *string {
 	world := "World"
 	return &world
 }
@@ -18,17 +18,18 @@ func (r *Resolver) Hello(ctx context.Context) *string {
 func (r *Resolver) Node(ctx context.Context, args struct {
 	Id string
 }) (*nodeResolver, error) {
-	node := model.NewNode(&model.NewNodeInput{Id: args.Id})
-	return &nodeResolver{node}, nil
-}
-
-func (r *Resolver) User(ctx context.Context, args struct {
-	Id string
-}) (*userResolver, error) {
-	userRepo, ok := ctxrepo.User.FromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("User repo not found in context")
+	cr, err := myctx.CtxRepoFromId(args.Id)
+	if err != nil {
+		return nil, err
 	}
-	user := userRepo.Get(args.Id)
-	return &userResolver{user}, nil
+	repo, ok := cr.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("Repo not found in context")
+	}
+	switch node := repo.Get(args.Id).(type) {
+	case *model.User:
+		return &nodeResolver{&userResolver{node}}, nil
+	default:
+		return nil, errors.New("Node not found")
+	}
 }

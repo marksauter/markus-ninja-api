@@ -1,7 +1,12 @@
 package model
 
 type User struct {
-	id string
+	id        string
+	Login     string
+	Password  string
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
+	Username  string
 }
 
 func (u *User) Id() string {

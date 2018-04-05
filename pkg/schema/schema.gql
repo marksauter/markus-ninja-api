@@ -3,6 +3,5 @@ schema {
 }
 type Query {
   hello: String
-  user(id: ID!): User
   node(id: ID!): Node
 }
