@@ -17,20 +17,24 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/justinas/alice"
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
-	"github.com/marksauter/markus-ninja-api/pkg/server"
+	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
-	"github.com/marksauter/markus-ninja-api/pkg/unhomoglyph"
 	"github.com/marksauter/markus-ninja-api/pkg/utils"
 )
 
@@ -43,37 +47,44 @@ func main() {
 		log.Fatalf("Unable to connect to db: %s \n", err)
 	}
 	defer db.Close()
-	// ctx := context.Background()
-	log := service.NewLogger()
+	ctx := context.Background()
+	logger := service.NewLogger(true)
+
+	ctx = myctx.Log.NewContext(ctx, logger)
+
+	addContext := middleware.AddContext{Ctx: ctx}
+	accessLogger := middleware.AccessLogger{DebugMode: true}
+	CommonMiddleware := alice.New(
+		addContext.Middleware,
+		accessLogger.Middleware,
+		handlers.RecoveryHandler(),
+	)
 
 	r := mux.NewRouter()
-	r.Handle("/", server.CommonHandlers.ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
-		a := unhomoglyph.Unhomoglyph("markus")
-		b := unhomoglyph.Unhomoglyph("machine")
-		fmt.Fprintf(rw, "Unhomoglyph: %s %s", a, b)
-	}))
-	// r.Handle("/", server.CommonHandlers.ThenFunc(func(w http.ResponseWriter, r *http.Request) {
-	//   // Connect and check the server version
-	//   var version string
-	//   err = db.QueryRow("SELECT VERSION()").Scan(&version)
-	//   switch {
-	//   case err != nil:
-	//     log.Fatal(err)
-	//   default:
-	//     fmt.Fprintf(w, "Connected to: %s", version)
-	//   }
-	// }))
+	r.Handle("/", CommonMiddleware.ThenFunc(
+		func(rw http.ResponseWriter, req *http.Request) {
+			// Connect and check the server version
+			var version string
+			err = db.QueryRow("SELECT VERSION()").Scan(&version)
+			switch {
+			case err != nil:
+				log.Fatal(err)
+			default:
+				fmt.Fprintf(rw, "Connected to: %s", version)
+			}
+		},
+	))
 
 	graphqlSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.Resolver{},
 	)
 
-	r.Handle("/graphql", server.CommonHandlers.Then(
-		server.GraphQLHandler{Schema: graphqlSchema},
+	r.Handle("/graphql", CommonMiddleware.Then(
+		route.GraphQLHandler{Schema: graphqlSchema},
 	))
 
-	r.Handle("/graphiql", server.CommonHandlers.ThenFunc(
+	r.Handle("/graphiql", CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
 			http.ServeFile(rw, req, "static/graphiql.html")
 		},

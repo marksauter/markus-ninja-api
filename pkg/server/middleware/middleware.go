@@ -1,24 +1,53 @@
-package server
+package middleware
 
 import (
-	"io"
+	"bytes"
+	"context"
+	"io/ioutil"
 	"net/http"
-	"os"
 
-	"github.com/gorilla/handlers"
-	"github.com/justinas/alice"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func LoggingHandler(out io.Writer) func(http.Handler) http.Handler {
-	return func(h http.Handler) http.Handler {
-		return handlers.LoggingHandler(out, h)
-	}
+type Middleware interface {
+	Middleware(http.Handler) http.Handler
 }
 
-var CommonHandlers = alice.New(
-	LoggingHandler(os.Stdout),
-	handlers.RecoveryHandler(),
-)
+type AddContext struct {
+	Ctx context.Context
+}
+
+func (a *AddContext) Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		h.ServeHTTP(rw, req.WithContext(a.Ctx))
+	})
+}
+
+type AccessLogger struct {
+	DebugMode bool
+}
+
+func (l *AccessLogger) Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		log, ok := myctx.Log.FromContext(ctx)
+		if !ok {
+			log.Fatal("Log service not in context")
+		}
+		log.Infof("%s %s %s %s", req.RemoteAddr, req.Method, req.URL, req.Proto)
+		log.Infof("User agent : %s", req.UserAgent())
+		if l.DebugMode {
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Errorf("Reading request body error: %s", err)
+			}
+			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
+			log.Debugf("Request body: %v", reqStr)
+			req.Body = reqStr
+		}
+		h.ServeHTTP(rw, req)
+	})
+}
 
 // type UseJwt struct {
 //   Jwt *jwt.Jwt

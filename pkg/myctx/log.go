@@ -12,8 +12,8 @@ type ctxLog struct{}
 
 var logKey key = "log"
 
-func (c *ctxLog) NewContext(ctx context.Context, log *service.Logger) context.Context {
-	return context.WithValue(ctx, logKey, log)
+func (c *ctxLog) NewContext(ctx context.Context, logger *service.Logger) context.Context {
+	return context.WithValue(ctx, logKey, logger)
 }
 
 func (c *ctxLog) FromContext(ctx context.Context) (*service.Logger, bool) {
