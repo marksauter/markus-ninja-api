@@ -10,7 +10,7 @@ import (
 
 type ctxRepo interface {
 	NewContext(ctx context.Context, repo repo.Repo) (context.Context, bool)
-	FromContext(ctx context.Context) (repo.Repo, bool)
+	FromContext(ctx context.Context, repo interface{}) error
 }
 
 func resolveTypeFromId(id string) (string, error) {

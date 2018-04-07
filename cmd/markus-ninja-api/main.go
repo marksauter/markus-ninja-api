@@ -30,11 +30,11 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/utils"
 )
 
@@ -48,7 +48,7 @@ func main() {
 	}
 	defer db.Close()
 	ctx := context.Background()
-	logger := service.NewLogger(true)
+	logger := mylog.NewLogger(true)
 
 	ctx = myctx.Log.NewContext(ctx, logger)
 
@@ -61,17 +61,10 @@ func main() {
 	)
 
 	r := mux.NewRouter()
+
 	r.Handle("/", CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
-			// Connect and check the server version
-			var version string
-			err = db.QueryRow("SELECT VERSION()").Scan(&version)
-			switch {
-			case err != nil:
-				log.Fatal(err)
-			default:
-				fmt.Fprintf(rw, "Connected to: %s", version)
-			}
+			http.ServeFile(rw, req, "static/index.html")
 		},
 	))
 
@@ -90,6 +83,21 @@ func main() {
 		},
 	))
 
+	r.Handle("/login", CommonMiddleware.Then(route.Login))
+
+	r.Handle("/maria", CommonMiddleware.ThenFunc(
+		func(rw http.ResponseWriter, req *http.Request) {
+			// Connect and check the server version
+			var version string
+			err = db.QueryRow("SELECT VERSION()").Scan(&version)
+			switch {
+			case err != nil:
+				log.Fatal(err)
+			default:
+				fmt.Fprintf(rw, "Connected to: %s", version)
+			}
+		},
+	))
 	port := utils.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
 	log.Fatal(http.ListenAndServe(address, r))

@@ -3,9 +3,11 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type Resolver struct{}
@@ -22,9 +24,10 @@ func (r *Resolver) Node(ctx context.Context, args struct {
 	if err != nil {
 		return nil, err
 	}
-	repo, ok := cr.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("Repo not found in context")
+	var repo repo.UserRepo
+	err = cr.FromContext(ctx, &repo)
+	if err != nil {
+		return nil, fmt.Errorf("resolver: %v", err)
 	}
 	switch node := repo.Get(args.Id).(type) {
 	case *model.User:

@@ -76,7 +76,7 @@ func (l *AccessLogger) Middleware(h http.Handler) http.Handler {
 //
 //   next.ServeHTTP(w, r.WithContext(ctx))
 // }
-
+//
 // func (u *SendUserToken) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 //   payload := jwt.NewPayload(&jwt.NewPayloadInput{Id: u.User.Id})
 //   token := u.Jwt.Encrypt(&payload)
