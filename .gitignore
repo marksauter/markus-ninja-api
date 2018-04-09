@@ -4,6 +4,9 @@
 /.container-*
 /.dockerfile-*
 /.env
+/gin-bin
+
+vendor/*
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
