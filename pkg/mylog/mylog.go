@@ -1,12 +1,18 @@
 package mylog
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	logging "github.com/op/go-logging"
 )
 
-type Logger = logging.Logger
+type Logger struct {
+	Log       *logging.Logger
+	debugMode bool
+}
 
 func NewLogger(debugMode bool) *Logger {
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
@@ -25,5 +31,22 @@ func NewLogger(debugMode bool) *Logger {
 
 	logging.SetBackend(backendLeveled)
 	logger := logging.MustGetLogger("markus-ninja-api")
-	return logger
+	return &Logger{Log: logger, debugMode: debugMode}
+}
+
+func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		l.Log.Infof("%s %s %s %s", req.RemoteAddr, req.Method, req.URL, req.Proto)
+		l.Log.Infof("User agent : %s", req.UserAgent())
+		if l.debugMode {
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				l.Log.Errorf("Reading request body error: %s", err)
+			}
+			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
+			l.Log.Debugf("Request body: %v", reqStr)
+			req.Body = reqStr
+		}
+		h.ServeHTTP(rw, req)
+	})
 }

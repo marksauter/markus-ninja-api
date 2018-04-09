@@ -3,9 +3,9 @@ package model
 import "github.com/marksauter/markus-ninja-api/pkg/attr"
 
 type User struct {
-	id       string
-	Login    string
-	Password attr.Password
+	id       string         `db:"id"`
+	Login    string         `db:"login"`
+	Password *attr.Password `db:"password"`
 	// CreatedAt string `db:"created_at"`
 	// UpdatedAt string `db:"updated_at"`
 	// Username  string
@@ -18,7 +18,7 @@ func (u *User) Id() string {
 type NewUserInput struct {
 	Id       string
 	Login    string
-	Password attr.Password
+	Password string
 	// CreatedAt string
 	// UpdatedAt string
 	// Username  string
@@ -28,7 +28,7 @@ func NewUser(input *NewUserInput) *User {
 	return &User{
 		id:       input.Id,
 		Login:    input.Login,
-		Password: input.Password,
+		Password: attr.NewPassword(input.Password),
 	}
 }
 

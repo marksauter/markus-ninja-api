@@ -7,16 +7,20 @@ import (
 )
 
 type Id struct {
-	Type  string
-	value string
+	idType string
+	value  string
 }
 
 func NewId(id string) (*Id, error) {
 	idComponents := strings.Split(id, "_")
 	if len(idComponents) != 2 {
-		return new(Id), fmt.Errorf(`Invalid id "%v": expected format "Type_id"`, id)
+		return new(Id), fmt.Errorf(`invalid id "%s", expected format "Type_id"`, id)
 	}
-	return &Id{Type: idComponents[0], value: id}, nil
+	return &Id{idType: idComponents[0], value: id}, nil
+}
+
+func (id *Id) Type() string {
+	return id.idType
 }
 
 func (id *Id) String() string {

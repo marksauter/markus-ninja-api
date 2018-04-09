@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type GraphQLHandler struct {
@@ -19,18 +17,6 @@ type GraphQLHandler struct {
 }
 
 func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	ctx := context.Background()
-	userRepo := new(repo.UserRepo)
-	var ok bool
-	ctx, ok = myctx.UserRepo.NewContext(ctx, userRepo)
-	if !ok {
-		http.Error(rw,
-			"handlers.GraphQLHandler: expected type UserRepo for UserRepo.NewContext",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
 	var params struct {
 		Query         string                 `json:"query"`
 		OperationName string                 `json:"operationName"`
@@ -46,6 +32,7 @@ func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
 	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
 	responseJSON, err := json.Marshal(response)
 	if err != nil {

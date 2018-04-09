@@ -3,31 +3,49 @@ package service
 import (
 	"database/sql"
 
-	"github.com/marksauter/markus-ninja-api/pkg/attr"
+	"github.com/jmoiron/sqlx"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
-	logging "github.com/op/go-logging"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 const (
 	defaultListFetchSize = 10
 )
 
-type UserService struct {
-	db     *sql.DB
-	logger *logging.Logger
+func NewUserService(db *sqlx.DB, logger *mylog.Logger) *UserService {
+	return &UserService{db: db, logger: logger}
 }
 
-func (u *UserService) log() *logging.Logger {
-	return u.logger
+type UserService struct {
+	db     *sqlx.DB
+	logger *mylog.Logger
 }
 
 func (u *UserService) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {
-	u.log().Debugf("Verifying credentials %v", userCredentials)
-	password := attr.NewPassword(userCredentials.Password)
+	u.logger.Log.Debugf("VerifyCredentials(%+v)", userCredentials)
 	input := model.NewUserInput{
 		Id:       "User_test",
 		Login:    userCredentials.Login,
-		Password: *password,
+		Password: userCredentials.Password,
 	}
 	return model.NewUser(&input), nil
+}
+
+func (u *UserService) FindByLogin(login string) (*model.User, error) {
+	newUser := model.NewUserInput{}
+
+	userSQL := `SELECT * FROM users WHERE login = ?`
+	row := u.db.QueryRow(userSQL, login)
+	err := row.Scan(&newUser)
+	if err != nil {
+		switch err {
+		case sql.ErrNoRows:
+			return model.NewUser(&newUser), nil
+		default:
+			u.logger.Log.Errorf("service: UserService.FindByLogin(%v) %v", login, err)
+			return nil, err
+		}
+	}
+
+	return model.NewUser(&newUser), nil
 }

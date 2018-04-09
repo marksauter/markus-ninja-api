@@ -2,15 +2,15 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/marksauter/markus-ninja-api/pkg/model"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/attr"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Resolver struct{}
+type Resolver struct {
+	UserRepo *repo.UserRepo
+}
 
 func (r *Resolver) Hello() *string {
 	world := "World"
@@ -20,19 +20,15 @@ func (r *Resolver) Hello() *string {
 func (r *Resolver) Node(ctx context.Context, args struct {
 	Id string
 }) (*nodeResolver, error) {
-	cr, err := myctx.CtxRepoFromId(args.Id)
+	id, err := attr.NewId(args.Id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("node(%v) %v", args.Id, err)
 	}
-	var repo repo.UserRepo
-	err = cr.FromContext(ctx, &repo)
-	if err != nil {
-		return nil, fmt.Errorf("resolver: %v", err)
-	}
-	switch node := repo.Get(args.Id).(type) {
-	case *model.User:
-		return &nodeResolver{&userResolver{node}}, nil
+	switch id.Type() {
+	case "User":
+		user := r.UserRepo.Get(args.Id)
+		return &nodeResolver{&userResolver{user}}, nil
 	default:
-		return nil, errors.New("Node not found")
+		return nil, fmt.Errorf(`node(id: "%v") invalid type "%v"`, args.Id, id.Type())
 	}
 }

@@ -13,7 +13,7 @@ type UserRepo struct {
 	svc *service.UserService
 }
 
-func (r *UserRepo) Get(id string) model.Node {
+func (r *UserRepo) Get(id string) *model.User {
 	input := model.NewUserInput{Id: id}
 	return model.NewUser(&input)
 }

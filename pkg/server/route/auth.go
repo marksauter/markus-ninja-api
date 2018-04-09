@@ -8,7 +8,6 @@ import (
 
 	"github.com/justinas/alice"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/rs/cors"
@@ -78,7 +77,7 @@ type AuthTokenSuccessResponse struct {
 	TokenType    string `json:"token_type,omitempty"`
 	ExpiresIn    int    `json:"expires_in,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
-	Scope        string `json:"scope"`
+	Scope        string `json:"scope,omitempty"`
 }
 
 func (r *AuthTokenSuccessResponse) WriteTo(rw http.ResponseWriter) error {
@@ -128,14 +127,16 @@ var LoginCors = cors.New(cors.Options{
 	AllowedOrigins: []string{"*"},
 })
 
-type LoginHandler struct{}
+type LoginHandler struct {
+	UserRepo *repo.UserRepo
+}
 
 func (h LoginHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
 
-	ctx := req.Context()
+	// ctx := req.Context()
 
 	if req.Method != http.MethodPost {
 		postMethodNotAllowed := myhttp.ErrorResponse{
@@ -167,17 +168,8 @@ func (h LoginHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	//   requestBodyInvalid.WriteTo(rw)
 	//   return
 	// }
-	var userRepo repo.UserRepo
-	err = myctx.UserRepo.FromContext(ctx, &userRepo)
-	if err != nil {
-		userRepoNotInContext := myhttp.ErrorResponse{
-			Error:            myhttp.InternalServerError,
-			ErrorDescription: fmt.Sprintf("route: %v", err),
-		}
-		userRepoNotInContext.WriteTo(rw)
-		return
-	}
-	_, err = userRepo.VerifyCredentials(&userCredentials)
+
+	_, err = h.UserRepo.VerifyCredentials(&userCredentials)
 	if err != nil {
 		verificationFailed := AuthTokenErrorResponse{
 			Error:            InvalidScope,

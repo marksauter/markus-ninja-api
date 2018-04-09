@@ -1,7 +1,7 @@
 package service
 
-import logging "github.com/op/go-logging"
+import "github.com/marksauter/markus-ninja-api/pkg/mylog"
 
 type Service interface {
-	log() *logging.Logger
+	Logger() *mylog.Logger
 }

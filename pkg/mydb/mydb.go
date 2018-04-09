@@ -1,14 +1,16 @@
 package mydb
 
 import (
-	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/marksauter/markus-ninja-api/pkg/utils"
 )
 
-func Open() (*sql.DB, error) {
+func Open() (*sqlx.DB, error) {
 	username := utils.GetRequiredEnv("RDS_USERNAME")
 	password := utils.GetRequiredEnv("RDS_PASSWORD")
 	hostname := utils.GetRequiredEnv("RDS_HOSTNAME")
@@ -16,8 +18,14 @@ func Open() (*sql.DB, error) {
 	name := utils.GetRequiredEnv("RDS_DB_NAME")
 
 	log.Println("Connecting to database...")
-	// Create the database handle, confirm driver is present
-	db, err := sql.Open("mysql", username+":"+password+"@tcp("+hostname+":"+port+")/"+name)
+	db, err := sqlx.Open("postgres", fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		hostname,
+		port,
+		username,
+		password,
+		name,
+	))
 	if err != nil {
 		panic(err)
 	}
