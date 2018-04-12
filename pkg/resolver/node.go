@@ -5,7 +5,7 @@ import (
 )
 
 type node interface {
-	Id() graphql.ID
+	ID() graphql.ID
 }
 
 type nodeResolver struct {

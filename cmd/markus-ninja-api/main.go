@@ -25,18 +25,16 @@ import (
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/justinas/alice"
-	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
+	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/utils"
 )
-
-var JwtKms = myaws.NewJwtKms()
 
 func main() {
 	utils.LoadEnv()
@@ -47,7 +45,16 @@ func main() {
 	defer db.Close()
 
 	logger := mylog.NewLogger(true)
-	userRepo := repo.NewUserRepo(service.NewUserService(db, logger))
+	authSvc := service.NewAuthService(logger)
+	roleSvc := service.NewRoleService(db, logger)
+	userSvc := service.NewUserService(db, logger, roleSvc)
+	userRepo := repo.NewUserRepo(userSvc)
+
+	authMiddleware := middleware.Authenticate{
+		AuthSvc:  authSvc,
+		UserRepo: userRepo,
+		Logger:   logger,
+	}
 
 	CommonMiddleware := alice.New(
 		logger.AccessMiddleware,
@@ -69,9 +76,15 @@ func main() {
 		},
 	)
 
-	r.Handle("/graphql", CommonMiddleware.Then(
-		route.GraphQLHandler{Schema: graphqlSchema},
-	))
+	r.Handle(
+		"/graphql",
+		CommonMiddleware.Append(authMiddleware.Use).Then(
+			route.GraphQLHandler{
+				Logger: logger,
+				Schema: graphqlSchema,
+			},
+		),
+	)
 
 	r.Handle("/graphiql", CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
@@ -79,9 +92,14 @@ func main() {
 		},
 	))
 
-	r.Handle("/login", CommonMiddleware.Then(
-		route.LoginHandler{UserRepo: userRepo},
-	))
+	r.Handle(
+		"/login",
+		CommonMiddleware.Extend(route.LoginMiddleware).Then(
+			route.LoginHandler{
+				AuthSvc:  authSvc,
+				UserRepo: userRepo,
+			}),
+	)
 
 	r.Handle("/db", CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {

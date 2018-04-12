@@ -9,6 +9,10 @@ type userResolver struct {
 	u *model.User
 }
 
-func (r *userResolver) Id() graphql.ID {
-	return graphql.ID(r.u.Id())
+func (r *userResolver) ID() graphql.ID {
+	return graphql.ID(r.u.ID)
+}
+
+func (r *userResolver) Login() string {
+	return r.u.Login
 }

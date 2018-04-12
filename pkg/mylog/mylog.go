@@ -17,7 +17,7 @@ type Logger struct {
 func NewLogger(debugMode bool) *Logger {
 	backend := logging.NewLogBackend(os.Stderr, "", 0)
 	format := logging.MustStringFormatter(
-		"%{color}%{time:2006/01/02 15:04:05 -07:00 MST} [%{level:.6s}] %{shortfile}" +
+		"%{color}%{time:2006/01/02 15:04:05 -07:00 MST} [%{level:.6s}] %{shortpkg}:%{shortfile}" +
 			" : " +
 			"%{color:reset}%{message}",
 	)
@@ -44,7 +44,7 @@ func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
 				l.Log.Errorf("Reading request body error: %s", err)
 			}
 			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
-			l.Log.Debugf("Request body: %v", reqStr)
+			l.Log.Debugf("Request body : %v", reqStr)
 			req.Body = reqStr
 		}
 		h.ServeHTTP(rw, req)

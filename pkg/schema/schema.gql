@@ -1,7 +1,12 @@
 schema {
   query: Query
+  mutation: Mutation
 }
 type Query {
   hello: String
+  viewer: User!
   node(id: ID!): Node
+}
+type Mutation {
+  createUser(login: String!, password: String!): User
 }

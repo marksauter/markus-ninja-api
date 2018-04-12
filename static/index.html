@@ -3,19 +3,130 @@
 <head>
   <meta charset="UTF-8">
   <title></title>
+  <style>
+    body {
+      height: 100%;
+      margin: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+    #root {
+      height: 100vh;
+    }
+    .LoginForm {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .LoginForm__field {
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
+
+    .LoginForm__submit {
+      align-self: stretch;
+    }
+  </style>
+  <script src="//cdn.jsdelivr.net/es6-promise/4.0.5/es6-promise.auto.min.js"></script>
+  <script src="//cdn.jsdelivr.net/fetch/0.9.0/fetch.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react-dom.min.js"></script>
 </head>
 <body>
-  <form
-    action="/login" method="post">
-    <div>
-      <label for="login">Login</label>
-      <input id="login" type="text" name="login">
-    </div>
-    <div>
-      <label for="password">Password</label>
-      <input id="password" type="password" name="password">
-    </div>
-    <div><input type="submit" value="Submit"></div>
-  </form>
+  <div id="root">Loading...</div>
+  <script>
+    class LoginForm extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          login: "",
+          password: "",
+        };
+
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+      }
+
+      handleSubmit(e) {
+        e.preventDefault();
+        const type = "Basic";
+        const credentials = btoa(this.state.login + ":" + this.state.password);
+        return fetch("/login", {
+          method: "POST",
+          headers: {
+            "Authorization": type + " " + credentials,
+            "Content-Type": "application/json",
+          },
+        }).then(function (response) {
+          return response.text();
+        }).then(function (responseBody) {
+          try {
+            return JSON.parse(responseBody);
+          } catch (error) {
+            return responseBody;
+          }
+        }).then(function (data) {
+          window.sessionStorage.setItem("access_token", data.access_token);
+          return
+        });
+      }
+
+      handleChange(e) {
+        this.setState({
+          [e.target.name]: e.target.value,
+        });
+      }
+
+      render() {
+        return React.createElement("form", {
+          className: "LoginForm",
+          onSubmit: this.handleSubmit,
+        },
+          React.createElement("fieldset", {
+            className: "LoginForm__field"
+          },
+            React.createElement("label", {
+              className: "LoginForm__label",
+              htmlFor: "LoginForm__login"
+            }, "Email"),
+            React.createElement("input", {
+              className: "LoginForm__input",
+              id: "LoginForm__login",
+              name: "login",
+              value: this.state.login,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "LoginForm__field"
+          },
+            React.createElement("label", {
+              className: "LoginForm__label",
+              htmlFor: "LoginForm__password"
+            }, "Password"),
+            React.createElement("input", {
+              className: "LoginForm__input",
+              id: "LoginForm__password",
+              type: "password",
+              name: "password",
+              value: this.state.password,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("button", {
+            className: "LoginForm__submit",
+            type: "submit"
+          }, "Login")
+        );
+      }
+    }
+
+    ReactDOM.render(
+      React.createElement(LoginForm),
+      document.getElementById('root')
+    );
+  </script>
 </body>
 </html>

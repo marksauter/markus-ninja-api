@@ -1,7 +1,6 @@
 package route
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -10,9 +9,11 @@ import (
 	"strings"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 type GraphQLHandler struct {
+	Logger *mylog.Logger
 	Schema *graphql.Schema
 }
 
@@ -32,8 +33,7 @@ func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
-	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
+	response := h.Schema.Exec(req.Context(), params.Query, params.OperationName, params.Variables)
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)

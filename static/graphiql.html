@@ -101,11 +101,13 @@
       function graphQLFetcher(graphQLParams) {
         // This example expects a GraphQL server at the path /graphql.
         // Change this to point wherever you host your GraphQL server.
+        const token = window.sessionStorage.getItem("access_token");
         return fetch('/graphql', {
           method: 'post',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(graphQLParams),
           credentials: 'include',
@@ -117,6 +119,8 @@
           } catch (error) {
             return responseBody;
           }
+        }).catch(function (error) {
+          console.error(error);
         });
       }
       // Render <GraphiQL /> into the body.

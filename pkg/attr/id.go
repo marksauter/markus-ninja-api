@@ -4,29 +4,38 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+
+	"github.com/rs/xid"
 )
 
 type Id struct {
-	idType string
-	value  string
+	objType string
+	value   string
 }
 
-func NewId(id string) (*Id, error) {
-	idComponents := strings.Split(id, "_")
-	if len(idComponents) != 2 {
-		return new(Id), fmt.Errorf(`invalid id "%s", expected format "Type_id"`, id)
+func ParseId(id string) (*Id, error) {
+	v, err := base64.StdEncoding.DecodeString(id)
+	if err != nil {
+		return new(Id), fmt.Errorf("ParseId(%v): invalid id expected base64 encoded", id)
 	}
-	return &Id{idType: idComponents[0], value: id}, nil
+	components := strings.Split(string(v), "_")
+	if len(components) != 2 {
+		return new(Id), fmt.Errorf("ParseId(%v): invalid id expected format TYPE_ID", id)
+	}
+	return &Id{objType: components[0], value: id}, nil
+}
+
+func NewId(objType string) *Id {
+	id := xid.New()
+	value := fmt.Sprintf("%v_%s", objType, id)
+	value = base64.StdEncoding.EncodeToString([]byte(value))
+	return &Id{objType: objType, value: value}
 }
 
 func (id *Id) Type() string {
-	return id.idType
+	return id.objType
 }
 
 func (id *Id) String() string {
 	return id.value
-}
-
-func (id *Id) Encode() string {
-	return base64.StdEncoding.EncodeToString([]byte(id.value))
 }
