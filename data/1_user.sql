@@ -1,6 +1,7 @@
-CREATE TABLE users
+CREATE TABLE "user"
 (
-  id         VARCHAR(45) PRIMARY KEY ,
+  id         VARCHAR(45) PRIMARY KEY,
+  bio        VARCHAR(255),
   login      VARCHAR(255) NOT NULL UNIQUE,
   password   BYTEA NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

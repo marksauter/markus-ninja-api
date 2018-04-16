@@ -1,4 +1,4 @@
-package connector
+package svccxn
 
 import (
 	"github.com/graph-gophers/dataloader"

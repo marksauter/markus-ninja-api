@@ -20,11 +20,10 @@ func GraphQL(schema *graphql.Schema, authSvc *service.AuthService, repos *repo.R
 		AuthSvc:  authSvc,
 		UserRepo: repos.User(),
 	}
-	reposMiddleware := repo.Middleware{Repos: repos}
 	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,
-		reposMiddleware.Use,
+		repos.Use,
 	).Then(graphQLHandler)
 }
 

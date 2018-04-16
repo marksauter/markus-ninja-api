@@ -1,31 +1,33 @@
 package repo
 
 import (
-	"github.com/marksauter/markus-ninja-api/pkg/connector"
+	"net/http"
+
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/svccxn"
 )
 
-func NewUserRepo(svcs *service.Services) *UserRepo {
-	return &UserRepo{svcs: svcs}
+func NewUserRepo(svc *service.UserService) *UserRepo {
+	return &UserRepo{svc: svc}
 }
 
 type UserRepo struct {
-	conn *connector.UserConnector
-	svcs *service.Services
+	cxn *svccxn.UserConnection
+	svc *service.UserService
 }
 
 func (r *UserRepo) Open() {
-	r.conn = connector.NewUserConnector(r.svcs)
+	r.cxn = svccxn.NewUserConnection(r.svc)
 }
 
 func (r *UserRepo) Close() {
-	r.conn = nil
+	r.cxn = nil
 }
 
 func (r *UserRepo) checkConnection() bool {
-	return r.conn != nil
+	return r.cxn != nil
 }
 
 func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
@@ -33,7 +35,7 @@ func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
 		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
 		return nil, ErrConnClosed
 	}
-	return r.conn.Create(input)
+	return r.cxn.Create(input)
 }
 
 func (r *UserRepo) Get(id string) (*model.User, error) {
@@ -41,7 +43,7 @@ func (r *UserRepo) Get(id string) (*model.User, error) {
 		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
 		return nil, ErrConnClosed
 	}
-	return r.conn.Get(id)
+	return r.cxn.Get(id)
 }
 
 func (r *UserRepo) GetMany(ids *[]string) ([]*model.User, []error) {
@@ -49,7 +51,7 @@ func (r *UserRepo) GetMany(ids *[]string) ([]*model.User, []error) {
 		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
 		return nil, []error{ErrConnClosed}
 	}
-	return r.conn.GetMany(ids)
+	return r.cxn.GetMany(ids)
 }
 
 func (r *UserRepo) GetByLogin(login string) (*model.User, error) {
@@ -57,7 +59,7 @@ func (r *UserRepo) GetByLogin(login string) (*model.User, error) {
 		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
 		return nil, ErrConnClosed
 	}
-	return r.conn.GetByLogin(login)
+	return r.cxn.GetByLogin(login)
 }
 
 func (r *UserRepo) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {
@@ -65,5 +67,13 @@ func (r *UserRepo) VerifyCredentials(userCredentials *model.UserCredentials) (*m
 		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
 		return nil, ErrConnClosed
 	}
-	return r.conn.VerifyCredentials(userCredentials)
+	return r.cxn.VerifyCredentials(userCredentials)
+}
+
+func (r *UserRepo) Use(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		r.Open()
+		defer r.Close()
+		h.ServeHTTP(rw, req)
+	})
 }

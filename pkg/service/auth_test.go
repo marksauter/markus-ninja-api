@@ -33,9 +33,9 @@ func TestSignJWT(t *testing.T) {
 }
 
 func TestSignJWTServiceError(t *testing.T) {
-	myaws.MockKmsServiceError = true
+	myaws.MockKMSServiceError = true
 	defer func() {
-		myaws.MockKmsServiceError = false
+		myaws.MockKMSServiceError = false
 	}()
 	payload := testPayload
 	_, err := mockAuthService.SignJWT(&payload)
@@ -107,9 +107,9 @@ func TestValidateJWTFailure(t *testing.T) {
 }
 
 func TestValidateJWTPanic(t *testing.T) {
-	myaws.MockKmsServiceError = true
+	myaws.MockKMSServiceError = true
 	defer func() {
-		myaws.MockKmsServiceError = false
+		myaws.MockKMSServiceError = false
 	}()
 	defer func() {
 		err := recover()

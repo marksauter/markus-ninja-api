@@ -18,14 +18,14 @@ type AuthService struct {
 func NewAuthService() *AuthService {
 	return &AuthService{
 		keyId: "alias/markus-ninja-api-key-alias",
-		svc:   myaws.NewKms(),
+		svc:   myaws.NewKMS(),
 	}
 }
 
 func NewMockAuthService() *AuthService {
 	return &AuthService{
 		keyId: "alias/markus-ninja-api-key-alias",
-		svc:   myaws.NewMockKms(),
+		svc:   myaws.NewMockKMS(),
 	}
 }
 

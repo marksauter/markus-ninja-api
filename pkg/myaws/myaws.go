@@ -6,12 +6,12 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-var AwsRegion = util.GetOptionalEnv("AWS_REGION", "us-east-1")
-var AwsSession = NewSession()
+var AWSRegion = util.GetOptionalEnv("AWS_REGION", "us-east-1")
+var AWSSession = NewSession()
 
 func NewSession() *session.Session {
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(AwsRegion),
+		Region: aws.String(AWSRegion),
 	})
 
 	if err != nil {

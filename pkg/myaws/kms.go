@@ -7,31 +7,31 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 )
 
-func NewKms() *kms.KMS {
-	return kms.New(AwsSession)
+func NewKMS() *kms.KMS {
+	return kms.New(AWSSession)
 }
 
-type MockKms struct {
+type MockKMS struct {
 	kmsiface.KMSAPI
 }
 
-func NewMockKms() *MockKms {
-	return new(MockKms)
+func NewMockKMS() *MockKMS {
+	return new(MockKMS)
 }
 
-var MockKmsServiceError = false
+var MockKMSServiceError = false
 
-func (m *MockKms) Encrypt(input *kms.EncryptInput) (*kms.EncryptOutput, error) {
+func (m *MockKMS) Encrypt(input *kms.EncryptInput) (*kms.EncryptOutput, error) {
 	output := new(kms.EncryptOutput)
-	if MockKmsServiceError {
+	if MockKMSServiceError {
 		return output, errors.New("AwsError")
 	}
 	return output.SetCiphertextBlob(input.Plaintext), nil
 }
 
-func (m *MockKms) Decrypt(input *kms.DecryptInput) (*kms.DecryptOutput, error) {
+func (m *MockKMS) Decrypt(input *kms.DecryptInput) (*kms.DecryptOutput, error) {
 	output := new(kms.DecryptOutput)
-	if MockKmsServiceError {
+	if MockKMSServiceError {
 		return output, errors.New("AwsError")
 	}
 	return output.SetPlaintext(input.CiphertextBlob), nil

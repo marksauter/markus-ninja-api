@@ -1,4 +1,4 @@
-package connector
+package svccxn
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-func NewUserConnector(svcs *service.Services) *UserConnector {
-	return &UserConnector{
-		svc: svcs.User,
+func NewUserConnection(svc *service.UserService) *UserConnection {
+	return &UserConnection{
+		svc: svc,
 		batchGet: createLoader(func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 			var (
 				n       = len(keys)
@@ -25,7 +25,7 @@ func NewUserConnector(svcs *service.Services) *UserConnector {
 			for i, key := range keys {
 				go func(i int, key dataloader.Key) {
 					defer wg.Done()
-					user, err := svcs.User.Get(key.String())
+					user, err := svc.Get(key.String())
 					results[i] = &dataloader.Result{Data: user, Error: err}
 				}(i, key)
 			}
@@ -37,13 +37,13 @@ func NewUserConnector(svcs *service.Services) *UserConnector {
 	}
 }
 
-type UserConnector struct {
+type UserConnection struct {
 	svc *service.UserService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *UserConnector) Get(id string) (*model.User, error) {
+func (r *UserConnection) Get(id string) (*model.User, error) {
 	ctx := context.Background()
 	data, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *UserConnector) Get(id string) (*model.User, error) {
 	return user, nil
 }
 
-func (r *UserConnector) GetMany(ids *[]string) ([]*model.User, []error) {
+func (r *UserConnection) GetMany(ids *[]string) ([]*model.User, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
@@ -79,14 +79,14 @@ func (r *UserConnector) GetMany(ids *[]string) ([]*model.User, []error) {
 	return users, nil
 }
 
-func (r *UserConnector) GetByLogin(login string) (*model.User, error) {
+func (r *UserConnection) GetByLogin(login string) (*model.User, error) {
 	return r.svc.GetByLogin(login)
 }
 
-func (r *UserConnector) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {
+func (r *UserConnection) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {
 	return r.svc.VerifyCredentials(userCredentials)
 }
 
-func (r *UserConnector) Create(input *service.CreateUserInput) (*model.User, error) {
+func (r *UserConnection) Create(input *service.CreateUserInput) (*model.User, error) {
 	return r.svc.Create(input)
 }

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -27,7 +28,7 @@ type Repos struct {
 func NewRepos(svcs *service.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
-			userRepoKey: NewUserRepo(svcs),
+			userRepoKey: NewUserRepo(svcs.User),
 		},
 	}
 }
@@ -47,4 +48,12 @@ func (r *Repos) CloseAll() {
 func (r *Repos) User() *UserRepo {
 	userRepo, _ := r.lookup[userRepoKey].(*UserRepo)
 	return userRepo
+}
+
+func (r *Repos) Use(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		r.OpenAll()
+		defer r.CloseAll()
+		h.ServeHTTP(rw, req)
+	})
 }

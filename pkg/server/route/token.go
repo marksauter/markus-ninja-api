@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/justinas/alice"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -18,10 +17,11 @@ func Token(authSvc *service.AuthService, userRepo *repo.UserRepo) http.Handler {
 		AuthSvc:  authSvc,
 		UserRepo: userRepo,
 	}
-	return middleware.CommonMiddleware.Extend(tokenMiddleware).Then(tokenHandler)
+	return middleware.CommonMiddleware.Append(
+		tokenCors.Handler,
+		userRepo.Use,
+	).Then(tokenHandler)
 }
-
-var tokenMiddleware = alice.New(tokenCors.Handler)
 
 var tokenCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
@@ -50,9 +50,6 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-
-	h.UserRepo.Open()
-	defer h.UserRepo.Close()
 
 	user, err := h.UserRepo.VerifyCredentials(userCredentials)
 	if err != nil {
