@@ -8,24 +8,33 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-var LoginMiddleware = alice.New(LoginCors.Handler)
+func Token(authSvc *service.AuthService, userRepo *repo.UserRepo) http.Handler {
+	tokenHandler := TokenHandler{
+		AuthSvc:  authSvc,
+		UserRepo: userRepo,
+	}
+	return middleware.CommonMiddleware.Extend(tokenMiddleware).Then(tokenHandler)
+}
 
-var LoginCors = cors.New(cors.Options{
+var tokenMiddleware = alice.New(tokenCors.Handler)
+
+var tokenCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
-type LoginHandler struct {
+type TokenHandler struct {
 	AuthSvc  *service.AuthService
 	UserRepo *repo.UserRepo
 }
 
-func (h LoginHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
@@ -41,6 +50,10 @@ func (h LoginHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
+
+	h.UserRepo.Open()
+	defer h.UserRepo.Close()
+
 	user, err := h.UserRepo.VerifyCredentials(userCredentials)
 	if err != nil {
 		response := myhttp.InvalidUserPasswordResponse()
@@ -57,18 +70,18 @@ func (h LoginHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response := LoginSuccessResponse{
+	response := TokenSuccessResponse{
 		AccessToken: jwt.String(),
 		ExpiresIn:   jwt.Payload.Exp,
 	}
 	myhttp.WriteResponseTo(rw, &response)
 }
 
-type LoginSuccessResponse struct {
+type TokenSuccessResponse struct {
 	AccessToken string              `json:"access_token,omitempty"`
 	ExpiresIn   myjwt.UnixTimestamp `json:"expires_in,omitempty"`
 }
 
-func (r *LoginSuccessResponse) StatusHTTP() int {
+func (r *TokenSuccessResponse) StatusHTTP() int {
 	return http.StatusOK
 }

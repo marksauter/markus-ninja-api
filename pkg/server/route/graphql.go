@@ -9,15 +9,36 @@ import (
 	"strings"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
+func GraphQL(schema *graphql.Schema, authSvc *service.AuthService, repos *repo.Repos) http.Handler {
+	authMiddleware := middleware.Authenticate{
+		AuthSvc:  authSvc,
+		UserRepo: repos.User(),
+	}
+	reposMiddleware := repo.Middleware{Repos: repos}
+	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
+	return middleware.CommonMiddleware.Append(
+		authMiddleware.Use,
+		reposMiddleware.Use,
+	).Then(graphQLHandler)
+}
+
 type GraphQLHandler struct {
-	Logger *mylog.Logger
 	Schema *graphql.Schema
+	Repos  *repo.Repos
 }
 
 func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost && req.Method != http.MethodGet {
+		response := myhttp.MethodNotAllowedResponse(req.Method)
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
 	var params struct {
 		Query         string                 `json:"query"`
 		OperationName string                 `json:"operationName"`
@@ -36,7 +57,8 @@ func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	response := h.Schema.Exec(req.Context(), params.Query, params.OperationName, params.Variables)
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		errResponse := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, errResponse)
 		return
 	}
 

@@ -17,104 +17,57 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/justinas/alice"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
-	"github.com/marksauter/markus-ninja-api/pkg/utils"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func main() {
-	utils.LoadEnv()
+	util.LoadEnv()
 	db, err := mydb.Open()
 	if err != nil {
-		log.Fatalf("Unable to connect to db: %s \n", err)
+		mylog.Log.WithField("error", err).Fatal("Unable to connect to database")
 	}
 	defer db.Close()
 
-	logger := mylog.NewLogger(true)
-	authSvc := service.NewAuthService(logger)
-	roleSvc := service.NewRoleService(db, logger)
-	userSvc := service.NewUserService(db, logger, roleSvc)
-	userRepo := repo.NewUserRepo(userSvc)
-
-	authMiddleware := middleware.Authenticate{
-		AuthSvc:  authSvc,
-		UserRepo: userRepo,
-		Logger:   logger,
-	}
-
-	CommonMiddleware := alice.New(
-		logger.AccessMiddleware,
-		handlers.RecoveryHandler(),
+	svcs := service.NewServices(db)
+	repos := repo.NewRepos(svcs)
+	graphQLSchema := graphql.MustParseSchema(
+		schema.GetRootSchema(),
+		&resolver.RootResolver{
+			Repos: repos,
+		},
 	)
 
 	r := mux.NewRouter()
 
-	r.Handle("/", CommonMiddleware.ThenFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			http.ServeFile(rw, req, "static/index.html")
-		},
-	))
+	r.Handle("/", route.Index())
+	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs.Auth, repos))
+	r.Handle("/graphiql", route.GraphiQL())
+	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
 
-	graphqlSchema := graphql.MustParseSchema(
-		schema.GetRootSchema(),
-		&resolver.Resolver{
-			UserRepo: userRepo,
-		},
-	)
-
-	r.Handle(
-		"/graphql",
-		CommonMiddleware.Append(authMiddleware.Use).Then(
-			route.GraphQLHandler{
-				Logger: logger,
-				Schema: graphqlSchema,
-			},
-		),
-	)
-
-	r.Handle("/graphiql", CommonMiddleware.ThenFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			http.ServeFile(rw, req, "static/graphiql.html")
-		},
-	))
-
-	r.Handle(
-		"/login",
-		CommonMiddleware.Extend(route.LoginMiddleware).Then(
-			route.LoginHandler{
-				AuthSvc:  authSvc,
-				UserRepo: userRepo,
-			}),
-	)
-
-	r.Handle("/db", CommonMiddleware.ThenFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			// Connect and check the server version
-			var version string
-			err = db.QueryRow("SELECT VERSION()").Scan(&version)
-			switch {
-			case err != nil:
-				log.Fatal(err)
-			default:
-				fmt.Fprintf(rw, "Connected to: %s", version)
-			}
-		},
-	))
-	port := utils.GetOptionalEnv("PORT", "5000")
+	// r.Handle("/db", CommonMiddleware.ThenFunc(
+	//   func(rw http.ResponseWriter, req *http.Request) {
+	//     // Connect and check the server version
+	//     var version string
+	//     err = db.QueryRow("SELECT VERSION()").Scan(&version)
+	//     if err != nil {
+	//       mylog.Log.Fatal(err)
+	//       return
+	//     }
+	//     fmt.Fprintf(rw, "Connected to: %s", version)
+	//   },
+	// ))
+	port := util.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
-	log.Fatal(http.ListenAndServe(address, r))
+	mylog.Log.Fatal(http.ListenAndServe(address, r))
 }

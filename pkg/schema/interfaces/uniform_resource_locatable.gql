@@ -1,0 +1,8 @@
+# Represents a type that can be retrieved by a URL.
+interface UniformResourceLocatable {
+  # The HTTP path to this resource.
+  resourcePath: URI!
+
+  # The HTTP URL to this resource.
+  url: URI!
+}

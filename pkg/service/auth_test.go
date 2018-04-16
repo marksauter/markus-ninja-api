@@ -82,7 +82,12 @@ var decryptFailureTests = []struct {
 		myjwt.ErrTokenExpired,
 	},
 	{
-		(myjwt.JWT{Signature: "invalid"}),
+		(myjwt.JWT{
+			Payload: myjwt.Payload{
+				Exp: time.Now().Add(time.Minute * time.Duration(1)).Unix(),
+			},
+			Signature: "invalid",
+		}),
 		myjwt.ErrInvalidSignature,
 	},
 }

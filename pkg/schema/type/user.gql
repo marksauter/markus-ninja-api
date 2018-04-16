@@ -1,4 +1,22 @@
-type User implements Node {
+# Represents a user.
+type User implements Node, UniformResourceLocatable {
+  # The user's public profile bio.
+  bio: String
+
+  # The user's public profile bio as HTML.
+  bioHTML: HTML!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time
+
   id: ID!
-  login: String!
+
+  # The username used to login.
+  login: String
+
+  # The HTTP path for this user.
+  resourcePath: URI!
+
+  # The HTTP URL for this user.
+  url: URI!
 }

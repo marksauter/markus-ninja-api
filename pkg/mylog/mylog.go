@@ -5,46 +5,45 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 
-	logging "github.com/op/go-logging"
+	"github.com/sirupsen/logrus"
 )
 
+var Log = New()
+
 type Logger struct {
-	Log       *logging.Logger
-	debugMode bool
+	*logrus.Logger
 }
 
-func NewLogger(debugMode bool) *Logger {
-	backend := logging.NewLogBackend(os.Stderr, "", 0)
-	format := logging.MustStringFormatter(
-		"%{color}%{time:2006/01/02 15:04:05 -07:00 MST} [%{level:.6s}] %{shortpkg}:%{shortfile}" +
-			" : " +
-			"%{color:reset}%{message}",
-	)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
-
-	backendLeveled := logging.AddModuleLevel(backendFormatter)
-	backendLeveled.SetLevel(logging.INFO, "")
-	if debugMode {
-		backendLeveled.SetLevel(logging.DEBUG, "")
-	}
-
-	logging.SetBackend(backendLeveled)
-	logger := logging.MustGetLogger("markus-ninja-api")
-	return &Logger{Log: logger, debugMode: debugMode}
+func New() *Logger {
+	log := logrus.New()
+	log.Formatter = &logrus.TextFormatter{ForceColors: true}
+	log.Out = os.Stdout
+	log.SetLevel(logrus.DebugLevel)
+	return &Logger{log}
 }
 
 func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		l.Log.Infof("%s %s %s %s", req.RemoteAddr, req.Method, req.URL, req.Proto)
-		l.Log.Infof("User agent : %s", req.UserAgent())
-		if l.debugMode {
+		l.WithFields(logrus.Fields{
+			"remote_addr": req.RemoteAddr,
+			"method":      req.Method,
+			"url":         req.URL,
+			"proto":       req.Proto,
+		}).Info("Request Info")
+		l.WithField("user_agent", req.UserAgent()).Info("")
+		if l.Level >= logrus.DebugLevel {
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
-				l.Log.Errorf("Reading request body error: %s", err)
+				l.WithField("error", err).Error("Error reading request body")
 			}
 			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
-			l.Log.Debugf("Request body : %v", reqStr)
+			re_escaped := regexp.MustCompile(`\\n|\\`)
+			prettyBody := re_escaped.ReplaceAll(body, nil)
+			re_inside_whtsp := regexp.MustCompile(`[\s\p{Zs}]{2,}`)
+			prettyBody = re_inside_whtsp.ReplaceAll(prettyBody, []byte{' '})
+			l.WithField("body", string(prettyBody)).Debug("")
 			req.Body = reqStr
 		}
 		h.ServeHTTP(rw, req)

@@ -8,20 +8,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 type AuthService struct {
-	keyId  string
-	logger *mylog.Logger
-	svc    kmsiface.KMSAPI
+	keyId string
+	svc   kmsiface.KMSAPI
 }
 
-func NewAuthService(logger *mylog.Logger) *AuthService {
+func NewAuthService() *AuthService {
 	return &AuthService{
-		keyId:  "alias/markus-ninja-api-key-alias",
-		logger: logger,
-		svc:    myaws.NewKms(),
+		keyId: "alias/markus-ninja-api-key-alias",
+		svc:   myaws.NewKms(),
 	}
 }
 

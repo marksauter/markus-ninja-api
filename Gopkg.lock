@@ -62,6 +62,12 @@
   version = "v1.6.1"
 
 [[projects]]
+  name = "github.com/graph-gophers/dataloader"
+  packages = ["."]
+  revision = "78139374585c29dcb97b8f33089ed11959e4be59"
+  version = "v5"
+
+[[projects]]
   branch = "master"
   name = "github.com/graph-gophers/graphql-go"
   packages = [
@@ -117,6 +123,12 @@
   revision = "d34b9ff171c21ad295489235aec8b6626023cd04"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/microcosm-cc/bluemonday"
+  packages = ["."]
+  revision = "995366fdf961d03629cd17361bddd32745718e2c"
+
+[[projects]]
   name = "github.com/nbutton23/zxcvbn-go"
   packages = [
     ".",
@@ -131,12 +143,6 @@
   ]
   revision = "eafdab6b0663b4b528c35975c8b0e78be6e25261"
   version = "v0.1"
-
-[[projects]]
-  name = "github.com/op/go-logging"
-  packages = ["."]
-  revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
-  version = "v1"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -162,28 +168,54 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/shurcooL/sanitized_anchor_name"
+  packages = ["."]
+  revision = "86672fcb3f950f35f2e675df2240550f2a50762f"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
-    "blowfish"
+    "blowfish",
+    "ssh/terminal"
   ]
   revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context"]
+  packages = [
+    "context",
+    "html",
+    "html/atom"
+  ]
   revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
 
 [[projects]]
-  branch = "v1"
-  name = "gopkg.in/nicksrandall/dataloader.v1"
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "f6f352972f061230a99fbf49d1eb8073ebdb36cb"
+
+[[projects]]
+  name = "gopkg.in/russross/blackfriday.v2"
   packages = ["."]
-  revision = "cfc0cf850481c7d818c9a411b98b496b1a241470"
+  revision = "cadec560ec52d93835bf2f15bd794700d3a2473b"
+  version = "v2.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6b5643522e5a148256048e0c03eb08697ad080202d6444ecbefc36a8ec5d62ed"
+  inputs-digest = "903cf12d6bc6f3ca55a619b1d4c8ff6f73c0a26b27b0fd114791a96728e99590"
   solver-name = "gps-cdcl"
   solver-version = 1

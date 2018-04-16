@@ -4,8 +4,11 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gorilla/handlers"
+	"github.com/justinas/alice"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -14,6 +17,11 @@ import (
 type Middleware interface {
 	Use(http.Handler) http.Handler
 }
+
+var CommonMiddleware = alice.New(
+	mylog.Log.AccessMiddleware,
+	handlers.RecoveryHandler(),
+)
 
 type AddContext struct {
 	Ctx context.Context
@@ -28,12 +36,11 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 type Authenticate struct {
 	AuthSvc  *service.AuthService
 	UserRepo *repo.UserRepo
-	Logger   *mylog.Logger
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		token, err := myctx.Token.FromRequest(req)
+		token, err := myjwt.JWTFromRequest(req)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
@@ -44,6 +51,9 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 		}
+
+		a.UserRepo.Open()
+		defer a.UserRepo.Close()
 
 		user, err := a.UserRepo.Get(payload.Sub)
 		if err != nil {

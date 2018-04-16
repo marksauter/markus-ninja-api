@@ -7,15 +7,17 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/marksauter/markus-ninja-api/pkg/utils"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-func Open() (*sqlx.DB, error) {
-	username := utils.GetRequiredEnv("RDS_USERNAME")
-	password := utils.GetRequiredEnv("RDS_PASSWORD")
-	hostname := utils.GetRequiredEnv("RDS_HOSTNAME")
-	port := utils.GetRequiredEnv("RDS_PORT")
-	name := utils.GetRequiredEnv("RDS_DB_NAME")
+type DB = sqlx.DB
+
+func Open() (*DB, error) {
+	username := util.GetRequiredEnv("RDS_USERNAME")
+	password := util.GetRequiredEnv("RDS_PASSWORD")
+	hostname := util.GetRequiredEnv("RDS_HOSTNAME")
+	port := util.GetRequiredEnv("RDS_PORT")
+	name := util.GetRequiredEnv("RDS_DB_NAME")
 
 	log.Println("Connecting to database...")
 	db, err := sqlx.Open("postgres", fmt.Sprintf(

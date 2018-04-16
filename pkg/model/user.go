@@ -1,10 +1,11 @@
 package model
 
 type User struct {
+	Bio       string `db:"bio"`
+	CreatedAt string `db:"created_at"`
 	ID        string `db:"id"`
 	Login     string `db:"login"`
 	Password  string `db:"password"`
-	CreatedAt string `db:"created_at"`
 	UpdatedAt string `db:"updated_at"`
 	Roles     []*Role
 }

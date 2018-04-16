@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -86,4 +87,13 @@ func ParseToken(token string) (*JWT, error) {
 		return new(JWT), ErrInvalidSignature
 	}
 	return &JWT{Payload: *payload, Signature: signature}, nil
+}
+
+func JWTFromRequest(req *http.Request) (*JWT, error) {
+	auth := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	if len(auth) != 2 || auth[0] != "Bearer" {
+		return nil, errors.New("Invalid credentials")
+	}
+	tokenString := auth[1]
+	return ParseToken(tokenString)
 }

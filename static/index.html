@@ -53,7 +53,7 @@
         e.preventDefault();
         const type = "Basic";
         const credentials = btoa(this.state.login + ":" + this.state.password);
-        return fetch("/login", {
+        return fetch("/token", {
           method: "POST",
           headers: {
             "Authorization": type + " " + credentials,
@@ -69,6 +69,7 @@
           }
         }).then(function (data) {
           window.sessionStorage.setItem("access_token", data.access_token);
+          window.location.replace("/graphiql")
           return
         });
       }

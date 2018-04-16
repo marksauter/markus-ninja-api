@@ -3,10 +3,10 @@ package myaws
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/marksauter/markus-ninja-api/pkg/utils"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-var AwsRegion = utils.GetOptionalEnv("AWS_REGION", "us-east-1")
+var AwsRegion = util.GetOptionalEnv("AWS_REGION", "us-east-1")
 var AwsSession = NewSession()
 
 func NewSession() *session.Session {

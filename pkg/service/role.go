@@ -3,18 +3,16 @@ package service
 import (
 	"database/sql"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 )
 
 type RoleService struct {
-	db     *sqlx.DB
-	logger *mylog.Logger
+	db *mydb.DB
 }
 
-func NewRoleService(db *sqlx.DB, logger *mylog.Logger) *RoleService {
-	return &RoleService{db: db, logger: logger}
+func NewRoleService(db *mydb.DB) *RoleService {
+	return &RoleService{db: db}
 }
 
 func (s *RoleService) GetByUserId(userId string) ([]*model.Role, error) {

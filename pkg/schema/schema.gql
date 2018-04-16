@@ -3,9 +3,10 @@ schema {
   mutation: Mutation
 }
 type Query {
-  hello: String
-  viewer: User!
   node(id: ID!): Node
+  nodes(ids: [ID!]): [Node]!
+  user(login: String!): User
+  viewer: User!
 }
 type Mutation {
   createUser(login: String!, password: String!): User
