@@ -1,9 +1,0 @@
-CREATE TABLE "user"
-(
-  id         VARCHAR(45) PRIMARY KEY,
-  bio        VARCHAR(255),
-  login      VARCHAR(255) NOT NULL UNIQUE,
-  password   BYTEA NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
