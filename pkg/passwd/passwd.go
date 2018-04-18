@@ -27,15 +27,15 @@ func New(password string) *Password {
 	return &Password{value: []byte(password)}
 }
 
-func (p *Password) Hash() (string, error) {
+func (p *Password) Hash() ([]byte, error) {
 	if p.hash == nil {
 		hash, err := bcrypt.GenerateFromPassword(p.value, bcrypt.DefaultCost)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		p.hash = hash
 	}
-	return string(p.hash), nil
+	return p.hash, nil
 }
 
 func (p *Password) CompareToHash(hash []byte) bool {

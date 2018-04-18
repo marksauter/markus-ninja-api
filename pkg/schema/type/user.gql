@@ -9,13 +9,22 @@ type User implements Node, UniformResourceLocatable {
   # Identifies the date and time when the object was created.
   createdAt: Time
 
+  # The user's public profile email.
+  email: String
+
   id: ID!
 
   # The username used to login.
   login: String
 
+  # The user's public profile name.
+  name: String
+
   # The HTTP path for this user.
   resourcePath: URI!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time
 
   # The HTTP URL for this user.
   url: URI!

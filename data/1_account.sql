@@ -4,7 +4,6 @@ CREATE TABLE account(
   primary_email VARCHAR(355) NOT NULL UNIQUE,
   password      BYTEA NOT NULL,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  login_at      TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   bio           TEXT,
   email         TEXT,

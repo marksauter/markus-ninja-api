@@ -52,9 +52,6 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			myhttp.WriteResponseTo(rw, response)
 		}
 
-		a.UserRepo.Open()
-		defer a.UserRepo.Close()
-
 		user, err := a.UserRepo.Get(payload.Sub)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())

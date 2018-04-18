@@ -1,42 +1,38 @@
 package mydb
 
 import (
-	"fmt"
-	"log"
-	"time"
+	"strconv"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type DB = sqlx.DB
+type DB = pgx.ConnPool
 
 func Open() (*DB, error) {
-	username := util.GetRequiredEnv("RDS_USERNAME")
-	password := util.GetRequiredEnv("RDS_PASSWORD")
-	hostname := util.GetRequiredEnv("RDS_HOSTNAME")
-	port := util.GetRequiredEnv("RDS_PORT")
-	name := util.GetRequiredEnv("RDS_DB_NAME")
-
-	log.Println("Connecting to database...")
-	db, err := sqlx.Open("postgres", fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		hostname,
-		port,
-		username,
-		password,
-		name,
-	))
+	mylog.Log.Println("Connecting to database...")
+	port, err := strconv.ParseUint(util.GetRequiredEnv("RDS_PORT"), 10, 16)
 	if err != nil {
 		panic(err)
 	}
-
-	if err = db.Ping(); err != nil {
-		log.Println("Retry database connection in 5 seconds...")
-		time.Sleep(time.Duration(5) * time.Second)
-		return Open()
+	pgxConfig := pgx.ConnConfig{
+		User:     util.GetRequiredEnv("RDS_USERNAME"),
+		Password: util.GetRequiredEnv("RDS_PASSWORD"),
+		Host:     util.GetRequiredEnv("RDS_HOSTNAME"),
+		Port:     uint16(port),
+		Database: util.GetRequiredEnv("RDS_DB_NAME"),
 	}
-	log.Println("Database connected")
-	return db, nil
+	pgxConnPoolConfig := pgx.ConnPoolConfig{
+		ConnConfig:     pgxConfig,
+		MaxConnections: 3,
+		AfterConnect:   nil,
+	}
+	conn, err := pgx.NewConnPool(pgxConnPoolConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mylog.Log.Println("Database connected")
+	return conn, nil
 }

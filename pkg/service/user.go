@@ -27,75 +27,157 @@ type UserService struct {
 }
 
 func (s *UserService) Get(id string) (*model.User, error) {
-	user := new(model.User)
-
-	userSQL := `SELECT * FROM users WHERE id = $1`
-	row := s.db.QueryRowx(userSQL, id)
-	err := row.StructScan(user)
+	mylog.Log.WithField("id", id).Info("Get(id) User")
+	u := new(model.User)
+	u.ID = id
+	userSQL := `
+		SELECT
+			bio,
+			created_at,
+			email,
+			login,
+			name,
+			password,
+			primary_email,
+			updated_at
+		FROM account
+		WHERE id = $1
+	`
+	row := s.db.QueryRow(userSQL, id)
+	err := row.Scan(
+		&u.Bio,
+		&u.CreatedAt,
+		&u.Email,
+		&u.Login,
+		&u.Name,
+		&u.Password,
+		&u.PrimaryEmail,
+		&u.UpdatedAt,
+	)
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
-			return user, nil
+			return u, nil
 		default:
-			mylog.Log.WithField("error", err).Errorf("Get(%v)", id)
+			mylog.Log.WithField("error", err).Errorf("error during scan")
 			return nil, err
 		}
 	}
 
-	roles, err := s.roleSvc.GetByUserId(user.ID)
-	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("Get(%v)", id)
-		return nil, err
-	}
-	user.Roles = roles
+	// roles, err := s.roleSvc.GetByUserId(user.ID)
+	// if err != nil {
+	//   mylog.Log.WithField("error", err).Errorf("Get(%v)", id)
+	//   return nil, err
+	// }
+	// user.Roles = roles
 
-	mylog.Log.WithField("user", user).Debugf("Get(%v)", id)
-	return user, nil
+	mylog.Log.Debug("user found")
+	return u, nil
 }
 
-func (s *UserService) BatchGet(ids []string) ([]model.User, error) {
-	users := []model.User{}
+func (s *UserService) BatchGet(ids []string) ([]*model.User, error) {
+	mylog.Log.WithField("ids", ids).Info("BatchGet(ids) []*User")
+	users := make([]*model.User, len(ids))
 
 	whereIn := "$1"
 	for i, _ := range ids[0:] {
 		whereIn = whereIn + fmt.Sprintf(", $%v", i+1)
 	}
-	batchGetSQL := fmt.Sprintf("SELECT * FROM users WHERE id IN (%v)", whereIn)
+	batchGetSQL := fmt.Sprintf(`
+		SELECT
+			bio,
+			created_at,
+			email,
+			id,
+			login,
+			name,
+			password,
+			primary_email,
+			updated_at
+		FROM account
+		WHERE id IN (%v)
+	`, whereIn)
 
-	err := s.db.Select(&users, batchGetSQL, util.StringToInterface(ids)...)
+	rows, err := s.db.Query(batchGetSQL, util.StringToInterface(ids)...)
+	defer rows.Close()
 	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("BatchGet(%v)", ids)
+		mylog.Log.WithField("error", err).Error("error during query")
 		return nil, err
 	}
+	i := 0
+	for rows.Next() {
+		u := users[i]
+		err := rows.Scan(
+			&u.Bio,
+			&u.CreatedAt,
+			&u.Email,
+			&u.Login,
+			&u.Name,
+			&u.Password,
+			&u.PrimaryEmail,
+			&u.UpdatedAt,
+		)
+		if err != nil {
+			mylog.Log.WithField("error", err).Error("error during scan")
+			return users, err
+		}
+		i++
+	}
 
-	mylog.Log.WithField("users", users).Debugf("BatchGet(%v)", ids)
+	if err := rows.Err(); err != nil {
+		mylog.Log.WithField("error", err).Error("error during rows processing")
+		return users, err
+	}
+
+	mylog.Log.Debug("users found")
 	return users, nil
 }
 
 func (s *UserService) GetByLogin(login string) (*model.User, error) {
-	user := new(model.User)
-
-	userSQL := `SELECT * FROM users WHERE login = $1`
-	row := s.db.QueryRowx(userSQL, login)
-	err := row.StructScan(user)
+	mylog.Log.WithField("login", login).Info("GetByLogin(login) User")
+	u := new(model.User)
+	u.Login = login
+	userSQL := `
+		SELECT
+			bio,
+			created_at,
+			email,
+			id,
+			name,
+			password,
+			primary_email,
+			updated_at
+		FROM account
+		WHERE login = $1
+	`
+	row := s.db.QueryRow(userSQL, login)
+	err := row.Scan(&u.Bio, &u.CreatedAt, &u.Email, &u.ID, &u.Name, &u.Password, &u.PrimaryEmail, &u.UpdatedAt)
 	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("GetByLogin(%v)", login)
-		return nil, err
+		switch err {
+		case sql.ErrNoRows:
+			return u, nil
+		default:
+			mylog.Log.WithField("error", err).Error("error during scan")
+			return nil, err
+		}
 	}
 
-	roles, err := s.roleSvc.GetByUserId(user.ID)
-	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("GetByLogin(%v)", login)
-		return nil, err
-	}
-	user.Roles = roles
+	// roles, err := s.roleSvc.GetByUserId(user.ID)
+	// if err != nil {
+	//   mylog.Log.WithFields(logrus.Fields{
+	//     "func":  "GetByLogin",
+	//     "error": err,
+	//   }).Error("failed to get user roles")
+	//   return nil, err
+	// }
+	// user.Roles = roles
 
-	mylog.Log.WithField("user", user).Debugf("GetByLogin(%v)", login)
-	return user, nil
+	mylog.Log.Debug("user found")
+	return u, nil
 }
 
 type CreateUserInput struct {
-	Bio      string
+	Email    string
 	Login    string
 	Password string
 }
@@ -104,32 +186,54 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 	userID := attr.NewId("User")
 	password := passwd.New(input.Password)
 	if ok := password.CheckStrength(passwd.VeryWeak); !ok {
-		mylog.Log.WithField(
-			"error", "password failed strength check",
-		).Errorf("Create(%+v)", input)
-		return new(model.User), errors.New("Password too weak")
+		mylog.Log.Error("password failed strength check")
+		return new(model.User), errors.New("password too weak")
 	}
 	pwdHash, err := password.Hash()
 	if err != nil {
 		mylog.Log.WithField("error", err).Errorf("Create(%+v)", input)
 		return nil, err
 	}
-	user := model.User{
-		Bio:      input.Bio,
-		ID:       userID.String(),
-		Login:    input.Login,
-		Password: pwdHash,
-	}
 
-	userSQL := `INSERT INTO users (id, login, password) VALUES (:id, :login, :password)`
-	_, err = s.db.NamedExec(userSQL, user)
+	u := new(model.User)
+	userSQL := `
+		INSERT INTO account (id, primary_email, login, password)
+		VALUES ($1, $2, $3, $4)
+		RETURNING
+			bio,
+			created_at,
+			email,
+			id,
+			login,
+			name,
+			password,
+			primary_email,
+			updated_at
+	`
+	row := s.db.QueryRow(userSQL, userID.String(), input.Email, input.Login, pwdHash)
+	err = row.Scan(
+		&u.Bio,
+		&u.CreatedAt,
+		&u.Email,
+		&u.ID,
+		&u.Login,
+		&u.Name,
+		&u.Password,
+		&u.PrimaryEmail,
+		&u.UpdatedAt,
+	)
 	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("Create(%+v)", input)
-		return nil, err
+		switch err {
+		case sql.ErrNoRows:
+			return u, nil
+		default:
+			mylog.Log.WithField("error", err).Errorf("error during scan")
+			return nil, err
+		}
 	}
 
-	mylog.Log.WithField("user", user).Debugf("Create(%+v)", input)
-	return &user, nil
+	mylog.Log.Debug("user created")
+	return u, nil
 }
 
 func (s *UserService) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {

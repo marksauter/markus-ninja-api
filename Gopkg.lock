@@ -88,6 +88,19 @@
   revision = "ce762577cbd55b7431607a3031cd4a9a1460248f"
 
 [[projects]]
+  name = "github.com/jackc/pgx"
+  packages = [
+    ".",
+    "chunkreader",
+    "internal/sanitize",
+    "pgio",
+    "pgproto3",
+    "pgtype"
+  ]
+  revision = "da3231b0b66e2e74cdb779f1d46c5e958ba8be27"
+  version = "v3.1.0"
+
+[[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   revision = "0b12d6b5"
@@ -155,6 +168,12 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
   revision = "feef513b9575b32f84bafa580aad89b011259019"
@@ -216,6 +235,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "903cf12d6bc6f3ca55a619b1d4c8ff6f73c0a26b27b0fd114791a96728e99590"
+  inputs-digest = "00f947d883b6a698931b779386e16d724fbca4ed0d44276bcc03096c02081ee2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -9,5 +9,5 @@ type Query {
   viewer: User!
 }
 type Mutation {
-  createUser(login: String!, password: String!): User
+  createUser(email: String!, login: String!, password: String!): User
 }
