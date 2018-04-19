@@ -1,8 +1,6 @@
 package passwd
 
 import (
-	"log"
-
 	"github.com/nbutton23/zxcvbn-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,6 +25,10 @@ func New(password string) *Password {
 	return &Password{value: []byte(password)}
 }
 
+func (p *Password) String() string {
+	return "*****"
+}
+
 func (p *Password) Hash() ([]byte, error) {
 	if p.hash == nil {
 		hash, err := bcrypt.GenerateFromPassword(p.value, bcrypt.DefaultCost)
@@ -38,13 +40,8 @@ func (p *Password) Hash() ([]byte, error) {
 	return p.hash, nil
 }
 
-func (p *Password) CompareToHash(hash []byte) bool {
-	err := bcrypt.CompareHashAndPassword(hash, p.value)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	return true
+func (p *Password) CompareToHash(hash []byte) error {
+	return bcrypt.CompareHashAndPassword(hash, p.value)
 }
 
 func (p *Password) CheckStrength(s PasswordStrength) bool {

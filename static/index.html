@@ -41,6 +41,7 @@
         super(props);
 
         this.state = {
+          error: null,
           login: "",
           password: "",
         };
@@ -67,10 +68,16 @@
           } catch (error) {
             return responseBody;
           }
-        }).then(function (data) {
+        }).then((data) => {
+          if (data.error) {
+            this.setState({
+              error: data.error_description,
+            });
+            return;
+          }
           window.sessionStorage.setItem("access_token", data.access_token);
-          window.location.replace("/graphiql")
-          return
+          window.location.replace("/graphiql");
+          return;
         });
       }
 
@@ -119,7 +126,10 @@
           React.createElement("button", {
             className: "LoginForm__submit",
             type: "submit"
-          }, "Login")
+          }, "Login"),
+          React.createElement("span", {
+            className: "LoginForm__error"
+          }, this.state.error)
         );
       }
     }

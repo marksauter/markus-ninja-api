@@ -42,20 +42,26 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		token, err := myjwt.JWTFromRequest(req)
 		if err != nil {
-			response := myhttp.InternalServerErrorResponse(err.Error())
-			myhttp.WriteResponseTo(rw, response)
+			response := myhttp.ErrorResponse{
+				Error:            myhttp.Unauthorized,
+				ErrorDescription: err.Error(),
+			}
+			myhttp.WriteResponseTo(rw, &response)
+			return
 		}
 
 		payload, err := a.AuthSvc.ValidateJWT(token)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
+			return
 		}
 
 		user, err := a.UserRepo.Get(payload.Sub)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
+			return
 		}
 
 		ctx := myctx.User.NewContext(req.Context(), user)

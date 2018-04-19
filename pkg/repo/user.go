@@ -32,7 +32,7 @@ func (r *UserRepo) checkConnection() bool {
 
 func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
+		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
 	return r.cxn.Create(input)
@@ -40,7 +40,7 @@ func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
 
 func (r *UserRepo) Get(id string) (*model.User, error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
+		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
 	return r.cxn.Get(id)
@@ -48,7 +48,7 @@ func (r *UserRepo) Get(id string) (*model.User, error) {
 
 func (r *UserRepo) GetMany(ids *[]string) ([]*model.User, []error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
+		mylog.Log.Error("user connection closed")
 		return nil, []error{ErrConnClosed}
 	}
 	return r.cxn.GetMany(ids)
@@ -56,7 +56,7 @@ func (r *UserRepo) GetMany(ids *[]string) ([]*model.User, []error) {
 
 func (r *UserRepo) GetByLogin(login string) (*model.User, error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
+		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
 	return r.cxn.GetByLogin(login)
@@ -64,7 +64,7 @@ func (r *UserRepo) GetByLogin(login string) (*model.User, error) {
 
 func (r *UserRepo) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.WithField("repo", "UserRepo").Error(ErrConnClosed)
+		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
 	return r.cxn.VerifyCredentials(userCredentials)

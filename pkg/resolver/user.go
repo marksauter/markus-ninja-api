@@ -1,10 +1,13 @@
 package resolver
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 )
 
@@ -42,6 +45,23 @@ func (r *userResolver) Email() (email *string, err error) {
 
 func (r *userResolver) ID() graphql.ID {
 	return graphql.ID(r.u.ID)
+}
+
+func (r *userResolver) IsSiteAdmin() bool {
+	for _, role := range r.u.Roles {
+		if role == "admin" {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
+	user, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	return user.ID == r.u.ID, nil
 }
 
 func (r *userResolver) Login() *string {

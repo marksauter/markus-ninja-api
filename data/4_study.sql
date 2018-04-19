@@ -5,7 +5,7 @@ CREATE TABLE study(
   published_at  TIMESTAMP,
   description   TEXT,
   name          TEXT,
-  CONSTRAINT lesson_comment_user_id_fkey FOREIGN KEY (user_id)
+  FOREIGN KEY (user_id)
     REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE NO ACTION
+    ON UPDATE NO ACTION ON DELETE CASCADE
 );

@@ -14,6 +14,12 @@ type User implements Node, UniformResourceLocatable {
 
   id: ID!
 
+  # Whether or not this user is a site administrator.
+  isSiteAdmin: Boolean!
+
+  # Whether or not this user is the viewing user.
+  isViewer: Boolean!
+
   # The username used to login.
   login: String
 

@@ -16,7 +16,7 @@ type User struct {
 	Password     []byte      `db:"password"`
 	PrimaryEmail string      `db:"primary_email"`
 	UpdatedAt    time.Time   `db:"updated_at"`
-	Roles        []*Role
+	Roles        []string    `db:"roles"`
 }
 
 type UserCredentials struct {

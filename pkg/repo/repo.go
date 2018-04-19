@@ -14,6 +14,7 @@ const (
 )
 
 var ErrConnClosed = errors.New("connection is closed")
+var ErrAccessDenied = errors.New("access denied")
 
 type Repo interface {
 	Open()

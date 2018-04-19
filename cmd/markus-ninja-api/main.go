@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -26,6 +27,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
+	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -55,18 +57,18 @@ func main() {
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
 
-	// r.Handle("/db", CommonMiddleware.ThenFunc(
-	//   func(rw http.ResponseWriter, req *http.Request) {
-	//     // Connect and check the server version
-	//     var version string
-	//     err = db.QueryRow("SELECT VERSION()").Scan(&version)
-	//     if err != nil {
-	//       mylog.Log.Fatal(err)
-	//       return
-	//     }
-	//     fmt.Fprintf(rw, "Connected to: %s", version)
-	//   },
-	// ))
+	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
+		func(rw http.ResponseWriter, req *http.Request) {
+			// Connect and check the server version
+			var version string
+			err = db.QueryRow("SELECT VERSION()").Scan(&version)
+			if err != nil {
+				mylog.Log.Fatal(err)
+				return
+			}
+			fmt.Fprintf(rw, "Connected to: %s", version)
+		},
+	))
 	port := util.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
 	mylog.Log.Fatal(http.ListenAndServe(address, r))

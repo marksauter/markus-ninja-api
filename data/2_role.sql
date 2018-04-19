@@ -6,6 +6,6 @@ CREATE TABLE role(
 
 INSERT INTO role (name)
   VALUES
-    ('admin'),
-    ('member'),
-    ('user');
+    ('ADMIN'),
+    ('MEMBER'),
+    ('USER');
