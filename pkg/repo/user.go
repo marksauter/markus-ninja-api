@@ -35,6 +35,9 @@ func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
+	// get user from context
+	// query permissions for user roles for operation 'Create User'
+	// if permitted create user, and return allowed fields from permission query
 	return r.cxn.Create(input)
 }
 
