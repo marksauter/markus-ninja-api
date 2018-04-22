@@ -38,6 +38,12 @@
   version = "v1.13.26"
 
 [[projects]]
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
+  version = "v1.0"
+
+[[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
   revision = "6333e38ac20b8949a8dd68baa3650f4dee8f39f0"
@@ -106,15 +112,6 @@
   revision = "0b12d6b5"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/jmoiron/sqlx"
-  packages = [
-    ".",
-    "reflectx"
-  ]
-  revision = "2aeb6a910c2b94f2d5eb53d9895d80e27264ec41"
-
-[[projects]]
   name = "github.com/joho/godotenv"
   packages = ["."]
   revision = "a79fa1e548e2c689c241d10173efd51e5d689d5b"
@@ -125,15 +122,6 @@
   name = "github.com/justinas/alice"
   packages = ["."]
   revision = "03f45bd4b7dad4734bc4620e46a35789349abb20"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/lib/pq"
-  packages = [
-    ".",
-    "oid"
-  ]
-  revision = "d34b9ff171c21ad295489235aec8b6626023cd04"
 
 [[projects]]
   branch = "master"
@@ -235,6 +223,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "00f947d883b6a698931b779386e16d724fbca4ed0d44276bcc03096c02081ee2"
+  inputs-digest = "d7fc2382b4e541172d8cd60c0decff418da367fff97914c177abcc93368cea12"
   solver-name = "gps-cdcl"
   solver-version = 1

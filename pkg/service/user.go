@@ -1,7 +1,6 @@
 package service
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 
@@ -68,7 +67,7 @@ func (s *UserService) Get(id string) (*model.User, error) {
 	)
 	if err != nil {
 		switch err {
-		case sql.ErrNoRows:
+		case pgx.ErrNoRows:
 			return u, nil
 		default:
 			mylog.Log.WithField("error", err).Errorf("error during scan")
@@ -178,7 +177,7 @@ func (s *UserService) GetByLogin(login string) (*model.User, error) {
 	)
 	if err != nil {
 		switch err {
-		case sql.ErrNoRows:
+		case pgx.ErrNoRows:
 			return u, nil
 		default:
 			mylog.Log.WithField("error", err).Error("error during scan")
@@ -245,7 +244,7 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 		&u.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return u, nil
 		}
 		mylog.Log.WithField("error", err).Error("error during scan")
@@ -263,7 +262,7 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 		INSERT INTO account_role (user_id, role_id)
 		SELECT DISTINCT a.id, r.id
 		FROM account a
-		INNER JOIN role r ON a.login = $1 AND r.name = 'user' 
+		INNER JOIN role r ON a.login = $1 AND r.name = 'USER' 
 	`
 	_, err = tx.Exec(roleSQL, input.Login)
 	if err != nil {

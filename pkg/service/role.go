@@ -1,6 +1,10 @@
 package service
 
 import (
+	"fmt"
+
+	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/attr"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -12,6 +16,46 @@ type RoleService struct {
 
 func NewRoleService(db *mydb.DB) *RoleService {
 	return &RoleService{db: db}
+}
+
+func (s *RoleService) Create(name string) (*model.Role, error) {
+	mylog.Log.WithField("name", name).Info("Create(name) Role")
+	roleId := attr.NewId("Role")
+	roleSQL := `
+		INSERT INTO role(id, name)
+		VALUES ($1, $2)
+		ON CONFLICT ON CONSTRAINT role_name_key DO NOTHING
+		RETURNING
+			id,
+			name,
+			created_at,
+			updated_at
+	`
+	row := s.db.QueryRow(roleSQL, roleId.String(), name)
+	role := new(model.Role)
+	err := row.Scan(
+		&role.ID,
+		&role.Name,
+		&role.CreatedAt,
+		&role.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return role, nil
+		}
+		mylog.Log.WithField("error", err).Error("error during scan")
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch mydb.PSQLError(pgErr.Code) {
+			default:
+				return nil, err
+			case mydb.UniqueViolation:
+				return nil, fmt.Errorf(`role "%v" already exists`, name)
+			}
+		}
+	}
+
+	mylog.Log.Debug("role created")
+	return role, nil
 }
 
 func (s *RoleService) GetByUserId(userId string) ([]model.Role, error) {

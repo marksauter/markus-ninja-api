@@ -22,6 +22,8 @@ func Open() (*DB, error) {
 		Host:     util.GetRequiredEnv("RDS_HOSTNAME"),
 		Port:     uint16(port),
 		Database: util.GetRequiredEnv("RDS_DB_NAME"),
+		Logger:   mylog.Log,
+		LogLevel: pgx.LogLevelDebug,
 	}
 	pgxConnPoolConfig := pgx.ConnPoolConfig{
 		ConnConfig:     pgxConfig,

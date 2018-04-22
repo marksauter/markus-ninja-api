@@ -22,6 +22,7 @@ import (
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -37,9 +38,13 @@ func main() {
 	util.LoadEnv()
 	db, err := mydb.Open()
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("Unable to connect to database")
+		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
 	}
 	defer db.Close()
+
+	if err = initDB(db); err != nil {
+		mylog.Log.WithField("error", err).Fatal("error initializing database")
+	}
 
 	svcs := service.NewServices(db)
 	repos := repo.NewRepos(svcs)
@@ -72,4 +77,35 @@ func main() {
 	port := util.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
 	mylog.Log.Fatal(http.ListenAndServe(address, r))
+}
+
+func initDB(db *mydb.DB) error {
+	defer func() {
+		if r := recover(); r != nil {
+			mylog.Log.Debug(r)
+		}
+	}()
+	svcs := service.NewServices(db)
+
+	roleNames := []string{"ADMIN", "MEMBER", "USER"}
+
+	for _, name := range roleNames {
+		if _, err := svcs.Role.Create(name); err != nil {
+			mylog.Log.WithError(err).Fatal("error during role creation")
+			return err
+		}
+	}
+
+	modelTypes := []interface{}{
+		new(model.User),
+	}
+
+	for _, model := range modelTypes {
+		if err := svcs.Perm.CreatePermissionSuite(model); err != nil {
+			mylog.Log.WithError(err).Fatal("error during permission suite creation")
+			return err
+		}
+	}
+
+	return nil
 }
