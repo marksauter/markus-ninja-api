@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func (r *RootResolver) Node(args struct {
+func (r *RootResolver) Node(ctx context.Context, args struct {
 	Id string
 }) (*nodeResolver, error) {
 	parsedId, err := attr.ParseId(args.Id)
@@ -18,17 +18,19 @@ func (r *RootResolver) Node(args struct {
 	}
 	switch parsedId.Type() {
 	case "User":
+		// Need to add viewer permissions to repo
+		// This will take care of access to repo functions
 		user, err := r.Repos.User().Get(args.Id)
 		if err != nil {
 			return nil, err
 		}
-		return &nodeResolver{&userResolver{user}}, nil
+		return &nodeResolver{&userResolver{r.Repos.User(), user}}, nil
 	default:
 		return nil, fmt.Errorf(`node(id: "%v") invalid type "%v"`, args.Id, parsedId.Type())
 	}
 }
 
-func (r *RootResolver) Nodes(args struct {
+func (r *RootResolver) Nodes(ctx context.Context, args struct {
 	Ids *[]string
 }) ([]*nodeResolver, error) {
 	nodes := make([]*nodeResolver, len(*args.Ids))
@@ -43,7 +45,7 @@ func (r *RootResolver) Nodes(args struct {
 			if err != nil {
 				return nil, err
 			}
-			nodes[i] = &nodeResolver{&userResolver{user}}
+			nodes[i] = &nodeResolver{&userResolver{r.Repos.User(), user}}
 		default:
 			return nil, fmt.Errorf(`nodes(id: "%v") invalid type "%v"`, id, parsedId.Type())
 		}
@@ -51,14 +53,14 @@ func (r *RootResolver) Nodes(args struct {
 	return nodes, nil
 }
 
-func (r *RootResolver) User(args struct {
+func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
 	user, err := r.Repos.User().GetByLogin(args.Login)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{user}, nil
+	return &userResolver{r.Repos.User(), user}, nil
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
@@ -66,5 +68,5 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	return &userResolver{user}, nil
+	return &userResolver{r.Repos.User(), user}, nil
 }

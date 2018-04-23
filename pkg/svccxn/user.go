@@ -78,7 +78,7 @@ func (r *UserConnection) GetByLogin(login string) (*model.User, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(user.ID), user)
+	r.batchGet.Prime(ctx, dataloader.StringKey(user.Id), user)
 
 	return user, nil
 }

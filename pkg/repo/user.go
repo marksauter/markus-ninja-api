@@ -14,8 +14,9 @@ func NewUserRepo(svc *service.UserService) *UserRepo {
 }
 
 type UserRepo struct {
-	cxn *svccxn.UserConnection
-	svc *service.UserService
+	cxn   *svccxn.UserConnection
+	svc   *service.UserService
+	perms []model.Permission
 }
 
 func (r *UserRepo) Open() {
@@ -24,11 +25,27 @@ func (r *UserRepo) Open() {
 
 func (r *UserRepo) Close() {
 	r.cxn = nil
+	r.perms = nil
+}
+
+func (r *UserRepo) AddPermissions(ps []model.Permission) {
+	r.perms = ps
 }
 
 func (r *UserRepo) checkConnection() bool {
 	return r.cxn != nil
 }
+
+// Model methods
+
+func (r *UserRepo) Bio(u *model.User) (bio *string, err error) {
+	// check repo read permissions for "bio" field
+
+	err = u.Bio.AssignTo(&bio)
+	return
+}
+
+// Service methods
 
 func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
 	if ok := r.checkConnection(); !ok {
@@ -73,6 +90,7 @@ func (r *UserRepo) VerifyCredentials(userCredentials *model.UserCredentials) (*m
 	return r.cxn.VerifyCredentials(userCredentials)
 }
 
+// Middleware
 func (r *UserRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		r.Open()

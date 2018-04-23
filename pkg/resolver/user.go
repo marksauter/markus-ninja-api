@@ -9,17 +9,18 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 var clientURL = "http://localhost:3000"
 
 type userResolver struct {
-	u *model.User
+	repo *repo.UserRepo
+	user *model.User
 }
 
-func (r *userResolver) Bio() (bio *string, err error) {
-	err = r.u.Bio.AssignTo(&bio)
-	return
+func (r *userResolver) Bio() (*string, error) {
+	return r.repo.Bio(r.user)
 }
 
 func (r *userResolver) BioHTML() (mygql.HTML, error) {
@@ -35,21 +36,21 @@ func (r *userResolver) BioHTML() (mygql.HTML, error) {
 }
 
 func (r *userResolver) CreatedAt() (*graphql.Time, error) {
-	return &graphql.Time{r.u.CreatedAt}, nil
+	return &graphql.Time{r.user.CreatedAt}, nil
 }
 
 func (r *userResolver) Email() (email *string, err error) {
-	err = r.u.Email.AssignTo(&email)
+	err = r.user.Email.AssignTo(&email)
 	return
 }
 
 func (r *userResolver) ID() graphql.ID {
-	return graphql.ID(r.u.ID)
+	return graphql.ID(r.user.Id)
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
-	for _, role := range r.u.Roles {
-		if role == "admin" {
+	for _, role := range r.user.Roles {
+		if role == "ADMIN" {
 			return true
 		}
 	}
@@ -61,28 +62,28 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	return user.ID == r.u.ID, nil
+	return user.Id == r.user.Id, nil
 }
 
 func (r *userResolver) Login() *string {
-	return &r.u.Login
+	return &r.user.Login
 }
 
 func (r *userResolver) Name() (name *string, err error) {
-	err = r.u.Name.AssignTo(&name)
+	err = r.user.Name.AssignTo(&name)
 	return
 }
 
 func (r *userResolver) ResourcePath() mygql.URI {
-	uri := fmt.Sprintf("/%s", r.u.Login)
+	uri := fmt.Sprintf("/%s", r.user.Login)
 	return mygql.URI(uri)
 }
 
 func (r *userResolver) UpdatedAt() (*graphql.Time, error) {
-	return &graphql.Time{r.u.UpdatedAt}, nil
+	return &graphql.Time{r.user.UpdatedAt}, nil
 }
 
 func (r *userResolver) URL() mygql.URI {
-	uri := fmt.Sprintf("%s/%s", clientURL, r.u.Login)
+	uri := fmt.Sprintf("%s/%s", clientURL, r.user.Login)
 	return mygql.URI(uri)
 }

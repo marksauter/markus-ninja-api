@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/iancoleman/strcase"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/attr"
@@ -15,8 +16,6 @@ import (
 )
 
 type AccessLevel int64
-type Audience string
-type ModelType string
 
 const (
 	ReadAccess AccessLevel = iota
@@ -25,11 +24,6 @@ const (
 	DeleteAccess
 	DisconnectAccess
 	UpdateAccess
-
-	Authenticated Audience = "AUTHENTICATED"
-	Everyone      Audience = "EVERYONE"
-
-	UserType ModelType = "User"
 )
 
 func (al AccessLevel) String() string {
@@ -67,7 +61,7 @@ func ParseAccessLevel(lvl string) (AccessLevel, error) {
 		return UpdateAccess, nil
 	default:
 		var al AccessLevel
-		return al, fmt.Errorf("not a valid access level: %q", lvl)
+		return al, fmt.Errorf("invalid access level: %q", lvl)
 	}
 }
 
@@ -79,20 +73,114 @@ func (al AccessLevel) Value() (driver.Value, error) {
 	return int64(al), nil
 }
 
+type Audience int64
+
+const (
+	Authenticated Audience = iota
+	Everyone
+)
+
+func (a Audience) String() string {
+	switch a {
+	case Authenticated:
+		return "AUTHENTICATED"
+	case Everyone:
+		return "EVERYONE"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseAudience(aud string) (Audience, error) {
+	switch strings.ToLower(aud) {
+	case "authenticated":
+		return Authenticated, nil
+	case "everyone":
+		return Everyone, nil
+	default:
+		var a Audience
+		return a, fmt.Errorf("invalid audience: %q", aud)
+	}
+}
+
 func (a *Audience) Scan(value interface{}) error {
-	*a = Audience(value.(string))
+	*a = Audience(value.(int64))
 	return nil
 }
 func (a Audience) Value() (driver.Value, error) {
-	return string(a), nil
+	return int64(a), nil
 }
 
-func (mt *ModelType) Scan(value interface{}) error {
-	*mt = ModelType(value.(string))
+type NodeType int64
+
+const (
+	UserType NodeType = iota
+)
+
+func (nt NodeType) String() string {
+	switch nt {
+	case UserType:
+		return "User"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseNodeType(nodeType string) (NodeType, error) {
+	switch strings.ToLower(nodeType) {
+	case "user":
+		return UserType, nil
+	default:
+		var t NodeType
+		return t, fmt.Errorf("invalid node type: %q", nodeType)
+	}
+}
+
+func (nt *NodeType) Scan(value interface{}) error {
+	*nt = NodeType(value.(int64))
 	return nil
 }
-func (mt ModelType) Value() (driver.Value, error) {
-	return string(mt), nil
+func (nt NodeType) Value() (driver.Value, error) {
+	return int64(nt), nil
+}
+
+type Operation struct {
+	accessLevel AccessLevel
+	nodeType    NodeType
+}
+
+var (
+	CreateUser     = Operation{CreateAccess, UserType}
+	DeleteUser     = Operation{DeleteAccess, UserType}
+	ReadUser       = Operation{ReadAccess, UserType}
+	UpdateUser     = Operation{UpdateAccess, UserType}
+	ConnectUser    = Operation{ConnectAccess, UserType}
+	DisconnectUser = Operation{DisconnectAccess, UserType}
+)
+
+func (o Operation) String() string {
+	return o.accessLevel.String() + " " + o.nodeType.String()
+}
+
+func ParseOperation(operation string) (Operation, error) {
+	var o Operation
+
+	parsedOperation := strings.SplitN(strings.ToLower(operation), " ", 2)
+	if len(parsedOperation) != 2 {
+		return o, fmt.Errorf("invalid operation: %q", operation)
+	}
+	accessLevel, err := ParseAccessLevel(parsedOperation[0])
+	if err != nil {
+		return o, fmt.Errorf("invalid operation: %v", err)
+	}
+	o.accessLevel = accessLevel
+	nodeType, err := ParseNodeType(parsedOperation[1])
+	if err != nil {
+		return o, fmt.Errorf("invalid operation: %v", err)
+	}
+	o.nodeType = nodeType
+
+	return o, nil
 }
 
 var accessLevelsWithFields = []AccessLevel{
@@ -117,29 +205,36 @@ func NewPermissionService(db *mydb.DB) *PermissionService {
 func (s *PermissionService) Create(
 	accessLevel AccessLevel,
 	audience Audience,
-	mType ModelType,
+	mType NodeType,
 	field string,
 ) (*model.Permission, error) {
 	return nil, nil
 }
 
-func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
-	mName := structs.Name(model)
-	mylog.Log.WithField("model", mName).Info("CreatePermissionSuite(model)")
+// Creates a suite of permissions for the passed node.
+//	- permissions for Create/Read/Update access for each field in node.
+//  - permissions for Connect/Disconnect/Delete.
+// Defaults audience to "AUTHENTICATED"
+func (s *PermissionService) CreatePermissionSuite(node interface{}) error {
+	mType, err := ParseNodeType(structs.Name(node))
+	mylog.Log.WithField(
+		"node",
+		mType.String(),
+	).Info("CreatePermissionSuite(node)")
 
-	// mType := ModelType(mName)
-	fields := structs.Names(model)
+	fields := structs.Names(node)
 	n := len(fields)*len(accessLevelsWithFields) + len(accessLevelsWithoutFields)
 	permissions := make([][]interface{}, n)
 	i := 0
 	field := pgtype.Text{}
 	for _, al := range accessLevelsWithFields {
 		for _, f := range fields {
-			field.Set(f)
+			field.Set(strcase.ToSnake(f))
 			permissions[i] = []interface{}{
 				attr.NewId("Permission").String(),
 				al.String(),
-				mName,
+				mType.String(),
+				Authenticated.String(),
 				field.Get(),
 			}
 			i += 1
@@ -150,7 +245,8 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		permissions[i] = []interface{}{
 			attr.NewId("Permission").String(),
 			al.String(),
-			mName,
+			mType.String(),
+			Authenticated.String(),
 			field.Get(),
 		}
 		i += 1
@@ -158,7 +254,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 
 	copyCount, err := s.db.CopyFrom(
 		pgx.Identifier{"permission"},
-		[]string{"id", "access_level", "type", "field"},
+		[]string{"id", "access_level", "type", "audience", "field"},
 		pgx.CopyFromRows(permissions),
 	)
 	if err != nil {
@@ -174,7 +270,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		return err
 	}
 
-	mylog.Log.Infof("created %v permissions for type %v", copyCount, mName)
+	mylog.Log.Infof("created %v permissions for type %v", copyCount, mType.String())
 	return nil
 }
 
@@ -205,7 +301,7 @@ func (s *PermissionService) GetByRoleName(
 	for i := 0; rows.Next(); i++ {
 		p := new(model.Permission)
 		err := rows.Scan(
-			&p.ID,
+			&p.Id,
 			&p.AccessLevel,
 			&p.Field,
 			&p.Type,
@@ -226,4 +322,69 @@ func (s *PermissionService) GetByRoleName(
 
 	mylog.Log.Debug("permissions found")
 	return permissions, nil
+}
+
+func (s *PermissionService) Update(permissionId string, a Audience) (*model.Permission, error) {
+	permissionSQL := `
+		UPDATE permission
+		SET audience = $1
+		WHERE id = $2
+		RETURNING
+			id,
+			access_level,
+			audience,
+			field,
+			type,
+			created_at,
+			updated_at
+	`
+	p := new(model.Permission)
+	row := s.db.QueryRow(permissionSQL, a.String(), permissionId)
+	err := row.Scan(
+		&p.Id,
+		&p.AccessLevel,
+		&p.Audience,
+		&p.Field,
+		&p.Type,
+		&p.CreatedAt,
+		&p.UpdatedAt,
+	)
+	if err != nil {
+		switch err {
+		case pgx.ErrNoRows:
+			return p, fmt.Errorf(`permissions with id "%v" not found`)
+		default:
+			mylog.Log.WithError(err).Error("error during scan")
+			return nil, err
+		}
+	}
+
+	return p, nil
+}
+
+func (s *PermissionService) UpdateOperationForFields(
+	o Operation,
+	fields []string,
+	a Audience,
+) error {
+	permissionSQL := `
+		UPDATE permission
+		SET audience = $1
+		WHERE access_level = $2
+			AND type = $3
+			AND field = ANY($4)
+	`
+	_, err := s.db.Exec(
+		permissionSQL,
+		a.String(),
+		o.accessLevel.String(),
+		o.nodeType.String(),
+		fields,
+	)
+	if err != nil {
+		return err
+	}
+
+	mylog.Log.Infof("made %v permissions public for fields %v", o, fields)
+	return nil
 }

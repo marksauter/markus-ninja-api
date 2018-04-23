@@ -94,6 +94,12 @@
   revision = "ce762577cbd55b7431607a3031cd4a9a1460248f"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/iancoleman/strcase"
+  packages = ["."]
+  revision = "d19238534019cf63623986540a3b6d557d4b4b42"
+
+[[projects]]
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -223,6 +229,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d7fc2382b4e541172d8cd60c0decff418da367fff97914c177abcc93368cea12"
+  inputs-digest = "e24617086df023b030bad47b6fdb7e4284aaf9e274367740a7f6953fd1ff660b"
   solver-name = "gps-cdcl"
   solver-version = 1

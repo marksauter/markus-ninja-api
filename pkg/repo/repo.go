@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -19,6 +20,7 @@ var ErrAccessDenied = errors.New("access denied")
 type Repo interface {
 	Open()
 	Close()
+	AddPermissions([]model.Permission)
 	checkConnection() bool
 }
 

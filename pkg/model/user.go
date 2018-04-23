@@ -10,7 +10,7 @@ type User struct {
 	Bio          pgtype.Text `db:"bio"`
 	CreatedAt    time.Time   `db:"created_at"`
 	Email        pgtype.Text `db:"email"`
-	ID           string      `db:"id"`
+	Id           string      `db:"id"`
 	Login        string      `db:"login"`
 	Name         pgtype.Text `db:"name"`
 	Password     []byte      `db:"password"`

@@ -9,8 +9,8 @@ import (
 type Study struct {
 	CreatedAt   time.Time        `db:"created_at"`
 	Description pgtype.Text      `db:"description"`
-	ID          string           `db:"id"`
+	Id          string           `db:"id"`
 	Name        string           `db:"name"`
 	PublishedAt pgtype.Timestamp `db:"published_at"`
-	UserID      string           `db:"user_id"`
+	UserId      string           `db:"user_id"`
 }

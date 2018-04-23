@@ -34,7 +34,7 @@ func (s *RoleService) Create(name string) (*model.Role, error) {
 	row := s.db.QueryRow(roleSQL, roleId.String(), name)
 	role := new(model.Role)
 	err := row.Scan(
-		&role.ID,
+		&role.Id,
 		&role.Name,
 		&role.CreatedAt,
 		&role.UpdatedAt,
@@ -78,7 +78,7 @@ func (s *RoleService) GetByUserId(userId string) ([]model.Role, error) {
 	}
 	for i := 0; rows.Next(); i++ {
 		r := roles[i]
-		err := rows.Scan(&r.ID, &r.Name, &r.CreatedAt)
+		err := rows.Scan(&r.Id, &r.Name, &r.CreatedAt)
 		if err != nil {
 			mylog.Log.WithField("error", err).Error("error during scan")
 			return nil, err

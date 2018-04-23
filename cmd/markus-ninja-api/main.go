@@ -22,6 +22,7 @@ import (
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -32,6 +33,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -60,6 +62,7 @@ func main() {
 	r.Handle("/", route.Index())
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs.Auth, repos))
 	r.Handle("/graphiql", route.GraphiQL())
+	r.Handle("/permissions", route.Permissions())
 	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
@@ -106,6 +109,60 @@ func initDB(db *mydb.DB) error {
 			return err
 		}
 	}
+
+	publicReadUserFields := []string{
+		"bio",
+		"email",
+		"id",
+		"login",
+		"name",
+	}
+	err := svcs.Perm.UpdateOperationForFields(
+		service.ReadUser,
+		publicReadUserFields,
+		service.Everyone,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("error during permission update")
+		return err
+	}
+
+	adminPermissionsSQL := `
+		SELECT
+			r.id role_id,
+			p.id permission_id
+		FROM
+			role r
+		INNER JOIN permission p ON true
+		WHERE r.name = 'ADMIN'
+	`
+	rows, err := db.Query(adminPermissionsSQL)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("Unexpected: no permissions found")
+		}
+		return err
+	}
+	adminPermissionsCount, err := db.CopyFrom(
+		pgx.Identifier{"role_permission"},
+		[]string{"role_id", "permission_id"},
+		rows,
+	)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch mydb.PSQLError(pgErr.Code) {
+			default:
+				return err
+			case mydb.UniqueViolation:
+				mylog.Log.Warn("role permissions already created")
+				return nil
+			}
+		}
+		return err
+	}
+	mylog.Log.WithFields(logrus.Fields{
+		"n": adminPermissionsCount,
+	}).Infof("created role permissions for ADMIN")
 
 	return nil
 }

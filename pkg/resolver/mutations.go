@@ -9,5 +9,5 @@ func (r *RootResolver) CreateUser(args service.CreateUserInput) (*userResolver, 
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{user}, nil
+	return &userResolver{r.Repos.User(), user}, nil
 }

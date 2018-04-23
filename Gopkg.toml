@@ -104,3 +104,7 @@
 [[constraint]]
   name = "github.com/fatih/structs"
   version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/iancoleman/strcase"
