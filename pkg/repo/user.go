@@ -1,10 +1,13 @@
 package repo
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/svccxn"
 )
@@ -16,7 +19,7 @@ func NewUserRepo(svc *service.UserService) *UserRepo {
 type UserRepo struct {
 	cxn   *svccxn.UserConnection
 	svc   *service.UserService
-	perms []model.Permission
+	perms map[string][]string
 }
 
 func (r *UserRepo) Open() {
@@ -28,58 +31,98 @@ func (r *UserRepo) Close() {
 	r.perms = nil
 }
 
-func (r *UserRepo) AddPermissions(ps []model.Permission) {
-	r.perms = ps
+func (r *UserRepo) AddPermission(p perm.QueryPermission) {
+	if r.perms == nil {
+		r.perms = make(map[string][]string)
+	}
+	r.perms[p.Operation.String()] = p.Fields
+}
+
+func (r *UserRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
+	fields, ok := r.perms[o.String()]
+	checkField := func(field string) bool {
+		for _, f := range fields {
+			if f == field {
+				return true
+			}
+		}
+		return false
+	}
+	return checkField, ok
 }
 
 func (r *UserRepo) checkConnection() bool {
 	return r.cxn != nil
 }
 
-// Model methods
-
-func (r *UserRepo) Bio(u *model.User) (bio *string, err error) {
-	// check repo read permissions for "bio" field
-
-	err = u.Bio.AssignTo(&bio)
-	return
-}
-
 // Service methods
 
-func (r *UserRepo) Create(input *service.CreateUserInput) (*model.User, error) {
+func (r *UserRepo) Create(input *service.CreateUserInput) (*resolver.User, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.CreateUser)
+	if !ok {
+		return nil, errors.New("access denied")
+	}
 	if ok := r.checkConnection(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	// get user from context
-	// query permissions for user roles for operation 'Create User'
-	// if permitted create user, and return allowed fields from permission query
-	return r.cxn.Create(input)
+	user, err := r.cxn.Create(input)
+	if err != nil {
+		return nil, err
+	}
+	return r.Get(user.Id)
 }
 
-func (r *UserRepo) Get(id string) (*model.User, error) {
+func (r *UserRepo) Get(id string) (*resolver.User, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadUser)
+	if !ok {
+		return nil, errors.New("access denied")
+	}
 	if ok := r.checkConnection(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	return r.cxn.Get(id)
-}
-
-func (r *UserRepo) GetMany(ids *[]string) ([]*model.User, []error) {
-	if ok := r.checkConnection(); !ok {
-		mylog.Log.Error("user connection closed")
-		return nil, []error{ErrConnClosed}
+	user, err := r.cxn.Get(id)
+	if err != nil {
+		return nil, err
 	}
-	return r.cxn.GetMany(ids)
+	return &resolver.User{fieldPermFn, user}, nil
 }
 
-func (r *UserRepo) GetByLogin(login string) (*model.User, error) {
+// func (r *UserRepo) GetMany(ids *[]string) ([]resolver.User, []error) {
+//   fieldPermFn, ok := r.CheckPermission(perm.ReadUser)
+//   if !ok {
+//     return nil, errors.New("access denied")
+//   }
+//   if ok := r.checkConnection(); !ok {
+//     mylog.Log.Error("user connection closed")
+//     return nil, []error{ErrConnClosed}
+//   }
+//   users, err := r.cxn.GetMany(ids)
+//   if err != nil {
+//     return nil, err
+//   }
+//   userResolvers = make([]resolver.User, len(ids))
+//   for i, user := range users {
+//     userResolvers[i] = resolver.User{fieldPermFn, user}
+//   }
+//   return r.cxn.GetMany(ids)
+// }
+
+func (r *UserRepo) GetByLogin(login string) (*resolver.User, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadUser)
+	if !ok {
+		return nil, errors.New("access denied")
+	}
 	if ok := r.checkConnection(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	return r.cxn.GetByLogin(login)
+	user, err := r.cxn.GetByLogin(login)
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.User{fieldPermFn, user}, nil
 }
 
 func (r *UserRepo) VerifyCredentials(userCredentials *model.UserCredentials) (*model.User, error) {

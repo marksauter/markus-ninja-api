@@ -5,10 +5,10 @@ CREATE TYPE node_type AS ENUM('Label', 'Lesson', 'LessonComment', 'Study', 'User
 CREATE TABLE IF NOT EXISTS permission(
   id            VARCHAR(45)   PRIMARY KEY,
   access_level  access_level  NOT NULL,
+  audience      audience      NOT NULL,
   type          node_type     NOT NULL,
   created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  audience      audience,
   field         TEXT
 );
 

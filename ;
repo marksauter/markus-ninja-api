@@ -9,20 +9,19 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 var clientURL = "http://localhost:3000"
 
-type User = userResolver
-
 type userResolver struct {
-	checkFieldPermission repo.FieldPermissionFunc
-	user                 *model.User
+	repo *repo.UserRepo
+	user *model.User
 }
 
 func (r *userResolver) Bio() (*string, error) {
-	if ok := r.checkFieldPermission("bio"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("bio"); !ok {
 		return nil, errors.New("access denied")
 	}
 	return r.repo.Bio(r.user)
@@ -41,14 +40,14 @@ func (r *userResolver) BioHTML() (mygql.HTML, error) {
 }
 
 func (r *userResolver) CreatedAt() (*graphql.Time, error) {
-	if ok := r.checkFieldPermission("created_at"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("created_at"); !ok {
 		return nil, errors.New("access denied")
 	}
 	return &graphql.Time{r.user.CreatedAt}, nil
 }
 
 func (r *userResolver) Email() (email *string, err error) {
-	if ok := r.checkFieldPermission("email"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("email"); !ok {
 		return nil, errors.New("access denied")
 	}
 	err = r.user.Email.AssignTo(&email)
@@ -56,12 +55,11 @@ func (r *userResolver) Email() (email *string, err error) {
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {
-	var id graphql.ID
-	if ok := r.checkFieldPermission("email"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("id"); !ok {
+		var id graphql.ID
 		return id, errors.New("access denied")
 	}
-	id = r.user.Id
-	return id, nil
+	return graphql.ID(r.user.Id), nil
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
@@ -82,14 +80,14 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 }
 
 func (r *userResolver) Login() (*string, error) {
-	if ok := r.checkFieldPermission("login"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("login"); !ok {
 		return nil, errors.New("access denied")
 	}
 	return &r.user.Login, nil
 }
 
 func (r *userResolver) Name() (name *string, err error) {
-	if ok := r.checkFieldPermission("name"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser)("name"); !ok {
 		return nil, errors.New("access denied")
 	}
 	err = r.user.Name.AssignTo(&name)
@@ -97,7 +95,7 @@ func (r *userResolver) Name() (name *string, err error) {
 }
 
 func (r *userResolver) PrimaryEmail() (*string, error) {
-	if ok := r.checkFieldPermission("primary_email"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser, "primary_email"); !ok {
 		return nil, errors.New("access denied")
 	}
 	return &r.user.PrimaryEmail, nil
@@ -109,7 +107,7 @@ func (r *userResolver) ResourcePath() mygql.URI {
 }
 
 func (r *userResolver) UpdatedAt() (*graphql.Time, error) {
-	if ok := r.checkFieldPermission("updated_at"); !ok {
+	if ok := r.repo.CheckPermission(perm.ReadUser, "updated_at"); !ok {
 		return nil, errors.New("access denied")
 	}
 	return &graphql.Time{r.user.UpdatedAt}, nil

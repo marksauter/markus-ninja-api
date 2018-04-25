@@ -4,23 +4,27 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/marksauter/markus-ninja-api/pkg/model"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type key string
 
 const (
+	permRepoKey key = "perm"
 	userRepoKey key = "user"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
 var ErrAccessDenied = errors.New("access denied")
 
+type FieldPermissionFunc = func(field string) bool
+
 type Repo interface {
 	Open()
 	Close()
-	AddPermissions([]model.Permission)
+	AddPermission(perm.QueryPermission)
+	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
 	checkConnection() bool
 }
 
@@ -31,6 +35,7 @@ type Repos struct {
 func NewRepos(svcs *service.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
+			permRepoKey: NewPermRepo(svcs.Perm),
 			userRepoKey: NewUserRepo(svcs.User),
 		},
 	}
@@ -48,9 +53,14 @@ func (r *Repos) CloseAll() {
 	}
 }
 
+func (r *Repos) Perm() *PermRepo {
+	repo, _ := r.lookup[permRepoKey].(*PermRepo)
+	return repo
+}
+
 func (r *Repos) User() *UserRepo {
-	userRepo, _ := r.lookup[userRepoKey].(*UserRepo)
-	return userRepo
+	repo, _ := r.lookup[userRepoKey].(*UserRepo)
+	return repo
 }
 
 func (r *Repos) Use(h http.Handler) http.Handler {

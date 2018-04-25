@@ -26,6 +26,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
@@ -90,7 +91,7 @@ func initDB(db *mydb.DB) error {
 	}()
 	svcs := service.NewServices(db)
 
-	roleNames := []string{"ADMIN", "MEMBER", "USER"}
+	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 
 	for _, name := range roleNames {
 		if _, err := svcs.Role.Create(name); err != nil {
@@ -118,9 +119,9 @@ func initDB(db *mydb.DB) error {
 		"name",
 	}
 	err := svcs.Perm.UpdateOperationForFields(
-		service.ReadUser,
+		perm.ReadUser,
 		publicReadUserFields,
-		service.Everyone,
+		perm.Everyone,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("error during permission update")
@@ -155,14 +156,81 @@ func initDB(db *mydb.DB) error {
 				return err
 			case mydb.UniqueViolation:
 				mylog.Log.Warn("role permissions already created")
-				return nil
 			}
 		}
-		return err
 	}
 	mylog.Log.WithFields(logrus.Fields{
 		"n": adminPermissionsCount,
-	}).Infof("created role permissions for ADMIN")
+	}).Infof("role permissions created for ADMIN")
 
+	selfPermissionsSQL := `
+		SELECT
+			r.id role_id,
+			p.id permission_id
+		FROM
+			role r
+		INNER JOIN permission p ON p.type = 'User'
+		WHERE r.name = 'SELF'
+	`
+	rows, err = db.Query(selfPermissionsSQL)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("Unexpected: no permissions found")
+		}
+		return err
+	}
+	selfPermissionsCount, err := db.CopyFrom(
+		pgx.Identifier{"role_permission"},
+		[]string{"role_id", "permission_id"},
+		rows,
+	)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch mydb.PSQLError(pgErr.Code) {
+			default:
+				return err
+			case mydb.UniqueViolation:
+				mylog.Log.Warn("role permissions already created")
+			}
+		}
+	}
+	mylog.Log.WithFields(logrus.Fields{
+		"n": selfPermissionsCount,
+	}).Infof("role permissions created for SELF")
+
+	userPermissionsSQL := `
+		SELECT
+			r.id role_id,
+			p.id permission_id
+		FROM
+			role r
+		INNER JOIN permission p ON p.audience = 'EVERYONE'
+		WHERE r.name = 'USER'
+	`
+	rows, err = db.Query(userPermissionsSQL)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("Unexpected: no permissions found")
+		}
+		return err
+	}
+	userPermissionsCount, err := db.CopyFrom(
+		pgx.Identifier{"role_permission"},
+		[]string{"role_id", "permission_id"},
+		rows,
+	)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch mydb.PSQLError(pgErr.Code) {
+			default:
+				return err
+			case mydb.UniqueViolation:
+				mylog.Log.Warn("role permissions already created")
+			}
+		}
+	}
+	mylog.Log.WithFields(logrus.Fields{
+		"n": userPermissionsCount,
+	}).Infof("role permissions created for USER")
 	return nil
 }

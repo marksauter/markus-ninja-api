@@ -7,11 +7,17 @@ import (
 
 	"github.com/marksauter/markus-ninja-api/pkg/attr"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 func (r *RootResolver) Node(ctx context.Context, args struct {
 	Id string
 }) (*nodeResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		mylog.Log.Error("viewer not found")
+	}
 	parsedId, err := attr.ParseId(args.Id)
 	if err != nil {
 		return nil, fmt.Errorf("node(%v) %v", args.Id, err)
@@ -20,6 +26,7 @@ func (r *RootResolver) Node(ctx context.Context, args struct {
 	case "User":
 		// Need to add viewer permissions to repo
 		// This will take care of access to repo functions
+		r.Repos.Perm().GetQueryPermission(perm.ReadUser, viewer.Roles...)
 		user, err := r.Repos.User().Get(args.Id)
 		if err != nil {
 			return nil, err
@@ -56,6 +63,23 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	roles := viewer.Roles
+	if viewer.Login == args.Login {
+		roles = append(roles, "SELF")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadUser,
+		roles...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, errors.New("access denied")
+	}
+	r.Repos.User().AddPermission(*queryPerm)
 	user, err := r.Repos.User().GetByLogin(args.Login)
 	if err != nil {
 		return nil, err
@@ -64,9 +88,18 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
-	user, ok := myctx.User.FromContext(ctx)
+	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	return &userResolver{r.Repos.User(), user}, nil
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadUser,
+		append(viewer.Roles, "SELF")...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, errors.New("access denied")
+	}
+	r.Repos.User().AddPermission(*queryPerm)
+	return &userResolver{r.Repos.User(), viewer}, nil
 }
