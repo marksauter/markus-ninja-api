@@ -19,11 +19,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
-	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -39,7 +39,18 @@ import (
 
 func main() {
 	util.LoadEnv()
-	db, err := mydb.Open()
+	dbPort, err := strconv.ParseUint(util.GetRequiredEnv("RDS_PORT"), 10, 16)
+	if err != nil {
+		panic(err)
+	}
+	dbConfig := pgx.ConnConfig{
+		User:     util.GetRequiredEnv("RDS_USERNAME"),
+		Password: util.GetRequiredEnv("RDS_PASSWORD"),
+		Host:     util.GetRequiredEnv("RDS_HOSTNAME"),
+		Port:     uint16(dbPort),
+		Database: util.GetRequiredEnv("RDS_DB_NAME"),
+	}
+	db, err := mydb.Open(dbConfig)
 	if err != nil {
 		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
 	}
@@ -101,7 +112,7 @@ func initDB(db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
-		new(model.User),
+		new(service.UserModel),
 	}
 
 	for _, model := range modelTypes {
@@ -121,6 +132,21 @@ func initDB(db *mydb.DB) error {
 	err := svcs.Perm.UpdateOperationForFields(
 		perm.ReadUser,
 		publicReadUserFields,
+		perm.Everyone,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("error during permission update")
+		return err
+	}
+
+	publicCreateUserFields := []string{
+		"primary_email",
+		"id",
+		"login",
+	}
+	err = svcs.Perm.UpdateOperationForFields(
+		perm.CreateUser,
+		publicCreateUserFields,
 		perm.Everyone,
 	)
 	if err != nil {
@@ -149,14 +175,9 @@ func initDB(db *mydb.DB) error {
 		[]string{"role_id", "permission_id"},
 		rows,
 	)
-	if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch mydb.PSQLError(pgErr.Code) {
-			default:
-				return err
-			case mydb.UniqueViolation:
-				mylog.Log.Warn("role permissions already created")
-			}
+	if pgErr, ok := err.(pgx.PgError); ok {
+		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+			return err
 		}
 	}
 	mylog.Log.WithFields(logrus.Fields{
@@ -184,14 +205,9 @@ func initDB(db *mydb.DB) error {
 		[]string{"role_id", "permission_id"},
 		rows,
 	)
-	if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch mydb.PSQLError(pgErr.Code) {
-			default:
-				return err
-			case mydb.UniqueViolation:
-				mylog.Log.Warn("role permissions already created")
-			}
+	if pgErr, ok := err.(pgx.PgError); ok {
+		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+			return err
 		}
 	}
 	mylog.Log.WithFields(logrus.Fields{
@@ -219,14 +235,9 @@ func initDB(db *mydb.DB) error {
 		[]string{"role_id", "permission_id"},
 		rows,
 	)
-	if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch mydb.PSQLError(pgErr.Code) {
-			default:
-				return err
-			case mydb.UniqueViolation:
-				mylog.Log.Warn("role permissions already created")
-			}
+	if pgErr, ok := err.(pgx.PgError); ok {
+		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+			return err
 		}
 	}
 	mylog.Log.WithFields(logrus.Fields{

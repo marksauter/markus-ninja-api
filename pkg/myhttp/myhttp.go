@@ -8,8 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
-	"github.com/marksauter/markus-ninja-api/pkg/model"
 )
 
 type Response interface {
@@ -34,19 +32,26 @@ func UnmarshalRequestBody(req *http.Request, v interface{}) error {
 	return json.Unmarshal(body, v)
 }
 
-func ValidateBasicAuthHeader(req *http.Request) (*model.UserCredentials, error) {
+type ValidateBasicAuthHeaderOutput struct {
+	Login    string
+	Password string
+}
+
+func ValidateBasicAuthHeader(
+	req *http.Request,
+) (*ValidateBasicAuthHeaderOutput, error) {
 	auth := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
 	if len(auth) != 2 || auth[0] != "Basic" {
-		return nil, errors.New("Invalid credentials")
+		return nil, errors.New("Invalid authorization header")
 	}
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
 	if len(pair) != 2 {
-		return nil, errors.New("Invalid credentials")
+		return nil, errors.New("Invalid authorization header")
 	}
-	userCredentials := model.UserCredentials{
+	output := ValidateBasicAuthHeaderOutput{
 		Login:    pair[0],
 		Password: pair[1],
 	}
-	return &userCredentials, nil
+	return &output, nil
 }

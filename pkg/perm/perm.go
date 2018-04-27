@@ -56,12 +56,18 @@ func ParseAccessLevel(lvl string) (AccessLevel, error) {
 	}
 }
 
-func (al *AccessLevel) Scan(value interface{}) error {
-	*al = AccessLevel(value.(int64))
-	return nil
+func (al *AccessLevel) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case string:
+		*al, err = ParseAccessLevel(v)
+		return
+	default:
+		err = fmt.Errorf("invalid type for access level %T", v)
+		return
+	}
 }
 func (al AccessLevel) Value() (driver.Value, error) {
-	return int64(al), nil
+	return al.String(), nil
 }
 
 type Audience int64
@@ -94,12 +100,19 @@ func ParseAudience(aud string) (Audience, error) {
 	}
 }
 
-func (a *Audience) Scan(value interface{}) error {
-	*a = Audience(value.(int64))
-	return nil
+func (a *Audience) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case string:
+		*a, err = ParseAudience(v)
+		return
+	default:
+		err = fmt.Errorf("invalid type for audience %T", v)
+		return
+	}
 }
+
 func (a Audience) Value() (driver.Value, error) {
-	return int64(a), nil
+	return a.String(), nil
 }
 
 type NodeType int64
@@ -127,12 +140,19 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	}
 }
 
-func (nt *NodeType) Scan(value interface{}) error {
-	*nt = NodeType(value.(int64))
-	return nil
+func (nt *NodeType) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case string:
+		*nt, err = ParseNodeType(v)
+		return
+	default:
+		err = fmt.Errorf("invalid type for node type %T", v)
+		return
+	}
 }
+
 func (nt NodeType) Value() (driver.Value, error) {
-	return int64(nt), nil
+	return nt.String(), nil
 }
 
 type Operation struct {
@@ -174,7 +194,23 @@ func ParseOperation(operation string) (Operation, error) {
 	return o, nil
 }
 
+func (o *Operation) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case string:
+		*o, err = ParseOperation(v)
+		return
+	default:
+		err = fmt.Errorf("invalid type for operation %T", v)
+		return
+	}
+}
+
+func (o Operation) Value() (driver.Value, error) {
+	return o.String(), nil
+}
+
 type QueryPermission struct {
 	Operation Operation
+	Audience  Audience
 	Fields    []string
 }

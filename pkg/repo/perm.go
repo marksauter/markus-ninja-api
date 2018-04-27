@@ -56,7 +56,7 @@ func (r *PermRepo) GetQueryPermission(
 	roles ...string,
 ) (*perm.QueryPermission, error) {
 	if ok := r.checkConnection(); !ok {
-		mylog.Log.Error("perm connection closed")
+		mylog.Log.Error("permission connection closed")
 		return nil, ErrConnClosed
 	}
 	return r.cxn.GetQueryPermission(o, roles...)

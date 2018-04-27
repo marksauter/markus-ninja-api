@@ -1,4 +1,4 @@
-package model
+package service
 
 import (
 	"time"
@@ -6,13 +6,12 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type Lesson struct {
+type LessonComment struct {
 	Body         pgtype.Text      `db:"body"`
 	CreatedAt    time.Time        `db:"created_at"`
 	Id           string           `db:"id"`
 	LastEditedAt time.Time        `db:"last_edited_at"`
-	Number       int              `db:"number"`
+	LessonId     string           `db:"lesson_id"`
 	PublishedAt  pgtype.Timestamp `db:"published_at"`
-	Title        string           `db:"title"`
 	UserId       string           `db:"user_id"`
 }

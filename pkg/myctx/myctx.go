@@ -3,7 +3,7 @@ package myctx
 import (
 	"context"
 
-	"github.com/marksauter/markus-ninja-api/pkg/model"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type key string
@@ -14,11 +14,11 @@ type ctxUser struct{}
 
 var userKey key = "user"
 
-func (c *ctxUser) NewContext(ctx context.Context, u *model.User) context.Context {
+func (c *ctxUser) NewContext(ctx context.Context, u *repo.UserPermit) context.Context {
 	return context.WithValue(ctx, userKey, u)
 }
 
-func (c *ctxUser) FromContext(ctx context.Context) (*model.User, bool) {
-	u, ok := ctx.Value(userKey).(*model.User)
+func (c *ctxUser) FromContext(ctx context.Context) (*repo.UserPermit, bool) {
+	u, ok := ctx.Value(userKey).(*repo.UserPermit)
 	return u, ok
 }

@@ -1,16 +1,16 @@
 # Represents a user.
 type User implements Node, UniformResourceLocatable {
   # The user's public profile bio.
-  bio: String
+  bio: String!
 
   # The user's public profile bio as HTML.
   bioHTML: HTML!
 
   # Identifies the date and time when the object was created.
-  createdAt: Time
+  createdAt: Time!
 
   # The user's public profile email.
-  email: String
+  email: String!
 
   id: ID!
 
@@ -21,19 +21,19 @@ type User implements Node, UniformResourceLocatable {
   isViewer: Boolean!
 
   # The username used to login.
-  login: String
+  login: String!
 
   # The user's public profile name.
-  name: String
+  name: String!
 
   # The user's primary email used to sign up.
-  primaryEmail: String
+  primaryEmail: String!
 
   # The HTTP path for this user.
   resourcePath: URI!
 
   # Identifies the date and time when the object was last updated.
-  updatedAt: Time
+  updatedAt: Time!
 
   # The HTTP URL for this user.
   url: URI!

@@ -1,0 +1,151 @@
+CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TABLE IF EXISTS account CASCADE;
+CREATE TABLE account(
+  id            VARCHAR(45) PRIMARY KEY,
+  login         VARCHAR(255) NOT NULL UNIQUE,
+  primary_email VARCHAR(355) NOT NULL UNIQUE,
+  password      BYTEA NOT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  bio           TEXT,
+  email         TEXT,
+  name          TEXT
+);
+
+CREATE TRIGGER account_updated_at_modtime
+BEFORE UPDATE ON account
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS role CASCADE;
+CREATE TABLE role(
+  id          VARCHAR(45) PRIMARY KEY,
+  name        VARCHAR(45) NOT NULL UNIQUE,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER role_updated_at_modtime
+BEFORE UPDATE ON role
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS account_role;
+CREATE TABLE account_role(
+  user_id     VARCHAR(45),
+  role_id     VARCHAR(45),
+  granted_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, role_id),
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (role_id)
+    REFERENCES role (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Update', 'Delete');
+CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
+CREATE TYPE node_type AS ENUM('Label', 'Lesson', 'LessonComment', 'Study', 'User');
+
+DROP TABLE IF EXISTS permission CASCADE;
+CREATE TABLE IF NOT EXISTS permission(
+  id            VARCHAR(45)   PRIMARY KEY,
+  access_level  access_level  NOT NULL,
+  audience      audience      NOT NULL,
+  type          node_type     NOT NULL,
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  field         TEXT
+);
+
+CREATE UNIQUE INDEX permission_access_level_type_field_key
+ON permission (access_level, type, field)
+WHERE field IS NOT NULL;
+
+CREATE UNIQUE INDEX permission_access_level_type_key
+ON permission (access_level, type)
+WHERE field IS NULL;
+
+CREATE TRIGGER permission_updated_at_modtime
+BEFORE UPDATE ON permission
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS role_permission;
+CREATE TABLE role_permission(
+  role_id       VARCHAR(45),
+  permission_id VARCHAR(45),
+  granted_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (role_id, permission_id),
+  FOREIGN KEY (role_id)
+    REFERENCES role (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (permission_id)
+    REFERENCES permission (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS study CASCADE;
+CREATE TABLE study(
+  id            VARCHAR(45) PRIMARY KEY,
+  user_id       VARCHAR(45) NOT NULL,
+  created_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  published_at  TIMESTAMP,
+  description   TEXT,
+  name          TEXT,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS lesson CASCADE;
+CREATE TABLE lesson(
+  id              VARCHAR(45) PRIMARY KEY,
+  study_id        VARCHAR(45) NOT NULL,    
+  user_id         VARCHAR(45) NOT NULL,
+  created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  last_edited_at  TIMESTAMP,
+  published_at    TIMESTAMP,
+  body            TEXT,
+  number          INT,
+  title           TEXT,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS lesson_comment;
+CREATE TABLE lesson_comment(
+  id              VARCHAR(45) PRIMARY KEY,
+  lesson_id       VARCHAR(45) NOT NULL,
+  user_id         VARCHAR(45) NOT NULL,
+  created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  last_edited_at  TIMESTAMP,
+  published_at    TIMESTAMP,
+  body            TEXT,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS label;
+CREATE TABLE label(
+  id          VARCHAR(45) PRIMARY KEY,
+  name        VARCHAR(45) NOT NULL UNIQUE,
+  created_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+); 
+
+CREATE TRIGGER label_updated_at_modtime
+BEFORE UPDATE ON label
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

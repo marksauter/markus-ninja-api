@@ -4,6 +4,7 @@
 /.container-*
 /.dockerfile-*
 /.env
+/.toml
 /gin-bin
 
 vendor/*

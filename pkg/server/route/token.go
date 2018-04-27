@@ -44,14 +44,19 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	userCredentials, err := myhttp.ValidateBasicAuthHeader(req)
+	validationOutput, err := myhttp.ValidateBasicAuthHeader(req)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	user, err := h.UserRepo.VerifyCredentials(userCredentials)
+	verificationInput := service.VerifyCredentialsInput{
+		Login:    validationOutput.Login,
+		Password: validationOutput.Password,
+	}
+
+	user, err := h.UserRepo.VerifyCredentials(&verificationInput)
 	if err != nil {
 		response := myhttp.InvalidUserPasswordResponse()
 		myhttp.WriteResponseTo(rw, response)

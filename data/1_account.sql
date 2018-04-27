@@ -1,3 +1,10 @@
+CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE TABLE account(
   id            VARCHAR(45) PRIMARY KEY,
   login         VARCHAR(255) NOT NULL UNIQUE,
@@ -10,9 +17,6 @@ CREATE TABLE account(
   name          TEXT
 );
 
-CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
+CREATE TRIGGER account_updated_at_modtime
+BEFORE UPDATE ON account
+FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

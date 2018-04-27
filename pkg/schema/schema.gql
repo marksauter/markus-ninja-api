@@ -4,10 +4,10 @@ schema {
 }
 type Query {
   node(id: ID!): Node
-  nodes(ids: [ID!]): [Node]!
+  nodes(ids: [ID!]!): [Node]!
   user(login: String!): User
   viewer: User!
 }
 type Mutation {
-  createUser(email: String!, login: String!, password: String!): User
+  createUser(input: CreateUserInput!): User
 }

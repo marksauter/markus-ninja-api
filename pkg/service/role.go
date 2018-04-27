@@ -2,13 +2,20 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx"
-	"github.com/marksauter/markus-ninja-api/pkg/attr"
-	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
+
+type RoleModel struct {
+	Id        string    `db:"id"`
+	Name      string    `db:"name"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
 
 type RoleService struct {
 	db *mydb.DB
@@ -18,9 +25,9 @@ func NewRoleService(db *mydb.DB) *RoleService {
 	return &RoleService{db: db}
 }
 
-func (s *RoleService) Create(name string) (*model.Role, error) {
+func (s *RoleService) Create(name string) (*RoleModel, error) {
 	mylog.Log.WithField("name", name).Info("Create(name) Role")
-	roleId := attr.NewId("Role")
+	roleId := oid.New("Role")
 	roleSQL := `
 		INSERT INTO role(id, name)
 		VALUES ($1, $2)
@@ -31,8 +38,8 @@ func (s *RoleService) Create(name string) (*model.Role, error) {
 			created_at,
 			updated_at
 	`
-	row := s.db.QueryRow(roleSQL, roleId.String(), name)
-	role := new(model.Role)
+	row := s.db.QueryRow(roleSQL, roleId, name)
+	role := new(RoleModel)
 	err := row.Scan(
 		&role.Id,
 		&role.Name,
@@ -58,8 +65,8 @@ func (s *RoleService) Create(name string) (*model.Role, error) {
 	return role, nil
 }
 
-func (s *RoleService) GetByUserId(userId string) ([]model.Role, error) {
-	roles := make([]model.Role, 0)
+func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
+	roles := make([]RoleModel, 0)
 
 	roleSQL := `
 		SELECT
@@ -76,6 +83,7 @@ func (s *RoleService) GetByUserId(userId string) ([]model.Role, error) {
 		mylog.Log.WithField("error", err).Error("error during query")
 		return nil, err
 	}
+	defer rows.Close()
 	for i := 0; rows.Next(); i++ {
 		r := roles[i]
 		err := rows.Scan(&r.Id, &r.Name, &r.CreatedAt)

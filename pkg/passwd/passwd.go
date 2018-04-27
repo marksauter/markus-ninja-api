@@ -49,3 +49,8 @@ func (p *Password) CheckStrength(s PasswordStrength) bool {
 	p.strength = PasswordStrength(entropy.Score)
 	return p.strength >= s
 }
+
+// This doesn't work for some reason...
+// func (p *Password) Value() (driver.Value, error) {
+//   return p.Hash()
+// }

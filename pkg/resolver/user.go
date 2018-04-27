@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -17,15 +16,11 @@ var clientURL = "http://localhost:3000"
 type User = userResolver
 
 type userResolver struct {
-	checkFieldPermission repo.FieldPermissionFunc
-	user                 *model.User
+	user *repo.UserPermit
 }
 
-func (r *userResolver) Bio() (*string, error) {
-	if ok := r.checkFieldPermission("bio"); !ok {
-		return nil, errors.New("access denied")
-	}
-	return r.repo.Bio(r.user)
+func (r *userResolver) Bio() (string, error) {
+	return r.user.Bio()
 }
 
 func (r *userResolver) BioHTML() (mygql.HTML, error) {
@@ -33,39 +28,26 @@ func (r *userResolver) BioHTML() (mygql.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	if bio == nil {
-		bio = new(string)
-	}
-	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", *bio))
+	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", bio))
 	return h, nil
 }
 
-func (r *userResolver) CreatedAt() (*graphql.Time, error) {
-	if ok := r.checkFieldPermission("created_at"); !ok {
-		return nil, errors.New("access denied")
-	}
-	return &graphql.Time{r.user.CreatedAt}, nil
+func (r *userResolver) CreatedAt() (graphql.Time, error) {
+	t, err := r.user.CreatedAt()
+	return graphql.Time{t}, err
 }
 
-func (r *userResolver) Email() (email *string, err error) {
-	if ok := r.checkFieldPermission("email"); !ok {
-		return nil, errors.New("access denied")
-	}
-	err = r.user.Email.AssignTo(&email)
-	return
+func (r *userResolver) Email() (string, error) {
+	return r.user.Email()
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {
-	var id graphql.ID
-	if ok := r.checkFieldPermission("email"); !ok {
-		return id, errors.New("access denied")
-	}
-	id = r.user.Id
-	return id, nil
+	id, err := r.user.ID()
+	return graphql.ID(id), err
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
-	for _, role := range r.user.Roles {
+	for _, role := range r.user.Roles() {
 		if role == "ADMIN" {
 			return true
 		}
@@ -74,48 +56,51 @@ func (r *userResolver) IsSiteAdmin() bool {
 }
 
 func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
-	user, ok := myctx.User.FromContext(ctx)
+	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	return user.Id == r.user.Id, nil
-}
-
-func (r *userResolver) Login() (*string, error) {
-	if ok := r.checkFieldPermission("login"); !ok {
-		return nil, errors.New("access denied")
+	id, err := r.user.ID()
+	if err != nil {
+		return false, err
 	}
-	return &r.user.Login, nil
+	viewerId, _ := viewer.ID()
+	return viewerId == id, nil
 }
 
-func (r *userResolver) Name() (name *string, err error) {
-	if ok := r.checkFieldPermission("name"); !ok {
-		return nil, errors.New("access denied")
+func (r *userResolver) Login() (string, error) {
+	return r.user.Login()
+}
+
+func (r *userResolver) Name() (string, error) {
+	return r.user.Name()
+}
+
+func (r *userResolver) PrimaryEmail() (string, error) {
+	return r.user.PrimaryEmail()
+}
+
+func (r *userResolver) ResourcePath() (mygql.URI, error) {
+	var uri mygql.URI
+	login, err := r.user.Login()
+	if err != nil {
+		return uri, err
 	}
-	err = r.user.Name.AssignTo(&name)
-	return
+	uri = mygql.URI(fmt.Sprintf("/%s", login))
+	return uri, nil
 }
 
-func (r *userResolver) PrimaryEmail() (*string, error) {
-	if ok := r.checkFieldPermission("primary_email"); !ok {
-		return nil, errors.New("access denied")
+func (r *userResolver) UpdatedAt() (graphql.Time, error) {
+	t, err := r.user.UpdatedAt()
+	return graphql.Time{t}, err
+}
+
+func (r *userResolver) URL() (mygql.URI, error) {
+	var uri mygql.URI
+	login, err := r.user.Login()
+	if err != nil {
+		return uri, err
 	}
-	return &r.user.PrimaryEmail, nil
-}
-
-func (r *userResolver) ResourcePath() mygql.URI {
-	uri := fmt.Sprintf("/%s", r.user.Login)
-	return mygql.URI(uri)
-}
-
-func (r *userResolver) UpdatedAt() (*graphql.Time, error) {
-	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return nil, errors.New("access denied")
-	}
-	return &graphql.Time{r.user.UpdatedAt}, nil
-}
-
-func (r *userResolver) URL() mygql.URI {
-	uri := fmt.Sprintf("%s/%s", clientURL, r.user.Login)
-	return mygql.URI(uri)
+	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, login))
+	return uri, nil
 }

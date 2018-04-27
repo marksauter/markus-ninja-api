@@ -3,58 +3,90 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"github.com/marksauter/markus-ninja-api/pkg/attr"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func (r *RootResolver) Node(ctx context.Context, args struct {
-	Id string
-}) (*nodeResolver, error) {
+func (r *RootResolver) Node(
+	ctx context.Context,
+	args struct{ Id string },
+) (*nodeResolver, error) {
 	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
 		mylog.Log.Error("viewer not found")
 	}
-	parsedId, err := attr.ParseId(args.Id)
+	parsedId, err := oid.Parse(args.Id)
 	if err != nil {
-		return nil, fmt.Errorf("node(%v) %v", args.Id, err)
+		return nil, err
 	}
 	switch parsedId.Type() {
 	case "User":
-		// Need to add viewer permissions to repo
-		// This will take care of access to repo functions
-		r.Repos.Perm().GetQueryPermission(perm.ReadUser, viewer.Roles...)
-		user, err := r.Repos.User().Get(args.Id)
-		if err != nil {
-			return nil, err
+		var user *repo.UserPermit
+		viewerId, _ := viewer.ID()
+		if args.Id == viewerId {
+			user = viewer
+		} else {
+			queryPerm, err := r.Repos.Perm().GetQueryPermission(
+				perm.ReadUser,
+				viewer.Roles()...,
+			)
+			if err != nil {
+				mylog.Log.WithError(err).Error("error retrieving query permission")
+				return nil, repo.ErrAccessDenied
+			}
+			r.Repos.User().AddPermission(*queryPerm)
+			user, err = r.Repos.User().Get(args.Id)
+			if err != nil {
+				return nil, err
+			}
 		}
-		return &nodeResolver{&userResolver{r.Repos.User(), user}}, nil
+		return &nodeResolver{&userResolver{user}}, nil
 	default:
-		return nil, fmt.Errorf(`node(id: "%v") invalid type "%v"`, args.Id, parsedId.Type())
+		return nil, errors.New("invalid id")
 	}
 }
 
 func (r *RootResolver) Nodes(ctx context.Context, args struct {
-	Ids *[]string
+	Ids []string
 }) ([]*nodeResolver, error) {
-	nodes := make([]*nodeResolver, len(*args.Ids))
-	for i, id := range *args.Ids {
-		parsedId, err := attr.ParseId(id)
+	nodes := make([]*nodeResolver, len(args.Ids))
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		mylog.Log.Error("viewer not found")
+	}
+	for i, id := range args.Ids {
+		parsedId, err := oid.Parse(id)
 		if err != nil {
-			return nil, fmt.Errorf("nodes(%v) %v", args.Ids, err)
+			return nil, err
 		}
 		switch parsedId.Type() {
 		case "User":
-			user, err := r.Repos.User().Get(id)
-			if err != nil {
-				return nil, err
+			var user *repo.UserPermit
+			viewerId, _ := viewer.ID()
+			if id == viewerId {
+				user = viewer
+			} else {
+				queryPerm, err := r.Repos.Perm().GetQueryPermission(
+					perm.ReadUser,
+					viewer.Roles()...,
+				)
+				if err != nil {
+					mylog.Log.WithError(err).Error("error retrieving query permission")
+					return nil, repo.ErrAccessDenied
+				}
+				r.Repos.User().AddPermission(*queryPerm)
+				user, err = r.Repos.User().Get(id)
+				if err != nil {
+					return nil, err
+				}
 			}
-			nodes[i] = &nodeResolver{&userResolver{r.Repos.User(), user}}
+			nodes[i] = &nodeResolver{&userResolver{user}}
 		default:
-			return nil, fmt.Errorf(`nodes(id: "%v") invalid type "%v"`, id, parsedId.Type())
+			return nil, errors.New("invalid id")
 		}
 	}
 	return nodes, nil
@@ -63,28 +95,30 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
+	var user *repo.UserPermit
 	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	roles := viewer.Roles
-	if viewer.Login == args.Login {
-		roles = append(roles, "SELF")
+	login, _ := viewer.Login()
+	if login == args.Login {
+		user = viewer
+	} else {
+		queryPerm, err := r.Repos.Perm().GetQueryPermission(
+			perm.ReadUser,
+			viewer.Roles()...,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, repo.ErrAccessDenied
+		}
+		r.Repos.User().AddPermission(*queryPerm)
+		user, err = r.Repos.User().GetByLogin(args.Login)
+		if err != nil {
+			return nil, err
+		}
 	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadUser,
-		roles...,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, errors.New("access denied")
-	}
-	r.Repos.User().AddPermission(*queryPerm)
-	user, err := r.Repos.User().GetByLogin(args.Login)
-	if err != nil {
-		return nil, err
-	}
-	return &userResolver{r.Repos.User(), user}, nil
+	return &userResolver{user}, nil
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
@@ -92,14 +126,5 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadUser,
-		append(viewer.Roles, "SELF")...,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, errors.New("access denied")
-	}
-	r.Repos.User().AddPermission(*queryPerm)
-	return &userResolver{r.Repos.User(), viewer}, nil
+	return &userResolver{viewer}, nil
 }

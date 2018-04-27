@@ -3,12 +3,13 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx"
-	"github.com/marksauter/markus-ninja-api/pkg/attr"
-	"github.com/marksauter/markus-ninja-api/pkg/model"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -17,18 +18,30 @@ const (
 	defaultListFetchSize = 10
 )
 
-func NewUserService(db *mydb.DB, roleSvc *RoleService) *UserService {
-	return &UserService{db: db, roleSvc: roleSvc}
+type UserModel struct {
+	Bio          pgtype.Text `db:"bio"`
+	CreatedAt    time.Time   `db:"created_at"`
+	Email        pgtype.Text `db:"email"`
+	Id           string      `db:"id"`
+	Login        string      `db:"login"`
+	Name         pgtype.Text `db:"name"`
+	Password     []byte      `db:"password"`
+	PrimaryEmail string      `db:"primary_email"`
+	UpdatedAt    time.Time   `db:"updated_at"`
+	Roles        []string    `db:"roles"`
+}
+
+func NewUserService(db *mydb.DB) *UserService {
+	return &UserService{db: db}
 }
 
 type UserService struct {
-	db      *mydb.DB
-	roleSvc *RoleService
+	db *mydb.DB
 }
 
-func (s *UserService) Get(id string) (*model.User, error) {
+func (s *UserService) Get(id string) (*UserModel, error) {
 	mylog.Log.WithField("id", id).Info("Get(id) User")
-	u := new(model.User)
+	u := new(UserModel)
 	userSQL := `
 		SELECT
 			bio,
@@ -79,9 +92,9 @@ func (s *UserService) Get(id string) (*model.User, error) {
 	return u, nil
 }
 
-func (s *UserService) BatchGet(ids []string) ([]*model.User, error) {
+func (s *UserService) BatchGet(ids []string) ([]*UserModel, error) {
 	mylog.Log.WithField("ids", ids).Info("BatchGet(ids) []*User")
-	users := make([]*model.User, len(ids))
+	users := make([]*UserModel, len(ids))
 
 	whereIn := "$1"
 	for i, _ := range ids[0:] {
@@ -136,9 +149,9 @@ func (s *UserService) BatchGet(ids []string) ([]*model.User, error) {
 	return users, nil
 }
 
-func (s *UserService) GetByLogin(login string) (*model.User, error) {
+func (s *UserService) GetByLogin(login string) (*UserModel, error) {
 	mylog.Log.WithField("login", login).Info("GetByLogin(login) User")
-	u := new(model.User)
+	u := new(UserModel)
 	userSQL := `
 		SELECT
 			bio,
@@ -195,17 +208,16 @@ type CreateUserInput struct {
 	Password string
 }
 
-func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
-	userID := attr.NewId("User")
+func (s *UserService) Create(input *CreateUserInput) (*UserModel, error) {
+	userID := oid.New("User")
 	password := passwd.New(input.Password)
-	if ok := password.CheckStrength(passwd.VeryWeak); !ok {
-		mylog.Log.Error("password failed strength check")
-		return new(model.User), errors.New("password too weak")
-	}
 	pwdHash, err := password.Hash()
 	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("Create(%+v)", input)
 		return nil, err
+	}
+	if ok := password.CheckStrength(passwd.VeryWeak); !ok {
+		mylog.Log.Error("password failed strength check")
+		return new(UserModel), errors.New("password too weak")
 	}
 
 	tx, err := s.db.Begin()
@@ -229,9 +241,9 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 			primary_email,
 			updated_at
 	`
-	row := tx.QueryRow(userSQL, userID.String(), input.Email, input.Login, pwdHash)
+	row := tx.QueryRow(userSQL, userID, input.Email, input.Login, pwdHash)
 
-	u := new(model.User)
+	u := new(UserModel)
 	err = row.Scan(
 		&u.Bio,
 		&u.CreatedAt,
@@ -247,8 +259,8 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 		if err == pgx.ErrNoRows {
 			return u, nil
 		}
-		mylog.Log.WithField("error", err).Error("error during scan")
 		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
 			switch mydb.PSQLError(pgErr.Code) {
 			default:
 				return nil, err
@@ -256,6 +268,8 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 				return nil, errors.New("The email and/or login are already in use")
 			}
 		}
+		mylog.Log.WithError(err).Error("error during query")
+		return nil, err
 	}
 
 	roleSQL := `
@@ -266,13 +280,13 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 	`
 	_, err = tx.Exec(roleSQL, input.Login)
 	if err != nil {
-		mylog.Log.WithField("error", err).Error("error during execution")
+		mylog.Log.WithError(err).Error("error during execution")
 		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		mylog.Log.WithField("error", err).Error("error during transaction")
+		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
 	}
 
@@ -280,16 +294,23 @@ func (s *UserService) Create(input *CreateUserInput) (*model.User, error) {
 	return u, nil
 }
 
-func (s *UserService) VerifyCredentials(creds *model.UserCredentials) (*model.User, error) {
-	mylog.Log.WithField("login", creds.Login).Info("VerifyCredentials() User")
-	user, err := s.GetByLogin(creds.Login)
+type VerifyCredentialsInput struct {
+	Login    string
+	Password string
+}
+
+func (s *UserService) VerifyCredentials(
+	input *VerifyCredentialsInput,
+) (*UserModel, error) {
+	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
+	user, err := s.GetByLogin(input.Login)
 	if err != nil {
-		mylog.Log.WithField("error", err).Errorf("error getting user")
+		mylog.Log.WithError(err).Error("error getting user")
 		return nil, errors.New("unauthorized access")
 	}
-	password := passwd.New(creds.Password)
+	password := passwd.New(input.Password)
 	if err = password.CompareToHash([]byte(user.Password)); err != nil {
-		mylog.Log.WithField("error", err).Error("error comparing passwords")
+		mylog.Log.WithError(err).Error("error comparing passwords")
 		return nil, errors.New("unauthorized access")
 	}
 

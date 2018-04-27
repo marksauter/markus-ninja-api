@@ -10,11 +10,10 @@ type Services struct {
 }
 
 func NewServices(db *mydb.DB) *Services {
-	roleSvc := NewRoleService(db)
 	return &Services{
 		Auth: NewAuthService(),
 		Perm: NewPermService(db),
-		Role: roleSvc,
-		User: NewUserService(db, roleSvc),
+		Role: NewRoleService(db),
+		User: NewUserService(db),
 	}
 }

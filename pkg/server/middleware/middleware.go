@@ -10,6 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -34,8 +35,8 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	AuthSvc  *service.AuthService
-	UserRepo *repo.UserRepo
+	AuthSvc *service.AuthService
+	Repos   *repo.Repos
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
@@ -57,12 +58,21 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		user, err := a.UserRepo.Get(payload.Sub)
+		queryPerm, err := a.Repos.Perm().GetQueryPermission(perm.ReadUser, "SELF")
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
+		a.Repos.User().AddPermission(*queryPerm)
+
+		user, err := a.Repos.User().Get(payload.Sub)
+		if err != nil {
+			response := myhttp.InternalServerErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+		a.Repos.User().ClearPermissions()
 
 		ctx := myctx.User.NewContext(req.Context(), user)
 		h.ServeHTTP(rw, req.WithContext(ctx))
