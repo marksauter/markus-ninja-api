@@ -1,4 +1,4 @@
-package service
+package data
 
 import (
 	"errors"
@@ -7,15 +7,10 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
-	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
-)
-
-const (
-	defaultListFetchSize = 10
 )
 
 type UserModel struct {
@@ -31,12 +26,12 @@ type UserModel struct {
 	Roles        []string    `db:"roles"`
 }
 
-func NewUserService(db *mydb.DB) *UserService {
-	return &UserService{db: db}
+func NewUserService(q Queryer) *UserService {
+	return &UserService{q}
 }
 
 type UserService struct {
-	db *mydb.DB
+	queryer Queryer
 }
 
 func (s *UserService) Get(id string) (*UserModel, error) {
@@ -65,7 +60,7 @@ func (s *UserService) Get(id string) (*UserModel, error) {
 		FROM account a
 		WHERE id = $1
 	`
-	row := s.db.QueryRow(userSQL, id)
+	row := prepareQueryRow(s.queryer, userSQL, id)
 	err := row.Scan(
 		&u.Bio,
 		&u.CreatedAt,
@@ -115,7 +110,7 @@ func (s *UserService) BatchGet(ids []string) ([]*UserModel, error) {
 		WHERE id IN (%v)
 	`, whereIn)
 
-	rows, err := s.db.Query(batchGetSQL, util.StringToInterface(ids)...)
+	rows, err := s.Query(batchGetSQL, util.StringToInterface(ids)...)
 	defer rows.Close()
 	if err != nil {
 		mylog.Log.WithField("error", err).Error("error during query")
@@ -175,7 +170,7 @@ func (s *UserService) GetByLogin(login string) (*UserModel, error) {
 		FROM account a
 		WHERE login = $1
 	`
-	row := s.db.QueryRow(userSQL, login)
+	row := s.QueryRow(userSQL, login)
 	err := row.Scan(
 		&u.Bio,
 		&u.CreatedAt,
@@ -220,7 +215,7 @@ func (s *UserService) Create(input *CreateUserInput) (*UserModel, error) {
 		return new(UserModel), errors.New("password too weak")
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.Begin()
 	if err != nil {
 		mylog.Log.WithField("error", err).Error("error starting transaction")
 		return nil, err
@@ -261,10 +256,10 @@ func (s *UserService) Create(input *CreateUserInput) (*UserModel, error) {
 		}
 		if pgErr, ok := err.(pgx.PgError); ok {
 			mylog.Log.WithError(err).Error("error during scan")
-			switch mydb.PSQLError(pgErr.Code) {
+			switch PSQLError(pgErr.Code) {
 			default:
 				return nil, err
-			case mydb.UniqueViolation:
+			case UniqueViolation:
 				return nil, errors.New("The email and/or login are already in use")
 			}
 		}
@@ -292,28 +287,4 @@ func (s *UserService) Create(input *CreateUserInput) (*UserModel, error) {
 
 	mylog.Log.Debug("user created")
 	return u, nil
-}
-
-type VerifyCredentialsInput struct {
-	Login    string
-	Password string
-}
-
-func (s *UserService) VerifyCredentials(
-	input *VerifyCredentialsInput,
-) (*UserModel, error) {
-	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
-	user, err := s.GetByLogin(input.Login)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error getting user")
-		return nil, errors.New("unauthorized access")
-	}
-	password := passwd.New(input.Password)
-	if err = password.CompareToHash([]byte(user.Password)); err != nil {
-		mylog.Log.WithError(err).Error("error comparing passwords")
-		return nil, errors.New("unauthorized access")
-	}
-
-	mylog.Log.Debug("credentials verified")
-	return user, nil
 }

@@ -1,4 +1,4 @@
-package service
+package data
 
 import (
 	"fmt"
@@ -18,11 +18,11 @@ type RoleModel struct {
 }
 
 type RoleService struct {
-	db *mydb.DB
+	*mydb.DB
 }
 
 func NewRoleService(db *mydb.DB) *RoleService {
-	return &RoleService{db: db}
+	return &RoleService{db}
 }
 
 func (s *RoleService) Create(name string) (*RoleModel, error) {
@@ -38,7 +38,7 @@ func (s *RoleService) Create(name string) (*RoleModel, error) {
 			created_at,
 			updated_at
 	`
-	row := s.db.QueryRow(roleSQL, roleId, name)
+	row := s.QueryRow(roleSQL, roleId, name)
 	role := new(RoleModel)
 	err := row.Scan(
 		&role.Id,
@@ -78,7 +78,7 @@ func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
 		INNER JOIN account_role ar ON role.id = ar.role_id
 		WHERE ar.user_id = $1
 	`
-	rows, err := s.db.Query(roleSQL, userId)
+	rows, err := s.Query(roleSQL, userId)
 	if err != nil {
 		mylog.Log.WithField("error", err).Error("error during query")
 		return nil, err

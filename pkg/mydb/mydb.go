@@ -54,5 +54,5 @@ func NewTestDB() *TestDB {
 }
 
 func (db *TestDB) Close() {
-	db.DB.Close()
+	db.Close()
 }

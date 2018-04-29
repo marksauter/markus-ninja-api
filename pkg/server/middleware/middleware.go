@@ -6,13 +6,13 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type Middleware interface {
@@ -35,7 +35,7 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	AuthSvc *service.AuthService
+	AuthSvc *data.AuthService
 	Repos   *repo.Repos
 }
 
@@ -53,7 +53,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 
 		payload, err := a.AuthSvc.ValidateJWT(token)
 		if err != nil {
-			response := myhttp.InternalServerErrorResponse(err.Error())
+			response := myhttp.UnauthorizedErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}

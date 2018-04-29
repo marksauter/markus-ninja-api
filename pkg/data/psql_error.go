@@ -1,4 +1,4 @@
-package mydb
+package data
 
 import (
 	"encoding/json"

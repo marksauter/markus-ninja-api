@@ -24,6 +24,7 @@ import (
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -32,7 +33,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
@@ -60,7 +60,7 @@ func main() {
 		mylog.Log.WithField("error", err).Fatal("error initializing database")
 	}
 
-	svcs := service.NewServices(db)
+	svcs := data.NewServices(db)
 	repos := repo.NewRepos(svcs)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
@@ -100,7 +100,7 @@ func initDB(db *mydb.DB) error {
 			mylog.Log.Debug(r)
 		}
 	}()
-	svcs := service.NewServices(db)
+	svcs := data.NewServices(db)
 
 	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 
@@ -112,7 +112,7 @@ func initDB(db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
-		new(service.UserModel),
+		new(data.UserModel),
 	}
 
 	for _, model := range modelTypes {

@@ -1,4 +1,4 @@
-package service
+package data
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type LessonComment struct {
+type LessonCommentModel struct {
 	Body         pgtype.Text      `db:"body"`
 	CreatedAt    time.Time        `db:"created_at"`
 	Id           string           `db:"id"`

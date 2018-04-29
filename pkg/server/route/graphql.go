@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-func GraphQL(schema *graphql.Schema, authSvc *service.AuthService, repos *repo.Repos) http.Handler {
+func GraphQL(schema *graphql.Schema, authSvc *data.AuthService, repos *repo.Repos) http.Handler {
 	authMiddleware := middleware.Authenticate{
 		AuthSvc: authSvc,
 		Repos:   repos,

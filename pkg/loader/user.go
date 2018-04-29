@@ -1,4 +1,4 @@
-package svccxn
+package loader
 
 import (
 	"context"
@@ -6,37 +6,37 @@ import (
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewUserConnection(svc *service.UserService) *UserConnection {
-	return &UserConnection{
+func NewUserLoader(svc *data.UserService) *UserLoader {
+	return &UserLoader{
 		svc:             svc,
 		batchGet:        createLoader(newBatchGetFn(svc.Get)),
 		batchGetByLogin: createLoader(newBatchGetFn(svc.GetByLogin)),
 	}
 }
 
-type UserConnection struct {
-	svc *service.UserService
+type UserLoader struct {
+	svc *data.UserService
 
 	batchGet        *dataloader.Loader
 	batchGetByLogin *dataloader.Loader
 }
 
-func (r *UserConnection) Create(
-	input *service.CreateUserInput,
-) (*service.UserModel, error) {
+func (r *UserLoader) Create(
+	input *data.CreateUserInput,
+) (*data.UserModel, error) {
 	return r.svc.Create(input)
 }
 
-func (r *UserConnection) Get(id string) (*service.UserModel, error) {
+func (r *UserLoader) Get(id string) (*data.UserModel, error) {
 	ctx := context.Background()
-	data, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+	userData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
-	user, ok := data.(*service.UserModel)
+	user, ok := userData.(*data.UserModel)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
@@ -46,20 +46,20 @@ func (r *UserConnection) Get(id string) (*service.UserModel, error) {
 	return user, nil
 }
 
-func (r *UserConnection) GetMany(ids *[]string) ([]*service.UserModel, []error) {
+func (r *UserLoader) GetMany(ids *[]string) ([]*data.UserModel, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
 	}
-	data, errs := r.batchGet.LoadMany(ctx, keys)()
+	userData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}
-	users := make([]*service.UserModel, len(data))
-	for i, d := range data {
+	users := make([]*data.UserModel, len(userData))
+	for i, d := range userData {
 		var ok bool
-		users[i], ok = d.(*service.UserModel)
+		users[i], ok = d.(*data.UserModel)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
@@ -68,13 +68,13 @@ func (r *UserConnection) GetMany(ids *[]string) ([]*service.UserModel, []error) 
 	return users, nil
 }
 
-func (r *UserConnection) GetByLogin(login string) (*service.UserModel, error) {
+func (r *UserLoader) GetByLogin(login string) (*data.UserModel, error) {
 	ctx := context.Background()
-	data, err := r.batchGetByLogin.Load(ctx, dataloader.StringKey(login))()
+	userData, err := r.batchGetByLogin.Load(ctx, dataloader.StringKey(login))()
 	if err != nil {
 		return nil, err
 	}
-	user, ok := data.(*service.UserModel)
+	user, ok := userData.(*data.UserModel)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
@@ -84,14 +84,8 @@ func (r *UserConnection) GetByLogin(login string) (*service.UserModel, error) {
 	return user, nil
 }
 
-func (r *UserConnection) VerifyCredentials(
-	input *service.VerifyCredentialsInput,
-) (*service.UserModel, error) {
-	return r.svc.VerifyCredentials(input)
-}
-
 func newBatchGetFn(
-	getter func(string) (*service.UserModel, error),
+	getter func(string) (*data.UserModel, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (

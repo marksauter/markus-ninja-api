@@ -3,24 +3,24 @@ package repo
 import (
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
-	"github.com/marksauter/markus-ninja-api/pkg/svccxn"
 )
 
-func NewPermRepo(svc *service.PermService) *PermRepo {
+func NewPermRepo(svc *data.PermService) *PermRepo {
 	return &PermRepo{svc: svc}
 }
 
 type PermRepo struct {
-	cxn   *svccxn.PermConnection
-	svc   *service.PermService
+	cxn   *loader.PermLoader
+	svc   *data.PermService
 	perms map[string][]string
 }
 
 func (r *PermRepo) Open() {
-	r.cxn = svccxn.NewPermConnection(r.svc)
+	r.cxn = loader.NewPermLoader(r.svc)
 }
 
 func (r *PermRepo) Close() {
@@ -45,7 +45,11 @@ func (r *PermRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
 	return checkField, ok
 }
 
-func (r *PermRepo) checkConnection() bool {
+func (r *PermRepo) ClearPermissions() {
+	r.perms = nil
+}
+
+func (r *PermRepo) checkLoader() bool {
 	return r.cxn != nil
 }
 
@@ -55,7 +59,7 @@ func (r *PermRepo) GetQueryPermission(
 	o perm.Operation,
 	roles ...string,
 ) (*perm.QueryPermission, error) {
-	if ok := r.checkConnection(); !ok {
+	if ok := r.checkLoader(); !ok {
 		mylog.Log.Error("permission connection closed")
 		return nil, ErrConnClosed
 	}

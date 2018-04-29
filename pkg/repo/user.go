@@ -1,18 +1,20 @@
 package repo
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
-	"github.com/marksauter/markus-ninja-api/pkg/svccxn"
 )
 
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	user                 *service.UserModel
+	user                 *data.UserModel
 }
 
 func (r *UserPermit) Bio() (string, error) {
@@ -78,22 +80,22 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	return r.user.UpdatedAt, nil
 }
 
-func NewUserRepo(svc *service.UserService) *UserRepo {
+func NewUserRepo(svc *data.UserService) *UserRepo {
 	return &UserRepo{svc: svc}
 }
 
 type UserRepo struct {
-	cxn   *svccxn.UserConnection
-	svc   *service.UserService
+	svc   *data.UserService
+	load  *loader.UserLoader
 	perms map[string][]string
 }
 
 func (r *UserRepo) Open() {
-	r.cxn = svccxn.NewUserConnection(r.svc)
+	r.load = loader.NewUserLoader(r.svc)
 }
 
 func (r *UserRepo) Close() {
-	r.cxn = nil
+	r.load = nil
 	r.perms = nil
 }
 
@@ -121,22 +123,22 @@ func (r *UserRepo) ClearPermissions() {
 	r.perms = nil
 }
 
-func (r *UserRepo) checkConnection() bool {
-	return r.cxn != nil
+func (r *UserRepo) checkLoader() bool {
+	return r.load != nil
 }
 
 // Service methods
 
-func (r *UserRepo) Create(input *service.CreateUserInput) (*UserPermit, error) {
+func (r *UserRepo) Create(input *data.CreateUserInput) (*UserPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.CreateUser)
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkConnection(); !ok {
+	if ok := r.checkLoader(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	user, err := r.cxn.Create(input)
+	user, err := r.load.Create(input)
 	if err != nil {
 		return nil, err
 	}
@@ -148,11 +150,11 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkConnection(); !ok {
+	if ok := r.checkLoader(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	user, err := r.cxn.Get(id)
+	user, err := r.load.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -164,11 +166,11 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 //   if !ok {
 //     return nil, ErrAccessDenied
 //   }
-//   if ok := r.checkConnection(); !ok {
+//   if ok := r.checkLoader(); !ok {
 //     mylog.Log.Error("user connection closed")
 //     return nil, []error{ErrConnClosed}
 //   }
-//   users, err := r.cxn.GetMany(ids)
+//   users, err := r.load.GetMany(ids)
 //   if err != nil {
 //     return nil, err
 //   }
@@ -176,7 +178,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 //   for i, user := range users {
 //     userResolvers[i] = resolver.User{fieldPermFn, user}
 //   }
-//   return r.cxn.GetMany(ids)
+//   return r.load.GetMany(ids)
 // }
 
 func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
@@ -184,25 +186,43 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkConnection(); !ok {
+	if ok := r.checkLoader(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	user, err := r.cxn.GetByLogin(login)
+	user, err := r.load.GetByLogin(login)
 	if err != nil {
 		return nil, err
 	}
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
+type VerifyCredentialsInput struct {
+	Login    string
+	Password string
+}
+
 func (r *UserRepo) VerifyCredentials(
-	input *service.VerifyCredentialsInput,
-) (*service.UserModel, error) {
-	if ok := r.checkConnection(); !ok {
+	input *VerifyCredentialsInput,
+) (*data.UserModel, error) {
+	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
+	if ok := r.checkLoader(); !ok {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	return r.cxn.VerifyCredentials(input)
+	user, err := r.load.GetByLogin(input.Login)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error getting user")
+		return nil, errors.New("unauthorized access")
+	}
+	password := passwd.New(input.Password)
+	if err = password.CompareToHash([]byte(user.Password)); err != nil {
+		mylog.Log.WithError(err).Error("error comparing passwords")
+		return nil, errors.New("unauthorized access")
+	}
+
+	mylog.Log.Debug("credentials verified")
+	return user, nil
 }
 
 // Middleware

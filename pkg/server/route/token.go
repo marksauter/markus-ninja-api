@@ -4,15 +4,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Token(authSvc *service.AuthService, userRepo *repo.UserRepo) http.Handler {
+func Token(authSvc *data.AuthService, userRepo *repo.UserRepo) http.Handler {
 	tokenHandler := TokenHandler{
 		AuthSvc:  authSvc,
 		UserRepo: userRepo,
@@ -30,7 +30,7 @@ var tokenCors = cors.New(cors.Options{
 })
 
 type TokenHandler struct {
-	AuthSvc  *service.AuthService
+	AuthSvc  *data.AuthService
 	UserRepo *repo.UserRepo
 }
 
@@ -51,7 +51,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	verificationInput := service.VerifyCredentialsInput{
+	verificationInput := repo.VerifyCredentialsInput{
 		Login:    validationOutput.Login,
 		Password: validationOutput.Password,
 	}

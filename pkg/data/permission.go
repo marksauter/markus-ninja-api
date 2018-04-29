@@ -1,4 +1,4 @@
-package service
+package data
 
 import (
 	"time"
@@ -36,11 +36,11 @@ type PermissionModel struct {
 }
 
 type PermService struct {
-	db *mydb.DB
+	*mydb.DB
 }
 
 func NewPermService(db *mydb.DB) *PermService {
-	return &PermService{db: db}
+	return &PermService{db}
 }
 
 // Creates a suite of permissions for the passed node.
@@ -84,7 +84,7 @@ func (s *PermService) CreatePermissionSuite(node interface{}) error {
 		i += 1
 	}
 
-	copyCount, err := s.db.CopyFrom(
+	copyCount, err := s.CopyFrom(
 		pgx.Identifier{"permission"},
 		[]string{"id", "access_level", "type", "audience", "field"},
 		pgx.CopyFromRows(permissions),
@@ -125,7 +125,7 @@ func (s *PermService) GetByRoleName(
 		INNER JOIN role r ON r.id = rp.role_id
 		WHERE r.name = $1
 	`
-	rows, err := s.db.Query(permissionSQL, roleName)
+	rows, err := s.Query(permissionSQL, roleName)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
@@ -194,14 +194,14 @@ func (s *PermService) GetQueryPermission(
 	`
 	var row *pgx.Row
 	if len(roles) != 0 {
-		row = s.db.QueryRow(
+		row = s.QueryRow(
 			permissionSQL+andRoleNameSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
 			roles,
 		)
 	} else {
-		row = s.db.QueryRow(
+		row = s.QueryRow(
 			permissionSQL+andAudienceSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
@@ -232,7 +232,7 @@ func (s *PermService) Update(permissionId string, a perm.Audience) error {
 		SET audience = $1
 		WHERE id = $2
 	`
-	_, err := s.db.Exec(permissionSQL, a, permissionId)
+	_, err := s.Exec(permissionSQL, a, permissionId)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during execution")
 		return err
@@ -254,7 +254,7 @@ func (s *PermService) UpdateOperationForFields(
 			AND type = $3
 			AND field = ANY($4)
 	`
-	_, err := s.db.Exec(
+	_, err := s.Exec(
 		permissionSQL,
 		a,
 		o.AccessLevel,

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type CreateUserInput struct {
@@ -34,7 +34,7 @@ func (r *RootResolver) CreateUser(
 		return nil, repo.ErrAccessDenied
 	}
 	r.Repos.User().AddPermission(*queryPerm)
-	svcInput := service.CreateUserInput{
+	svcInput := data.CreateUserInput{
 		Email:    args.Input.Email,
 		Login:    args.Input.Login,
 		Password: args.Input.Password,

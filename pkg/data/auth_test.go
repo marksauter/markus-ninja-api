@@ -1,4 +1,4 @@
-package service_test
+package data_test
 
 import (
 	"testing"

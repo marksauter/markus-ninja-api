@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type key string
@@ -25,14 +25,15 @@ type Repo interface {
 	Close()
 	AddPermission(perm.QueryPermission)
 	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
-	checkConnection() bool
+	ClearPermissions()
+	checkLoader() bool
 }
 
 type Repos struct {
 	lookup map[key]Repo
 }
 
-func NewRepos(svcs *service.Services) *Repos {
+func NewRepos(svcs *data.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
 			permRepoKey: NewPermRepo(svcs.Perm),
