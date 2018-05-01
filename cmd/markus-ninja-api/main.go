@@ -176,7 +176,7 @@ func initDB(db *mydb.DB) error {
 		rows,
 	)
 	if pgErr, ok := err.(pgx.PgError); ok {
-		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
 			return err
 		}
 	}
@@ -206,7 +206,7 @@ func initDB(db *mydb.DB) error {
 		rows,
 	)
 	if pgErr, ok := err.(pgx.PgError); ok {
-		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
 			return err
 		}
 	}
@@ -236,7 +236,7 @@ func initDB(db *mydb.DB) error {
 		rows,
 	)
 	if pgErr, ok := err.(pgx.PgError); ok {
-		if mydb.PSQLError(pgErr.Code) != mydb.UniqueViolation {
+		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
 			return err
 		}
 	}

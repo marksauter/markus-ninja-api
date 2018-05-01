@@ -155,7 +155,7 @@ func TooManyAttemptsResponse() *ErrorResponse {
 func UnauthorizedErrorResponse(err string) *ErrorResponse {
 	return &ErrorResponse{
 		Error:            Unauthorized,
-		ErrorDescription: fmt.Sprintf("Unauthorized: %v", err),
+		ErrorDescription: err,
 	}
 }
 

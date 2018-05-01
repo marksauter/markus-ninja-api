@@ -43,11 +43,8 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		token, err := myjwt.JWTFromRequest(req)
 		if err != nil {
-			response := myhttp.ErrorResponse{
-				Error:            myhttp.Unauthorized,
-				ErrorDescription: err.Error(),
-			}
-			myhttp.WriteResponseTo(rw, &response)
+			response := myhttp.UnauthorizedErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 
@@ -68,7 +65,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 
 		user, err := a.Repos.User().Get(payload.Sub)
 		if err != nil {
-			response := myhttp.InternalServerErrorResponse(err.Error())
+			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}

@@ -64,7 +64,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
-	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id}
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
 	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())

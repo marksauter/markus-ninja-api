@@ -15,12 +15,22 @@ type Queryer interface {
 	Query(sql string, args ...interface{}) (*pgx.Rows, error)
 	QueryRow(sql string, args ...interface{}) *pgx.Row
 	Exec(sql string, arguments ...interface{}) (pgx.CommandTag, error)
+}
+
+type transactor interface {
 	Begin() (*pgx.Tx, error)
 }
 
 type preparer interface {
 	Prepare(name, sql string) (*pgx.PreparedStatement, error)
 	Deallocate(name string) error
+}
+
+func beginTransaction(db Queryer) (*pgx.Tx, error) {
+	if transactor, ok := db.(transactor); ok {
+		return transactor.Begin()
+	}
+	return nil, errors.New("queryer is not a transactor")
 }
 
 func prepareQuery(db Queryer, name, sql string, args ...interface{}) (*pgx.Rows, error) {

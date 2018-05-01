@@ -101,12 +101,11 @@
       function graphQLFetcher(graphQLParams) {
         // This example expects a GraphQL server at the path /graphql.
         // Change this to point wherever you host your GraphQL server.
-        const token = window.sessionStorage.getItem("access_token");
         return fetch('/graphql', {
           method: 'post',
           headers: {
             'Accept': 'application/json',
-            'Authorization': 'Bearer ' + token,
+            'Authorization': 'Bearer ' + accessToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(graphQLParams),
@@ -123,22 +122,30 @@
           console.error(error);
         });
       }
-      // Render <GraphiQL /> into the body.
-      // See the README in the top level of this module to learn more about
-      // how you can customize GraphiQL by providing different values or
-      // additional child elements.
-      ReactDOM.render(
-        React.createElement(GraphiQL, {
-          fetcher: graphQLFetcher,
-          query: parameters.query,
-          variables: parameters.variables,
-          operationName: parameters.operationName,
-          onEditQuery: onEditQuery,
-          onEditVariables: onEditVariables,
-          onEditOperationName: onEditOperationName
-        }),
-        document.getElementById('graphiql')
-      );
+      // Get access token from session storage
+      var accessToken = window.sessionStorage.getItem("access_token");
+      // if access token is missing, then redirect to root
+      if (accessToken === null) {
+        window.location.replace("/");
+      // else render html
+      } else {
+        // Render <GraphiQL /> into the body.
+        // See the README in the top level of this module to learn more about
+        // how you can customize GraphiQL by providing different values or
+        // additional child elements.
+        ReactDOM.render(
+          React.createElement(GraphiQL, {
+            fetcher: graphQLFetcher,
+            query: parameters.query,
+            variables: parameters.variables,
+            operationName: parameters.operationName,
+            onEditQuery: onEditQuery,
+            onEditVariables: onEditVariables,
+            onEditOperationName: onEditOperationName
+          }),
+          document.getElementById('graphiql')
+        );
+      }
     </script>
   </body>
 </html>

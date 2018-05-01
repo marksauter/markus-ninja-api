@@ -91,10 +91,10 @@ func (s *PermService) CreatePermissionSuite(node interface{}) error {
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch mydb.PSQLError(pgErr.Code) {
+			switch PSQLError(pgErr.Code) {
 			default:
 				return err
-			case mydb.UniqueViolation:
+			case UniqueViolation:
 				mylog.Log.Warn("permissions already created")
 				return nil
 			}
@@ -207,19 +207,23 @@ func (s *PermService) GetQueryPermission(
 			o.NodeType,
 		)
 	}
-	var operation string
-	err := row.Scan(
-		&operation,
-		&p.Fields,
-	)
-	if err != nil {
+	var operation pgtype.Text
+	var fields pgtype.TextArray
+	err := row.Scan(&operation, &fields)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	} else if err != nil {
 		mylog.Log.WithError(err).Error("error during scan")
 		return nil, err
 	}
-	p.Operation, err = perm.ParseOperation(operation)
+	p.Operation, err = perm.ParseOperation(operation.String)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during parse operation")
 		return nil, err
+	}
+	p.Fields = make([]string, len(fields.Elements))
+	for i, f := range fields.Elements {
+		p.Fields[i] = f.String
 	}
 
 	mylog.Log.WithField("fields", p.Fields).Info("query granted permission")

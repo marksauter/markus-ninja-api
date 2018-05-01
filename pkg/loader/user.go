@@ -12,7 +12,7 @@ import (
 func NewUserLoader(svc *data.UserService) *UserLoader {
 	return &UserLoader{
 		svc:             svc,
-		batchGet:        createLoader(newBatchGetFn(svc.Get)),
+		batchGet:        createLoader(newBatchGetFn(svc.GetById)),
 		batchGetByLogin: createLoader(newBatchGetFn(svc.GetByLogin)),
 	}
 }
@@ -22,12 +22,6 @@ type UserLoader struct {
 
 	batchGet        *dataloader.Loader
 	batchGetByLogin *dataloader.Loader
-}
-
-func (r *UserLoader) Create(
-	input *data.CreateUserInput,
-) (*data.UserModel, error) {
-	return r.svc.Create(input)
 }
 
 func (r *UserLoader) Get(id string) (*data.UserModel, error) {
@@ -41,7 +35,7 @@ func (r *UserLoader) Get(id string) (*data.UserModel, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGetByLogin.Prime(ctx, dataloader.StringKey(user.Login), user)
+	r.batchGetByLogin.Prime(ctx, dataloader.StringKey(user.Login.String), user)
 
 	return user, nil
 }
@@ -79,7 +73,7 @@ func (r *UserLoader) GetByLogin(login string) (*data.UserModel, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(user.Id), user)
+	r.batchGet.Prime(ctx, dataloader.StringKey(user.Id.String), user)
 
 	return user, nil
 }

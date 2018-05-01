@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx"
-	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
@@ -18,10 +17,10 @@ type RoleModel struct {
 }
 
 type RoleService struct {
-	*mydb.DB
+	db Queryer
 }
 
-func NewRoleService(db *mydb.DB) *RoleService {
+func NewRoleService(db Queryer) *RoleService {
 	return &RoleService{db}
 }
 
@@ -38,7 +37,7 @@ func (s *RoleService) Create(name string) (*RoleModel, error) {
 			created_at,
 			updated_at
 	`
-	row := s.QueryRow(roleSQL, roleId, name)
+	row := s.db.QueryRow(roleSQL, roleId, name)
 	role := new(RoleModel)
 	err := row.Scan(
 		&role.Id,
@@ -52,10 +51,10 @@ func (s *RoleService) Create(name string) (*RoleModel, error) {
 		}
 		mylog.Log.WithField("error", err).Error("error during scan")
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch mydb.PSQLError(pgErr.Code) {
+			switch PSQLError(pgErr.Code) {
 			default:
 				return nil, err
-			case mydb.UniqueViolation:
+			case UniqueViolation:
 				return nil, fmt.Errorf(`role "%v" already exists`, name)
 			}
 		}
@@ -78,7 +77,7 @@ func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
 		INNER JOIN account_role ar ON role.id = ar.role_id
 		WHERE ar.user_id = $1
 	`
-	rows, err := s.Query(roleSQL, userId)
+	rows, err := s.db.Query(roleSQL, userId)
 	if err != nil {
 		mylog.Log.WithField("error", err).Error("error during query")
 		return nil, err

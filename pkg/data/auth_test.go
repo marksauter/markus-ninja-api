@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 var testPayload = myjwt.Payload{
@@ -16,7 +16,7 @@ var testPayload = myjwt.Payload{
 }
 var testJWT = myjwt.JWT{Payload: testPayload, Signature: testPayload.String()}
 
-var mockAuthService = service.NewMockAuthService()
+var mockAuthService = data.NewMockAuthService()
 
 func TestSignJWT(t *testing.T) {
 	payload := testPayload

@@ -21,8 +21,7 @@ func (r *UserPermit) Bio() (string, error) {
 	if ok := r.checkFieldPermission("bio"); !ok {
 		return "", ErrAccessDenied
 	}
-	bio, _ := r.user.Bio.Get().(string)
-	return bio, nil
+	return r.user.Bio.String, nil
 }
 
 func (r *UserPermit) CreatedAt() (time.Time, error) {
@@ -36,37 +35,35 @@ func (r *UserPermit) Email() (string, error) {
 	if ok := r.checkFieldPermission("email"); !ok {
 		return "", ErrAccessDenied
 	}
-	email, _ := r.user.Email.Get().(string)
-	return email, nil
+	return r.user.Email.String, nil
 }
 
 func (r *UserPermit) ID() (string, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.user.Id, nil
+	return r.user.Id.String, nil
 }
 
 func (r *UserPermit) Login() (string, error) {
 	if ok := r.checkFieldPermission("login"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.user.Login, nil
+	return r.user.Login.String, nil
 }
 
 func (r *UserPermit) Name() (string, error) {
 	if ok := r.checkFieldPermission("name"); !ok {
 		return "", ErrAccessDenied
 	}
-	name, _ := r.user.Name.Get().(string)
-	return name, nil
+	return r.user.Name.String, nil
 }
 
 func (r *UserPermit) PrimaryEmail() (string, error) {
 	if ok := r.checkFieldPermission("primary_email"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.user.PrimaryEmail, nil
+	return r.user.PrimaryEmail.String, nil
 }
 
 func (r *UserPermit) Roles() []string {
@@ -129,7 +126,7 @@ func (r *UserRepo) checkLoader() bool {
 
 // Service methods
 
-func (r *UserRepo) Create(input *data.CreateUserInput) (*UserPermit, error) {
+func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.CreateUser)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -138,7 +135,7 @@ func (r *UserRepo) Create(input *data.CreateUserInput) (*UserPermit, error) {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	user, err := r.load.Create(input)
+	err := r.svc.Create(user)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +194,38 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
+func (r *UserRepo) Delete(id string) error {
+	_, ok := r.CheckPermission(perm.DeleteUser)
+	if !ok {
+		return ErrAccessDenied
+	}
+	if ok := r.checkLoader(); !ok {
+		mylog.Log.Error("user connection closed")
+		return ErrConnClosed
+	}
+	err := r.svc.Delete(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *UserRepo) Update(user *data.UserModel) (*UserPermit, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.UpdateUser)
+	if !ok {
+		return nil, ErrAccessDenied
+	}
+	if ok := r.checkLoader(); !ok {
+		mylog.Log.Error("user connection closed")
+		return nil, ErrConnClosed
+	}
+	err := r.svc.Update(user)
+	if err != nil {
+		return nil, err
+	}
+	return &UserPermit{fieldPermFn, user}, nil
+}
+
 type VerifyCredentialsInput struct {
 	Login    string
 	Password string
@@ -216,7 +245,7 @@ func (r *UserRepo) VerifyCredentials(
 		return nil, errors.New("unauthorized access")
 	}
 	password := passwd.New(input.Password)
-	if err = password.CompareToHash([]byte(user.Password)); err != nil {
+	if err = password.CompareToHash(user.Password.Bytes); err != nil {
 		mylog.Log.WithError(err).Error("error comparing passwords")
 		return nil, errors.New("unauthorized access")
 	}

@@ -1,7 +1,9 @@
 package mydb
 
 import (
+	"fmt"
 	"strconv"
+	"testing"
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -29,13 +31,14 @@ func Open(config pgx.ConnConfig) (*DB, error) {
 }
 
 type TestDB struct {
-	*DB
+	DB *DB
+	T  testing.TB
 }
 
-func NewTestDB() *TestDB {
+func NewTestDB(t testing.TB) *TestDB {
 	port, err := strconv.ParseUint(util.GetRequiredEnv("TEST_RDS_PORT"), 10, 16)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	pgxConfig := pgx.ConnConfig{
 		User:     util.GetRequiredEnv("TEST_RDS_USERNAME"),
@@ -48,11 +51,28 @@ func NewTestDB() *TestDB {
 	}
 	db, err := Open(pgxConfig)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return &TestDB{db}
+	return &TestDB{DB: db, T: t}
 }
 
 func (db *TestDB) Close() {
-	db.Close()
+	db.DB.Close()
+}
+
+func (db *TestDB) Empty() error {
+	tables := []string{
+		"account",
+		"role",
+		"account_role",
+		"permission",
+		"role_permission",
+	}
+	for _, table := range tables {
+		_, err := db.DB.Exec(fmt.Sprintf("delete from %s", table))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
