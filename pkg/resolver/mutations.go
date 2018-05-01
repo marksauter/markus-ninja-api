@@ -39,14 +39,12 @@ func (r *RootResolver) CreateUser(
 
 	var user data.UserModel
 
-	userId := oid.New("User")
 	password := passwd.New(args.Input.Password)
-	if ok := password.CheckStrength(passwd.VeryWeak); !ok {
+	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
 		mylog.Log.Error("password failed strength check")
-		return nil, errors.New("password too weak")
+		return nil, err
 	}
 
-	user.Id.Set(userId.String())
 	user.Login.Set(args.Input.Login)
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(args.Input.Email)
@@ -141,9 +139,9 @@ func (r *RootResolver) UpdateUser(
 
 	if args.Input.Password != nil {
 		password := passwd.New(*args.Input.Password)
-		if ok := password.CheckStrength(passwd.VeryWeak); !ok {
+		if err := password.CheckStrength(passwd.VeryWeak); err != nil {
 			mylog.Log.Error("password failed strength check")
-			return nil, errors.New("password too weak")
+			return nil, passwd.ErrTooWeak
 		}
 		user.Password.Set(password.Hash())
 	}

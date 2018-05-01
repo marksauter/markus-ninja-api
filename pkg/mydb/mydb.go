@@ -2,12 +2,11 @@ package mydb
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type DB struct {
@@ -30,30 +29,37 @@ func Open(config pgx.ConnConfig) (*DB, error) {
 	return &DB{conn}, nil
 }
 
+var SharedTestDB *TestDB
+
 type TestDB struct {
 	DB *DB
 	T  testing.TB
 }
 
 func NewTestDB(t testing.TB) *TestDB {
-	port, err := strconv.ParseUint(util.GetRequiredEnv("TEST_RDS_PORT"), 10, 16)
+	if SharedTestDB == nil {
+		config := myconf.Load("config.test")
+		dbConfig := pgx.ConnConfig{
+			User:     config.DBUser,
+			Password: config.DBPassword,
+			Host:     config.DBHost,
+			Port:     config.DBPort,
+			Database: config.DBName,
+		}
+		db, err := Open(dbConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		SharedTestDB = &TestDB{DB: db, T: t}
+	}
+
+	err := SharedTestDB.Empty()
 	if err != nil {
 		t.Fatal(err)
 	}
-	pgxConfig := pgx.ConnConfig{
-		User:     util.GetRequiredEnv("TEST_RDS_USERNAME"),
-		Password: util.GetRequiredEnv("TEST_RDS_PASSWORD"),
-		Host:     util.GetRequiredEnv("TEST_RDS_HOSTNAME"),
-		Port:     uint16(port),
-		Database: util.GetRequiredEnv("TEST_RDS_DB_NAME"),
-		// Logger:   mylog.Log,
-		// LogLevel: pgx.LogLevelDebug,
-	}
-	db, err := Open(pgxConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &TestDB{DB: db, T: t}
+
+	return SharedTestDB
 }
 
 func (db *TestDB) Close() {

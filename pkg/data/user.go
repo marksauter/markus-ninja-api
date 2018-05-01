@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
 type UserModel struct {
@@ -239,7 +240,7 @@ const getUserByPrimaryEmailSQL = `
 				r.id = ar.role_id
 		) roles
 	FROM account a
-	WHERE login = $1
+	WHERE primary_email = $1
 `
 
 func (s *UserService) GetByPrimaryEmail(primaryEmail string) (*UserModel, error) {
@@ -258,6 +259,9 @@ const giveUserRoleUserSQL = `
 func (s *UserService) Create(user *UserModel) error {
 	mylog.Log.WithField("login", user.Login.String).Info("Create() User")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+
+	userId := oid.New("User")
+	user.Id.Set(userId.String())
 
 	var columns, values []string
 
@@ -316,9 +320,9 @@ func (s *UserService) Create(user *UserModel) error {
 			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return fmt.Errorf(`"%s" is required`, pgErr.ColumnName)
+				return RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return errors.New("The email and/or login are already in use")
+				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
 				return err
 			}

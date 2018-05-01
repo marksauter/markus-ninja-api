@@ -12,6 +12,7 @@ type ErrorCode int
 const (
 	UnknownError ErrorCode = iota
 	AccessDenied
+	BadRequest
 	InternalServerError
 	InvalidPassword
 	InvalidUserPassword
@@ -33,6 +34,8 @@ func (e *ErrorCode) UnmarshalJSON(b []byte) error {
 		*e = UnknownError
 	case "access_denied":
 		*e = AccessDenied
+	case "bad_request":
+		*e = BadRequest
 	case "internal_server_error":
 		*e = InternalServerError
 	case "invalid_password":
@@ -63,6 +66,8 @@ func (e ErrorCode) MarshalJSON() ([]byte, error) {
 		s = "unknown_error"
 	case AccessDenied:
 		s = "access_denied"
+	case BadRequest:
+		s = "bad_request"
 	case InternalServerError:
 		s = "internal_server_error"
 	case InvalidPassword:
@@ -98,6 +103,8 @@ func (r *ErrorResponse) StatusHTTP() int {
 		return http.StatusBadRequest
 	case AccessDenied:
 		return http.StatusForbidden
+	case BadRequest:
+		return http.StatusBadRequest
 	case InternalServerError:
 		return http.StatusInternalServerError
 	case MethodNotAllowed:
@@ -106,6 +113,13 @@ func (r *ErrorResponse) StatusHTTP() int {
 		return http.StatusTooManyRequests
 	case Unauthorized:
 		return http.StatusUnauthorized
+	}
+}
+
+func BadRequestErrorResponse(err string) *ErrorResponse {
+	return &ErrorResponse{
+		Error:            BadRequest,
+		ErrorDescription: err,
 	}
 }
 
@@ -138,10 +152,10 @@ func MethodNotAllowedResponse(method string) *ErrorResponse {
 	}
 }
 
-func PasswordStrengthErrorResponse() *ErrorResponse {
+func PasswordStrengthErrorResponse(err string) *ErrorResponse {
 	return &ErrorResponse{
 		Error:            PasswordStrengthError,
-		ErrorDescription: "The chosen password is too weak",
+		ErrorDescription: err,
 	}
 }
 

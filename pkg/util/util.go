@@ -7,15 +7,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/microcosm-cc/bluemonday"
 	blackfriday "gopkg.in/russross/blackfriday.v2"
 )
-
-func LoadEnv() error {
-	// Load env vars from .env
-	return godotenv.Load()
-}
 
 func GetOptionalEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {

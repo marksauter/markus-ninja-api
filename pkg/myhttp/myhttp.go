@@ -40,7 +40,14 @@ type ValidateBasicAuthHeaderOutput struct {
 func ValidateBasicAuthHeader(
 	req *http.Request,
 ) (*ValidateBasicAuthHeaderOutput, error) {
-	auth := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	output := ValidateBasicAuthHeaderOutput{}
+	authHeader := req.Header.Get("Authorization")
+	if authHeader == "" {
+		output.Login = "guest"
+		output.Password = "guest"
+		return &output, nil
+	}
+	auth := strings.SplitN(authHeader, " ", 2)
 	if len(auth) != 2 || auth[0] != "Basic" {
 		return nil, errors.New("Invalid authorization header")
 	}
@@ -49,9 +56,7 @@ func ValidateBasicAuthHeader(
 	if len(pair) != 2 {
 		return nil, errors.New("Invalid authorization header")
 	}
-	output := ValidateBasicAuthHeaderOutput{
-		Login:    pair[0],
-		Password: pair[1],
-	}
+	output.Login = pair[0]
+	output.Password = pair[1]
 	return &output, nil
 }

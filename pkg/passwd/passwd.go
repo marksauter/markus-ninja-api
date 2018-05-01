@@ -1,9 +1,13 @@
 package passwd
 
 import (
+	"errors"
+
 	"github.com/nbutton23/zxcvbn-go"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var ErrTooWeak = errors.New("password too weak")
 
 type PasswordStrength int
 
@@ -45,10 +49,13 @@ func (p *Password) CompareToHash(hash []byte) error {
 	return bcrypt.CompareHashAndPassword(hash, p.value)
 }
 
-func (p *Password) CheckStrength(s PasswordStrength) bool {
+func (p *Password) CheckStrength(s PasswordStrength) error {
 	entropy := zxcvbn.PasswordStrength(string(p.value), nil)
 	p.strength = PasswordStrength(entropy.Score)
-	return p.strength >= s
+	if p.strength < s {
+		return ErrTooWeak
+	}
+	return nil
 }
 
 // This doesn't work for some reason...

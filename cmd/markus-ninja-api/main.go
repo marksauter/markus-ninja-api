@@ -19,12 +19,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -38,17 +38,13 @@ import (
 )
 
 func main() {
-	util.LoadEnv()
-	dbPort, err := strconv.ParseUint(util.GetRequiredEnv("RDS_PORT"), 10, 16)
-	if err != nil {
-		panic(err)
-	}
+	config := myconf.Load("config")
 	dbConfig := pgx.ConnConfig{
-		User:     util.GetRequiredEnv("RDS_USERNAME"),
-		Password: util.GetRequiredEnv("RDS_PASSWORD"),
-		Host:     util.GetRequiredEnv("RDS_HOSTNAME"),
-		Port:     uint16(dbPort),
-		Database: util.GetRequiredEnv("RDS_DB_NAME"),
+		User:     config.DBUser,
+		Password: config.DBPassword,
+		Host:     config.DBHost,
+		Port:     config.DBPort,
+		Database: config.DBName,
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
@@ -75,6 +71,7 @@ func main() {
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs.Auth, repos))
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/permissions", route.Permissions())
+	r.Handle("/signup", route.Signup(svcs.Auth, repos))
 	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
