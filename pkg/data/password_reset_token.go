@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 type PasswordResetTokenModel struct {
@@ -144,35 +145,41 @@ func (s *PasswordResetTokenService) InsertPasswordReset(row *PasswordResetTokenM
 		columns = append(columns, `email`)
 		values = append(values, args.Append(&row.Email))
 	}
+	if row.UserId.Status != pgtype.Undefined {
+		columns = append(columns, `user_id`)
+		values = append(values, args.Append(&row.UserId))
+	}
 	if row.RequestIP.Status != pgtype.Undefined {
 		columns = append(columns, `request_ip`)
 		values = append(values, args.Append(&row.RequestIP))
 	}
-	if row.RequestTime.Status != pgtype.Undefined {
-		columns = append(columns, `request_time`)
-		values = append(values, args.Append(&row.RequestTime))
+	if row.IssuedAt.Status != pgtype.Undefined {
+		columns = append(columns, `issued_at`)
+		values = append(values, args.Append(&row.IssuedAt))
 	}
-	if row.UserID.Status != pgtype.Undefined {
-		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserID))
+	if row.ExpiresAt.Status != pgtype.Undefined {
+		columns = append(columns, `expires_at`)
+		values = append(values, args.Append(&row.ExpiresAt))
 	}
-	if row.CompletionIP.Status != pgtype.Undefined {
-		columns = append(columns, `completion_ip`)
-		values = append(values, args.Append(&row.CompletionIP))
+	if row.EndIP.Status != pgtype.Undefined {
+		columns = append(columns, `end_ip`)
+		values = append(values, args.Append(&row.EndIP))
 	}
-	if row.CompletionTime.Status != pgtype.Undefined {
-		columns = append(columns, `completion_time`)
-		values = append(values, args.Append(&row.CompletionTime))
+	if row.EndedAt.Status != pgtype.Undefined {
+		columns = append(columns, `ended_at`)
+		values = append(values, args.Append(&row.EndedAt))
 	}
 
-	sql := `insert into "password_resets"(` + strings.Join(columns, ", ") + `)
-values(` + strings.Join(values, ",") + `)
-returning "token"
+	sql := `
+		INSERT INTO password_reset_token(` + strings.Join(columns, ", ") + `)
+		VALUES(` + strings.Join(values, ",") + `)
+		RETURNING
+			token
   `
 
-	psName := preparedName("pgxdataInsertPasswordReset", sql)
+	psName := preparedName("insertPasswordResetToken", sql)
 
-	return prepareQueryRow(db, psName, sql, args...).Scan(&row.Token)
+	return prepareQueryRow(s.db, psName, sql, args...).Scan(&row.Token)
 }
 
 func (s *PasswordResetTokenService) Update(
@@ -181,14 +188,11 @@ func (s *PasswordResetTokenService) Update(
 	sets := make([]string, 0, 7)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
-	if row.Token.Status != pgtype.Undefined {
-		sets = append(sets, `token`+"="+args.Append(&row.Token))
-	}
 	if row.Email.Status != pgtype.Undefined {
 		sets = append(sets, `email`+"="+args.Append(&row.Email))
 	}
-	if row.UserID.Status != pgtype.Undefined {
-		sets = append(sets, `user_id`+"="+args.Append(&row.UserID))
+	if row.UserId.Status != pgtype.Undefined {
+		sets = append(sets, `user_id`+"="+args.Append(&row.UserId))
 	}
 	if row.RequestIP.Status != pgtype.Undefined {
 		sets = append(sets, `request_ip`+"="+args.Append(&row.RequestIP))
@@ -213,17 +217,46 @@ func (s *PasswordResetTokenService) Update(
 	sql := `
 		UPDATE password_reset_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE ` + `"token"=` + args.Append(token)
+		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
+		RETURNING
+			email,
+			user_id,
+			request_ip,
+			issued_at,
+			expires_at,
+			end_ip,
+			ended_at
+	`
 
-	psName := preparedName("pgxdataUpdatePasswordReset", sql)
+	psName := preparedName("updatePasswordResetToken", sql)
 
-	commandTag, err := prepareExec(s.db, psName, sql, args...)
-	if err != nil {
+	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
+		&row.Email,
+		&row.UserId,
+		&row.RequestIP,
+		&row.IssuedAt,
+		&row.ExpiresAt,
+		&row.EndIP,
+		&row.EndedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return ErrNotFound
+	} else if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				return RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return err
+			}
+		}
+		mylog.Log.WithError(err).Error("error during query")
 		return err
 	}
-	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
-	}
+
 	return nil
 }
 
