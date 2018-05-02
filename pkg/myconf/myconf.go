@@ -14,6 +14,13 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+
+	SMTPHost     string
+	SMTPPort     string
+	SMTPFromAddr string
+	SMTPRootUrl  string
+	SMTPUser     string
+	SMTPPassword string
 }
 
 func Load(name string) *Config {
@@ -33,5 +40,12 @@ func Load(name string) *Config {
 		DBUser:     config.Get("db.user").(string),
 		DBPassword: config.Get("db.password").(string),
 		DBName:     config.Get("db.name").(string),
+
+		SMTPHost:     config.Get("smtp.host").(string),
+		SMTPPort:     config.Get("smtp.port").(string),
+		SMTPFromAddr: config.Get("smtp.from_address").(string),
+		SMTPRootUrl:  config.Get("smtp.root_url").(string),
+		SMTPUser:     config.Get("smtp.user").(string),
+		SMTPPassword: config.Get("smtp.password").(string),
 	}
 }

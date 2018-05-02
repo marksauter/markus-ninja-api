@@ -135,7 +135,7 @@ func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Create(user)
+	err := r.svc.Create(user, data.UserRole)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,11 @@ func (r *UserRepo) VerifyCredentials(
 		mylog.Log.WithError(err).Error("error getting user")
 		return nil, errors.New("unauthorized access")
 	}
-	password := passwd.New(input.Password)
+	password, err := passwd.New(input.Password)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error new password")
+		return nil, err
+	}
 	if err = password.CompareToHash(user.Password.Bytes); err != nil {
 		mylog.Log.WithError(err).Error("error comparing passwords")
 		return nil, errors.New("unauthorized access")

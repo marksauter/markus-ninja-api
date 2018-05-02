@@ -3,12 +3,12 @@ CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
 CREATE TYPE node_type AS ENUM('Label', 'Lesson', 'LessonComment', 'Study', 'User');
 
 CREATE TABLE IF NOT EXISTS permission(
-  id            VARCHAR(45)   PRIMARY KEY,
+  id            VARCHAR(40)   PRIMARY KEY,
   access_level  access_level  NOT NULL,
   audience      audience      NOT NULL,
   type          node_type     NOT NULL,
-  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  created_at    TIMESTAMPTZ     DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ     DEFAULT NOW(),
   field         TEXT
 );
 

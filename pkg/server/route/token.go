@@ -58,7 +58,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	user, err := h.UserRepo.VerifyCredentials(&verificationInput)
 	if err != nil {
-		response := myhttp.InvalidUserPasswordResponse()
+		response := myhttp.InvalidCredentialsErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}

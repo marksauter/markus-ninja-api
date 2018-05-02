@@ -1,7 +1,7 @@
 CREATE TABLE role_permission(
-  role_id       VARCHAR(45),
-  permission_id VARCHAR(45),
-  granted_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  role_id       VARCHAR(40),
+  permission_id VARCHAR(40),
+  granted_at    TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (role_id, permission_id),
   FOREIGN KEY (role_id)
     REFERENCES role (id)

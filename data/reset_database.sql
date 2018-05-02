@@ -7,12 +7,12 @@ $$ language 'plpgsql';
 
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
-  id            VARCHAR(45) PRIMARY KEY,
-  login         VARCHAR(255) NOT NULL UNIQUE,
-  primary_email VARCHAR(355) NOT NULL UNIQUE,
+  id            VARCHAR(40) PRIMARY KEY,
+  login         VARCHAR(40) NOT NULL UNIQUE,
+  primary_email VARCHAR(40) NOT NULL UNIQUE,
   password      BYTEA NOT NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
   bio           TEXT,
   email         TEXT,
   name          TEXT
@@ -24,10 +24,10 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role CASCADE;
 CREATE TABLE role(
-  id          VARCHAR(45) PRIMARY KEY,
-  name        VARCHAR(45) NOT NULL UNIQUE,
-  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id          VARCHAR(40) PRIMARY KEY,
+  name        VARCHAR(40) NOT NULL UNIQUE,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TRIGGER role_updated_at_modtime
@@ -36,9 +36,9 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS account_role;
 CREATE TABLE account_role(
-  user_id     VARCHAR(45),
-  role_id     VARCHAR(45),
-  granted_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  user_id     VARCHAR(40),
+  role_id     VARCHAR(40),
+  granted_at  TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (user_id, role_id),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
@@ -54,12 +54,12 @@ CREATE TYPE node_type AS ENUM('Label', 'Lesson', 'LessonComment', 'Study', 'User
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
-  id            VARCHAR(45)   PRIMARY KEY,
+  id            VARCHAR(40)   PRIMARY KEY,
   access_level  access_level  NOT NULL,
   audience      audience      NOT NULL,
   type          node_type     NOT NULL,
-  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  created_at    TIMESTAMPTZ     DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ     DEFAULT NOW(),
   field         TEXT
 );
 
@@ -77,9 +77,9 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role_permission;
 CREATE TABLE role_permission(
-  role_id       VARCHAR(45),
-  permission_id VARCHAR(45),
-  granted_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  role_id       VARCHAR(40),
+  permission_id VARCHAR(40),
+  granted_at    TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (role_id, permission_id),
   FOREIGN KEY (role_id)
     REFERENCES role (id)
@@ -89,12 +89,27 @@ CREATE TABLE role_permission(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS password_reset_token;
+CREATE TABLE password_reset_token(
+  token         VARCHAR(40)   PRIMARY KEY,
+  email         VARCHAR(40)   NOT NULL,
+  user_id       VARCHAR(40)   NOT NULL,
+  request_ip    INET          NOT NULL,
+  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
+  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
+  end_ip        INET,
+  ended_at      TIMESTAMPTZ,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
 DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
-  id            VARCHAR(45) PRIMARY KEY,
-  user_id       VARCHAR(45) NOT NULL,
-  created_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  published_at  TIMESTAMP,
+  id            VARCHAR(40) PRIMARY KEY,
+  user_id       VARCHAR(40) NOT NULL,
+  created_at    TIMESTAMPTZ   DEFAULT NOW(),
+  published_at  TIMESTAMPTZ,
   description   TEXT,
   name          TEXT,
   FOREIGN KEY (user_id)
@@ -104,12 +119,12 @@ CREATE TABLE study(
 
 DROP TABLE IF EXISTS lesson CASCADE;
 CREATE TABLE lesson(
-  id              VARCHAR(45) PRIMARY KEY,
-  study_id        VARCHAR(45) NOT NULL,    
-  user_id         VARCHAR(45) NOT NULL,
-  created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  last_edited_at  TIMESTAMP,
-  published_at    TIMESTAMP,
+  id              VARCHAR(40) PRIMARY KEY,
+  study_id        VARCHAR(40) NOT NULL,    
+  user_id         VARCHAR(40) NOT NULL,
+  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  last_edited_at  TIMESTAMPTZ,
+  published_at    TIMESTAMPTZ,
   body            TEXT,
   number          INT,
   title           TEXT,
@@ -123,12 +138,12 @@ CREATE TABLE lesson(
 
 DROP TABLE IF EXISTS lesson_comment;
 CREATE TABLE lesson_comment(
-  id              VARCHAR(45) PRIMARY KEY,
-  lesson_id       VARCHAR(45) NOT NULL,
-  user_id         VARCHAR(45) NOT NULL,
-  created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  last_edited_at  TIMESTAMP,
-  published_at    TIMESTAMP,
+  id              VARCHAR(40) PRIMARY KEY,
+  lesson_id       VARCHAR(40) NOT NULL,
+  user_id         VARCHAR(40) NOT NULL,
+  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  last_edited_at  TIMESTAMPTZ,
+  published_at    TIMESTAMPTZ,
   body            TEXT,
   FOREIGN KEY (lesson_id)
     REFERENCES lesson (id)
@@ -140,10 +155,10 @@ CREATE TABLE lesson_comment(
 
 DROP TABLE IF EXISTS label;
 CREATE TABLE label(
-  id          VARCHAR(45) PRIMARY KEY,
-  name        VARCHAR(45) NOT NULL UNIQUE,
-  created_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+  id          VARCHAR(40) PRIMARY KEY,
+  name        VARCHAR(40) NOT NULL UNIQUE,
+  created_at  TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ   DEFAULT NOW()
 ); 
 
 CREATE TRIGGER label_updated_at_modtime

@@ -53,35 +53,57 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	var registration struct {
 		Email    string `json:"email"`
-		Login    string `json:"login"`
+		Username string `json:"login"`
 		Password string `json:"password"`
 	}
 	err := myhttp.UnmarshalRequestBody(req, &registration)
 	if err != nil {
-		response := myhttp.BadRequestErrorResponse(err.Error())
+		response := myhttp.InvalidRequestErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
 	if registration.Email == "" {
-		response := myhttp.BadRequestErrorResponse("invalid email")
+		response := &myhttp.ErrorResponse{
+			Error:            myhttp.InvalidCredentials,
+			ErrorDescription: "The request email was invalid",
+		}
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	if len(registration.Email) > 40 {
+		response := &myhttp.ErrorResponse{
+			Error:            myhttp.InvalidCredentials,
+			ErrorDescription: "The request email must be less than or equal to 40 characters",
+		}
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	if registration.Login == "" {
-		response := myhttp.BadRequestErrorResponse("invalid login")
+	if registration.Username == "" {
+		response := &myhttp.ErrorResponse{
+			Error:            myhttp.InvalidCredentials,
+			ErrorDescription: "The request username was invalid",
+		}
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	if len(registration.Username) > 40 {
+		response := &myhttp.ErrorResponse{
+			Error:            myhttp.InvalidCredentials,
+			ErrorDescription: "The request username must be less than or equal to 40 characters",
+		}
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	if registration.Password == "" {
-		response := myhttp.BadRequestErrorResponse("invalid password")
+	password, err := passwd.New(registration.Password)
+	if err != nil {
+		response := myhttp.InvalidPasswordResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	password := passwd.New(registration.Password)
 	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
 		response := myhttp.PasswordStrengthErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -89,7 +111,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	user := &data.UserModel{}
-	user.Login.Set(registration.Login)
+	user.Login.Set(registration.Username)
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(registration.Email)
 
@@ -114,7 +136,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 					response = myhttp.InternalServerErrorResponse(dfErr.Error())
 				}
 			case data.RequiredField:
-				response = myhttp.BadRequestErrorResponse(dfErr.Error())
+				response = myhttp.InvalidRequestErrorResponse(dfErr.Error())
 			default:
 				response = myhttp.InternalServerErrorResponse(dfErr.Error())
 			}

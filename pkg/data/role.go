@@ -9,6 +9,31 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
+type Role int
+
+const (
+	UnknownRole Role = iota
+	AdminRole
+	MemberRole
+	SelfRole
+	UserRole
+)
+
+func (r Role) String() string {
+	switch r {
+	case AdminRole:
+		return "ADMIN"
+	case MemberRole:
+		return "MEMBER"
+	case SelfRole:
+		return "SELF"
+	case UserRole:
+		return "USER"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 type RoleModel struct {
 	Id        string    `db:"id"`
 	Name      string    `db:"name"`

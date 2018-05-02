@@ -6,12 +6,12 @@ END;
 $$ language 'plpgsql';
 
 CREATE TABLE account(
-  id            VARCHAR(45) PRIMARY KEY,
-  login         VARCHAR(255) NOT NULL UNIQUE,
-  primary_email VARCHAR(355) NOT NULL UNIQUE,
+  id            VARCHAR(40) PRIMARY KEY,
+  login         VARCHAR(40) NOT NULL UNIQUE,
+  primary_email VARCHAR(40) NOT NULL UNIQUE,
   password      BYTEA NOT NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
   bio           TEXT,
   email         TEXT,
   name          TEXT

@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var ErrEmpty = errors.New("password cannot be empty")
 var ErrTooWeak = errors.New("password too weak")
 
 type PasswordStrength int
@@ -25,8 +26,11 @@ type Password struct {
 	value    []byte
 }
 
-func New(password string) *Password {
-	return &Password{value: []byte(password)}
+func New(password string) (*Password, error) {
+	if password == "" {
+		return nil, ErrEmpty
+	}
+	return &Password{value: []byte(password)}, nil
 }
 
 func (p *Password) String() string {

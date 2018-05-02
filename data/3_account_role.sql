@@ -1,7 +1,7 @@
 CREATE TABLE account_role(
-  user_id     VARCHAR(45),
-  role_id     VARCHAR(45),
-  granted_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  user_id     VARCHAR(40),
+  role_id     VARCHAR(40),
+  granted_at  TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (user_id, role_id),
   FOREIGN KEY (user_id)
     REFERENCES account (id)

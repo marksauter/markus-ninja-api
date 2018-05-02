@@ -12,10 +12,10 @@ type ErrorCode int
 const (
 	UnknownError ErrorCode = iota
 	AccessDenied
-	BadRequest
+	InvalidRequest
 	InternalServerError
 	InvalidPassword
-	InvalidUserPassword
+	InvalidCredentials
 	MethodNotAllowed
 	PasswordStrengthError
 	TooManyAttempts
@@ -34,14 +34,14 @@ func (e *ErrorCode) UnmarshalJSON(b []byte) error {
 		*e = UnknownError
 	case "access_denied":
 		*e = AccessDenied
-	case "bad_request":
-		*e = BadRequest
+	case "invalid_credentials":
+		*e = InvalidCredentials
+	case "invalid_request":
+		*e = InvalidRequest
 	case "internal_server_error":
 		*e = InternalServerError
 	case "invalid_password":
 		*e = InvalidPassword
-	case "invalid_user_password":
-		*e = InvalidUserPassword
 	case "method_not_allowed":
 		*e = MethodNotAllowed
 	case "password_strength_error":
@@ -66,14 +66,14 @@ func (e ErrorCode) MarshalJSON() ([]byte, error) {
 		s = "unknown_error"
 	case AccessDenied:
 		s = "access_denied"
-	case BadRequest:
-		s = "bad_request"
+	case InvalidCredentials:
+		s = "invalid_credentials"
+	case InvalidRequest:
+		s = "invalid_request"
 	case InternalServerError:
 		s = "internal_server_error"
 	case InvalidPassword:
 		s = "invalid_password"
-	case InvalidUserPassword:
-		s = "invalid_user_password"
 	case MethodNotAllowed:
 		s = "method_not_allowed"
 	case PasswordStrengthError:
@@ -103,12 +103,18 @@ func (r *ErrorResponse) StatusHTTP() int {
 		return http.StatusBadRequest
 	case AccessDenied:
 		return http.StatusForbidden
-	case BadRequest:
+	case InvalidCredentials:
+		return http.StatusUnprocessableEntity
+	case InvalidPassword:
+		return http.StatusUnprocessableEntity
+	case InvalidRequest:
 		return http.StatusBadRequest
 	case InternalServerError:
 		return http.StatusInternalServerError
 	case MethodNotAllowed:
 		return http.StatusMethodNotAllowed
+	case PasswordStrengthError:
+		return http.StatusUnprocessableEntity
 	case TooManyAttempts:
 		return http.StatusTooManyRequests
 	case Unauthorized:
@@ -116,9 +122,16 @@ func (r *ErrorResponse) StatusHTTP() int {
 	}
 }
 
-func BadRequestErrorResponse(err string) *ErrorResponse {
+func AccessDeniedErrorResponse() *ErrorResponse {
 	return &ErrorResponse{
-		Error:            BadRequest,
+		Error:            AccessDenied,
+		ErrorDescription: "You do not have the necessary permissions to access this content",
+	}
+}
+
+func InvalidRequestErrorResponse(err string) *ErrorResponse {
+	return &ErrorResponse{
+		Error:            InvalidRequest,
 		ErrorDescription: err,
 	}
 }
@@ -133,14 +146,14 @@ func InternalServerErrorResponse(err string) *ErrorResponse {
 func InvalidPasswordResponse() *ErrorResponse {
 	return &ErrorResponse{
 		Error:            InvalidPassword,
-		ErrorDescription: "If the password used doesn't comply with the password policy for the connection",
+		ErrorDescription: "The password doesn't comply with the password policy for the connection",
 	}
 }
 
-func InvalidUserPasswordResponse() *ErrorResponse {
+func InvalidCredentialsErrorResponse() *ErrorResponse {
 	return &ErrorResponse{
-		Error:            InvalidUserPassword,
-		ErrorDescription: "The login and/or password used for authentication are invalid",
+		Error:            InvalidCredentials,
+		ErrorDescription: "The credentials used for authentication are invalid",
 	}
 }
 

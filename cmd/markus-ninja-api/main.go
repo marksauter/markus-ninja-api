@@ -27,6 +27,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
@@ -94,10 +96,27 @@ func main() {
 func initDB(db *mydb.DB) error {
 	defer func() {
 		if r := recover(); r != nil {
-			mylog.Log.Debug(r)
+			mylog.Log.Panic(r)
 		}
 	}()
 	svcs := data.NewServices(db)
+
+	guestId := oid.New("User")
+	guestPassword, _ := passwd.New("guest")
+	guest := &data.UserModel{}
+	guest.Id.Set(guestId.String())
+	guest.Login.Set("guest")
+	guest.Password.Set(guestPassword.Hash())
+	guest.PrimaryEmail.Set("guest@rkus.ninja")
+	if err := svcs.User.Create(guest); err != nil {
+		if dfErr, ok := err.(data.DataFieldError); ok {
+			if dfErr.Code != data.DuplicateField {
+				mylog.Log.WithError(err).Fatal("failed to create guest account")
+				return err
+			}
+			mylog.Log.Info("guest account already exists")
+		}
+	}
 
 	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 

@@ -1,8 +1,8 @@
 CREATE TABLE study(
-  id            VARCHAR(45) PRIMARY KEY,
-  user_id       VARCHAR(45) NOT NULL,
-  created_at    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  published_at  TIMESTAMP,
+  id            VARCHAR(40) PRIMARY KEY,
+  user_id       VARCHAR(40) NOT NULL,
+  created_at    TIMESTAMPTZ   DEFAULT NOW(),
+  published_at  TIMESTAMPTZ,
   description   TEXT,
   name          TEXT,
   FOREIGN KEY (user_id)

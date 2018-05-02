@@ -32,16 +32,20 @@ func (r *RootResolver) CreateUser(
 		viewer.Roles()...,
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
+		mylog.Log.WithError(err).Error("failed to retrieve query permission")
 		return nil, repo.ErrAccessDenied
 	}
 	r.Repos.User().AddPermission(*queryPerm)
 
 	var user data.UserModel
 
-	password := passwd.New(args.Input.Password)
+	password, err := passwd.New(args.Input.Password)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to create password")
+		return nil, err
+	}
 	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
-		mylog.Log.Error("password failed strength check")
+		mylog.Log.WithError(err).Error("password failed strength check")
 		return nil, err
 	}
 
@@ -138,7 +142,11 @@ func (r *RootResolver) UpdateUser(
 	user.Id.Set(id.String())
 
 	if args.Input.Password != nil {
-		password := passwd.New(*args.Input.Password)
+		password, err := passwd.New(*args.Input.Password)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to create password")
+			return nil, err
+		}
 		if err := password.CheckStrength(passwd.VeryWeak); err != nil {
 			mylog.Log.Error("password failed strength check")
 			return nil, passwd.ErrTooWeak

@@ -8,7 +8,7 @@ import (
 type DataFieldErrorCode int
 
 const (
-	Unknown DataFieldErrorCode = iota
+	UnknownDataFieldErrorCode DataFieldErrorCode = iota
 	DuplicateField
 	RequiredField
 )
@@ -16,7 +16,7 @@ const (
 func (c DataFieldErrorCode) String() string {
 	switch c {
 	default:
-		return "unknown"
+		return "unknown_data_field_error"
 	case DuplicateField:
 		return "duplicate_field"
 	case RequiredField:

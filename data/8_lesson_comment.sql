@@ -1,10 +1,10 @@
 CREATE TABLE lesson_comment(
-  id              VARCHAR(45) PRIMARY KEY,
-  lesson_id       VARCHAR(45) NOT NULL,
-  user_id         VARCHAR(45) NOT NULL,
-  created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-  last_edited_at  TIMESTAMP,
-  published_at    TIMESTAMP,
+  id              VARCHAR(40) PRIMARY KEY,
+  lesson_id       VARCHAR(40) NOT NULL,
+  user_id         VARCHAR(40) NOT NULL,
+  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  last_edited_at  TIMESTAMPTZ,
+  published_at    TIMESTAMPTZ,
   body            TEXT,
   FOREIGN KEY (lesson_id)
     REFERENCES lesson (id)
