@@ -89,19 +89,31 @@ CREATE TABLE role_permission(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS account_verification_token;
+CREATE TABLE account_verification_token(
+  token         VARCHAR(40)   PRIMARY KEY,
+  user_id       VARCHAR(40)   NOT NULL,
+  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
+  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
+  ended_at      TIMESTAMPTZ,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
 DROP TABLE IF EXISTS password_reset_token;
 CREATE TABLE password_reset_token(
   token         VARCHAR(40)   PRIMARY KEY,
   email         VARCHAR(40)   NOT NULL,
-  user_id       VARCHAR(40)   NOT NULL,
   request_ip    INET          NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
   end_ip        INET,
   ended_at      TIMESTAMPTZ,
+  user_id       VARCHAR(40),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
+    ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
 DROP TABLE IF EXISTS study CASCADE;

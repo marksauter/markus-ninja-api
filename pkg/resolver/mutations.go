@@ -11,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/rs/xid"
 )
 
 type CreateUserInput struct {
@@ -57,7 +58,26 @@ func (r *RootResolver) CreateUser(
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{userPermit}, nil
+	uResolver := &userResolver{userPermit}
+
+	avt := &data.AccountVerificationTokenModel{}
+	token := xid.New()
+	avt.Token.Set(token.String())
+	avt.UserId.Set(user.Id.String)
+
+	err = r.Svcs.AVT.Create(avt)
+	if err != nil {
+		return uResolver, err
+	}
+	err = r.MailSvc.SendAccountVerificationMail(
+		user.PrimaryEmail.String,
+		token.String(),
+	)
+	if err != nil {
+		return uResolver, err
+	}
+
+	return uResolver, nil
 }
 
 type DeleteUserInput struct {

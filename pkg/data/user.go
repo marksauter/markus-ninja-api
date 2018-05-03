@@ -242,19 +242,22 @@ const getUserByPrimaryEmailSQL = `
 `
 
 func (s *UserService) GetByPrimaryEmail(primaryEmail string) (*UserModel, error) {
-	mylog.Log.WithField("primaryEmail", primaryEmail).Info("GetByPrimaryEmail(primaryEmail) User")
+	mylog.Log.WithField(
+		"primary_email",
+		primaryEmail,
+	).Info("GetByPrimaryEmail(primaryEmail) User")
 	return s.get("getUserByPrimaryEmail", getUserByPrimaryEmailSQL, primaryEmail)
 }
 
-const giveUserRoleUserSQL = `
-	INSERT INTO account_role (user_id, role_id)
-	SELECT DISTINCT a.id, r.id
-	FROM account a
-	INNER JOIN role r ON r.name = ANY($1)
-	WHERE a.id = $2
-`
+// const giveUserRoleUserSQL = `
+//   INSERT INTO account_role (user_id, role_id)
+//   SELECT DISTINCT a.id, r.id
+//   FROM account a
+//   INNER JOIN role r ON r.name = ANY($1)
+//   WHERE a.id = $2
+// `
 
-func (s *UserService) Create(user *UserModel, roles ...Role) error {
+func (s *UserService) Create(user *UserModel) error {
 	mylog.Log.WithField("login", user.Login.String).Info("Create() User")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -329,23 +332,23 @@ func (s *UserService) Create(user *UserModel, roles ...Role) error {
 		return err
 	}
 
-	if len(roles) > 0 {
-		roleArgs := make([]string, len(roles))
-		for i, r := range roles {
-			roleArgs[i] = r.String()
-		}
-		_, err = prepareExec(
-			tx,
-			"giveUserRoleUser",
-			giveUserRoleUserSQL,
-			roleArgs,
-			user.Id.String,
-		)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during execution")
-			return err
-		}
-	}
+	// if len(roles) > 0 {
+	//   roleArgs := make([]string, len(roles))
+	//   for i, r := range roles {
+	//     roleArgs[i] = r.String()
+	//   }
+	//   _, err = prepareExec(
+	//     tx,
+	//     "giveUserRoleUser",
+	//     giveUserRoleUserSQL,
+	//     roleArgs,
+	//     user.Id.String,
+	//   )
+	//   if err != nil {
+	//     mylog.Log.WithError(err).Error("error during execution")
+	//     return err
+	//   }
+	// }
 
 	err = tx.Commit()
 	if err != nil {

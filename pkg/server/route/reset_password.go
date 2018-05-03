@@ -13,34 +13,34 @@ import (
 	"github.com/rs/xid"
 )
 
-func RequestPasswordReset(
+func PasswordReset(
 	mailSvc mysmtp.Mailer,
 	pwrtSvc *data.PasswordResetTokenService,
 	userSvc *data.UserService,
 ) http.Handler {
-	requestPasswordResetHandler := RequestPasswordResetHandler{
+	passwordResetHandler := PasswordResetHandler{
 		MailSvc: mailSvc,
 		PWRTSvc: pwrtSvc,
 		UserSvc: userSvc,
 	}
 	return middleware.CommonMiddleware.Append(
-		requestPasswordResetCors.Handler,
-	).Then(requestPasswordResetHandler)
+		passwordResetCors.Handler,
+	).Then(passwordResetHandler)
 }
 
-var requestPasswordResetCors = cors.New(cors.Options{
+var passwordResetCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
-type RequestPasswordResetHandler struct {
+type PasswordResetHandler struct {
 	MailSvc mysmtp.Mailer
 	PWRTSvc *data.PasswordResetTokenService
 	UserSvc *data.UserService
 }
 
-func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h PasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

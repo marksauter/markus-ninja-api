@@ -9,9 +9,9 @@ user = "markus"
 password = "fender917"
 
 [smtp]
-host = "smtp.example.com"
+host = "email-smtp.us-east-1.amazonaws.com"
 port = "587"
 from_address = "noreply@rkus.ninja"
 root_url = "http://localhost:3000"
-user = "noreply@rkus.ninja"
-password = "secret"
+user = "AKIAJAKGPARBNEWK7RTA"
+password = "AgqJhceQBXmjsDxBOPsctSpRO8kWk2HCGPsBLNvnjmL0"

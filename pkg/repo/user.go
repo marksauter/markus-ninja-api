@@ -135,7 +135,7 @@ func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Create(user, data.UserRole)
+	err := r.svc.Create(user)
 	if err != nil {
 		return nil, err
 	}

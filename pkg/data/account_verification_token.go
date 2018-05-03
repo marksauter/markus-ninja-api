@@ -8,74 +8,65 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
-type PasswordResetTokenModel struct {
-	Token     pgtype.Varchar
-	Email     pgtype.Varchar
-	UserId    pgtype.Varchar
-	RequestIP pgtype.Inet
-	IssuedAt  pgtype.Timestamptz
-	ExpiresAt pgtype.Timestamptz
-	EndIP     pgtype.Inet
-	EndedAt   pgtype.Timestamptz
+type AccountVerificationTokenModel struct {
+	Token      pgtype.Varchar
+	UserId     pgtype.Varchar
+	IssuedAt   pgtype.Timestamptz
+	ExpiresAt  pgtype.Timestamptz
+	VerifiedAt pgtype.Timestamptz
 }
 
-func NewPasswordResetTokenService(q Queryer) *PasswordResetTokenService {
-	return &PasswordResetTokenService{q}
+func NewAccountVerificationTokenService(q Queryer) *AccountVerificationTokenService {
+	return &AccountVerificationTokenService{q}
 }
 
-type PasswordResetTokenService struct {
+type AccountVerificationTokenService struct {
 	db Queryer
 }
 
-const countPasswordResetTokenSQL = `SELECT COUNT(*) from password_reset_token`
+const countAccountVerificationTokenSQL = `SELECT COUNT(*) from account_verification_token`
 
-func (s *PasswordResetTokenService) CountPasswordReset() (int64, error) {
+func (s *AccountVerificationTokenService) CountAccountVerification() (int64, error) {
 	var n int64
 	err := prepareQueryRow(
 		s.db,
-		"countPasswordResetToken",
-		countPasswordResetTokenSQL,
+		"countAccountVerificationToken",
+		countAccountVerificationTokenSQL,
 	).Scan(&n)
 	return n, err
 }
 
-const getAllPasswordResetTokenSQL = `
+const getAllAccountVerificationTokenSQL = `
 	SELECT
 		token,
-		email,
 		user_id,
-		request_ip,
 		issued_at,
 		expires_at,
-		end_ip,
-		ended_at
+		verified_at
 	FROM
-		password_reset_token
+		account_verification_token
 `
 
-func (s *PasswordResetTokenService) GetAll() ([]PasswordResetTokenModel, error) {
-	var rows []PasswordResetTokenModel
+func (s *AccountVerificationTokenService) GetAll() ([]AccountVerificationTokenModel, error) {
+	var rows []AccountVerificationTokenModel
 
 	dbRows, err := prepareQuery(
 		s.db,
-		"getAllPasswordResetToken",
-		getAllPasswordResetTokenSQL,
+		"getAllAccountVerificationToken",
+		getAllAccountVerificationTokenSQL,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	for dbRows.Next() {
-		var row PasswordResetTokenModel
+		var row AccountVerificationTokenModel
 		dbRows.Scan(
 			&row.Token,
-			&row.Email,
 			&row.UserId,
-			&row.RequestIP,
 			&row.IssuedAt,
 			&row.ExpiresAt,
-			&row.EndIP,
-			&row.EndedAt,
+			&row.VerifiedAt,
 		)
 		rows = append(rows, row)
 	}
@@ -88,40 +79,34 @@ func (s *PasswordResetTokenService) GetAll() ([]PasswordResetTokenModel, error) 
 
 }
 
-const getPasswordResetTokenByPKSQL = `
+const getAccountVerificationTokenByPKSQL = `
 	SELECT
 		token,
-		email,
 		user_id,
-		request_ip,
 		issued_at,
 		expires_at,
-		end_ip,
-		ended_at
+		verified_at
 	FROM
-		password_reset_token
+		account_verification_token
 	WHERE
 		token = $1
 `
 
-func (s *PasswordResetTokenService) GetByPK(
+func (s *AccountVerificationTokenService) GetByPK(
 	token string,
-) (*PasswordResetTokenModel, error) {
-	var row PasswordResetTokenModel
+) (*AccountVerificationTokenModel, error) {
+	var row AccountVerificationTokenModel
 	err := prepareQueryRow(
 		s.db,
-		"getPasswordResetTokenByPK",
-		getPasswordResetTokenByPKSQL,
+		"getAccountVerificationTokenByPK",
+		getAccountVerificationTokenByPKSQL,
 		token,
 	).Scan(
 		&row.Token,
-		&row.Email,
 		&row.UserId,
-		&row.RequestIP,
 		&row.IssuedAt,
 		&row.ExpiresAt,
-		&row.EndIP,
-		&row.EndedAt,
+		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -132,7 +117,7 @@ func (s *PasswordResetTokenService) GetByPK(
 	return &row, nil
 }
 
-func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
+func (s *AccountVerificationTokenService) Create(row *AccountVerificationTokenModel) error {
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
 	var columns, values []string
@@ -141,17 +126,9 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 		columns = append(columns, `token`)
 		values = append(values, args.Append(&row.Token))
 	}
-	if row.Email.Status != pgtype.Undefined {
-		columns = append(columns, `email`)
-		values = append(values, args.Append(&row.Email))
-	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
 		values = append(values, args.Append(&row.UserId))
-	}
-	if row.RequestIP.Status != pgtype.Undefined {
-		columns = append(columns, `request_ip`)
-		values = append(values, args.Append(&row.RequestIP))
 	}
 	if row.IssuedAt.Status != pgtype.Undefined {
 		columns = append(columns, `issued_at`)
@@ -161,41 +138,31 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 		columns = append(columns, `expires_at`)
 		values = append(values, args.Append(&row.ExpiresAt))
 	}
-	if row.EndIP.Status != pgtype.Undefined {
-		columns = append(columns, `end_ip`)
-		values = append(values, args.Append(&row.EndIP))
-	}
-	if row.EndedAt.Status != pgtype.Undefined {
-		columns = append(columns, `ended_at`)
-		values = append(values, args.Append(&row.EndedAt))
+	if row.VerifiedAt.Status != pgtype.Undefined {
+		columns = append(columns, `verified_at`)
+		values = append(values, args.Append(&row.VerifiedAt))
 	}
 
 	sql := `
-		INSERT INTO password_reset_token(` + strings.Join(columns, ", ") + `)
+		INSERT INTO account_verification_token(` + strings.Join(columns, ", ") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 		RETURNING
 			token
   `
 
-	psName := preparedName("insertPasswordResetToken", sql)
+	psName := preparedName("insertAccountVerificationToken", sql)
 
 	return prepareQueryRow(s.db, psName, sql, args...).Scan(&row.Token)
 }
 
-func (s *PasswordResetTokenService) Update(
-	row *PasswordResetTokenModel,
+func (s *AccountVerificationTokenService) Update(
+	row *AccountVerificationTokenModel,
 ) error {
 	sets := make([]string, 0, 7)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
-	if row.Email.Status != pgtype.Undefined {
-		sets = append(sets, `email`+"="+args.Append(&row.Email))
-	}
 	if row.UserId.Status != pgtype.Undefined {
 		sets = append(sets, `user_id`+"="+args.Append(&row.UserId))
-	}
-	if row.RequestIP.Status != pgtype.Undefined {
-		sets = append(sets, `request_ip`+"="+args.Append(&row.RequestIP))
 	}
 	if row.IssuedAt.Status != pgtype.Undefined {
 		sets = append(sets, `issued_at`+"="+args.Append(&row.IssuedAt))
@@ -203,11 +170,8 @@ func (s *PasswordResetTokenService) Update(
 	if row.ExpiresAt.Status != pgtype.Undefined {
 		sets = append(sets, `expires_at`+"="+args.Append(&row.ExpiresAt))
 	}
-	if row.EndIP.Status != pgtype.Undefined {
-		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
-	}
-	if row.EndedAt.Status != pgtype.Undefined {
-		sets = append(sets, `ended_at`+"="+args.Append(&row.EndedAt))
+	if row.VerifiedAt.Status != pgtype.Undefined {
+		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
 	if len(sets) == 0 {
@@ -215,29 +179,23 @@ func (s *PasswordResetTokenService) Update(
 	}
 
 	sql := `
-		UPDATE password_reset_token
+		UPDATE account_verification_token
 		SET ` + strings.Join(sets, ", ") + `
 		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
 		RETURNING
-			email,
 			user_id,
-			request_ip,
 			issued_at,
 			expires_at,
-			end_ip,
-			ended_at
+			verified_at
 	`
 
-	psName := preparedName("updatePasswordResetToken", sql)
+	psName := preparedName("updateAccountVerificationToken", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.Email,
 		&row.UserId,
-		&row.RequestIP,
 		&row.IssuedAt,
 		&row.ExpiresAt,
-		&row.EndIP,
-		&row.EndedAt,
+		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
@@ -260,14 +218,14 @@ func (s *PasswordResetTokenService) Update(
 	return nil
 }
 
-func (s *PasswordResetTokenService) Delete(token string) error {
+func (s *AccountVerificationTokenService) Delete(token string) error {
 	args := pgx.QueryArgs(make([]interface{}, 0, 1))
 
 	sql := `
-		DELETE FROM password_reset_token 
+		DELETE FROM account_verification_token 
 		WHERE ` + `"token"=` + args.Append(token)
 
-	commandTag, err := prepareExec(s.db, "deletePasswordResetToken", sql, args...)
+	commandTag, err := prepareExec(s.db, "deleteAccountVerificationToken", sql, args...)
 	if err != nil {
 		return err
 	}

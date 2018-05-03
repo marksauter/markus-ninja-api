@@ -125,3 +125,33 @@ func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
 	mylog.Log.Debug("roles found")
 	return roles, nil
 }
+
+const grantUserRolesSQL = `
+	INSERT INTO account_role (user_id, role_id)
+	SELECT DISTINCT a.id, r.id
+	FROM account a
+	INNER JOIN role r ON r.name = ANY($1)
+	WHERE a.id = $2
+`
+
+func (s *RoleService) GrantUser(userId string, roles ...Role) error {
+	if len(roles) > 0 {
+		roleArgs := make([]string, len(roles))
+		for i, r := range roles {
+			roleArgs[i] = r.String()
+		}
+		_, err := prepareExec(
+			s.db,
+			"grantUserRoles",
+			grantUserRolesSQL,
+			roleArgs,
+			userId,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during execution")
+			return err
+		}
+	}
+
+	return nil
+}

@@ -27,6 +27,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/mysmtp"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -60,10 +61,13 @@ func main() {
 
 	svcs := data.NewServices(db)
 	repos := repo.NewRepos(svcs)
+	mailSvc := mysmtp.New(config)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
-			Repos: repos,
+			MailSvc: mailSvc,
+			Repos:   repos,
+			Svcs:    svcs,
 		},
 	)
 
@@ -73,8 +77,13 @@ func main() {
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs.Auth, repos))
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/permissions", route.Permissions())
+	r.Handle(
+		"/request_password_reset",
+		route.RequestPasswordReset(mailSvc, svcs.PWRT, svcs.User),
+	)
 	r.Handle("/signup", route.Signup(svcs.Auth, repos))
 	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
+	r.Handle("/verify_account", route.VerifyAccount(mailSvc, svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
@@ -100,23 +109,6 @@ func initDB(db *mydb.DB) error {
 		}
 	}()
 	svcs := data.NewServices(db)
-
-	guestId := oid.New("User")
-	guestPassword, _ := passwd.New("guest")
-	guest := &data.UserModel{}
-	guest.Id.Set(guestId.String())
-	guest.Login.Set("guest")
-	guest.Password.Set(guestPassword.Hash())
-	guest.PrimaryEmail.Set("guest@rkus.ninja")
-	if err := svcs.User.Create(guest); err != nil {
-		if dfErr, ok := err.(data.DataFieldError); ok {
-			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal("failed to create guest account")
-				return err
-			}
-			mylog.Log.Info("guest account already exists")
-		}
-	}
 
 	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 
@@ -259,5 +251,23 @@ func initDB(db *mydb.DB) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"n": userPermissionsCount,
 	}).Infof("role permissions created for USER")
+
+	guestId := oid.New("User")
+	guestPassword, _ := passwd.New("guest")
+	guest := &data.UserModel{}
+	guest.Id.Set(guestId.String())
+	guest.Login.Set("guest")
+	guest.Password.Set(guestPassword.Hash())
+	guest.PrimaryEmail.Set("guest@rkus.ninja")
+	if err := svcs.User.Create(guest); err != nil {
+		if dfErr, ok := err.(data.DataFieldError); ok {
+			if dfErr.Code != data.DuplicateField {
+				mylog.Log.WithError(err).Fatal("failed to create guest account")
+				return err
+			}
+			mylog.Log.Info("guest account already exists")
+		}
+	}
+
 	return nil
 }
