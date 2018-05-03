@@ -4,22 +4,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Token(authSvc *data.AuthService, userRepo *repo.UserRepo) http.Handler {
+func Token(svcs *service.Services, repos *repo.Repos) http.Handler {
 	tokenHandler := TokenHandler{
-		AuthSvc:  authSvc,
-		UserRepo: userRepo,
+		Svcs:  svcs,
+		Repos: repos,
 	}
 	return middleware.CommonMiddleware.Append(
 		tokenCors.Handler,
-		userRepo.Use,
+		repos.User().Use,
 	).Then(tokenHandler)
 }
 
@@ -30,8 +30,8 @@ var tokenCors = cors.New(cors.Options{
 })
 
 type TokenHandler struct {
-	AuthSvc  *data.AuthService
-	UserRepo *repo.UserRepo
+	Svcs  *service.Services
+	Repos *repo.Repos
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -56,7 +56,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		Password: validationOutput.Password,
 	}
 
-	user, err := h.UserRepo.VerifyCredentials(&verificationInput)
+	user, err := h.Repos.User().VerifyCredentials(&verificationInput)
 	if err != nil {
 		response := myhttp.InvalidCredentialsErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
@@ -65,7 +65,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.AuthSvc.SignJWT(&payload)
+	jwt, err := h.Svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

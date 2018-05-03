@@ -7,18 +7,14 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
-	"github.com/marksauter/markus-ninja-api/pkg/mysmtp"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func VerifyAccount(
-	mailer mysmtp.Mailer,
-	svcs *data.Services,
-) http.Handler {
+func VerifyAccount(svcs *service.Services) http.Handler {
 	requestAccountVerificationHandler := RequestAccountVerificationHandler{
-		Mailer: mailer,
-		Svcs:   svcs,
+		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
 		requestAccountVerificationCors.Handler,
@@ -32,8 +28,7 @@ var requestAccountVerificationCors = cors.New(cors.Options{
 })
 
 type RequestAccountVerificationHandler struct {
-	Mailer mysmtp.Mailer
-	Svcs   *data.Services
+	Svcs *service.Services
 }
 
 func (h RequestAccountVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -80,6 +75,19 @@ func (h RequestAccountVerificationHandler) ServeHTTP(rw http.ResponseWriter, req
 	}
 
 	err = h.Svcs.Role.GrantUser(avt.UserId.String, data.UserRole)
+	if err != nil {
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	err = avt.VerifiedAt.Set(time.Now())
+	if err != nil {
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	err = h.Svcs.AVT.Update(avt)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

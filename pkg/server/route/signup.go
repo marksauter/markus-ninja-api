@@ -11,17 +11,18 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Signup(authSvc *data.AuthService, repos *repo.Repos) http.Handler {
+func Signup(svcs *service.Services, repos *repo.Repos) http.Handler {
 	authMiddleware := middleware.Authenticate{
-		AuthSvc: authSvc,
-		Repos:   repos,
+		Svcs:  svcs,
+		Repos: repos,
 	}
 	signupHandler := SignupHandler{
-		AuthSvc: authSvc,
-		Repos:   repos,
+		Svcs:  svcs,
+		Repos: repos,
 	}
 	return middleware.CommonMiddleware.Append(
 		SignupCors.Handler,
@@ -37,8 +38,8 @@ var SignupCors = cors.New(cors.Options{
 })
 
 type SignupHandler struct {
-	AuthSvc *data.AuthService
-	Repos   *repo.Repos
+	Svcs  *service.Services
+	Repos *repo.Repos
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -149,7 +150,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.AuthSvc.SignJWT(&payload)
+	jwt, err := h.Svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

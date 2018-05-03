@@ -3,25 +3,22 @@ package route
 import (
 	"net"
 	"net/http"
+	"time"
 
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mysmtp"
+	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
-	"github.com/rs/xid"
 )
 
-func PasswordReset(
-	mailSvc mysmtp.Mailer,
-	pwrtSvc *data.PasswordResetTokenService,
-	userSvc *data.UserService,
-) http.Handler {
-	passwordResetHandler := PasswordResetHandler{
-		MailSvc: mailSvc,
-		PWRTSvc: pwrtSvc,
-		UserSvc: userSvc,
+func ResetPassword(svcs *service.Services) http.Handler {
+	passwordResetHandler := ResetPasswordHandler{
+		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
 		passwordResetCors.Handler,
@@ -34,92 +31,104 @@ var passwordResetCors = cors.New(cors.Options{
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
-type PasswordResetHandler struct {
-	MailSvc mysmtp.Mailer
-	PWRTSvc *data.PasswordResetTokenService
-	UserSvc *data.UserService
+type ResetPasswordHandler struct {
+	Svcs *service.Services
 }
 
-func (h PasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h ResetPasswordHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	pwrt := &data.PasswordResetTokenModel{}
-	token := xid.New()
-	pwrt.Token.Set(token.String())
-
-	if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-		if ip := net.ParseIP(host); ip != nil {
-			mask := net.CIDRMask(len(ip)*8, len(ip)*8)
-			ipNet := &net.IPNet{IP: ip, Mask: mask}
-			pwrt.RequestIP.Set(&ipNet)
-		}
+	var resetPassword struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
 	}
 
-	var reset struct {
-		Email string `json:"email"`
-	}
-
-	err := myhttp.UnmarshalRequestBody(req, &reset)
+	err := myhttp.UnmarshalRequestBody(req, &resetPassword)
 	if err != nil {
 		response := myhttp.InvalidRequestErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	if reset.Email == "" {
-		response := &myhttp.ErrorResponse{
-			Error:            myhttp.InvalidCredentials,
-			ErrorDescription: "The request email was invalid",
-		}
-		myhttp.WriteResponseTo(rw, response)
-	}
-	if len(reset.Email) > 40 {
-		response := &myhttp.ErrorResponse{
-			Error:            myhttp.InvalidCredentials,
-			ErrorDescription: "The request email must be less than or equal to 40 characters",
-		}
+
+	pwrt, err := h.Svcs.PWRT.GetByPK(resetPassword.Token)
+	if err == data.ErrNotFound {
+		rw.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
+		response := myhttp.InvalidRequestErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	pwrt.Email.Set(reset.Email)
+	if pwrt.UserId.Status != pgtype.Present {
+		rw.WriteHeader(http.StatusNotFound)
+		return
+	}
 
-	user, err := h.UserSvc.GetByPrimaryEmail(reset.Email)
-	switch err {
-	case nil:
-		pwrt.UserId = user.Id
-	case data.ErrNotFound:
-	default:
-		response := myhttp.InternalServerErrorResponse(err.Error())
+	if pwrt.EndedAt.Status == pgtype.Present {
+		rw.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	user := &data.UserModel{}
+	user.Id = pwrt.UserId
+	password, err := passwd.New(resetPassword.Password)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to create password")
+		response := myhttp.InvalidRequestErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
+		mylog.Log.Error("password failed strength check")
+		response := myhttp.InvalidRequestErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	user.Password.Set(password.Hash())
+
+	err = h.Svcs.User.Update(user)
+	if err != nil {
+		response := myhttp.InvalidRequestErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	err = h.PWRTSvc.Create(pwrt)
+	if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+		if ip := net.ParseIP(host); ip != nil {
+			mask := net.CIDRMask(len(ip)*8, len(ip)*8)
+			ipNet := &net.IPNet{IP: ip, Mask: mask}
+			pwrt.EndIP.Set(&ipNet)
+		}
+	}
+	pwrt.EndedAt.Set(time.Now())
+	err = h.Svcs.PWRT.Update(pwrt)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	if user == nil {
-		mylog.Log.WithField(
-			"email",
-			reset.Email,
-		).Warn("Password reset requested for missing email")
-		return
-	}
+	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	rw.Header().Set("Cache-Control", "no-store")
+	rw.Header().Set("Pragma", "no-cache")
 
-	err = h.MailSvc.SendPasswordResetMail(reset.Email, token.String())
+	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
+	jwt, err := h.Svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
-	return
+	response := &TokenSuccessResponse{
+		AccessToken: jwt.String(),
+		ExpiresIn:   jwt.Payload.Exp,
+	}
+	myhttp.WriteResponseTo(rw, response)
 }

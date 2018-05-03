@@ -27,7 +27,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mysmtp"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -36,18 +35,19 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	config := myconf.Load("config")
+	conf := myconf.Load("config")
 	dbConfig := pgx.ConnConfig{
-		User:     config.DBUser,
-		Password: config.DBPassword,
-		Host:     config.DBHost,
-		Port:     config.DBPort,
-		Database: config.DBName,
+		User:     conf.DBUser,
+		Password: conf.DBPassword,
+		Host:     conf.DBHost,
+		Port:     conf.DBPort,
+		Database: conf.DBName,
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
@@ -55,35 +55,32 @@ func main() {
 	}
 	defer db.Close()
 
-	if err = initDB(db); err != nil {
+	svcs := service.NewServices(conf, db)
+
+	if err = initDB(svcs, db); err != nil {
 		mylog.Log.WithField("error", err).Fatal("error initializing database")
 	}
 
-	svcs := data.NewServices(db)
 	repos := repo.NewRepos(svcs)
-	mailSvc := mysmtp.New(config)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
-			MailSvc: mailSvc,
-			Repos:   repos,
-			Svcs:    svcs,
+			Repos: repos,
+			Svcs:  svcs,
 		},
 	)
 
 	r := mux.NewRouter()
 
 	r.Handle("/", route.Index())
-	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs.Auth, repos))
+	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs, repos))
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/permissions", route.Permissions())
-	r.Handle(
-		"/request_password_reset",
-		route.RequestPasswordReset(mailSvc, svcs.PWRT, svcs.User),
-	)
-	r.Handle("/signup", route.Signup(svcs.Auth, repos))
-	r.Handle("/token", route.Token(svcs.Auth, repos.User()))
-	r.Handle("/verify_account", route.VerifyAccount(mailSvc, svcs))
+	r.Handle("/request_password_reset", route.RequestPasswordReset(svcs))
+	r.Handle("/reset_password", route.ResetPassword(svcs))
+	r.Handle("/signup", route.Signup(svcs, repos))
+	r.Handle("/token", route.Token(svcs, repos))
+	r.Handle("/verify_account", route.VerifyAccount(svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
@@ -102,13 +99,12 @@ func main() {
 	mylog.Log.Fatal(http.ListenAndServe(address, r))
 }
 
-func initDB(db *mydb.DB) error {
+func initDB(svcs *service.Services, db *mydb.DB) error {
 	defer func() {
 		if r := recover(); r != nil {
 			mylog.Log.Panic(r)
 		}
 	}()
-	svcs := data.NewServices(db)
 
 	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 

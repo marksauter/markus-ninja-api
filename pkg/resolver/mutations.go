@@ -69,7 +69,7 @@ func (r *RootResolver) CreateUser(
 	if err != nil {
 		return uResolver, err
 	}
-	err = r.MailSvc.SendAccountVerificationMail(
+	err = r.Svcs.Mail.SendAccountVerificationMail(
 		user.PrimaryEmail.String,
 		token.String(),
 	)

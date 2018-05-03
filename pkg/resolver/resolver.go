@@ -1,13 +1,11 @@
 package resolver
 
 import (
-	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/mysmtp"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type RootResolver struct {
-	MailSvc mysmtp.Mailer
-	Repos   *repo.Repos
-	Svcs    *data.Services
+	Repos *repo.Repos
+	Svcs  *service.Services
 }
