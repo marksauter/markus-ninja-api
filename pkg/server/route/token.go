@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/badoux/checkmail"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -45,15 +46,23 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	validationOutput, err := myhttp.ValidateBasicAuthHeader(req)
-	if err != nil {
+	if err == myhttp.ErrNoAuthHeader {
+		validationOutput.Login = "guest"
+		validationOutput.Password = "guest"
+	} else if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
 	verificationInput := repo.VerifyCredentialsInput{
-		Login:    validationOutput.Login,
 		Password: validationOutput.Password,
+	}
+	err = checkmail.ValidateFormat(validationOutput.Login)
+	if err != nil {
+		verificationInput.Login = validationOutput.Login
+	} else {
+		verificationInput.Email = validationOutput.Login
 	}
 
 	user, err := h.Repos.User().VerifyCredentials(&verificationInput)

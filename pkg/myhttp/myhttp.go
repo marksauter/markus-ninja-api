@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+var ErrNoAuthHeader = errors.New("authorization header is empty")
+
 type Response interface {
 	StatusHTTP() int
 }
@@ -41,22 +43,24 @@ func ValidateBasicAuthHeader(
 	req *http.Request,
 ) (*ValidateBasicAuthHeaderOutput, error) {
 	output := ValidateBasicAuthHeaderOutput{}
+
 	authHeader := req.Header.Get("Authorization")
 	if authHeader == "" {
-		output.Login = "guest"
-		output.Password = "guest"
-		return &output, nil
+		return nil, ErrNoAuthHeader
 	}
 	auth := strings.SplitN(authHeader, " ", 2)
 	if len(auth) != 2 || auth[0] != "Basic" {
 		return nil, errors.New("Invalid authorization header")
 	}
+
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
 	if len(pair) != 2 {
 		return nil, errors.New("Invalid authorization header")
 	}
+
 	output.Login = pair[0]
 	output.Password = pair[1]
+
 	return &output, nil
 }

@@ -76,11 +76,12 @@ func main() {
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs, repos))
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/permissions", route.Permissions())
-	r.Handle("/request_password_reset", route.RequestPasswordReset(svcs))
-	r.Handle("/reset_password", route.ResetPassword(svcs))
 	r.Handle("/signup", route.Signup(svcs, repos))
 	r.Handle("/token", route.Token(svcs, repos))
-	r.Handle("/verify_account", route.VerifyAccount(svcs))
+	r.Handle("/users/{login}/emails/confirm_verification/{token}", route.ConfirmVerification(svcs))
+	r.Handle("/users/{login}/emails/request_verification", route.RequestEmailVerification(svcs))
+	r.Handle("/users/{login}/request_password_reset", route.RequestPasswordReset(svcs))
+	r.Handle("/users/{login}/reset_password", route.ResetPassword(svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {

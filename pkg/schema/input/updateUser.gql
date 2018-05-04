@@ -1,10 +1,7 @@
 # Input type for UpdateUser
 input UpdateUserInput {
   bio:          String
-  email:        String
   id:           String!
   login:        String
   name:         String
-  password:     String
-  primaryEmail: String
 }

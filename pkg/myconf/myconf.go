@@ -18,7 +18,7 @@ type Config struct {
 	SMTPHost     string
 	SMTPPort     string
 	SMTPFromAddr string
-	SMTPRootUrl  string
+	SMTPRootURL  string
 	SMTPUser     string
 	SMTPPassword string
 }
@@ -44,7 +44,7 @@ func Load(name string) *Config {
 		SMTPHost:     config.Get("smtp.host").(string),
 		SMTPPort:     config.Get("smtp.port").(string),
 		SMTPFromAddr: config.Get("smtp.from_address").(string),
-		SMTPRootUrl:  config.Get("smtp.root_url").(string),
+		SMTPRootURL:  config.Get("smtp.root_url").(string),
 		SMTPUser:     config.Get("smtp.user").(string),
 		SMTPPassword: config.Get("smtp.password").(string),
 	}

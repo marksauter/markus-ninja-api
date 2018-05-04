@@ -32,10 +32,10 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 }
 
 func (r *UserPermit) Email() (string, error) {
-	if ok := r.checkFieldPermission("email"); !ok {
+	if ok := r.checkFieldPermission("public_email"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.user.Email.String, nil
+	return r.user.PublicEmail.String, nil
 }
 
 func (r *UserPermit) ID() (string, error) {
@@ -57,13 +57,6 @@ func (r *UserPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.user.Name.String, nil
-}
-
-func (r *UserPermit) PrimaryEmail() (string, error) {
-	if ok := r.checkFieldPermission("primary_email"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.user.PrimaryEmail.String, nil
 }
 
 func (r *UserPermit) Roles() []string {
@@ -227,6 +220,7 @@ func (r *UserRepo) Update(user *data.UserModel) (*UserPermit, error) {
 }
 
 type VerifyCredentialsInput struct {
+	Email    string
 	Login    string
 	Password string
 }
@@ -239,18 +233,27 @@ func (r *UserRepo) VerifyCredentials(
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	user, err := r.load.GetByLogin(input.Login)
+
+	var user *data.UserModel
+	var err error
+	if input.Email != "" {
+		user, err = r.svc.GetCredentialsByEmail(input.Email)
+	} else if input.Login != "" {
+		user, err = r.svc.GetCredentialsByLogin(input.Login)
+	} else {
+		return nil, errors.New("unauthorized access")
+	}
 	if err != nil {
-		mylog.Log.WithError(err).Error("error getting user")
+		mylog.Log.WithError(err).Error("failed to get user")
 		return nil, errors.New("unauthorized access")
 	}
 	password, err := passwd.New(input.Password)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error new password")
+		mylog.Log.WithError(err).Error("failed to make new password")
 		return nil, err
 	}
 	if err = password.CompareToHash(user.Password.Bytes); err != nil {
-		mylog.Log.WithError(err).Error("error comparing passwords")
+		mylog.Log.WithError(err).Error("passwords do not match")
 		return nil, errors.New("unauthorized access")
 	}
 

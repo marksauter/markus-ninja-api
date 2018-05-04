@@ -1,74 +1,63 @@
 package route
 
 import (
-	"net"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
-	"github.com/rs/xid"
 )
 
-func RequestPasswordReset(svcs *service.Services) http.Handler {
-	requestPasswordResetHandler := RequestPasswordResetHandler{
+func RequestEmailVerification(svcs *service.Services) http.Handler {
+	requestAccountVerificationHandler := RequestEmailVerificationHandler{
 		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
-		requestPasswordResetCors.Handler,
-	).Then(requestPasswordResetHandler)
+		requestEmailVerificationCors.Handler,
+	).Then(requestAccountVerificationHandler)
 }
 
-var requestPasswordResetCors = cors.New(cors.Options{
+var requestEmailVerificationCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
-type RequestPasswordResetHandler struct {
+type RequestEmailVerificationHandler struct {
 	Svcs *service.Services
 }
 
-func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	pwrt := &data.PasswordResetTokenModel{}
-	token := xid.New()
-	pwrt.Token.Set(token.String())
+	routeVars := mux.Vars(req)
 
-	if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-		if ip := net.ParseIP(host); ip != nil {
-			mask := net.CIDRMask(len(ip)*8, len(ip)*8)
-			ipNet := &net.IPNet{IP: ip, Mask: mask}
-			pwrt.RequestIP.Set(&ipNet)
-		}
-	}
-
-	var reset struct {
+	var verify struct {
 		Email string `json:"email"`
 	}
 
-	err := myhttp.UnmarshalRequestBody(req, &reset)
+	err := myhttp.UnmarshalRequestBody(req, &verify)
 	if err != nil {
 		response := myhttp.InvalidRequestErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	if reset.Email == "" {
+	if verify.Email == "" {
 		response := &myhttp.ErrorResponse{
 			Error:            myhttp.InvalidCredentials,
 			ErrorDescription: "The request email was invalid",
 		}
 		myhttp.WriteResponseTo(rw, response)
 	}
-	if len(reset.Email) > 40 {
+	if len(verify.Email) > 40 {
 		response := &myhttp.ErrorResponse{
 			Error:            myhttp.InvalidCredentials,
 			ErrorDescription: "The request email must be less than or equal to 40 characters",
@@ -77,20 +66,17 @@ func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http
 		return
 	}
 
-	pwrt.Email.Set(reset.Email)
-
-	user, err := h.Svcs.User.GetCredentialsByEmail(reset.Email)
-	switch err {
-	case nil:
-		pwrt.UserId = user.Id
-	case data.ErrNotFound:
-	default:
+	user, err := h.Svcs.User.GetCredentialsByEmail(verify.Email)
+	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	err = h.Svcs.PWRT.Create(pwrt)
+	avt := &data.EmailVerificationTokenModel{}
+	avt.UserId = user.Id
+
+	err = h.Svcs.AVT.Create(avt)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -100,12 +86,13 @@ func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http
 	if user == nil {
 		mylog.Log.WithField(
 			"email",
-			reset.Email,
-		).Warn("Password reset requested for missing email")
+			verify.Email,
+		).Warn("Account verification requested for missing email")
 		return
 	}
 
-	err = h.Svcs.Mail.SendPasswordResetMail(reset.Email, token.String())
+	login := routeVars["login"]
+	err = h.Svcs.Mail.SendEmailVerificationMail(verify.Email, login, avt.Token.String)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

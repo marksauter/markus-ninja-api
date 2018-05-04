@@ -12,15 +12,17 @@ import (
 
 type UserModel struct {
 	Bio          pgtype.Text    `db:"bio"`
+	BackupEmail  pgtype.Varchar `db:"backup_email"`
 	CreatedAt    time.Time      `db:"created_at"`
-	Email        pgtype.Text    `db:"email"`
+	ExtraEmails  []string       `db:"extra_emails"`
 	Id           pgtype.Varchar `db:"id"`
 	Login        pgtype.Varchar `db:"login"`
 	Name         pgtype.Text    `db:"name"`
 	Password     pgtype.Bytea   `db:"password"`
 	PrimaryEmail pgtype.Varchar `db:"primary_email"`
-	UpdatedAt    time.Time      `db:"updated_at"`
+	PublicEmail  pgtype.Varchar `db:"public_email"`
 	Roles        []string       `db:"roles"`
+	UpdatedAt    time.Time      `db:"updated_at"`
 }
 
 func NewUserService(q Queryer) *UserService {
@@ -39,64 +41,14 @@ func (s *UserService) Count() (int64, error) {
 	return n, err
 }
 
-const getAllUserSQL = `
-	SELECT
-		bio,
-		created_at,
-		email,
-		id,
-		login,
-		name,
-		password,
-		primary_email,
-		updated_at
-	FROM account
-`
-
-func (s *UserService) GetAll() ([]UserModel, error) {
-	mylog.Log.Info("GetAll() User")
-	var users []UserModel
-
-	rows, err := prepareQuery(s.db, "getAllUser", getAllUserSQL)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var user UserModel
-		rows.Scan(
-			&user.Bio,
-			&user.CreatedAt,
-			&user.Email,
-			&user.Id,
-			&user.Login,
-			&user.Name,
-			&user.Password,
-			&user.PrimaryEmail,
-			&user.UpdatedAt,
-		)
-		users = append(users, user)
-	}
-
-	if err := rows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("error during rows processing")
-		return nil, err
-	}
-
-	return users, nil
-}
-
 const batchGetUserSQL = `
 	SELECT
 		bio,
 		created_at,
-		email,
 		id,
 		login,
 		name,
-		password,
-		primary_email,
+		public_email,
 		updated_at
 	FROM account
 	WHERE id = ANY($1)
@@ -118,11 +70,8 @@ func (s *UserService) BatchGet(ids []string) ([]*UserModel, error) {
 		rows.Scan(
 			&u.Bio,
 			&u.CreatedAt,
-			&u.Email,
 			&u.Login,
 			&u.Name,
-			&u.Password,
-			&u.PrimaryEmail,
 			&u.UpdatedAt,
 		)
 	}
@@ -140,12 +89,10 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*UserModel,
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
 		&user.Bio,
 		&user.CreatedAt,
-		&user.Email,
 		&user.Id,
 		&user.Login,
 		&user.Name,
-		&user.Password,
-		&user.PrimaryEmail,
+		&user.PublicEmail,
 		&user.UpdatedAt,
 		&user.Roles,
 	)
@@ -161,15 +108,13 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*UserModel,
 
 const getUserByIdSQL = `  
 	SELECT
-		bio,
-		created_at,
-		email,
-		id,
-		login,
-		name,
-		password,
-		primary_email,
-		updated_at,
+		a.bio,
+		a.created_at,
+		a.id,
+		a.login,
+		a.name,
+		e.value public_email,
+		a.updated_at,
 		ARRAY(
 			SELECT
 				r.name
@@ -180,7 +125,10 @@ const getUserByIdSQL = `
 				r.id = ar.role_id
 		) roles
 	FROM account a
-	WHERE id = $1
+	LEFT JOIN account_email ae ON ae.user_id = a.id
+		AND ae.type = 'PUBLIC'
+	LEFT JOIN email e ON e.id = ae.email_id
+	WHERE a.id = $1
 `
 
 func (s *UserService) GetById(id string) (*UserModel, error) {
@@ -190,15 +138,13 @@ func (s *UserService) GetById(id string) (*UserModel, error) {
 
 const getUserByLoginSQL = `
 	SELECT
-		bio,
-		created_at,
-		email,
-		id,
-		login,
-		name,
-		password,
-		primary_email,
-		updated_at,
+		a.bio,
+		a.created_at,
+		a.id,
+		a.login,
+		a.name,
+		e.value public_email,
+		a.updated_at,
 		ARRAY(
 			SELECT
 				r.name
@@ -209,7 +155,10 @@ const getUserByLoginSQL = `
 				r.id = ar.role_id
 		) roles
 	FROM account a
-	WHERE login = $1
+	LEFT JOIN account_email ae ON ae.user_id = a.id
+		AND ae.type = 'PUBLIC'
+	LEFT JOIN email e ON e.id = ae.email_id
+	WHERE a.login = $1
 `
 
 func (s *UserService) GetByLogin(login string) (*UserModel, error) {
@@ -217,82 +166,83 @@ func (s *UserService) GetByLogin(login string) (*UserModel, error) {
 	return s.get("getUserByLogin", getUserByLoginSQL, login)
 }
 
-const getUserByPrimaryEmailSQL = `
-	SELECT
-		bio,
-		created_at,
-		email,
-		id,
-		login,
-		name,
-		password,
-		primary_email,
-		updated_at,
-		ARRAY(
-			SELECT
-				r.name
-			FROM
-				role r
-			INNER JOIN account_role ar ON ar.user_id = a.id
-			WHERE
-				r.id = ar.role_id
-		) roles
-	FROM account a
-	WHERE primary_email = $1
-`
+func (s *UserService) getCredentials(
+	name string,
+	sql string,
+	arg interface{},
+) (*UserModel, error) {
+	var row UserModel
+	err := prepareQueryRow(s.db, name, sql, arg).Scan(
+		&row.Id,
+		&row.Password,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	} else if err != nil {
+		mylog.Log.WithField("error", err).Error("error during scan")
+		return nil, err
+	}
 
-func (s *UserService) GetByPrimaryEmail(primaryEmail string) (*UserModel, error) {
-	mylog.Log.WithField(
-		"primary_email",
-		primaryEmail,
-	).Info("GetByPrimaryEmail(primaryEmail) User")
-	return s.get("getUserByPrimaryEmail", getUserByPrimaryEmailSQL, primaryEmail)
+	return &row, nil
 }
 
-// const giveUserRoleUserSQL = `
-//   INSERT INTO account_role (user_id, role_id)
-//   SELECT DISTINCT a.id, r.id
-//   FROM account a
-//   INNER JOIN role r ON r.name = ANY($1)
-//   WHERE a.id = $2
-// `
+const getUserCredentialsByLoginSQL = `  
+	SELECT
+		id,
+		password
+	FROM account
+	WHERE login = $1
+`
+
+func (s *UserService) GetCredentialsByLogin(
+	login string,
+) (*UserModel, error) {
+	mylog.Log.WithField("login", login).Info("GetCredentialsByLogin(login) UserCredentials")
+	return s.getCredentials("getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
+}
+
+const getUserCredentialsByEmailSQL = `
+	SELECT
+		a.id,
+		a.password
+	FROM account a
+	INNER JOIN account_email ae ON ae.user_id = a.id 
+		AND ae.type = ANY('{"PRIMARY", "BACKUP"}')
+	INNER JOIN email e ON e.id = ae.email_id
+		AND e.value = $1
+`
+
+func (s *UserService) GetCredentialsByEmail(
+	email string,
+) (*UserModel, error) {
+	mylog.Log.WithField(
+		"email", email,
+	).Info("GetCredentialsByEmail(email) UserCredentials")
+	return s.getCredentials(
+		"getUserCredentialsByEmail",
+		getUserCredentialsByEmailSQL,
+		email,
+	)
+}
 
 func (s *UserService) Create(user *UserModel) error {
 	mylog.Log.WithField("login", user.Login.String).Info("Create() User")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
-	userId := oid.New("User")
-	user.Id.Set(userId.String())
-
 	var columns, values []string
 
-	if user.Bio.Status != pgtype.Undefined {
-		columns = append(columns, `bio`)
-		values = append(values, args.Append(&user.Bio))
-	}
-	if user.Email.Status != pgtype.Undefined {
-		columns = append(columns, `email`)
-		values = append(values, args.Append(&user.Email))
-	}
-	if user.Id.Status != pgtype.Undefined {
-		columns = append(columns, `id`)
-		values = append(values, args.Append(&user.Id))
-	}
+	userId := oid.New("User")
+	user.Id.Set(userId.String())
+	columns = append(columns, `id`)
+	values = append(values, args.Append(&user.Id))
+
 	if user.Login.Status != pgtype.Undefined {
 		columns = append(columns, `login`)
 		values = append(values, args.Append(&user.Login))
 	}
-	if user.Name.Status != pgtype.Undefined {
-		columns = append(columns, `name`)
-		values = append(values, args.Append(&user.Name))
-	}
 	if user.Password.Status != pgtype.Undefined {
 		columns = append(columns, `password`)
 		values = append(values, args.Append(&user.Password))
-	}
-	if user.PrimaryEmail.Status != pgtype.Undefined {
-		columns = append(columns, `primary_email`)
-		values = append(values, args.Append(&user.PrimaryEmail))
 	}
 
 	tx, err := beginTransaction(s.db)
@@ -332,23 +282,25 @@ func (s *UserService) Create(user *UserModel) error {
 		return err
 	}
 
-	// if len(roles) > 0 {
-	//   roleArgs := make([]string, len(roles))
-	//   for i, r := range roles {
-	//     roleArgs[i] = r.String()
-	//   }
-	//   _, err = prepareExec(
-	//     tx,
-	//     "giveUserRoleUser",
-	//     giveUserRoleUserSQL,
-	//     roleArgs,
-	//     user.Id.String,
-	//   )
-	//   if err != nil {
-	//     mylog.Log.WithError(err).Error("error during execution")
-	//     return err
-	//   }
-	// }
+	emailSvc := NewEmailService(tx)
+	email := &EmailModel{Value: user.PrimaryEmail}
+	err = emailSvc.Create(email)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to create email")
+		return err
+	}
+
+	accountEmailSvc := NewAccountEmailService(tx)
+	accountEmail := &AccountEmailModel{
+		EmailId: email.Id,
+		Type:    "PRIMARY",
+		UserId:  user.Id,
+	}
+	err = accountEmailSvc.Create(accountEmail)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to create user primary_email")
+		return err
+	}
 
 	err = tx.Commit()
 	if err != nil {
@@ -379,13 +331,10 @@ func (s *UserService) Delete(id string) error {
 
 func (s *UserService) Update(user *UserModel) error {
 	sets := make([]string, 0, 5)
-	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	if user.Bio.Status != pgtype.Undefined {
 		sets = append(sets, `bio`+"="+args.Append(&user.Bio))
-	}
-	if user.Email.Status != pgtype.Undefined {
-		sets = append(sets, `email`+"="+args.Append(&user.Email))
 	}
 	if user.Login.Status != pgtype.Undefined {
 		sets = append(sets, `login`+"="+args.Append(&user.Login))
@@ -396,9 +345,6 @@ func (s *UserService) Update(user *UserModel) error {
 	if user.Password.Status != pgtype.Undefined {
 		sets = append(sets, `password`+"="+args.Append(&user.Password))
 	}
-	if user.PrimaryEmail.Status != pgtype.Undefined {
-		sets = append(sets, `primary_email`+"="+args.Append(&user.PrimaryEmail))
-	}
 
 	sql := `
 		UPDATE account
@@ -407,11 +353,9 @@ func (s *UserService) Update(user *UserModel) error {
 		RETURNING
 			bio,
 			created_at,
-			email,
 			login,
 			name,
 			password,
-			primary_email,
 			updated_at
 	`
 
@@ -420,11 +364,9 @@ func (s *UserService) Update(user *UserModel) error {
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&user.Bio,
 		&user.CreatedAt,
-		&user.Email,
 		&user.Login,
 		&user.Name,
 		&user.Password,
-		&user.PrimaryEmail,
 		&user.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {

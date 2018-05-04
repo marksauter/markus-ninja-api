@@ -11,7 +11,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/rs/xid"
 )
 
 type CreateUserInput struct {
@@ -60,18 +59,18 @@ func (r *RootResolver) CreateUser(
 	}
 	uResolver := &userResolver{userPermit}
 
-	avt := &data.AccountVerificationTokenModel{}
-	token := xid.New()
-	avt.Token.Set(token.String())
+	avt := &data.EmailVerificationTokenModel{}
 	avt.UserId.Set(user.Id.String)
 
 	err = r.Svcs.AVT.Create(avt)
 	if err != nil {
 		return uResolver, err
 	}
-	err = r.Svcs.Mail.SendAccountVerificationMail(
+
+	err = r.Svcs.Mail.SendEmailVerificationMail(
 		user.PrimaryEmail.String,
-		token.String(),
+		user.Login.String,
+		avt.Token.String,
 	)
 	if err != nil {
 		return uResolver, err
@@ -121,13 +120,10 @@ func (r *RootResolver) DeleteUser(
 }
 
 type UpdateUserInput struct {
-	Bio          *string
-	Email        *string
-	Id           string
-	Login        *string
-	Name         *string
-	Password     *string
-	PrimaryEmail *string
+	Bio   *string
+	Id    string
+	Login *string
+	Name  *string
 }
 
 func (r *RootResolver) UpdateUser(
@@ -161,32 +157,14 @@ func (r *RootResolver) UpdateUser(
 	}
 	user.Id.Set(id.String())
 
-	if args.Input.Password != nil {
-		password, err := passwd.New(*args.Input.Password)
-		if err != nil {
-			mylog.Log.WithError(err).Error("failed to create password")
-			return nil, err
-		}
-		if err := password.CheckStrength(passwd.VeryWeak); err != nil {
-			mylog.Log.Error("password failed strength check")
-			return nil, passwd.ErrTooWeak
-		}
-		user.Password.Set(password.Hash())
-	}
 	if args.Input.Bio != nil {
 		user.Bio.Set(args.Input.Bio)
-	}
-	if args.Input.Email != nil {
-		user.Email.Set(args.Input.Email)
 	}
 	if args.Input.Login != nil {
 		user.Login.Set(args.Input.Login)
 	}
 	if args.Input.Name != nil {
 		user.Name.Set(args.Input.Name)
-	}
-	if args.Input.PrimaryEmail != nil {
-		user.PrimaryEmail.Set(args.Input.PrimaryEmail)
 	}
 
 	userPermit, err := r.Repos.User().Update(&user)

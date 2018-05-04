@@ -41,19 +41,19 @@ func TestDataUsersLifeCycle(t *testing.T) {
 		t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
 	}
 
-	user, err = userSvc.GetByPrimaryEmail(input.PrimaryEmail.String)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if user.Id.String != userId {
-		t.Errorf("Expected %v, got %v", userId, user.Id)
-	}
-	if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
-		t.Errorf("Expected %v, got %v", input.Password, user.Password)
-	}
-	if user.PrimaryEmail != input.PrimaryEmail {
-		t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
-	}
+	// user, err = userSvc.GetByPrimaryEmail(input.PrimaryEmail.String)
+	// if err != nil {
+	//   t.Fatal(err)
+	// }
+	// if user.Id.String != userId {
+	//   t.Errorf("Expected %v, got %v", userId, user.Id)
+	// }
+	// if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
+	//   t.Errorf("Expected %v, got %v", input.Password, user.Password)
+	// }
+	// if user.PrimaryEmail != input.PrimaryEmail {
+	//   t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
+	// }
 
 	user, err = userSvc.GetById(input.Id.String)
 	if err != nil {
@@ -88,24 +88,24 @@ func TestDataCreateUserHandlesLoginUniqueness(t *testing.T) {
 	}
 }
 
-func TestDataCreateUserHandlesPrimaryEmailUniqueness(t *testing.T) {
-	db := mydb.NewTestDB(t)
-	userSvc := data.NewUserService(db.DB)
-
-	user := newUser()
-	user.Email.Set("test@example.com")
-	err := userSvc.Create(user)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	user.Login.Set("otherlogin")
-	actual := userSvc.Create(user)
-	expected := data.DuplicateFieldError("primary_email")
-	if actual != expected {
-		t.Fatalf("Expected %v, got %v", expected, actual)
-	}
-}
+// func TestDataCreateUserHandlesPrimaryEmailUniqueness(t *testing.T) {
+//   db := mydb.NewTestDB(t)
+//   userSvc := data.NewUserService(db.DB)
+//
+//   user := newUser()
+//   user.Email.Set("test@example.com")
+//   err := userSvc.Create(user)
+//   if err != nil {
+//     t.Fatal(err)
+//   }
+//
+//   user.Login.Set("otherlogin")
+//   actual := userSvc.Create(user)
+//   expected := data.DuplicateFieldError("primary_email")
+//   if actual != expected {
+//     t.Fatalf("Expected %v, got %v", expected, actual)
+//   }
+// }
 
 func BenchmarkDataGetUser(b *testing.B) {
 	db := mydb.NewTestDB(b)

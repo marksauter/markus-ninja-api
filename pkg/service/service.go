@@ -8,7 +8,7 @@ import (
 
 type Services struct {
 	Auth *AuthService
-	AVT  *data.AccountVerificationTokenService
+	AVT  *data.EmailVerificationTokenService
 	Mail *MailService
 	Perm *data.PermService
 	PWRT *data.PasswordResetTokenService
@@ -23,10 +23,11 @@ func NewServices(conf *myconf.Config, db *mydb.DB) *Services {
 		User:        conf.SMTPUser,
 		Password:    conf.SMTPPassword,
 		FromAddress: conf.SMTPFromAddr,
+		RootURL:     conf.SMTPRootURL,
 	}
 	return &Services{
 		Auth: NewAuthService(),
-		AVT:  data.NewAccountVerificationTokenService(db),
+		AVT:  data.NewEmailVerificationTokenService(db),
 		Mail: NewMailService(mailConfig),
 		Perm: data.NewPermService(db),
 		PWRT: data.NewPasswordResetTokenService(db),

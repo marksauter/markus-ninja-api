@@ -76,10 +76,6 @@ func (r *userResolver) Name() (string, error) {
 	return r.user.Name()
 }
 
-func (r *userResolver) PrimaryEmail() (string, error) {
-	return r.user.PrimaryEmail()
-}
-
 func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
 	login, err := r.user.Login()

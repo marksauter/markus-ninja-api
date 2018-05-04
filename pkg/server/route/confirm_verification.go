@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
@@ -12,44 +13,36 @@ import (
 	"github.com/rs/cors"
 )
 
-func VerifyAccount(svcs *service.Services) http.Handler {
-	requestAccountVerificationHandler := RequestAccountVerificationHandler{
+func ConfirmVerification(svcs *service.Services) http.Handler {
+	verifyAcccountHandler := ConfirmVerificationHandler{
 		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
-		requestAccountVerificationCors.Handler,
-	).Then(requestAccountVerificationHandler)
+		confirmVerificationCors.Handler,
+	).Then(verifyAcccountHandler)
 }
 
-var requestAccountVerificationCors = cors.New(cors.Options{
+var confirmVerificationCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
-type RequestAccountVerificationHandler struct {
+type ConfirmVerificationHandler struct {
 	Svcs *service.Services
 }
 
-func (h RequestAccountVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
+func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	var verifyAccount struct {
-		Token string `json:"token"`
-	}
+	routeVars := mux.Vars(req)
 
-	err := myhttp.UnmarshalRequestBody(req, &verifyAccount)
-	if err != nil {
-		response := myhttp.InvalidRequestErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
-	avt, err := h.Svcs.AVT.GetByPK(verifyAccount.Token)
+	login := routeVars["login"]
+	user, err := h.Svcs.User.GetByLogin(login)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -59,8 +52,14 @@ func (h RequestAccountVerificationHandler) ServeHTTP(rw http.ResponseWriter, req
 		return
 	}
 
-	if avt.UserId.Status != pgtype.Present {
+	token := routeVars["token"]
+	avt, err := h.Svcs.AVT.GetByPK(user.Id.String, token)
+	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 

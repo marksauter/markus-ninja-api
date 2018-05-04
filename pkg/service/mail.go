@@ -15,12 +15,14 @@ type MailServiceConfig struct {
 	User        string
 	Password    string
 	FromAddress string
+	RootURL     string
 }
 
 func NewMailService(conf *MailServiceConfig) *MailService {
 	auth := smtp.PlainAuth("", conf.User, conf.Password, conf.Host)
 
 	return &MailService{
+		rootURL:    conf.RootURL,
 		serverAddr: conf.Host + ":" + conf.Port,
 		auth:       auth,
 		from:       conf.FromAddress,
@@ -28,28 +30,37 @@ func NewMailService(conf *MailServiceConfig) *MailService {
 }
 
 type MailService struct {
+	rootURL    string
 	serverAddr string
 	auth       smtp.Auth
 	from       string
 }
 
-var accountVerificationMailTemplate = template.Must(
+var emailVerificationMailTemplate = template.Must(
 	template.New("passwordResetMailTemplate").Parse(
-		"To: {{.To}}\r\nSubject: markus ninja account verification\r\n\r\nYour verification code is: {{.Token}}",
+		"To: {{.To}}\r\n" +
+			"Subject: [rkus.ninja] Please verify your email address\r\n\r\n" +
+			"Hi @{{.Login}}\r\n\r\n," +
+			"Paste the following link into your browser to verify your email address: " +
+			"{{.RootURL}}/users/{{.Login}}/emails/confirm_verification/{{.Token}}",
 	),
 )
 
-func (s *MailService) SendAccountVerificationMail(to, token string) error {
+func (s *MailService) SendEmailVerificationMail(to, login, token string) error {
 	var data = struct {
-		To    string
-		Token string
+		To      string
+		Login   string
+		RootURL string
+		Token   string
 	}{
-		To:    to,
-		Token: token,
+		To:      to,
+		Login:   login,
+		RootURL: s.rootURL,
+		Token:   token,
 	}
 
 	buf := &bytes.Buffer{}
-	err := accountVerificationMailTemplate.Execute(buf, data)
+	err := emailVerificationMailTemplate.Execute(buf, data)
 	if err != nil {
 		return err
 	}
@@ -59,19 +70,21 @@ func (s *MailService) SendAccountVerificationMail(to, token string) error {
 		mylog.Log.WithFields(logrus.Fields{
 			"to":    to,
 			"error": err,
-		}).Error("failed to send account verification email")
+		}).Error("failed to send email verification email")
 	}
 
 	mylog.Log.WithFields(logrus.Fields{
 		"to": to,
-	}).Info("sent account verification email")
+	}).Info("sent email verification email")
 
 	return nil
 }
 
 var passwordResetMailTemplate = template.Must(
 	template.New("passwordResetMailTemplate").Parse(
-		"To: {{.To}}\r\nSubject: markus ninja password reset\r\n\r\nYour password reset code is: {{.Token}}",
+		"To: {{.To}}\r\n" +
+			"Subject: [rkus.ninja] Password reset request\r\n\r\n" +
+			"Your password reset code is: {{.Token}}",
 	),
 )
 

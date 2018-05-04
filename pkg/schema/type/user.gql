@@ -26,9 +26,6 @@ type User implements Node, UniformResourceLocatable {
   # The user's public profile name.
   name: String!
 
-  # The user's primary email used to sign up.
-  primaryEmail: String!
-
   # The HTTP path for this user.
   resourcePath: URI!
 

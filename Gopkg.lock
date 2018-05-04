@@ -38,6 +38,12 @@
   version = "v1.13.26"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/badoux/checkmail"
+  packages = ["."]
+  revision = "0755fe2dc241caebab64327c352006712f6a55c4"
+
+[[projects]]
   name = "github.com/fatih/structs"
   packages = ["."]
   revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
@@ -316,6 +322,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6e9b000d3c4f1956ceabc365f0a3f2151e2dee703ae371b4c21eab99d8289343"
+  inputs-digest = "e215db81613bac6b868c49049eedf03b4a04c93280a283851ba2941d6ec51d4a"
   solver-name = "gps-cdcl"
   solver-version = 1
