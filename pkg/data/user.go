@@ -11,18 +11,18 @@ import (
 )
 
 type UserModel struct {
-	Bio          pgtype.Text    `db:"bio"`
+	Bio          pgtype.Text    `db:"bio" permit:"read"`
 	BackupEmail  pgtype.Varchar `db:"backup_email"`
-	CreatedAt    time.Time      `db:"created_at"`
+	CreatedAt    time.Time      `db:"created_at" permit:"read"`
 	ExtraEmails  []string       `db:"extra_emails"`
-	Id           pgtype.Varchar `db:"id"`
-	Login        pgtype.Varchar `db:"login"`
-	Name         pgtype.Text    `db:"name"`
+	Id           pgtype.Varchar `db:"id" permit:"read/create"`
+	Login        pgtype.Varchar `db:"login" permit:"read/create"`
+	Name         pgtype.Text    `db:"name" permit:"read"`
 	Password     pgtype.Bytea   `db:"password"`
 	PrimaryEmail pgtype.Varchar `db:"primary_email"`
-	PublicEmail  pgtype.Varchar `db:"public_email"`
+	PublicEmail  pgtype.Varchar `db:"public_email" permit:"read"`
 	Roles        []string       `db:"roles"`
-	UpdatedAt    time.Time      `db:"updated_at"`
+	UpdatedAt    time.Time      `db:"updated_at" permit:"read"`
 }
 
 func NewUserService(q Queryer) *UserService {

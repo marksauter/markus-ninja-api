@@ -43,18 +43,18 @@ func NewPermService(db *mydb.DB) *PermService {
 	return &PermService{db}
 }
 
-// Creates a suite of permissions for the passed node.
-//	- permissions for Create/Read/Update access for each field in node.
+// Creates a suite of permissions for the passed model.
+//	- permissions for Create/Read/Update access for each field in model.
 //  - permissions for Connect/Disconnect/Delete.
 // Defaults audience to "AUTHENTICATED"
-func (s *PermService) CreatePermissionSuite(node interface{}) error {
-	mType, err := perm.ParseNodeType(structs.Name(node))
+func (s *PermService) CreatePermissionSuite(model interface{}) error {
+	mType, err := perm.ParseNodeType(structs.Name(model))
 	mylog.Log.WithField(
-		"node",
+		"model",
 		mType,
-	).Info("CreatePermissionSuite(node)")
+	).Info("CreatePermissionSuite(model)")
 
-	fields := structs.Names(node)
+	fields := structs.Names(model)
 	n := len(fields)*len(accessLevelsWithFields) + len(accessLevelsWithoutFields)
 	permissions := make([][]interface{}, n)
 	i := 0
@@ -67,7 +67,7 @@ func (s *PermService) CreatePermissionSuite(node interface{}) error {
 				al,
 				mType,
 				perm.Authenticated,
-				field.Get(),
+				field.String,
 			}
 			i += 1
 		}
@@ -79,7 +79,7 @@ func (s *PermService) CreatePermissionSuite(node interface{}) error {
 			al,
 			mType,
 			perm.Authenticated,
-			field.Get(),
+			field.String,
 		}
 		i += 1
 	}
@@ -103,6 +103,51 @@ func (s *PermService) CreatePermissionSuite(node interface{}) error {
 	}
 
 	mylog.Log.Infof("created %v permissions for type %s", copyCount, mType)
+
+	err = s.UpdatePermissionSuite(model)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *PermService) UpdatePermissionSuite(model interface{}) error {
+	permissableUserFields, err := perm.GetPermissableFields(model)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("failed to get user field permissions")
+		return err
+	}
+	err = s.UpdateOperationForFields(
+		perm.ReadUser,
+		permissableUserFields.Filter(perm.ReadAccess).Names(),
+		perm.Everyone,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("error during permission update")
+		return err
+	}
+
+	err = s.UpdateOperationForFields(
+		perm.CreateUser,
+		permissableUserFields.Filter(perm.CreateAccess).Names(),
+		perm.Everyone,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("error during permission update")
+		return err
+	}
+
+	err = s.UpdateOperationForFields(
+		perm.UpdateUser,
+		permissableUserFields.Filter(perm.UpdateAccess).Names(),
+		perm.Everyone,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal("error during permission update")
+		return err
+	}
+
 	return nil
 }
 

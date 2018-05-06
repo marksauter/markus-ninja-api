@@ -24,13 +24,11 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
@@ -127,7 +125,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
-		new(model.User),
+		new(data.UserModel),
 	}
 
 	for _, model := range modelTypes {
@@ -135,38 +133,6 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 			mylog.Log.WithError(err).Fatal("error during permission suite creation")
 			return err
 		}
-	}
-
-	publicReadUserFields := []string{
-		"bio",
-		"email",
-		"id",
-		"login",
-		"name",
-	}
-	err := svcs.Perm.UpdateOperationForFields(
-		perm.ReadUser,
-		publicReadUserFields,
-		perm.Everyone,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("error during permission update")
-		return err
-	}
-
-	publicCreateUserFields := []string{
-		"primary_email",
-		"id",
-		"login",
-	}
-	err = svcs.Perm.UpdateOperationForFields(
-		perm.CreateUser,
-		publicCreateUserFields,
-		perm.Everyone,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("error during permission update")
-		return err
 	}
 
 	adminPermissionsSQL := `

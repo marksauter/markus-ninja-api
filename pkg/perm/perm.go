@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"strings"
+
+	"github.com/fatih/structs"
 )
 
 type AccessLevel int64
@@ -73,7 +75,8 @@ func (al AccessLevel) Value() (driver.Value, error) {
 type Audience int64
 
 const (
-	Authenticated Audience = iota
+	NoAudience Audience = iota
+	Authenticated
 	Everyone
 )
 
@@ -84,7 +87,7 @@ func (a Audience) String() string {
 	case Everyone:
 		return "EVERYONE"
 	default:
-		return "unknown"
+		return "NOAUDIENCE"
 	}
 }
 
@@ -106,8 +109,7 @@ func (a *Audience) Scan(value interface{}) (err error) {
 		*a, err = ParseAudience(v)
 		return
 	default:
-		err = fmt.Errorf("invalid type for audience %T", v)
-		return
+		return fmt.Errorf("invalid type for audience %T", v)
 	}
 }
 
@@ -213,4 +215,69 @@ type QueryPermission struct {
 	Operation Operation
 	Audience  Audience
 	Fields    []string
+}
+
+func GetPermissableFields(model interface{}) (PermissableFields, error) {
+	fields := structs.Fields(model)
+	permissableFields := make([]*PermissableField, 0, len(fields))
+
+	for _, field := range fields {
+		permissableField, err := NewPermissableField(field)
+		if err != nil {
+			return nil, err
+		}
+		permissableFields = append(permissableFields, permissableField)
+	}
+
+	return PermissableFields(permissableFields), nil
+}
+
+type PermissableFields []*PermissableField
+
+func (fs PermissableFields) Filter(al AccessLevel) PermissableFields {
+	permissableFields := make([]*PermissableField, 0, len(fs))
+	for _, f := range fs {
+		if f.Can(al) {
+			permissableFields = append(permissableFields, f)
+		}
+	}
+	return PermissableFields(permissableFields)
+}
+
+func (fs PermissableFields) Names() []string {
+	names := make([]string, len(fs))
+	for i, f := range fs {
+		names[i] = f.Name
+	}
+	return names
+}
+
+func NewPermissableField(f *structs.Field) (*PermissableField, error) {
+	permissableField := &PermissableField{
+		Name: f.Tag("db"),
+	}
+	permit := f.Tag("permit")
+	if permit != "" {
+		permissions := strings.Split(permit, "/")
+		accessLookup := make(map[AccessLevel]bool, len(permissions))
+		for _, p := range permissions {
+			al, err := ParseAccessLevel(p)
+			if err != nil {
+				return nil, err
+			}
+			accessLookup[al] = true
+		}
+		permissableField.accessLookup = accessLookup
+	}
+
+	return permissableField, nil
+}
+
+type PermissableField struct {
+	Name         string
+	accessLookup map[AccessLevel]bool
+}
+
+func (fp *PermissableField) Can(al AccessLevel) bool {
+	return fp.accessLookup[al]
 }
