@@ -24,6 +24,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/model"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -78,9 +79,18 @@ func main() {
 	r.Handle("/permissions", route.Permissions())
 	r.Handle("/signup", route.Signup(svcs, repos))
 	r.Handle("/token", route.Token(svcs, repos))
-	r.Handle("/users/{login}/emails/confirm_verification/{token}", route.ConfirmVerification(svcs))
-	r.Handle("/users/{login}/emails/request_verification", route.RequestEmailVerification(svcs))
-	r.Handle("/users/{login}/request_password_reset", route.RequestPasswordReset(svcs))
+	r.Handle(
+		"/users/{login}/emails/confirm_verification/{token}",
+		route.ConfirmVerification(svcs),
+	)
+	r.Handle(
+		"/users/{login}/emails/request_verification",
+		route.RequestEmailVerification(svcs),
+	)
+	r.Handle(
+		"/users/{login}/request_password_reset",
+		route.RequestPasswordReset(svcs),
+	)
 	r.Handle("/users/{login}/reset_password", route.ResetPassword(svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
@@ -117,7 +127,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
-		new(data.UserModel),
+		new(model.User),
 	}
 
 	for _, model := range modelTypes {

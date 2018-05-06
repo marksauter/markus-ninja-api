@@ -4,13 +4,13 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
-	"github.com/rs/xid"
 )
 
 func RequestPasswordReset(svcs *service.Services) http.Handler {
@@ -39,9 +39,9 @@ func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http
 		return
 	}
 
+	routeVars := mux.Vars(req)
+
 	pwrt := &data.PasswordResetTokenModel{}
-	token := xid.New()
-	pwrt.Token.Set(token.String())
 
 	if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
 		if ip := net.ParseIP(host); ip != nil {
@@ -105,7 +105,8 @@ func (h RequestPasswordResetHandler) ServeHTTP(rw http.ResponseWriter, req *http
 		return
 	}
 
-	err = h.Svcs.Mail.SendPasswordResetMail(reset.Email, token.String())
+	login := routeVars["login"]
+	err = h.Svcs.Mail.SendPasswordResetMail(reset.Email, login, pwrt.Token.String)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

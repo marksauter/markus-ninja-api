@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/rs/xid"
 )
 
 type PasswordResetTokenModel struct {
@@ -25,67 +26,6 @@ func NewPasswordResetTokenService(q Queryer) *PasswordResetTokenService {
 
 type PasswordResetTokenService struct {
 	db Queryer
-}
-
-const countPasswordResetTokenSQL = `SELECT COUNT(*) from password_reset_token`
-
-func (s *PasswordResetTokenService) CountPasswordReset() (int64, error) {
-	var n int64
-	err := prepareQueryRow(
-		s.db,
-		"countPasswordResetToken",
-		countPasswordResetTokenSQL,
-	).Scan(&n)
-	return n, err
-}
-
-const getAllPasswordResetTokenSQL = `
-	SELECT
-		token,
-		email,
-		user_id,
-		request_ip,
-		issued_at,
-		expires_at,
-		end_ip,
-		ended_at
-	FROM
-		password_reset_token
-`
-
-func (s *PasswordResetTokenService) GetAll() ([]PasswordResetTokenModel, error) {
-	var rows []PasswordResetTokenModel
-
-	dbRows, err := prepareQuery(
-		s.db,
-		"getAllPasswordResetToken",
-		getAllPasswordResetTokenSQL,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row PasswordResetTokenModel
-		dbRows.Scan(
-			&row.Token,
-			&row.Email,
-			&row.UserId,
-			&row.RequestIP,
-			&row.IssuedAt,
-			&row.ExpiresAt,
-			&row.EndIP,
-			&row.EndedAt,
-		)
-		rows = append(rows, row)
-	}
-
-	if dbRows.Err() != nil {
-		return nil, dbRows.Err()
-	}
-
-	return rows, nil
-
 }
 
 const getPasswordResetTokenByPKSQL = `
@@ -137,10 +77,10 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 
 	var columns, values []string
 
-	if row.Token.Status != pgtype.Undefined {
-		columns = append(columns, `token`)
-		values = append(values, args.Append(&row.Token))
-	}
+	token := xid.New()
+	columns = append(columns, `token`)
+	values = append(values, args.Append(token))
+
 	if row.Email.Status != pgtype.Undefined {
 		columns = append(columns, `email`)
 		values = append(values, args.Append(&row.Email))

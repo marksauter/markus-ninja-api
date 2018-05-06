@@ -84,16 +84,20 @@ var passwordResetMailTemplate = template.Must(
 	template.New("passwordResetMailTemplate").Parse(
 		"To: {{.To}}\r\n" +
 			"Subject: [rkus.ninja] Password reset request\r\n\r\n" +
-			"Your password reset code is: {{.Token}}",
+			"Hi @{{.Login}}\r\n\r\n," +
+			"Your password reset code is: {{.Token}}\r\n\r\n" +
+			"If you did not request a password reset, then please ignore this message.",
 	),
 )
 
-func (s *MailService) SendPasswordResetMail(to, token string) error {
+func (s *MailService) SendPasswordResetMail(to, login, token string) error {
 	var data = struct {
 		To    string
+		Login string
 		Token string
 	}{
 		To:    to,
+		Login: login,
 		Token: token,
 	}
 
