@@ -13,3 +13,9 @@ CREATE TABLE lesson_comment(
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE INDEX lesson_comment_lesson_id_key
+ON lesson_comment (lesson_id);
+
+CREATE INDEX lesson_comment_user_id_key
+ON lesson_comment (user_id);

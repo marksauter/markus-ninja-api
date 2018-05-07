@@ -38,7 +38,7 @@ func (r *RootResolver) Node(
 				mylog.Log.WithError(err).Error("error retrieving query permission")
 				return nil, repo.ErrAccessDenied
 			}
-			r.Repos.User().AddPermission(*queryPerm)
+			r.Repos.User().AddPermission(queryPerm)
 			user, err = r.Repos.User().Get(args.Id)
 			if err != nil {
 				return nil, err
@@ -78,7 +78,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 					mylog.Log.WithError(err).Error("error retrieving query permission")
 					return nil, repo.ErrAccessDenied
 				}
-				r.Repos.User().AddPermission(*queryPerm)
+				r.Repos.User().AddPermission(queryPerm)
 				user, err = r.Repos.User().Get(id)
 				if err != nil {
 					return nil, err
@@ -112,7 +112,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 			mylog.Log.WithError(err).Error("error retrieving query permission")
 			return nil, repo.ErrAccessDenied
 		}
-		r.Repos.User().AddPermission(*queryPerm)
+		r.Repos.User().AddPermission(queryPerm)
 		user, err = r.Repos.User().GetByLogin(args.Login)
 		if err != nil {
 			return nil, err

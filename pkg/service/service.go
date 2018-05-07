@@ -3,7 +3,6 @@ package service
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
-	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 )
 
 type Services struct {
@@ -16,7 +15,7 @@ type Services struct {
 	User *data.UserService
 }
 
-func NewServices(conf *myconf.Config, db *mydb.DB) *Services {
+func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 	mailConfig := &MailServiceConfig{
 		Host:        conf.SMTPHost,
 		Port:        conf.SMTPPort,

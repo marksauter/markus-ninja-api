@@ -1,0 +1,5 @@
+input CreateLessonInput {
+  body: String
+  studyID: ID!
+  title: String!
+}

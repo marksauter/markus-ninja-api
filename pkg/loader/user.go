@@ -12,8 +12,8 @@ import (
 func NewUserLoader(svc *data.UserService) *UserLoader {
 	return &UserLoader{
 		svc:             svc,
-		batchGet:        createLoader(newBatchGetFn(svc.GetById)),
-		batchGetByLogin: createLoader(newBatchGetFn(svc.GetByLogin)),
+		batchGet:        createLoader(newBatchGetUserFn(svc.GetById)),
+		batchGetByLogin: createLoader(newBatchGetUserFn(svc.GetByLogin)),
 	}
 }
 
@@ -78,7 +78,7 @@ func (r *UserLoader) GetByLogin(login string) (*data.UserModel, error) {
 	return user, nil
 }
 
-func newBatchGetFn(
+func newBatchGetUserFn(
 	getter func(string) (*data.UserModel, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {

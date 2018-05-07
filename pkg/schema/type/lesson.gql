@@ -1,0 +1,43 @@
+# Represents a lesson.
+type Lesson implements Node, UniformResourceLocatable {
+  # The author of the lesson.
+  author: User
+
+  # The body of the lesson.
+  body: String!
+
+  # The body of the lesson rendered to HTML.
+  bodyHTML: HTML!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # Identifies the date and time when the object was last edited.
+  lastEditedAt: Time!
+
+  # Identifies the lesson number.
+  number: Int!
+
+  # Identifies when the lesson was published at.
+  publishedAt: Time!
+
+  # The study associated with this lesson.
+  study: Study!
+
+  # The title of the lesson.
+  title: String!
+
+  # The HTTP path for this lesson.
+  resourcePath: URI!
+
+  # The HTTP URL for this lesson.
+  url: URI!
+
+  # Can the viewer update this lesson.
+  viewerCanUpdate: Boolean!
+
+  # Did the viewer author this lesson.
+  viewerDidAuthor: Boolean!
+}

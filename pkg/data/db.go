@@ -12,9 +12,10 @@ import (
 var ErrNotFound = errors.New("not found")
 
 type Queryer interface {
+	CopyFrom(pgx.Identifier, []string, pgx.CopyFromSource) (int, error)
+	Exec(sql string, arguments ...interface{}) (pgx.CommandTag, error)
 	Query(sql string, args ...interface{}) (*pgx.Rows, error)
 	QueryRow(sql string, args ...interface{}) *pgx.Row
-	Exec(sql string, arguments ...interface{}) (pgx.CommandTag, error)
 }
 
 type transactor interface {

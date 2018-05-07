@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
+	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -15,6 +17,17 @@ import (
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	user                 *data.UserModel
+}
+
+func (r *UserPermit) PreCheckPermissions() error {
+	for _, f := range structs.Fields(r.user) {
+		if !f.IsZero() {
+			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
+				return ErrAccessDenied
+			}
+		}
+	}
+	return nil
 }
 
 func (r *UserPermit) Bio() (string, error) {
@@ -28,14 +41,7 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.user.CreatedAt, nil
-}
-
-func (r *UserPermit) Email() (string, error) {
-	if ok := r.checkFieldPermission("public_email"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.user.PublicEmail.String, nil
+	return r.user.CreatedAt.Time, nil
 }
 
 func (r *UserPermit) ID() (string, error) {
@@ -59,6 +65,13 @@ func (r *UserPermit) Name() (string, error) {
 	return r.user.Name.String, nil
 }
 
+func (r *UserPermit) PublicEmail() (string, error) {
+	if ok := r.checkFieldPermission("public_email"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.user.PublicEmail.String, nil
+}
+
 func (r *UserPermit) Roles() []string {
 	return r.user.Roles
 }
@@ -67,7 +80,7 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.user.UpdatedAt, nil
+	return r.user.UpdatedAt.Time, nil
 }
 
 func NewUserRepo(svc *data.UserService) *UserRepo {
@@ -89,11 +102,13 @@ func (r *UserRepo) Close() {
 	r.perms = nil
 }
 
-func (r *UserRepo) AddPermission(p perm.QueryPermission) {
+func (r *UserRepo) AddPermission(p *perm.QueryPermission) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	r.perms[p.Operation.String()] = p.Fields
+	if p != nil {
+		r.perms[p.Operation.String()] = p.Fields
+	}
 }
 
 func (r *UserRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
@@ -113,10 +128,6 @@ func (r *UserRepo) ClearPermissions() {
 	r.perms = nil
 }
 
-func (r *UserRepo) checkLoader() bool {
-	return r.load != nil
-}
-
 // Service methods
 
 func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
@@ -124,15 +135,20 @@ func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Create(user)
+	userPermit := &UserPermit{fieldPermFn, user}
+	err := userPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
-	return &UserPermit{fieldPermFn, user}, nil
+	err = r.svc.Create(user)
+	if err != nil {
+		return nil, err
+	}
+	return userPermit, nil
 }
 
 func (r *UserRepo) Get(id string) (*UserPermit, error) {
@@ -140,7 +156,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
@@ -156,7 +172,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 //   if !ok {
 //     return nil, ErrAccessDenied
 //   }
-//   if ok := r.checkLoader(); !ok {
+//	 if r.load == nil {
 //     mylog.Log.Error("user connection closed")
 //     return nil, []error{ErrConnClosed}
 //   }
@@ -176,7 +192,7 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
@@ -192,7 +208,7 @@ func (r *UserRepo) Delete(id string) error {
 	if !ok {
 		return ErrAccessDenied
 	}
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return ErrConnClosed
 	}
@@ -208,7 +224,7 @@ func (r *UserRepo) Update(user *data.UserModel) (*UserPermit, error) {
 	if !ok {
 		return nil, ErrAccessDenied
 	}
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
@@ -229,7 +245,7 @@ func (r *UserRepo) VerifyCredentials(
 	input *VerifyCredentialsInput,
 ) (*data.UserModel, error) {
 	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}

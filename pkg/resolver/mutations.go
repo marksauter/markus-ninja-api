@@ -3,9 +3,12 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
@@ -35,7 +38,7 @@ func (r *RootResolver) CreateUser(
 		mylog.Log.WithError(err).Error("failed to retrieve query permission")
 		return nil, repo.ErrAccessDenied
 	}
-	r.Repos.User().AddPermission(*queryPerm)
+	r.Repos.User().AddPermission(queryPerm)
 
 	var user data.UserModel
 
@@ -53,11 +56,25 @@ func (r *RootResolver) CreateUser(
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(args.Input.Email)
 
-	userPermit, err := r.Repos.User().Create(&user)
+	_, err = r.Repos.User().Create(&user)
+	if err == repo.ErrAccessDenied {
+		return nil, fmt.Errorf(
+			`access_denied: you may only include %s`,
+			strings.Join(queryPerm.Fields, ", "),
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
-	uResolver := &userResolver{userPermit}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: user.Id.String})
+	if err != nil {
+		return nil, err
+	}
+	uResolver, ok := node.ToUser()
+	if !ok {
+		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to userResolver"}
+	}
 
 	avt := &data.EmailVerificationTokenModel{}
 	avt.UserId.Set(user.Id.String)
@@ -104,7 +121,7 @@ func (r *RootResolver) DeleteUser(
 		mylog.Log.WithError(err).Error("error retrieving query permission")
 		return nil, repo.ErrAccessDenied
 	}
-	r.Repos.User().AddPermission(*queryPerm)
+	r.Repos.User().AddPermission(queryPerm)
 
 	id, err := oid.Parse(args.Input.Id)
 	if err != nil {
@@ -147,7 +164,7 @@ func (r *RootResolver) UpdateUser(
 		mylog.Log.WithError(err).Error("error retrieving query permission")
 		return nil, repo.ErrAccessDenied
 	}
-	r.Repos.User().AddPermission(*queryPerm)
+	r.Repos.User().AddPermission(queryPerm)
 
 	var user data.UserModel
 
@@ -172,4 +189,59 @@ func (r *RootResolver) UpdateUser(
 		return nil, err
 	}
 	return &userResolver{userPermit}, nil
+}
+
+type CreateLessonInput struct {
+	Body    string
+	StudyId string
+	Title   string
+}
+
+func (r *RootResolver) CreateLesson(
+	ctx context.Context,
+	args struct{ Input CreateLessonInput },
+) (*lessonResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	viewerId, _ := viewer.ID()
+
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.CreateLesson,
+		roles...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Lesson().AddPermission(queryPerm)
+
+	var lesson data.LessonModel
+
+	lesson.Body.Set(args.Input.Body)
+	lesson.StudyId.Set(args.Input.StudyId)
+	lesson.Title.Set(args.Input.Title)
+
+	_, err = r.Repos.Lesson().Create(&lesson)
+	if err == repo.ErrAccessDenied {
+		return nil, fmt.Errorf(
+			`access_denied: you may only include %s`,
+			strings.Join(queryPerm.Fields, ", "),
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: lesson.Id.String})
+	if err != nil {
+		return nil, err
+	}
+	resolver, ok := node.ToLesson()
+	if !ok {
+		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to lessonResolver"}
+	}
+
+	return resolver, nil
 }

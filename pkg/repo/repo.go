@@ -23,10 +23,9 @@ type FieldPermissionFunc = func(field string) bool
 type Repo interface {
 	Open()
 	Close()
-	AddPermission(perm.QueryPermission)
+	AddPermission(*perm.QueryPermission)
 	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
 	ClearPermissions()
-	checkLoader() bool
 }
 
 type Repos struct {

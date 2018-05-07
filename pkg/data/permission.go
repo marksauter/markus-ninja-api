@@ -7,7 +7,6 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
-	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -36,10 +35,10 @@ type PermissionModel struct {
 }
 
 type PermService struct {
-	*mydb.DB
+	db Queryer
 }
 
-func NewPermService(db *mydb.DB) *PermService {
+func NewPermService(db Queryer) *PermService {
 	return &PermService{db}
 }
 
@@ -84,7 +83,7 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 		i += 1
 	}
 
-	copyCount, err := s.CopyFrom(
+	copyCount, err := s.db.CopyFrom(
 		pgx.Identifier{"permission"},
 		[]string{"id", "access_level", "type", "audience", "field"},
 		pgx.CopyFromRows(permissions),
@@ -170,7 +169,7 @@ func (s *PermService) GetByRoleName(
 		INNER JOIN role r ON r.id = rp.role_id
 		WHERE r.name = $1
 	`
-	rows, err := s.Query(permissionSQL, roleName)
+	rows, err := s.db.Query(permissionSQL, roleName)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
@@ -239,14 +238,14 @@ func (s *PermService) GetQueryPermission(
 	`
 	var row *pgx.Row
 	if len(roles) != 0 {
-		row = s.QueryRow(
+		row = s.db.QueryRow(
 			permissionSQL+andRoleNameSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
 			roles,
 		)
 	} else {
-		row = s.QueryRow(
+		row = s.db.QueryRow(
 			permissionSQL+andAudienceSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
@@ -281,7 +280,7 @@ func (s *PermService) Update(permissionId string, a perm.Audience) error {
 		SET audience = $1
 		WHERE id = $2
 	`
-	_, err := s.Exec(permissionSQL, a, permissionId)
+	_, err := s.db.Exec(permissionSQL, a, permissionId)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during execution")
 		return err
@@ -303,7 +302,7 @@ func (s *PermService) UpdateOperationForFields(
 			AND type = $3
 			AND field = ANY($4)
 	`
-	_, err := s.Exec(
+	_, err := s.db.Exec(
 		permissionSQL,
 		a,
 		o.AccessLevel,

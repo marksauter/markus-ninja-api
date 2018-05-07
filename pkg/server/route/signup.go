@@ -122,7 +122,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	h.Repos.User().AddPermission(*createUserPerm)
+	h.Repos.User().AddPermission(createUserPerm)
 	_, err = h.Repos.User().Create(user)
 	if err != nil {
 		var response *myhttp.ErrorResponse

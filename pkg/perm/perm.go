@@ -121,12 +121,15 @@ type NodeType int64
 
 const (
 	UserType NodeType = iota
+	LessonType
 )
 
 func (nt NodeType) String() string {
 	switch nt {
 	case UserType:
 		return "User"
+	case LessonType:
+		return "Lesson"
 	default:
 		return "unknown"
 	}
@@ -169,6 +172,13 @@ var (
 	UpdateUser     = Operation{UpdateAccess, UserType}
 	ConnectUser    = Operation{ConnectAccess, UserType}
 	DisconnectUser = Operation{DisconnectAccess, UserType}
+
+	CreateLesson     = Operation{CreateAccess, LessonType}
+	DeleteLesson     = Operation{DeleteAccess, LessonType}
+	ReadLesson       = Operation{ReadAccess, LessonType}
+	UpdateLesson     = Operation{UpdateAccess, LessonType}
+	ConnectLesson    = Operation{ConnectAccess, LessonType}
+	DisconnectLesson = Operation{DisconnectAccess, LessonType}
 )
 
 func (o Operation) String() string {

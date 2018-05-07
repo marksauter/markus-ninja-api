@@ -9,3 +9,6 @@ CREATE TABLE study(
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE INDEX study_user_id_key
+ON study (user_id);

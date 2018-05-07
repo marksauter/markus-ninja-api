@@ -61,7 +61,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-		a.Repos.User().AddPermission(*queryPerm)
+		a.Repos.User().AddPermission(queryPerm)
 
 		user, err := a.Repos.User().Get(payload.Sub)
 		if err != nil {

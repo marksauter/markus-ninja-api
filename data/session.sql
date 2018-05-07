@@ -9,3 +9,6 @@ CREATE TABLE session(
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
 );
+
+CREATE INDEX session_user_id_key
+ON session (user_id);

@@ -2,7 +2,6 @@ package data
 
 import (
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -11,18 +10,18 @@ import (
 )
 
 type UserModel struct {
-	Bio          pgtype.Text    `db:"bio" permit:"read"`
-	BackupEmail  pgtype.Varchar `db:"backup_email"`
-	CreatedAt    time.Time      `db:"created_at" permit:"read"`
-	ExtraEmails  []string       `db:"extra_emails"`
-	Id           pgtype.Varchar `db:"id" permit:"read/create"`
-	Login        pgtype.Varchar `db:"login" permit:"read/create"`
-	Name         pgtype.Text    `db:"name" permit:"read"`
-	Password     pgtype.Bytea   `db:"password"`
-	PrimaryEmail pgtype.Varchar `db:"primary_email"`
-	PublicEmail  pgtype.Varchar `db:"public_email" permit:"read"`
-	Roles        []string       `db:"roles"`
-	UpdatedAt    time.Time      `db:"updated_at" permit:"read"`
+	Bio          pgtype.Text        `db:"bio" permit:"read"`
+	BackupEmail  pgtype.Varchar     `db:"backup_email"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	ExtraEmails  []string           `db:"extra_emails"`
+	Id           pgtype.Varchar     `db:"id" permit:"read"`
+	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
+	Name         pgtype.Text        `db:"name" permit:"read"`
+	Password     pgtype.Bytea       `db:"password" permit:"create"`
+	PrimaryEmail pgtype.Varchar     `db:"primary_email" permit:"create"`
+	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
+	Roles        []string           `db:"roles"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
 func NewUserService(q Queryer) *UserService {
@@ -99,7 +98,7 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*UserModel,
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithField("error", err).Error("error during scan")
+		mylog.Log.WithError(err).Error("failed to get user")
 		return nil, err
 	}
 
@@ -330,7 +329,7 @@ func (s *UserService) Delete(id string) error {
 }
 
 func (s *UserService) Update(user *UserModel) error {
-	sets := make([]string, 0, 5)
+	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	if user.Bio.Status != pgtype.Undefined {

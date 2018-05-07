@@ -38,7 +38,7 @@ func (r *userResolver) CreatedAt() (graphql.Time, error) {
 }
 
 func (r *userResolver) Email() (string, error) {
-	return r.user.Email()
+	return r.user.PublicEmail()
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {

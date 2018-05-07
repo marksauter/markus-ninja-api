@@ -14,22 +14,27 @@ func NewPermRepo(svc *data.PermService) *PermRepo {
 }
 
 type PermRepo struct {
-	cxn   *loader.PermLoader
+	load  *loader.PermLoader
 	svc   *data.PermService
 	perms map[string][]string
 }
 
 func (r *PermRepo) Open() {
-	r.cxn = loader.NewPermLoader(r.svc)
+	r.load = loader.NewPermLoader(r.svc)
 }
 
 func (r *PermRepo) Close() {
-	r.cxn = nil
+	r.load = nil
 	r.perms = nil
 }
 
-func (r *PermRepo) AddPermission(p perm.QueryPermission) {
-	r.perms[p.Operation.String()] = p.Fields
+func (r *PermRepo) AddPermission(p *perm.QueryPermission) {
+	if r.perms == nil {
+		r.perms = make(map[string][]string)
+	}
+	if p != nil {
+		r.perms[p.Operation.String()] = p.Fields
+	}
 }
 
 func (r *PermRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
@@ -49,21 +54,17 @@ func (r *PermRepo) ClearPermissions() {
 	r.perms = nil
 }
 
-func (r *PermRepo) checkLoader() bool {
-	return r.cxn != nil
-}
-
 // Service methods
 
 func (r *PermRepo) GetQueryPermission(
 	o perm.Operation,
 	roles ...string,
 ) (*perm.QueryPermission, error) {
-	if ok := r.checkLoader(); !ok {
+	if r.load == nil {
 		mylog.Log.Error("permission connection closed")
 		return nil, ErrConnClosed
 	}
-	return r.cxn.GetQueryPermission(o, roles...)
+	return r.load.GetQueryPermission(o, roles...)
 }
 
 // Middleware
