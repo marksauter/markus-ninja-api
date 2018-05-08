@@ -1,5 +1,4 @@
-/*
-Copyright 2016 The Kubernetes Authors.
+/* Copyright 2016 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -125,7 +124,9 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
-		new(data.UserModel),
+		new(data.Lesson),
+		new(data.Study),
+		new(data.User),
 	}
 
 	for _, model := range modelTypes {
@@ -227,7 +228,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 
 	guestId := oid.New("User")
 	guestPassword, _ := passwd.New("guest")
-	guest := &data.UserModel{}
+	guest := &data.User{}
 	guest.Id.Set(guestId.String())
 	guest.Login.Set("guest")
 	guest.Password.Set(guestPassword.Hash())
@@ -239,6 +240,32 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 				return err
 			}
 			mylog.Log.Info("guest account already exists")
+		}
+	}
+
+	markusId := oid.New("User")
+	markusPassword, _ := passwd.New("fender917")
+	markus := &data.User{}
+	markus.Id.Set(markusId.String())
+	markus.Login.Set("markus")
+	markus.Password.Set(markusPassword.Hash())
+	markus.PrimaryEmail.Set("m@rkus.ninja")
+	if err := svcs.User.Create(markus); err != nil {
+		if dfErr, ok := err.(data.DataFieldError); ok {
+			if dfErr.Code != data.DuplicateField {
+				mylog.Log.WithError(err).Fatal("failed to create markus account")
+				return err
+			}
+			mylog.Log.Info("markus account already exists")
+		}
+	}
+	if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
+		if dfErr, ok := err.(data.DataFieldError); ok {
+			if dfErr.Code != data.DuplicateField {
+				mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
+				return err
+			}
+			mylog.Log.Info("markus is already an admin")
 		}
 	}
 

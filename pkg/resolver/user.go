@@ -11,16 +11,15 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-var clientURL = "http://localhost:3000"
-
 type User = userResolver
 
 type userResolver struct {
-	user *repo.UserPermit
+	User  *repo.UserPermit
+	Repos *repo.Repos
 }
 
 func (r *userResolver) Bio() (string, error) {
-	return r.user.Bio()
+	return r.User.Bio()
 }
 
 func (r *userResolver) BioHTML() (mygql.HTML, error) {
@@ -33,21 +32,21 @@ func (r *userResolver) BioHTML() (mygql.HTML, error) {
 }
 
 func (r *userResolver) CreatedAt() (graphql.Time, error) {
-	t, err := r.user.CreatedAt()
+	t, err := r.User.CreatedAt()
 	return graphql.Time{t}, err
 }
 
 func (r *userResolver) Email() (string, error) {
-	return r.user.PublicEmail()
+	return r.User.PublicEmail()
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {
-	id, err := r.user.ID()
+	id, err := r.User.ID()
 	return graphql.ID(id), err
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
-	for _, role := range r.user.Roles() {
+	for _, role := range r.User.Roles() {
 		if role == "ADMIN" {
 			return true
 		}
@@ -60,7 +59,7 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	id, err := r.user.ID()
+	id, err := r.User.ID()
 	if err != nil {
 		return false, err
 	}
@@ -69,16 +68,16 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 }
 
 func (r *userResolver) Login() (string, error) {
-	return r.user.Login()
+	return r.User.Login()
 }
 
 func (r *userResolver) Name() (string, error) {
-	return r.user.Name()
+	return r.User.Name()
 }
 
 func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	login, err := r.user.Login()
+	login, err := r.User.Login()
 	if err != nil {
 		return uri, err
 	}
@@ -87,13 +86,13 @@ func (r *userResolver) ResourcePath() (mygql.URI, error) {
 }
 
 func (r *userResolver) UpdatedAt() (graphql.Time, error) {
-	t, err := r.user.UpdatedAt()
+	t, err := r.User.UpdatedAt()
 	return graphql.Time{t}, err
 }
 
 func (r *userResolver) URL() (mygql.URI, error) {
 	var uri mygql.URI
-	login, err := r.user.Login()
+	login, err := r.User.Login()
 	if err != nil {
 		return uri, err
 	}

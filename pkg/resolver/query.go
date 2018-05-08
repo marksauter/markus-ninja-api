@@ -24,6 +24,36 @@ func (r *RootResolver) Node(
 		return nil, err
 	}
 	switch parsedId.Type() {
+	case "Lesson":
+		queryPerm, err := r.Repos.Perm().GetQueryPermission(
+			perm.ReadLesson,
+			viewer.Roles()...,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, repo.ErrAccessDenied
+		}
+		r.Repos.Lesson().AddPermission(queryPerm)
+		lesson, err := r.Repos.Lesson().Get(args.Id)
+		if err != nil {
+			return nil, err
+		}
+		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
+	case "Study":
+		queryPerm, err := r.Repos.Perm().GetQueryPermission(
+			perm.ReadStudy,
+			viewer.Roles()...,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, repo.ErrAccessDenied
+		}
+		r.Repos.Study().AddPermission(queryPerm)
+		study, err := r.Repos.Study().Get(args.Id)
+		if err != nil {
+			return nil, err
+		}
+		return &nodeResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
 		var user *repo.UserPermit
 		viewerId, _ := viewer.ID()
@@ -44,7 +74,7 @@ func (r *RootResolver) Node(
 				return nil, err
 			}
 		}
-		return &nodeResolver{&userResolver{user}}, nil
+		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
 	default:
 		return nil, errors.New("invalid id")
 	}
@@ -84,7 +114,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 					return nil, err
 				}
 			}
-			nodes[i] = &nodeResolver{&userResolver{user}}
+			nodes[i] = &nodeResolver{&userResolver{User: user, Repos: r.Repos}}
 		default:
 			return nil, errors.New("invalid id")
 		}
@@ -118,7 +148,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 			return nil, err
 		}
 	}
-	return &userResolver{user}, nil
+	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
@@ -126,5 +156,5 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	return &userResolver{viewer}, nil
+	return &userResolver{User: viewer, Repos: r.Repos}, nil
 }

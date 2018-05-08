@@ -111,7 +111,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user := &data.UserModel{}
+	user := &data.User{}
 	user.Login.Set(registration.Username)
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(registration.Email)

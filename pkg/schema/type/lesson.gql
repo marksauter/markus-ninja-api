@@ -1,5 +1,5 @@
 # Represents a lesson.
-type Lesson implements Node, UniformResourceLocatable {
+type Lesson implements Node, UniformResourceLocatable, Updateable {
   # The author of the lesson.
   author: User
 

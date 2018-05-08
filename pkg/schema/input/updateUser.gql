@@ -1,7 +1,7 @@
-# Input type for UpdateUser
+# Input type for UpdateUser.
 input UpdateUserInput {
-  bio:          String
-  id:           String!
-  login:        String
-  name:         String
+  bio:     String
+  userId:  ID!
+  login:   String
+  name:    String
 }

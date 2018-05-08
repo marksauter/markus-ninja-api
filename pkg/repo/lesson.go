@@ -14,7 +14,7 @@ import (
 
 type LessonPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	lesson               *data.LessonModel
+	lesson               *data.Lesson
 }
 
 func (r *LessonPermit) PreCheckPermissions() error {
@@ -139,7 +139,16 @@ func (r *LessonRepo) ClearPermissions() {
 
 // Service methods
 
-func (r *LessonRepo) Create(lesson *data.LessonModel) (*LessonPermit, error) {
+func (r *LessonRepo) CountByStudy(studyId string) (int32, error) {
+	_, ok := r.CheckPermission(perm.ReadLesson)
+	if !ok {
+		var count int32
+		return count, ErrAccessDenied
+	}
+	return r.svc.CountByStudy(studyId)
+}
+
+func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.CreateLesson)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -176,7 +185,7 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
-func (r *LessonRepo) GetByStudyId(login string) (*LessonPermit, error) {
+func (r *LessonRepo) GetByStudyId(studyId string) (*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -185,7 +194,23 @@ func (r *LessonRepo) GetByStudyId(login string) (*LessonPermit, error) {
 		mylog.Log.Error("lesson connection closed")
 		return nil, ErrConnClosed
 	}
-	lesson, err := r.svc.GetByStudyId(login)
+	lesson, err := r.svc.GetByStudyId(studyId)
+	if err != nil {
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) GetByStudyNumber(studyId string, number int) (*LessonPermit, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
+	if !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.load == nil {
+		mylog.Log.Error("lesson connection closed")
+		return nil, ErrConnClosed
+	}
+	lesson, err := r.svc.GetByStudyNumber(studyId, number)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +233,7 @@ func (r *LessonRepo) Delete(id string) error {
 	return nil
 }
 
-func (r *LessonRepo) Update(lesson *data.LessonModel) (*LessonPermit, error) {
+func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.UpdateLesson)
 	if !ok {
 		return nil, ErrAccessDenied

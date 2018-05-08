@@ -24,13 +24,13 @@ type UserLoader struct {
 	batchGetByLogin *dataloader.Loader
 }
 
-func (r *UserLoader) Get(id string) (*data.UserModel, error) {
+func (r *UserLoader) Get(id string) (*data.User, error) {
 	ctx := context.Background()
 	userData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
-	user, ok := userData.(*data.UserModel)
+	user, ok := userData.(*data.User)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
@@ -40,7 +40,7 @@ func (r *UserLoader) Get(id string) (*data.UserModel, error) {
 	return user, nil
 }
 
-func (r *UserLoader) GetMany(ids *[]string) ([]*data.UserModel, []error) {
+func (r *UserLoader) GetMany(ids *[]string) ([]*data.User, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
@@ -50,10 +50,10 @@ func (r *UserLoader) GetMany(ids *[]string) ([]*data.UserModel, []error) {
 	if errs != nil {
 		return nil, errs
 	}
-	users := make([]*data.UserModel, len(userData))
+	users := make([]*data.User, len(userData))
 	for i, d := range userData {
 		var ok bool
-		users[i], ok = d.(*data.UserModel)
+		users[i], ok = d.(*data.User)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
@@ -62,13 +62,13 @@ func (r *UserLoader) GetMany(ids *[]string) ([]*data.UserModel, []error) {
 	return users, nil
 }
 
-func (r *UserLoader) GetByLogin(login string) (*data.UserModel, error) {
+func (r *UserLoader) GetByLogin(login string) (*data.User, error) {
 	ctx := context.Background()
 	userData, err := r.batchGetByLogin.Load(ctx, dataloader.StringKey(login))()
 	if err != nil {
 		return nil, err
 	}
-	user, ok := userData.(*data.UserModel)
+	user, ok := userData.(*data.User)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
@@ -79,7 +79,7 @@ func (r *UserLoader) GetByLogin(login string) (*data.UserModel, error) {
 }
 
 func newBatchGetUserFn(
-	getter func(string) (*data.UserModel, error),
+	getter func(string) (*data.User, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (

@@ -74,7 +74,7 @@ func (h ResetPasswordHandler) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	user := &data.UserModel{}
+	user := &data.User{}
 	user.Id = pwrt.UserId
 	password, err := passwd.New(resetPassword.Password)
 	if err != nil {

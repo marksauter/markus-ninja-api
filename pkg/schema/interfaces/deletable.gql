@@ -1,0 +1,5 @@
+# Entities that can be deleted.
+interface Deletable {
+  # Can the viewer delete this object.
+  viewerCanDelete: Boolean!
+}

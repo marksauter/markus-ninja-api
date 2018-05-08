@@ -1,6 +1,6 @@
-# Input type for CreateUser
+# Input type for CreateUser.
 input CreateUserInput {
-  email: String!
-  login: String!
-  password: String!
+  email:     String!
+  login:     String!
+  password:  String!
 }

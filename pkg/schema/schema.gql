@@ -9,6 +9,12 @@ type Query {
   viewer: User!
 }
 type Mutation {
+  createLesson(input: CreateLessonInput!): Lesson
+  # deleteLesson(input: DeleteLessonInput!): Boolean!
+  # updateLesson(input: UpdateLessonInput!): Lesson!
+  createStudy(input: CreateStudyInput!): Study
+  # deleteStudy(input: DeleteStudyInput!): Boolean!
+  # updateStudy(input: UpdateStudyInput!): Study!
   createUser(input: CreateUserInput!): User
   deleteUser(input: DeleteUserInput!): String
   updateUser(input: UpdateUserInput!): User!

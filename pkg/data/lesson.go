@@ -7,9 +7,10 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/sirupsen/logrus"
 )
 
-type LessonModel struct {
+type Lesson struct {
 	Body         pgtype.Text        `db:"body" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           pgtype.Varchar     `db:"id" permit:"read"`
@@ -29,16 +30,24 @@ type LessonService struct {
 	db Queryer
 }
 
-const countLessonSQL = `SELECT COUNT(*) FROM lesson`
+const countLessonSQL = `SELECT COUNT(*)::INT FROM lesson`
 
-func (s *LessonService) Count() (int64, error) {
-	var n int64
+func (s *LessonService) Count() (int32, error) {
+	var n int32
 	err := prepareQueryRow(s.db, "countLesson", countLessonSQL).Scan(&n)
 	return n, err
 }
 
-func (s *LessonService) get(name string, sql string, args ...interface{}) (*LessonModel, error) {
-	var row LessonModel
+const countLessonByStudySQL = `SELECT COUNT(*) FROM lesson WHERE study_id = $1`
+
+func (s *LessonService) CountByStudy(studyId string) (int32, error) {
+	var n int32
+	err := prepareQueryRow(s.db, "countLesson", countLessonSQL, studyId).Scan(&n)
+	return n, err
+}
+
+func (s *LessonService) get(name string, sql string, args ...interface{}) (*Lesson, error) {
+	var row Lesson
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
@@ -75,7 +84,7 @@ const getLessonByPKSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonService) GetByPK(id string) (*LessonModel, error) {
+func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 	mylog.Log.WithField("id", id).Info("GetByPK(id) Lesson")
 	return s.get("getLessonByPKSQL", id)
 }
@@ -95,12 +104,37 @@ const getLessonByStudyIdSQL = `
 	WHERE study_id = $1
 `
 
-func (s *LessonService) GetByStudyId(studyId string) (*LessonModel, error) {
+func (s *LessonService) GetByStudyId(studyId string) (*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
-	return s.get("getLessonByStudyIdSQL", studyId)
+	return s.get("getLessonByStudyId", getLessonByStudyIdSQL, studyId)
 }
 
-func (s *LessonService) Create(row *LessonModel) error {
+const getLessonByStudyNumberSQL = `
+	SELECT
+		body,
+		created_at,
+		id,
+		last_edited_at,
+		number,
+		published_at,
+		study_id,
+		title,
+		user_id
+	FROM lesson
+	WHERE study_id = $1
+`
+
+func (s *LessonService) GetByStudyNumber(studyId string, number int) (*Lesson, error) {
+	mylog.Log.WithFields(
+		logrus.Fields{
+			"study_id": studyId,
+			"number":   number,
+		},
+	).Info("GetByStudyNumber(studyId, number) Lesson")
+	return s.get("getLessonByStudyNumber", getLessonByStudyNumberSQL, studyId, number)
+}
+
+func (s *LessonService) Create(row *Lesson) error {
 	mylog.Log.Info("Create() Lesson")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
@@ -145,7 +179,7 @@ func (s *LessonService) Create(row *LessonModel) error {
 
 	psName := preparedName("createLesson", sql)
 
-	err := prepareQueryRow(s.db, psName, sql).Scan(
+	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.CreatedAt,
 	)
 	if err != nil {
@@ -184,7 +218,7 @@ func (s *LessonService) Delete(id string) error {
 	return nil
 }
 
-func (s *LessonService) Update(row *LessonModel) error {
+func (s *LessonService) Update(row *Lesson) error {
 	mylog.Log.Info("Update() Lesson")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
@@ -223,7 +257,7 @@ func (s *LessonService) Update(row *LessonModel) error {
 
 	psName := preparedName("updateLesson", sql)
 
-	err := prepareQueryRow(s.db, psName, sql).Scan(
+	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,

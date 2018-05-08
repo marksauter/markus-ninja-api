@@ -11,8 +11,10 @@ import (
 type key string
 
 const (
-	permRepoKey key = "perm"
-	userRepoKey key = "user"
+	lessonRepoKey key = "lesson"
+	permRepoKey   key = "perm"
+	studyRepoKey  key = "study"
+	userRepoKey   key = "user"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -35,8 +37,10 @@ type Repos struct {
 func NewRepos(svcs *service.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
-			permRepoKey: NewPermRepo(svcs.Perm),
-			userRepoKey: NewUserRepo(svcs.User),
+			lessonRepoKey: NewLessonRepo(svcs.Lesson),
+			permRepoKey:   NewPermRepo(svcs.Perm),
+			studyRepoKey:  NewStudyRepo(svcs.Study),
+			userRepoKey:   NewUserRepo(svcs.User),
 		},
 	}
 }
@@ -53,8 +57,18 @@ func (r *Repos) CloseAll() {
 	}
 }
 
+func (r *Repos) Lesson() *LessonRepo {
+	repo, _ := r.lookup[lessonRepoKey].(*LessonRepo)
+	return repo
+}
+
 func (r *Repos) Perm() *PermRepo {
 	repo, _ := r.lookup[permRepoKey].(*PermRepo)
+	return repo
+}
+
+func (r *Repos) Study() *StudyRepo {
+	repo, _ := r.lookup[studyRepoKey].(*StudyRepo)
 	return repo
 }
 

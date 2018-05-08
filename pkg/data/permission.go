@@ -24,7 +24,7 @@ var accessLevelsWithoutFields = []perm.AccessLevel{
 	perm.DisconnectAccess,
 }
 
-type PermissionModel struct {
+type Permission struct {
 	AccessLevel string      `db:"access_level"`
 	Audience    string      `db:"audience"`
 	CreatedAt   time.Time   `db:"created_at"`
@@ -48,6 +48,9 @@ func NewPermService(db Queryer) *PermService {
 // Defaults audience to "AUTHENTICATED"
 func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	mType, err := perm.ParseNodeType(structs.Name(model))
+	if err != nil {
+		return err
+	}
 	mylog.Log.WithField(
 		"model",
 		mType,
@@ -112,13 +115,17 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 }
 
 func (s *PermService) UpdatePermissionSuite(model interface{}) error {
+	mType, err := perm.ParseNodeType(structs.Name(model))
+	if err != nil {
+		return err
+	}
 	permissableUserFields, err := perm.GetPermissableFields(model)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("failed to get user field permissions")
 		return err
 	}
 	err = s.UpdateOperationForFields(
-		perm.ReadUser,
+		perm.Operation{AccessLevel: perm.ReadAccess, NodeType: mType},
 		permissableUserFields.Filter(perm.ReadAccess).Names(),
 		perm.Everyone,
 	)
@@ -128,7 +135,7 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.CreateUser,
+		perm.Operation{AccessLevel: perm.CreateAccess, NodeType: mType},
 		permissableUserFields.Filter(perm.CreateAccess).Names(),
 		perm.Everyone,
 	)
@@ -138,7 +145,7 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.UpdateUser,
+		perm.Operation{AccessLevel: perm.UpdateAccess, NodeType: mType},
 		permissableUserFields.Filter(perm.UpdateAccess).Names(),
 		perm.Everyone,
 	)
@@ -152,8 +159,8 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 
 func (s *PermService) GetByRoleName(
 	roleName string,
-) ([]PermissionModel, error) {
-	permissions := make([]PermissionModel, 0)
+) ([]Permission, error) {
+	permissions := make([]Permission, 0)
 
 	permissionSQL := `
 		SELECT
@@ -176,7 +183,7 @@ func (s *PermService) GetByRoleName(
 	}
 	defer rows.Close()
 	for i := 0; rows.Next(); i++ {
-		p := new(PermissionModel)
+		p := new(Permission)
 		err := rows.Scan(
 			&p.Id,
 			&p.AccessLevel,

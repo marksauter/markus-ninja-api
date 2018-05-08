@@ -1,0 +1,43 @@
+# Represents a study.
+type Study implements Node, UniformResourceLocatable {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The description of the study.
+  description: String!
+
+  # The description of the study rendered to HTML.
+  descriptionHTML: HTML!
+
+  id: ID!
+
+  # Returns a single lesson from the current study by number.
+  lesson(
+    # The number for the lesson to be returned.
+    number: Int!  
+  ): Lesson
+
+  # How many lessons there are in this study.
+  lessonCount: Int!
+
+  # The name of the study.
+  name: String!
+
+  # The study's name with owner.
+  nameWithOwner: String!
+
+  # The owner of the study.
+  owner: User!
+
+  # Identifies when the study was published at.
+  publishedAt: Time!
+
+  # The HTTP path for this study.
+  resourcePath: URI!
+
+  # Identifies when the study was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this study.
+  url: URI!
+}

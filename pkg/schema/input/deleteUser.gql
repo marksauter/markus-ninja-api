@@ -1,4 +1,4 @@
-# Input type for DeleteUser
+# Input type for DeleteUser.
 input DeleteUserInput {
-  id: String!
+  userId: ID!
 }

@@ -8,8 +8,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 )
 
-func newUser() *data.UserModel {
-	user := data.UserModel{}
+func newUser() *data.User {
+	user := data.User{}
 	user.Login.Set("test")
 	user.Password.Set([]byte("password"))
 	user.PrimaryEmail.Set("test@example.com")

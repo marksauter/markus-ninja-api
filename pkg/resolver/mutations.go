@@ -40,7 +40,7 @@ func (r *RootResolver) CreateUser(
 	}
 	r.Repos.User().AddPermission(queryPerm)
 
-	var user data.UserModel
+	var user data.User
 
 	password, err := passwd.New(args.Input.Password)
 	if err != nil {
@@ -76,28 +76,30 @@ func (r *RootResolver) CreateUser(
 		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to userResolver"}
 	}
 
-	avt := &data.EmailVerificationTokenModel{}
-	avt.UserId.Set(user.Id.String)
+	if user.Login.String != "guest" {
+		avt := &data.EmailVerificationTokenModel{}
+		avt.UserId.Set(user.Id.String)
 
-	err = r.Svcs.AVT.Create(avt)
-	if err != nil {
-		return uResolver, err
-	}
+		err = r.Svcs.AVT.Create(avt)
+		if err != nil {
+			return uResolver, err
+		}
 
-	err = r.Svcs.Mail.SendEmailVerificationMail(
-		user.PrimaryEmail.String,
-		user.Login.String,
-		avt.Token.String,
-	)
-	if err != nil {
-		return uResolver, err
+		err = r.Svcs.Mail.SendEmailVerificationMail(
+			user.PrimaryEmail.String,
+			user.Login.String,
+			avt.Token.String,
+		)
+		if err != nil {
+			return uResolver, err
+		}
 	}
 
 	return uResolver, nil
 }
 
 type DeleteUserInput struct {
-	Id string
+	UserId string
 }
 
 func (r *RootResolver) DeleteUser(
@@ -110,7 +112,7 @@ func (r *RootResolver) DeleteUser(
 	}
 	viewerId, _ := viewer.ID()
 	roles := viewer.Roles()
-	if viewerId == args.Input.Id {
+	if viewerId == args.Input.UserId {
 		roles = append(roles, "SELF")
 	}
 	queryPerm, err := r.Repos.Perm().GetQueryPermission(
@@ -123,7 +125,7 @@ func (r *RootResolver) DeleteUser(
 	}
 	r.Repos.User().AddPermission(queryPerm)
 
-	id, err := oid.Parse(args.Input.Id)
+	id, err := oid.Parse(args.Input.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -133,14 +135,14 @@ func (r *RootResolver) DeleteUser(
 		return nil, err
 	}
 
-	return &args.Input.Id, nil
+	return &args.Input.UserId, nil
 }
 
 type UpdateUserInput struct {
-	Bio   *string
-	Id    string
-	Login *string
-	Name  *string
+	Bio    *string
+	UserId string
+	Login  *string
+	Name   *string
 }
 
 func (r *RootResolver) UpdateUser(
@@ -153,7 +155,7 @@ func (r *RootResolver) UpdateUser(
 	}
 	viewerId, _ := viewer.ID()
 	roles := viewer.Roles()
-	if viewerId == args.Input.Id {
+	if viewerId == args.Input.UserId {
 		roles = append(roles, "SELF")
 	}
 	queryPerm, err := r.Repos.Perm().GetQueryPermission(
@@ -166,9 +168,9 @@ func (r *RootResolver) UpdateUser(
 	}
 	r.Repos.User().AddPermission(queryPerm)
 
-	var user data.UserModel
+	var user data.User
 
-	id, err := oid.Parse(args.Input.Id)
+	id, err := oid.Parse(args.Input.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -188,13 +190,13 @@ func (r *RootResolver) UpdateUser(
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{userPermit}, nil
+	return &userResolver{User: userPermit, Repos: r.Repos}, nil
 }
 
 type CreateLessonInput struct {
-	Body    string
+	Body    *string
 	StudyId string
-	Title   string
+	Title   *string
 }
 
 func (r *RootResolver) CreateLesson(
@@ -209,7 +211,7 @@ func (r *RootResolver) CreateLesson(
 
 	queryPerm, err := r.Repos.Perm().GetQueryPermission(
 		perm.CreateLesson,
-		roles...,
+		viewer.Roles()...,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error retrieving query permission")
@@ -217,11 +219,12 @@ func (r *RootResolver) CreateLesson(
 	}
 	r.Repos.Lesson().AddPermission(queryPerm)
 
-	var lesson data.LessonModel
+	var lesson data.Lesson
 
 	lesson.Body.Set(args.Input.Body)
 	lesson.StudyId.Set(args.Input.StudyId)
 	lesson.Title.Set(args.Input.Title)
+	lesson.UserId.Set(viewerId)
 
 	_, err = r.Repos.Lesson().Create(&lesson)
 	if err == repo.ErrAccessDenied {
@@ -241,6 +244,62 @@ func (r *RootResolver) CreateLesson(
 	resolver, ok := node.ToLesson()
 	if !ok {
 		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to lessonResolver"}
+	}
+
+	return resolver, nil
+}
+
+type CreateStudyInput struct {
+	Description *string
+	Name        string
+}
+
+func (r *RootResolver) CreateStudy(
+	ctx context.Context,
+	args struct{ Input CreateStudyInput },
+) (*studyResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	viewerId, _ := viewer.ID()
+
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.CreateStudy,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Study().AddPermission(queryPerm)
+
+	var study data.Study
+
+	if args.Input.Description != nil {
+		study.Description.Set(args.Input.Description)
+	}
+	study.Name.Set(args.Input.Name)
+	study.UserId.Set(viewerId)
+
+	_, err = r.Repos.Study().Create(&study)
+	if err == repo.ErrAccessDenied {
+		return nil, fmt.Errorf(
+			`access_denied: you may only include %s`,
+			strings.Join(queryPerm.Fields, ", "),
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: study.Id.String})
+	if err != nil {
+		return nil, err
+	}
+	resolver, ok := node.ToStudy()
+	if !ok {
+		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to studyResolver"}
 	}
 
 	return resolver, nil

@@ -16,7 +16,7 @@ import (
 
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	user                 *data.UserModel
+	user                 *data.User
 }
 
 func (r *UserPermit) PreCheckPermissions() error {
@@ -130,7 +130,7 @@ func (r *UserRepo) ClearPermissions() {
 
 // Service methods
 
-func (r *UserRepo) Create(user *data.UserModel) (*UserPermit, error) {
+func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.CreateUser)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -219,7 +219,7 @@ func (r *UserRepo) Delete(id string) error {
 	return nil
 }
 
-func (r *UserRepo) Update(user *data.UserModel) (*UserPermit, error) {
+func (r *UserRepo) Update(user *data.User) (*UserPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.UpdateUser)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -243,14 +243,14 @@ type VerifyCredentialsInput struct {
 
 func (r *UserRepo) VerifyCredentials(
 	input *VerifyCredentialsInput,
-) (*data.UserModel, error) {
+) (*data.User, error) {
 	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
 
-	var user *data.UserModel
+	var user *data.User
 	var err error
 	if input.Email != "" {
 		user, err = r.svc.GetCredentialsByEmail(input.Email)

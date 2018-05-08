@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
-type UserModel struct {
+type User struct {
 	Bio          pgtype.Text        `db:"bio" permit:"read"`
 	BackupEmail  pgtype.Varchar     `db:"backup_email"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
@@ -53,9 +53,9 @@ const batchGetUserSQL = `
 	WHERE id = ANY($1)
 `
 
-func (s *UserService) BatchGet(ids []string) ([]*UserModel, error) {
+func (s *UserService) BatchGet(ids []string) ([]*User, error) {
 	mylog.Log.WithField("ids", ids).Info("BatchGet(ids) User")
-	users := make([]*UserModel, len(ids))
+	users := make([]*User, len(ids))
 
 	rows, err := prepareQuery(s.db, "batchGetUserById", batchGetUserSQL, ids)
 	if err != nil {
@@ -83,8 +83,8 @@ func (s *UserService) BatchGet(ids []string) ([]*UserModel, error) {
 	return users, nil
 }
 
-func (s *UserService) get(name string, sql string, arg interface{}) (*UserModel, error) {
-	var user UserModel
+func (s *UserService) get(name string, sql string, arg interface{}) (*User, error) {
+	var user User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
 		&user.Bio,
 		&user.CreatedAt,
@@ -130,7 +130,7 @@ const getUserByIdSQL = `
 	WHERE a.id = $1
 `
 
-func (s *UserService) GetById(id string) (*UserModel, error) {
+func (s *UserService) GetById(id string) (*User, error) {
 	mylog.Log.WithField("id", id).Info("GetById(id) User")
 	return s.get("getUserById", getUserByIdSQL, id)
 }
@@ -160,7 +160,7 @@ const getUserByLoginSQL = `
 	WHERE a.login = $1
 `
 
-func (s *UserService) GetByLogin(login string) (*UserModel, error) {
+func (s *UserService) GetByLogin(login string) (*User, error) {
 	mylog.Log.WithField("login", login).Info("GetByLogin(login) User")
 	return s.get("getUserByLogin", getUserByLoginSQL, login)
 }
@@ -169,8 +169,8 @@ func (s *UserService) getCredentials(
 	name string,
 	sql string,
 	arg interface{},
-) (*UserModel, error) {
-	var row UserModel
+) (*User, error) {
+	var row User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
 		&row.Id,
 		&row.Password,
@@ -195,7 +195,7 @@ const getUserCredentialsByLoginSQL = `
 
 func (s *UserService) GetCredentialsByLogin(
 	login string,
-) (*UserModel, error) {
+) (*User, error) {
 	mylog.Log.WithField("login", login).Info("GetCredentialsByLogin(login) UserCredentials")
 	return s.getCredentials("getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
 }
@@ -213,7 +213,7 @@ const getUserCredentialsByEmailSQL = `
 
 func (s *UserService) GetCredentialsByEmail(
 	email string,
-) (*UserModel, error) {
+) (*User, error) {
 	mylog.Log.WithField(
 		"email", email,
 	).Info("GetCredentialsByEmail(email) UserCredentials")
@@ -224,7 +224,7 @@ func (s *UserService) GetCredentialsByEmail(
 	)
 }
 
-func (s *UserService) Create(user *UserModel) error {
+func (s *UserService) Create(user *User) error {
 	mylog.Log.WithField("login", user.Login.String).Info("Create() User")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -328,7 +328,7 @@ func (s *UserService) Delete(id string) error {
 	return nil
 }
 
-func (s *UserService) Update(user *UserModel) error {
+func (s *UserService) Update(user *User) error {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
