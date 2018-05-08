@@ -3,9 +3,33 @@ schema {
   mutation: Mutation
 }
 type Query {
-  node(id: ID!): Node
-  nodes(ids: [ID!]!): [Node]!
-  user(login: String!): User
+  # Lookup node by ID.
+  node(
+    # The ID of the node.
+    id: ID!
+  ): Node
+
+  # Lookup nodes by a list of IDs.
+  nodes(
+    # The list of IDs.
+    ids: [ID!]!
+  ): [Node]!
+
+  # Lookup a given study by the owner and study name.
+  study(
+    # The name of the study.
+    name: String!
+    # The login field of a user.
+    owner: String!
+  ): Study
+
+  # Lookup a user by login. 
+  user(
+    # The login of the user.
+    login: String!
+  ): User
+
+  # The currently authenticated user.
   viewer: User!
 }
 type Mutation {

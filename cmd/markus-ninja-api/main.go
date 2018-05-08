@@ -269,5 +269,6 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 
+	mylog.Log.Info("database initialized")
 	return nil
 }

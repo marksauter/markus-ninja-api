@@ -69,6 +69,38 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 	return &row, nil
 }
 
+func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([]*Lesson, error) {
+	var rows []*Lesson
+
+	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Lesson
+		dbRows.Scan(
+			&row.Body,
+			&row.CreatedAt,
+			&row.Id,
+			&row.LastEditedAt,
+			&row.Number,
+			&row.PublishedAt,
+			&row.StudyId,
+			&row.Title,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get lessons")
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 const getLessonByPKSQL = `
 	SELECT
 		body,
@@ -86,10 +118,10 @@ const getLessonByPKSQL = `
 
 func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 	mylog.Log.WithField("id", id).Info("GetByPK(id) Lesson")
-	return s.get("getLessonByPKSQL", id)
+	return s.get("getLessonByPK", getLessonByPKSQL, id)
 }
 
-const getLessonByStudyIdSQL = `
+const getLessonsByStudyIdSQL = `
 	SELECT
 		body,
 		created_at,
@@ -104,9 +136,9 @@ const getLessonByStudyIdSQL = `
 	WHERE study_id = $1
 `
 
-func (s *LessonService) GetByStudyId(studyId string) (*Lesson, error) {
+func (s *LessonService) GetByStudyId(studyId string) ([]*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
-	return s.get("getLessonByStudyId", getLessonByStudyIdSQL, studyId)
+	return s.getMany("getLessonsByStudyId", getLessonsByStudyIdSQL, studyId)
 }
 
 const getLessonByStudyNumberSQL = `
@@ -121,10 +153,10 @@ const getLessonByStudyNumberSQL = `
 		title,
 		user_id
 	FROM lesson
-	WHERE study_id = $1
+	WHERE study_id = $1 AND number = $2
 `
 
-func (s *LessonService) GetByStudyNumber(studyId string, number int) (*Lesson, error) {
+func (s *LessonService) GetByStudyNumber(studyId string, number int32) (*Lesson, error) {
 	mylog.Log.WithFields(
 		logrus.Fields{
 			"study_id": studyId,

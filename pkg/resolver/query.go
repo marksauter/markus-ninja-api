@@ -122,6 +122,33 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 	return nodes, nil
 }
 
+func (r *RootResolver) Study(
+	ctx context.Context,
+	args struct {
+		Name  string
+		Owner string
+	},
+) (*studyResolver, error) {
+	var study *repo.StudyPermit
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadStudy,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Study().AddPermission(queryPerm)
+	study, err = r.Repos.Study().GetByUserAndName(args.Owner, args.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {

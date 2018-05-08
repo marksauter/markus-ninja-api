@@ -8,6 +8,8 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -41,7 +43,23 @@ func (r *studyResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id), err
 }
 
-func (r *studyResolver) Lesson(args struct{ Number int }) (*lessonResolver, error) {
+func (r *studyResolver) Lesson(
+	ctx context.Context,
+	args struct{ Number int32 },
+) (*lessonResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadLesson,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Lesson().AddPermission(queryPerm)
 	id, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -51,6 +69,37 @@ func (r *studyResolver) Lesson(args struct{ Number int }) (*lessonResolver, erro
 		return nil, err
 	}
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+}
+
+func (r *studyResolver) Lessons(
+	ctx context.Context,
+) ([]*lessonResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadLesson,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Lesson().AddPermission(queryPerm)
+	id, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	lessons, err := r.Repos.Lesson().GetByStudyId(id)
+	if err != nil {
+		return nil, err
+	}
+	lessonResolvers := make([]*lessonResolver, len(lessons))
+	for i, l := range lessons {
+		lessonResolvers[i] = &lessonResolver{Lesson: l, Repos: r.Repos}
+	}
+	return lessonResolvers, nil
 }
 
 func (r *studyResolver) LessonCount() (int32, error) {

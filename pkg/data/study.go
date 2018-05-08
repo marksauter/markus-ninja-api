@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/sirupsen/logrus"
 )
 
 type Study struct {
@@ -74,22 +75,26 @@ func (s *StudyService) GetByPK(id string) (*Study, error) {
 	return s.get("getStudyByPK", getStudyByPKSQL, id)
 }
 
-const getStudyByNameSQL = `
+const getStudyByUserAndNameSQL = `
 	SELECT
-		created_at,
-		description,
-		id,
-		name,
-		published_at,
-		updated_at,
-		user_id
-	FROM study
-	WHERE study_id = $1
+		s.created_at,
+		s.description,
+		s.id,
+		s.name,
+		s.published_at,
+		s.updated_at,
+		s.user_id
+	FROM study s
+	INNER JOIN account a ON a.login = $1
+	WHERE s.name = $2 AND s.user_id = a.id
 `
 
-func (s *StudyService) GetByName(name string) (*Study, error) {
-	mylog.Log.WithField("study_id", name).Info("GetByName(name) Study")
-	return s.get("getStudyByName", getStudyByNameSQL, name)
+func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"owner": owner,
+		"name":  name,
+	}).Info("GetByUserAndName(owner, name) Study")
+	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
 }
 
 func (s *StudyService) Create(row *Study) error {

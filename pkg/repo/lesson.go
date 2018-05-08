@@ -185,7 +185,7 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
-func (r *LessonRepo) GetByStudyId(studyId string) (*LessonPermit, error) {
+func (r *LessonRepo) GetByStudyId(studyId string) ([]*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -194,14 +194,18 @@ func (r *LessonRepo) GetByStudyId(studyId string) (*LessonPermit, error) {
 		mylog.Log.Error("lesson connection closed")
 		return nil, ErrConnClosed
 	}
-	lesson, err := r.svc.GetByStudyId(studyId)
+	lessons, err := r.svc.GetByStudyId(studyId)
 	if err != nil {
 		return nil, err
 	}
-	return &LessonPermit{fieldPermFn, lesson}, nil
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	for i, l := range lessons {
+		lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+	}
+	return lessonPermits, nil
 }
 
-func (r *LessonRepo) GetByStudyNumber(studyId string, number int) (*LessonPermit, error) {
+func (r *LessonRepo) GetByStudyNumber(studyId string, number int32) (*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
 	if !ok {
 		return nil, ErrAccessDenied

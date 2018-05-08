@@ -158,7 +158,7 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByName(name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -166,7 +166,7 @@ func (r *StudyRepo) GetByName(name string) (*StudyPermit, error) {
 	if r.load == nil {
 		return nil, ErrConnClosed
 	}
-	study, err := r.svc.GetByName(name)
+	study, err := r.svc.GetByUserAndName(owner, name)
 	if err != nil {
 		return nil, err
 	}

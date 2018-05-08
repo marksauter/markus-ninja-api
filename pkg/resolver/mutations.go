@@ -196,7 +196,7 @@ func (r *RootResolver) UpdateUser(
 type CreateLessonInput struct {
 	Body    *string
 	StudyId string
-	Title   *string
+	Title   string
 }
 
 func (r *RootResolver) CreateLesson(

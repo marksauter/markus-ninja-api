@@ -17,6 +17,9 @@ type Study implements Node, UniformResourceLocatable {
     number: Int!  
   ): Lesson
 
+  # Returns a list of lessons from the current study.
+  lessons: [Lesson!]!
+
   # How many lessons there are in this study.
   lessonCount: Int!
 
