@@ -2,7 +2,6 @@ package data
 
 import (
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -11,9 +10,9 @@ import (
 )
 
 type EmailModel struct {
-	CreatedAt time.Time      `db:"created_at"`
-	Id        pgtype.Varchar `db:"id"`
-	Value     pgtype.Varchar `db:"value"`
+	CreatedAt pgtype.Timestamptz `db:"created_at"`
+	Id        pgtype.Varchar     `db:"id"`
+	Value     pgtype.Varchar     `db:"value"`
 }
 
 func NewEmailService(q Queryer) *EmailService {

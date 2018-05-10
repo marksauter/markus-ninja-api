@@ -53,7 +53,7 @@ func (r *LessonPermit) LastEditedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("last_edited_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.lesson.LastEditedAt.Time, nil
+	return r.lesson.UpdatedAt.Time, nil
 }
 
 func (r *LessonPermit) Number() (int32, error) {
@@ -185,7 +185,7 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
-func (r *LessonRepo) GetByStudyId(studyId string) ([]*LessonPermit, error) {
+func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -194,7 +194,7 @@ func (r *LessonRepo) GetByStudyId(studyId string) ([]*LessonPermit, error) {
 		mylog.Log.Error("lesson connection closed")
 		return nil, ErrConnClosed
 	}
-	lessons, err := r.svc.GetByStudyId(studyId)
+	lessons, err := r.svc.GetByStudyId(studyId, po)
 	if err != nil {
 		return nil, err
 	}

@@ -2,18 +2,23 @@ package data
 
 import (
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
+var BackupEmail = pgtype.Text{String: "BACKUP", Status: pgtype.Present}
+var ExtraEmail = pgtype.Text{String: "EXTRA", Status: pgtype.Present}
+var PrimaryEmail = pgtype.Text{String: "PRIMARY", Status: pgtype.Present}
+var PublicEmail = pgtype.Text{String: "PUBLIC", Status: pgtype.Present}
+
 type AccountEmailModel struct {
-	CreatedAt  time.Time          `db:"created_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at"`
 	EmailId    pgtype.Varchar     `db:"email_id"`
-	Type       string             `db:"type"`
+	Type       pgtype.Text        `db:"type"`
 	UserId     pgtype.Varchar     `db:"user_id"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
@@ -35,7 +40,7 @@ func (s *AccountEmailService) Create(ae *AccountEmailModel) error {
 		columns = append(columns, `email_id`)
 		values = append(values, args.Append(&ae.EmailId))
 	}
-	if ae.Type != "" {
+	if ae.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
 		values = append(values, args.Append(&ae.Type))
 	}
@@ -48,13 +53,15 @@ func (s *AccountEmailService) Create(ae *AccountEmailModel) error {
 		INSERT INTO account_email(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 		RETURNING
-			created_at
+			created_at,
+			updated_at
 	`
 
 	psName := preparedName("createAccountEmail", createAccountEmailSQL)
 
 	err := prepareQueryRow(s.db, psName, createAccountEmailSQL, args...).Scan(
 		&ae.CreatedAt,
+		&ae.UpdatedAt,
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -99,7 +106,7 @@ func (s *AccountEmailService) Update(ae *AccountEmailModel) error {
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
-	if ae.Type != "" {
+	if ae.Type.Status != pgtype.Undefined {
 		sets = append(sets, `type`+"="+args.Append(&ae.Type))
 	}
 	if ae.VerifiedAt.Status != pgtype.Undefined {

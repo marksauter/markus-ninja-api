@@ -292,7 +292,7 @@ func (s *UserService) Create(user *User) error {
 	accountEmailSvc := NewAccountEmailService(tx)
 	accountEmail := &AccountEmailModel{
 		EmailId: email.Id,
-		Type:    "PRIMARY",
+		Type:    PrimaryEmail,
 		UserId:  user.Id,
 	}
 	err = accountEmailSvc.Create(accountEmail)

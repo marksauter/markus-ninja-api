@@ -4,25 +4,25 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
-type node interface {
+type Node interface {
 	ID() (graphql.ID, error)
 }
 
 type nodeResolver struct {
-	node
+	Node
 }
 
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
-	ur, ok := r.node.(*lessonResolver)
-	return ur, ok
+	resolver, ok := r.Node.(*lessonResolver)
+	return resolver, ok
 }
 
 func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
-	ur, ok := r.node.(*studyResolver)
-	return ur, ok
+	resolver, ok := r.Node.(*studyResolver)
+	return resolver, ok
 }
 
 func (r *nodeResolver) ToUser() (*userResolver, bool) {
-	ur, ok := r.node.(*userResolver)
-	return ur, ok
+	resolver, ok := r.Node.(*userResolver)
+	return resolver, ok
 }

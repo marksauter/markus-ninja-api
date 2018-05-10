@@ -73,6 +73,13 @@ func (r *studyResolver) Lesson(
 
 func (r *studyResolver) Lessons(
 	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *LessonOrderArg
+	},
 ) ([]*lessonResolver, error) {
 	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
@@ -91,7 +98,27 @@ func (r *studyResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	lessons, err := r.Repos.Lesson().GetByStudyId(id)
+	lessonOrder, err := ParseLessonOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+	pageOptions := &data.PageOptions{
+		Direction: lessonOrder.Direction,
+		Field:     lessonOrder.Field,
+		Limit:     ,
+		Relation:  data.GreaterThan,
+	}
+	if args.First == nil && args.Last == nil {
+		return nil, fmt.Errorf("You must provide a first or last value to properly paginate the `lessons`")
+	} else if args.First != nil {
+		pageOptions.Limit = args.First 
+	} else if args.Last != nil {
+		pageOptions.Limit = args.Last 
+	}
+	if args.After != nil {
+		pageOptions.Value().Set(args.After)
+	}
+	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
 	if err != nil {
 		return nil, err
 	}

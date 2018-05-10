@@ -59,7 +59,7 @@ func (r *StudyPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.study.PublishedAt.Time, nil
+	return r.study.AdvancedAt.Time, nil
 }
 
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {

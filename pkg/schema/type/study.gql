@@ -18,7 +18,22 @@ type Study implements Node, UniformResourceLocatable {
   ): Lesson
 
   # Returns a list of lessons from the current study.
-  lessons: [Lesson!]!
+  lessons(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for lessons returned from the connection.
+    orderBy: LessonOrder
+  ): LessonConnection!
 
   # How many lessons there are in this study.
   lessonCount: Int!

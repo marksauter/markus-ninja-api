@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -11,15 +12,40 @@ import (
 )
 
 type Lesson struct {
-	Body         pgtype.Text        `db:"body" permit:"read"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           pgtype.Varchar     `db:"id" permit:"read"`
-	LastEditedAt pgtype.Timestamptz `db:"last_edited_at" permit:"read"`
-	Number       pgtype.Int4        `db:"number" permit:"read"`
-	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId      pgtype.Varchar     `db:"study_id" permit:"read"`
-	Title        pgtype.Text        `db:"title" permit:"read"`
-	UserId       pgtype.Varchar     `db:"user_id" permit:"read"`
+	Body        pgtype.Text        `db:"body" permit:"read"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id          pgtype.Varchar     `db:"id" permit:"read"`
+	Number      pgtype.Int4        `db:"number" permit:"read"`
+	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
+	StudyId     pgtype.Varchar     `db:"study_id" permit:"read"`
+	Title       pgtype.Text        `db:"title" permit:"read"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId      pgtype.Varchar     `db:"user_id" permit:"read"`
+}
+
+type LessonOrderField struct {
+	name  string
+	value OrderFieldValue
+}
+
+func ParseLessonOrderField(s string) (*LessonOrderField, error) {
+	f := &LessonOrderField{}
+	switch strings.ToLower(s) {
+	case "number":
+		f.name = "number"
+		f.value = &pgtype.Int4{}
+		return f, nil
+	default:
+		return nil, fmt.Errorf("invalid LessonOrderField: %q", s)
+	}
+}
+
+func (f *LessonOrderField) Name() string {
+	return f.name
+}
+
+func (f *LessonOrderField) Value() OrderFieldValue {
+	return f.value
 }
 
 func NewLessonService(db Queryer) *LessonService {
@@ -52,11 +78,11 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,
-		&row.LastEditedAt,
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyId,
 		&row.Title,
+		&row.UpdatedAt,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -83,11 +109,11 @@ func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([
 			&row.Body,
 			&row.CreatedAt,
 			&row.Id,
-			&row.LastEditedAt,
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyId,
 			&row.Title,
+			&row.UpdatedAt,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -106,11 +132,11 @@ const getLessonByPKSQL = `
 		body,
 		created_at,
 		id,
-		last_edited_at,
 		number,
 		published_at,
 		study_id,
 		title,
+		updated_at,
 		user_id
 	FROM lesson
 	WHERE id = $1
@@ -121,24 +147,30 @@ func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 	return s.get("getLessonByPK", getLessonByPKSQL, id)
 }
 
-const getLessonsByStudyIdSQL = `
-	SELECT
-		body,
-		created_at,
-		id,
-		last_edited_at,
-		number,
-		published_at,
-		study_id,
-		title,
-		user_id
-	FROM lesson
-	WHERE study_id = $1
-`
-
-func (s *LessonService) GetByStudyId(studyId string) ([]*Lesson, error) {
+func (s *LessonService) GetByStudyId(studyId string, po PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
-	return s.getMany("getLessonsByStudyId", getLessonsByStudyIdSQL, studyId)
+
+	sql := `
+		SELECT
+			body,
+			created_at,
+			id,
+			number,
+			published_at,
+			study_id,
+			title,
+			updated_at,
+			user_id
+		FROM lesson
+		WHERE study_id = $1
+			AND ` + po.Field.Name + ` ` + po.Relation.String() + ` $2
+		ORDER BY ` + po.Field.Name + ` ` + po.Direction.String() + `
+		LIMIT $3
+	`
+
+	psName := preparedName("getLessonsByStudyId", sql)
+
+	return s.getMany(psName, sql, studyId, po.Field.Value, po.Limit)
 }
 
 const getLessonByStudyNumberSQL = `
@@ -146,11 +178,11 @@ const getLessonByStudyNumberSQL = `
 		body,
 		created_at,
 		id,
-		last_edited_at,
 		number,
 		published_at,
 		study_id,
 		title,
+		updated_at,
 		user_id
 	FROM lesson
 	WHERE study_id = $1 AND number = $2
@@ -163,7 +195,12 @@ func (s *LessonService) GetByStudyNumber(studyId string, number int32) (*Lesson,
 			"number":   number,
 		},
 	).Info("GetByStudyNumber(studyId, number) Lesson")
-	return s.get("getLessonByStudyNumber", getLessonByStudyNumberSQL, studyId, number)
+	return s.get(
+		"getLessonByStudyNumber",
+		getLessonByStudyNumberSQL,
+		studyId,
+		number,
+	)
 }
 
 func (s *LessonService) Create(row *Lesson) error {
@@ -206,13 +243,15 @@ func (s *LessonService) Create(row *Lesson) error {
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 		RETURNING
-			created_at
+			created_at,
+			updated_at
 	`
 
 	psName := preparedName("createLesson", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.CreatedAt,
+		&row.UpdatedAt,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create lesson")
@@ -279,11 +318,11 @@ func (s *LessonService) Update(row *Lesson) error {
 			body,
 			created_at,
 			id,
-			last_edited_at,
 			number,
 			published_at,
 			study_id,
 			title,
+			updated_at,
 			user_id
 	`
 
@@ -293,11 +332,11 @@ func (s *LessonService) Update(row *Lesson) error {
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,
-		&row.LastEditedAt,
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyId,
 		&row.Title,
+		&row.UpdatedAt,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {

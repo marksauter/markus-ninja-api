@@ -41,3 +41,36 @@ type Lesson implements Node, UniformResourceLocatable, Updateable {
   # Did the viewer author this lesson.
   viewerDidAuthor: Boolean!
 }
+
+# An edge type for Lesson.
+type LessonEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Lesson
+}
+
+# A connection type for Lesson.
+type LessonConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [LessonEdge]
+
+  # A list of nodes.
+  nodes: [Lesson]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}
+
+# Ways in which lessons can be ordered upon return.
+type LessonOrder {
+  # The direction in which to order lessons by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order lessons by.
+  field: LessonOrderField!
+}

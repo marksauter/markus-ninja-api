@@ -16,9 +16,14 @@ CREATE TABLE account(
   name          TEXT
 );
 
+CREATE UNIQUE INDEX account_unique_login_idx
+  ON account (LOWER(login));
+
 CREATE TRIGGER account_updated_at_modtime
-BEFORE UPDATE ON account
-FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+  BEFORE UPDATE
+  ON account
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS email CASCADE;
 CREATE TABLE email(
@@ -27,14 +32,18 @@ CREATE TABLE email(
   created_at  TIMESTAMPTZ   DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX email_unique_lower_value_idx
+  ON email (LOWER(value));
+
 CREATE TYPE account_email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY', 'PUBLIC');
 
-DROP TABLE IF EXISTS account_email;
+DROP TABLE IF EXISTS account_email CASCADE;
 CREATE TABLE account_email(
   user_id     VARCHAR(40),
   email_id    VARCHAR(40),
   type        account_email_type DEFAULT 'EXTRA',
   created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
   PRIMARY KEY (user_id, email_id),
   FOREIGN KEY (user_id)
@@ -46,8 +55,14 @@ CREATE TABLE account_email(
 );
 
 CREATE UNIQUE INDEX account_email_user_id_type_key
-ON account_email (user_id, type)
-WHERE type = ANY('{"PRIMARY", "BACKUP"}');
+  ON account_email (user_id, type)
+  WHERE type = ANY('{"PRIMARY", "BACKUP"}');
+
+CREATE TRIGGER account_email_updated_at_modtime
+  BEFORE UPDATE
+  ON account_email
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role CASCADE;
 CREATE TABLE role(
@@ -61,7 +76,7 @@ CREATE TRIGGER role_updated_at_modtime
 BEFORE UPDATE ON role
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-DROP TABLE IF EXISTS account_role;
+DROP TABLE IF EXISTS account_role CASCADE;
 CREATE TABLE account_role(
   user_id     VARCHAR(40),
   role_id     VARCHAR(40),
@@ -91,18 +106,17 @@ CREATE TABLE IF NOT EXISTS permission(
 );
 
 CREATE UNIQUE INDEX permission_access_level_type_field_key
-ON permission (access_level, type, field)
-WHERE field IS NOT NULL;
-
+  ON permission (access_level, type, field)
+  WHERE field IS NOT NULL;
 CREATE UNIQUE INDEX permission_access_level_type_key
-ON permission (access_level, type)
-WHERE field IS NULL;
+  ON permission (access_level, type)
+  WHERE field IS NULL;
 
 CREATE TRIGGER permission_updated_at_modtime
 BEFORE UPDATE ON permission
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-DROP TABLE IF EXISTS role_permission;
+DROP TABLE IF EXISTS role_permission CASCADE;
 CREATE TABLE role_permission(
   role_id       VARCHAR(40),
   permission_id VARCHAR(40),
@@ -116,7 +130,7 @@ CREATE TABLE role_permission(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS email_verification_token;
+DROP TABLE IF EXISTS email_verification_token CASCADE;
 CREATE TABLE email_verification_token(
   user_id       VARCHAR(40),
   token         VARCHAR(40),
@@ -129,7 +143,7 @@ CREATE TABLE email_verification_token(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS password_reset_token;
+DROP TABLE IF EXISTS password_reset_token CASCADE;
 CREATE TABLE password_reset_token(
   token         VARCHAR(40)   PRIMARY KEY,
   email         VARCHAR(40)   NOT NULL,
@@ -151,15 +165,17 @@ CREATE TABLE study(
   name          TEXT          NOT NULL,
   created_at    TIMESTAMPTZ   DEFAULT NOW(),
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
-  published_at  TIMESTAMPTZ,
+  advanced_at   TIMESTAMPTZ,
   description   TEXT,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX study_user_id_name_key
-ON study (user_id, name);
+CREATE UNIQUE INDEX study_user_id_name_key ON study (user_id, LOWER(name));
+CREATE INDEX study_created_at_idx ON study (created_at);
+CREATE INDEX study_updated_at_idx ON study (updated_at);
+CREATE INDEX study_advanced_at_idx ON study (advanced_at);
 
 CREATE TRIGGER study_updated_at_modtime
 BEFORE UPDATE ON study
@@ -237,7 +253,7 @@ CREATE TABLE lesson(
   study_id        VARCHAR(40) NOT NULL,    
   user_id         VARCHAR(40) NOT NULL,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
-  last_edited_at  TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
   published_at    TIMESTAMPTZ,
   body            TEXT,
   number          INT         CHECK(number > 0),
@@ -250,11 +266,11 @@ CREATE TABLE lesson(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX lesson_study_id_key
-ON lesson (study_id);
-
-CREATE INDEX lesson_user_id_key
-ON lesson (user_id);
+CREATE INDEX lesson_study_id_number_idx ON lesson (study_id, number);
+CREATE INDEX lesson_user_id_idx ON lesson (user_id);
+CREATE INDEX lesson_created_at_idx ON lesson (created_at);
+CREATE INDEX lesson_updated_at_idx ON lesson (updated_at);
+CREATE INDEX lesson_published_at_idx ON lesson (published_at DESC NULLS LAST);
 
 CREATE TRIGGER insert_new_lesson
   BEFORE INSERT
@@ -281,13 +297,19 @@ CREATE TRIGGER after_update_lesson
   WHEN (pg_trigger_depth() = 0)
   EXECUTE PROCEDURE move_study_lesson_number();
 
-DROP TABLE IF EXISTS lesson_comment;
+CREATE TRIGGER lesson_updated_at_modtime
+  BEFORE UPDATE
+  ON lesson
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS lesson_comment CASCADE;
 CREATE TABLE lesson_comment(
   id              VARCHAR(40) PRIMARY KEY,
   lesson_id       VARCHAR(40) NOT NULL,
   user_id         VARCHAR(40) NOT NULL,
   created_at      TIMESTAMPTZ   DEFAULT NOW(),
-  last_edited_at  TIMESTAMPTZ,
+  updated_at      TIMESTAMPTZ   DEFAULT NOW(),
   published_at    TIMESTAMPTZ,
   body            TEXT,
   FOREIGN KEY (lesson_id)
@@ -298,13 +320,17 @@ CREATE TABLE lesson_comment(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX lesson_comment_lesson_id_key
-ON lesson_comment (lesson_id);
+CREATE INDEX lesson_comment_lesson_id_idx ON lesson_comment (lesson_id);
+CREATE INDEX lesson_comment_user_id_idx ON lesson_comment (user_id);
+CREATE INDEX lesson_comment_published_at_idx ON lesson_comment (published_at DESC NULLS LAST);
 
-CREATE INDEX lesson_comment_user_id_key
-ON lesson_comment (user_id);
+CREATE TRIGGER lesson_comment_updated_at_modtime
+  BEFORE UPDATE
+  ON lesson_comment
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
 
-DROP TABLE IF EXISTS label;
+DROP TABLE IF EXISTS label CASCADE;
 CREATE TABLE label(
   id          VARCHAR(40) PRIMARY KEY,
   name        VARCHAR(40) NOT NULL UNIQUE,
@@ -312,6 +338,11 @@ CREATE TABLE label(
   updated_at  TIMESTAMPTZ   DEFAULT NOW()
 ); 
 
+CREATE UNIQUE INDEX label_unique_name_idx
+  ON label (LOWER(name));
+
 CREATE TRIGGER label_updated_at_modtime
-BEFORE UPDATE ON label
-FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+  BEFORE UPDATE
+  ON label
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();

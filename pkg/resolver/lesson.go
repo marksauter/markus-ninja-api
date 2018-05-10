@@ -140,3 +140,51 @@ func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
 
 	return viewerId == userId, nil
 }
+
+type lessonEdgeResolver struct {
+	cursor string
+	node   *repo.LessonPermit
+	repos  *repo.Repos
+}
+
+func (r *lessonEdgeResolver) Cursor() string {
+	return r.cursor
+}
+
+func (r *lessonEdgeResolver) Node() *nodeResolver {
+	return &nodeResolver{&lessonResolver{Lesson: r.node, Repos: r.repos}}
+}
+
+type lessonConnectionResolver struct {
+	lessons    []*repo.LessonPermit
+	totalCount int32
+	repos      *repo.Repos
+}
+
+func (r *lessonConnectionResolver) Edges() *[]*lessonEdgeResolver {
+	edges := make([]*lessonEdgeResolver, len(r.lessons))
+	for i := range edges {
+		lid, _ := r.lessons[i].ID()
+		edges[i] = &lessonEdgeResolver{
+			cursor: lid,
+			node:   r.lessons[i],
+		}
+	}
+	return &edges
+}
+
+func (r *lessonConnectionResolver) Nodes() *[]*lessonResolver {
+	nodes := make([]*lessonResolver, len(r.lessons))
+	for i := range nodes {
+		nodes[i] = &lessonResolver{Lesson: r.lessons[i], Repos: r.repos}
+	}
+	return &nodes
+}
+
+func (r *lessonConnectionResolver) PageInfo() *pageInfoResolver {
+	return &pageInfoResolver{}
+}
+
+func (r *lessonConnectionResolver) TotalCount() int32 {
+	return r.totalCount
+}

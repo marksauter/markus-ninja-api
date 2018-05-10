@@ -1,12 +1,15 @@
 package data
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"strings"
 
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -77,4 +80,69 @@ func preparedName(baseName, sql string) string {
 	}
 
 	return fmt.Sprintf("%s%d", baseName, h.Sum32())
+}
+
+type OrderDirection int
+
+const (
+	ASC OrderDirection = iota
+	DESC
+)
+
+func ParseOrderDirection(s string) (OrderDirection, error) {
+	switch strings.ToLower(s) {
+	case "asc":
+		return ASC, nil
+	case "desc":
+		return DESC, nil
+	default:
+		var o OrderDirection
+		return o, fmt.Errorf("invalid OrderDirection: %q", s)
+	}
+}
+
+func (od OrderDirection) String() string {
+	switch od {
+	case ASC:
+		return "ASC"
+	case DESC:
+		return "DESC"
+	default:
+		return "unknown"
+	}
+}
+
+type KeysetRelation int
+
+const (
+	GreaterThan KeysetRelation = iota
+	LessThan
+)
+
+func (kr KeysetRelation) String() string {
+	switch kr {
+	case GreaterThan:
+		return ">"
+	case LessThan:
+		return "<"
+	default:
+		return "unknown"
+	}
+}
+
+type OrderFieldValue interface {
+	pgtype.Value
+	driver.Valuer
+}
+
+type OrderField interface {
+	Name() string
+	Value() OrderFieldValue
+}
+
+type PageOptions struct {
+	Direction OrderDirection
+	Field     OrderField
+	Limit     int32
+	Relation  KeysetRelation
 }
