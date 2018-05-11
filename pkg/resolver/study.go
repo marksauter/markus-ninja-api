@@ -77,8 +77,8 @@ func (r *studyResolver) Lessons(
 	args struct {
 		After   *string
 		Before  *string
-		First   *int
-		Last    *int
+		First   *int32
+		Last    *int32
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
@@ -104,7 +104,7 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	var limit int
+	var limit int32
 	if args.First == nil && args.Last == nil {
 		return nil, fmt.Errorf("You must provide a first or last value to properly paginate the `lessons`")
 	} else if args.First != nil {
@@ -120,20 +120,14 @@ func (r *studyResolver) Lessons(
 		Relation:  data.GreaterThan,
 	}
 
-	var cursor *string
 	if args.After != nil {
-		cursor = args.After
+		pageOptions.Cursor, err = data.DecodeCursor(args.After)
 		pageOptions.Relation = data.GreaterThan
 	} else if args.Before != nil {
-		cursor = args.Before
+		pageOptions.Cursor, err = data.DecodeCursor(args.Before)
 		pageOptions.Relation = data.LessThan
 	}
-	if cursor != nil {
-		err = pageOptions.Field.DecodeCursor(*cursor)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
 	if err != nil {
 		return nil, err
@@ -142,13 +136,15 @@ func (r *studyResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	lessonConnectionResolver := NewLessonConnectionResolver(
-		cursor,
+	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		lessons,
 		pageOptions,
 		count,
 		r.Repos,
 	)
+	if err != nil {
+		return nil, err
+	}
 	return lessonConnectionResolver, nil
 }
 

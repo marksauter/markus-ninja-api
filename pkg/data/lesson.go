@@ -130,6 +130,13 @@ func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 
 func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+
+	var joinCursor, whereCursor string
+	if po.Cursor != nil {
+		joinCursor = `INNER JOIN lesson l2 ON l2.id = ` + args.Append(po.Cursor)
+		whereCursor = `AND l1.` + po.Field.String() + ` ` + po.Relation.String() + ` l2.` + po.Field.String()
+	}
 
 	sql := `
 		SELECT
@@ -142,17 +149,16 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 			l1.title,
 			l1.updated_at,
 			l1.user_id
-		FROM lesson l1
-		INNER JOIN lesson l2 ON l2.id = $1
-		WHERE study_id = $2
-			AND ` + po.Field.Name() + ` ` + po.Relation.String() + ` l2.` + po.Field.Name() + `
-		ORDER BY ` + po.Field.Name() + ` ` + po.Direction.String() + `
-		LIMIT $3
-	`
+		FROM lesson l1 ` +
+		joinCursor + `
+		WHERE l1.study_id = ` + args.Append(studyId) + `
+		` + whereCursor + `
+		ORDER BY l1.` + po.Field.String() + ` ` + po.Direction.String() + `
+		LIMIT ` + args.Append(po.Limit+2)
 
 	psName := preparedName("getLessonsByStudyId", sql)
 
-	return s.getMany(psName, sql, studyId, po.Field.Value(), po.Limit+2)
+	return s.getMany(psName, sql, args...)
 }
 
 const getLessonByStudyNumberSQL = `

@@ -2,85 +2,114 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonConnectionResolver(
-	cursor *string,
 	lessons []*repo.LessonPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
-) *lessonConnectionResolver {
-	return &lessonConnectionResolver{
-		cursor:      cursor,
-		lessons:     lessons,
-		pageOptions: pageOptions,
-		totalCount:  totalCount,
-		repos:       repos,
-	}
-}
-
-type lessonConnectionResolver struct {
-	cursor      *string
-	lessons     []*repo.LessonPermit
-	pageOptions *data.PageOptions
-	totalCount  int32
-	repos       *repo.Repos
-}
-
-func (r *lessonConnectionResolver) Edges() (*[]*lessonEdgeResolver, error) {
-	edges := make([]*lessonEdgeResolver, len(r.lessons))
-	fieldName := r.pageOptions.Field.Name()
+) (*lessonConnectionResolver, error) {
+	edges := make([]*lessonEdgeResolver, len(lessons))
 	for i := range edges {
-		cursor, err := r.pageOptions.Field.EncodeCursor(r.lessons[i])
+		id, err := lessons[i].ID()
 		if err != nil {
 			return nil, err
 		}
-		lessonEdge := NewLessonEdgeResolver(cursor, r.lessons[i], r.repos)
+		cursor := data.EncodeCursor(id)
+		lessonEdge := NewLessonEdgeResolver(cursor, lessons[i], repos)
 		edges[i] = lessonEdge
 	}
-	return &edges, nil
+
+	var hasNextPage, hasPreviousPage bool
+	var end, start int32
+	nLessons := int32(len(lessons))
+	if pageOptions.Cursor != nil {
+		firstCursor := edges[0].Cursor()
+		lastCursor := edges[len(edges)-1].Cursor()
+		mylog.Log.Debug(*pageOptions.Cursor)
+		if *pageOptions.Cursor == firstCursor || *pageOptions.Cursor == lastCursor {
+			start = 0
+			hasPreviousPage = false
+			if nLessons > pageOptions.Limit || *pageOptions.Cursor == lastCursor {
+				end = nLessons - 2
+				hasNextPage = true
+			} else {
+				end = nLessons - 1
+				hasNextPage = false
+			}
+		} else {
+			start = 1
+			hasPreviousPage = true
+			if nLessons > pageOptions.Limit+1 {
+				end = nLessons - 2
+				hasNextPage = true
+			} else {
+				end = nLessons - 1
+				hasNextPage = false
+			}
+		}
+	} else {
+		start = 0
+		hasPreviousPage = false
+		if nLessons > pageOptions.Limit {
+			end = nLessons - 2
+			hasNextPage = true
+		} else {
+			end = nLessons - 1
+			hasNextPage = false
+		}
+	}
+	endCursor := edges[end].Cursor()
+	startCursor := edges[start].Cursor()
+
+	pageInfo := &pageInfoResolver{
+		endCursor:       endCursor,
+		hasNextPage:     hasNextPage,
+		hasPreviousPage: hasPreviousPage,
+		startCursor:     startCursor,
+	}
+
+	resolver := &lessonConnectionResolver{
+		edges:      edges,
+		lessons:    lessons,
+		pageInfo:   pageInfo,
+		repos:      repos,
+		totalCount: totalCount,
+		start:      start,
+		end:        end,
+	}
+	return resolver, nil
+}
+
+type lessonConnectionResolver struct {
+	edges      []*lessonEdgeResolver
+	lessons    []*repo.LessonPermit
+	pageInfo   *pageInfoResolver
+	repos      *repo.Repos
+	totalCount int32
+	start      int32
+	end        int32
+}
+
+func (r *lessonConnectionResolver) Edges() *[]*lessonEdgeResolver {
+	edges := r.edges[r.start : r.end+1]
+	return &edges
 }
 
 func (r *lessonConnectionResolver) Nodes() *[]*lessonResolver {
-	nodes := make([]*lessonResolver, len(r.lessons))
+	lessons := r.lessons[r.start : r.end+1]
+	nodes := make([]*lessonResolver, len(lessons))
 	for i := range nodes {
-		nodes[i] = &lessonResolver{Lesson: r.lessons[i], Repos: r.repos}
+		nodes[i] = &lessonResolver{Lesson: lessons[i], Repos: r.repos}
 	}
 	return &nodes
 }
 
 func (r *lessonConnectionResolver) PageInfo() (*pageInfoResolver, error) {
-	var endCursor, startCursor string
-	var hasNextPage, hasPrevPage bool
-	fieldName := r.pageOptions.Field.Name()
-	var end, start int
-	if len(r.lessons) < r.pageOptions.Limit {
-		end = len(r.lessons) - 1
-		hasNextPage = false
-	} else if len(r.lessons) == r.pageOptions.Limit+2 {
-		end = len(r.lessons) - 2
-	}
-	endCursor, err = r.pageOptions.Field.EncodeCursor(r.lessons[end])
-	if err != nil {
-		return nil, err
-	}
-	startCursor, err = r.pageOptions.Field.EncodeCursor(r.lessons[start])
-	if err != nil {
-		return nil, err
-	}
-
-	pageInfo := &pageInfoResolver{
-		endCursor: endCursor,
-		hasNextPage: r.pageOptions.Relation == data.GreaterThan &&
-			len(r.lessons) > r.pageOptions.Limit,
-		hasPrevPage: r.pageOptions.Relation == data.LessThan &&
-			len(r.lessons) > r.pageOptions.Limit,
-		startCursor: startCursor,
-	}
-
-	return pageInfo, nil
+	return r.pageInfo, nil
 }
 
 func (r *lessonConnectionResolver) TotalCount() int32 {

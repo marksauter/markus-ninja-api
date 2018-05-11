@@ -1,7 +1,6 @@
 package data
 
 import (
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -9,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -130,21 +128,23 @@ func (kr KeysetRelation) String() string {
 	}
 }
 
-type OrderFieldValue interface {
-	pgtype.Value
-	driver.Valuer
-}
+// type OrderFieldValue interface {
+//   pgtype.Value
+//   driver.Valuer
+// }
 
-type OrderField interface {
-	DecodeCursor(string) error
-	EncodeCursor(src interface{}) (string, error)
-	Name() string
-	Value() OrderFieldValue
-}
+// type OrderField interface {
+//   DecodeCursor(string) error
+//   EncodeCursor(src interface{}) (string, error)
+//   Name() string
+//   Value() OrderFieldValue
+// }
+type OrderField = fmt.Stringer
 
 type PageOptions struct {
+	Cursor    *string
 	Direction OrderDirection
 	Field     OrderField
-	Limit     int
+	Limit     int32
 	Relation  KeysetRelation
 }
