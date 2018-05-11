@@ -65,12 +65,3 @@ type LessonConnection implements Connection {
   # The total count of items in the connection.
   totalCount: Int!
 }
-
-# Ways in which lessons can be ordered upon return.
-type LessonOrder {
-  # The direction in which to order lessons by the specified field.
-  direction: OrderDirection!
-
-  # The field in which to order lessons by.
-  field: LessonOrderField!
-}

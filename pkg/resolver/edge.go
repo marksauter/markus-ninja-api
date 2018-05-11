@@ -9,7 +9,7 @@ type edgeResolver struct {
 	Edge
 }
 
-func (r *edgeResolver) ToLesson() (*lessonEdgeResolver, bool) {
-	resolver, ok := r.Edge.(*lessonEdgeResolver)
-	return resolver, ok
-}
+// func (r *edgeResolver) ToLessonEdge() (*lessonEdgeResolver, bool) {
+//   resolver, ok := r.Edge.(*lessonEdgeResolver)
+//   return resolver, ok
+// }

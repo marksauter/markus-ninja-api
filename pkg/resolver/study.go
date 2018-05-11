@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -76,11 +77,11 @@ func (r *studyResolver) Lessons(
 	args struct {
 		After   *string
 		Before  *string
-		First   *int32
-		Last    *int32
+		First   *int
+		Last    *int
 		OrderBy *LessonOrderArg
 	},
-) ([]*lessonResolver, error) {
+) (*lessonConnectionResolver, error) {
 	viewer, ok := myctx.User.FromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -102,31 +103,53 @@ func (r *studyResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	pageOptions := &data.PageOptions{
-		Direction: lessonOrder.Direction,
-		Field:     lessonOrder.Field,
-		Limit:     ,
-		Relation:  data.GreaterThan,
-	}
+
+	var limit int
 	if args.First == nil && args.Last == nil {
 		return nil, fmt.Errorf("You must provide a first or last value to properly paginate the `lessons`")
 	} else if args.First != nil {
-		pageOptions.Limit = args.First 
+		limit = *args.First
 	} else if args.Last != nil {
-		pageOptions.Limit = args.Last 
+		limit = *args.Last
 	}
+
+	pageOptions := &data.PageOptions{
+		Direction: lessonOrder.Direction,
+		Field:     lessonOrder.Field,
+		Limit:     limit,
+		Relation:  data.GreaterThan,
+	}
+
+	var cursor *string
 	if args.After != nil {
-		pageOptions.Value().Set(args.After)
+		cursor = args.After
+		pageOptions.Relation = data.GreaterThan
+	} else if args.Before != nil {
+		cursor = args.Before
+		pageOptions.Relation = data.LessThan
+	}
+	if cursor != nil {
+		err = pageOptions.Field.DecodeCursor(*cursor)
+		if err != nil {
+			return nil, err
+		}
 	}
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	lessonResolvers := make([]*lessonResolver, len(lessons))
-	for i, l := range lessons {
-		lessonResolvers[i] = &lessonResolver{Lesson: l, Repos: r.Repos}
+	count, err := r.Repos.Lesson().CountByStudy(id)
+	if err != nil {
+		return nil, err
 	}
-	return lessonResolvers, nil
+	lessonConnectionResolver := NewLessonConnectionResolver(
+		cursor,
+		lessons,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	return lessonConnectionResolver, nil
 }
 
 func (r *studyResolver) LessonCount() (int32, error) {

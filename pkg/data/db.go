@@ -122,9 +122,9 @@ const (
 func (kr KeysetRelation) String() string {
 	switch kr {
 	case GreaterThan:
-		return ">"
+		return ">="
 	case LessThan:
-		return "<"
+		return "<="
 	default:
 		return "unknown"
 	}
@@ -136,6 +136,8 @@ type OrderFieldValue interface {
 }
 
 type OrderField interface {
+	DecodeCursor(string) error
+	EncodeCursor(src interface{}) (string, error)
 	Name() string
 	Value() OrderFieldValue
 }
@@ -143,6 +145,6 @@ type OrderField interface {
 type PageOptions struct {
 	Direction OrderDirection
 	Field     OrderField
-	Limit     int32
+	Limit     int
 	Relation  KeysetRelation
 }

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -23,31 +22,6 @@ type Lesson struct {
 	UserId      pgtype.Varchar     `db:"user_id" permit:"read"`
 }
 
-type LessonOrderField struct {
-	name  string
-	value OrderFieldValue
-}
-
-func ParseLessonOrderField(s string) (*LessonOrderField, error) {
-	f := &LessonOrderField{}
-	switch strings.ToLower(s) {
-	case "number":
-		f.name = "number"
-		f.value = &pgtype.Int4{}
-		return f, nil
-	default:
-		return nil, fmt.Errorf("invalid LessonOrderField: %q", s)
-	}
-}
-
-func (f *LessonOrderField) Name() string {
-	return f.name
-}
-
-func (f *LessonOrderField) Value() OrderFieldValue {
-	return f.value
-}
-
 func NewLessonService(db Queryer) *LessonService {
 	return &LessonService{db}
 }
@@ -59,6 +33,7 @@ type LessonService struct {
 const countLessonSQL = `SELECT COUNT(*)::INT FROM lesson`
 
 func (s *LessonService) Count() (int32, error) {
+	mylog.Log.Info("Count()")
 	var n int32
 	err := prepareQueryRow(s.db, "countLesson", countLessonSQL).Scan(&n)
 	return n, err
@@ -67,8 +42,14 @@ func (s *LessonService) Count() (int32, error) {
 const countLessonByStudySQL = `SELECT COUNT(*) FROM lesson WHERE study_id = $1`
 
 func (s *LessonService) CountByStudy(studyId string) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountByStudy(study_id)")
 	var n int32
-	err := prepareQueryRow(s.db, "countLesson", countLessonSQL, studyId).Scan(&n)
+	err := prepareQueryRow(
+		s.db,
+		"countLessonByStudy",
+		countLessonByStudySQL,
+		studyId,
+	).Scan(&n)
 	return n, err
 }
 
@@ -147,30 +128,31 @@ func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 	return s.get("getLessonByPK", getLessonByPKSQL, id)
 }
 
-func (s *LessonService) GetByStudyId(studyId string, po PageOptions) ([]*Lesson, error) {
+func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
 
 	sql := `
 		SELECT
-			body,
-			created_at,
-			id,
-			number,
-			published_at,
-			study_id,
-			title,
-			updated_at,
-			user_id
-		FROM lesson
-		WHERE study_id = $1
-			AND ` + po.Field.Name + ` ` + po.Relation.String() + ` $2
-		ORDER BY ` + po.Field.Name + ` ` + po.Direction.String() + `
+			l1.body,
+			l1.created_at,
+			l1.id,
+			l1.number,
+			l1.published_at,
+			l1.study_id,
+			l1.title,
+			l1.updated_at,
+			l1.user_id
+		FROM lesson l1
+		INNER JOIN lesson l2 ON l2.id = $1
+		WHERE study_id = $2
+			AND ` + po.Field.Name() + ` ` + po.Relation.String() + ` l2.` + po.Field.Name() + `
+		ORDER BY ` + po.Field.Name() + ` ` + po.Direction.String() + `
 		LIMIT $3
 	`
 
 	psName := preparedName("getLessonsByStudyId", sql)
 
-	return s.getMany(psName, sql, studyId, po.Field.Value, po.Limit)
+	return s.getMany(psName, sql, studyId, po.Field.Value(), po.Limit+2)
 }
 
 const getLessonByStudyNumberSQL = `
