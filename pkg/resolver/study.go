@@ -8,6 +8,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -72,6 +73,75 @@ func (r *studyResolver) Lesson(
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
+type PageDirection int
+
+const (
+	ForwardPagination PageDirection = iota
+	BackwardPagination
+)
+
+type Cursor struct {
+	s *string
+	v *string
+}
+
+func NewCursor(cursor *string) *Cursor {
+	return &Cursor{
+		s: cursor,
+		v: data.DecodeCursor(cursor),
+	}
+}
+
+func (c *Cursor) String() string {
+	if c.s != nil {
+		return *c.s
+	}
+	return ""
+}
+
+func (c *Cursor) Value() string {
+	if c.v != nil {
+		return *c.v
+	}
+	return ""
+}
+
+type Pagination struct {
+	After     *Cursor
+	Before    *Cursor
+	Direction PageDirection
+	first     int32
+	last      int32
+}
+
+func NewPagination(after, before *string, first, last *int32) (*Pagination, error) {
+	pagination := &Pagination{}
+	if first == nil && last == nil {
+		return nil, fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+	} else if first != nil {
+		if last != nil {
+			return nil, fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+		}
+		pagination.first = *first
+		pagination.Direction = ForwardPagination
+	} else {
+		pagination.last = *last
+		pagination.Direction = BackwardPagination
+	}
+	if after != nil {
+		pagination.After = NewCursor(after)
+	}
+	if before != nil {
+		pagination.Before = NewCursor(before)
+	}
+	return pagination, nil
+}
+
+func (p *Pagination) Limit() int32 {
+	// Assuming one of these is 0, so the sum will be the non-zero field
+	return p.first + p.last
+}
+
 func (r *studyResolver) Lessons(
 	ctx context.Context,
 	args struct {
@@ -104,28 +174,20 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	var limit int32
-	if args.First == nil && args.Last == nil {
-		return nil, fmt.Errorf("You must provide a first or last value to properly paginate the `lessons`")
-	} else if args.First != nil {
-		limit = *args.First
-	} else if args.Last != nil {
-		limit = *args.Last
-	}
+	pagination := NewPagination(args.After, args.Before, args.First, args.Last)
 
 	pageOptions := &data.PageOptions{
-		Direction: lessonOrder.Direction,
-		Field:     lessonOrder.Field,
-		Limit:     limit,
-		Relation:  data.GreaterThan,
+		Order: lessonOrder,
+		Limit: pagination.Limit(),
 	}
 
-	if args.After != nil {
-		pageOptions.Cursor, err = data.DecodeCursor(args.After)
+	switch pagination.Direction {
+	case ForwardPagination:
 		pageOptions.Relation = data.GreaterThan
-	} else if args.Before != nil {
-		pageOptions.Cursor, err = data.DecodeCursor(args.Before)
+	case BackwardPagination:
 		pageOptions.Relation = data.LessThan
+	default:
+		return nil, myerr.UnexpectedError{"invalid type for Pagination.direction"}
 	}
 
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)

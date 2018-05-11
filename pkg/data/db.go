@@ -139,12 +139,15 @@ func (kr KeysetRelation) String() string {
 //   Name() string
 //   Value() OrderFieldValue
 // }
-type OrderField = fmt.Stringer
+
+type Order interface {
+	Direction() string
+	Field() string
+}
 
 type PageOptions struct {
-	Cursor    *string
-	Direction OrderDirection
-	Field     OrderField
-	Limit     int32
-	Relation  KeysetRelation
+	Cursor   *string
+	Order    Order
+	Limit    int32
+	Relation KeysetRelation
 }

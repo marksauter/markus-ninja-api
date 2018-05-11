@@ -93,8 +93,16 @@ func (f LessonOrderField) String() string {
 }
 
 type LessonOrder struct {
-	Direction data.OrderDirection
-	Field     LessonOrderField
+	direction data.OrderDirection
+	field     LessonOrderField
+}
+
+func (o *LessonOrder) Direction() string {
+	return o.direction.String()
+}
+
+func (o *LessonOrder) Field() string {
+	return o.field.String()
 }
 
 type LessonOrderArg struct {
@@ -118,8 +126,8 @@ func ParseLessonOrder(arg *LessonOrderArg) (*LessonOrder, error) {
 		return nil, err
 	}
 	lessonOrder := &LessonOrder{
-		Direction: direction,
-		Field:     field,
+		direction: direction,
+		field:     field,
 	}
 	return lessonOrder, nil
 }
@@ -129,9 +137,9 @@ type lessonOrderResolver struct {
 }
 
 func (r *lessonOrderResolver) Direction() string {
-	return r.LessonOrder.Direction.String()
+	return r.LessonOrder.Direction()
 }
 
 func (r *lessonOrderResolver) Field() string {
-	return r.LessonOrder.Field.String()
+	return r.LessonOrder.Field()
 }

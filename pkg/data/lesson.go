@@ -135,7 +135,7 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 	var joinCursor, whereCursor string
 	if po.Cursor != nil {
 		joinCursor = `INNER JOIN lesson l2 ON l2.id = ` + args.Append(po.Cursor)
-		whereCursor = `AND l1.` + po.Field.String() + ` ` + po.Relation.String() + ` l2.` + po.Field.String()
+		whereCursor = `AND l1.` + po.Order.Field() + ` ` + po.Relation.String() + ` l2.` + po.Order.Field()
 	}
 
 	sql := `
@@ -153,7 +153,7 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 		joinCursor + `
 		WHERE l1.study_id = ` + args.Append(studyId) + `
 		` + whereCursor + `
-		ORDER BY l1.` + po.Field.String() + ` ` + po.Direction.String() + `
+		ORDER BY l1.` + po.Order.Field() + ` ` + po.Order.Direction() + `
 		LIMIT ` + args.Append(po.Limit+2)
 
 	psName := preparedName("getLessonsByStudyId", sql)
