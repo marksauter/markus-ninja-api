@@ -110,23 +110,23 @@ func (od OrderDirection) String() string {
 	}
 }
 
-type KeysetRelation int
-
-const (
-	GreaterThan KeysetRelation = iota
-	LessThan
-)
-
-func (kr KeysetRelation) String() string {
-	switch kr {
-	case GreaterThan:
-		return ">="
-	case LessThan:
-		return "<="
-	default:
-		return "unknown"
-	}
-}
+// type KeysetRelation int
+//
+// const (
+//   GreaterThan KeysetRelation = iota
+//   LessThan
+// )
+//
+// func (kr KeysetRelation) String() string {
+//   switch kr {
+//   case GreaterThan:
+//     return ">="
+//   case LessThan:
+//     return "<="
+//   default:
+//     return "unknown"
+//   }
+// }
 
 // type OrderFieldValue interface {
 //   pgtype.Value
@@ -146,8 +146,8 @@ type Order interface {
 }
 
 type PageOptions struct {
-	Cursor   *string
-	Order    Order
-	Limit    int32
-	Relation KeysetRelation
+	After  string
+	Before string
+	Order  Order
+	Limit  int32
 }

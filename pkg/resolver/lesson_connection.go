@@ -2,8 +2,6 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myerr"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -27,21 +25,13 @@ func NewLessonConnectionResolver(
 	var hasNextPage, hasPreviousPage bool
 	var end, start int32
 	nLessons := int32(len(lessons))
-	switch pagination.Direction {
-	case ForwardPagination:
-
-	case BackwardPagination:
-	default:
-		return nil, myerr.UnexpectedError{"invalid type for Pagination.direction"}
-	}
 	if pagination.After != nil {
 		firstCursor := edges[0].Cursor()
 		lastCursor := edges[len(edges)-1].Cursor()
-		mylog.Log.Debug(*pagination.Cursor)
-		if *pagination.Cursor == firstCursor || *pagination.Cursor == lastCursor {
+		if pagination.After.String() == firstCursor || pagination.Before.String() == lastCursor {
 			start = 0
 			hasPreviousPage = false
-			if nLessons > pagination.Limit || *pagination.Cursor == lastCursor {
+			if nLessons > pagination.Limit() || pagination.Before.String() == lastCursor {
 				end = nLessons - 2
 				hasNextPage = true
 			} else {
@@ -51,7 +41,7 @@ func NewLessonConnectionResolver(
 		} else {
 			start = 1
 			hasPreviousPage = true
-			if nLessons > pagination.Limit+1 {
+			if nLessons > pagination.Limit()+1 {
 				end = nLessons - 2
 				hasNextPage = true
 			} else {
@@ -62,7 +52,7 @@ func NewLessonConnectionResolver(
 	} else {
 		start = 0
 		hasPreviousPage = false
-		if nLessons > pagination.Limit {
+		if nLessons > pagination.Limit() {
 			end = nLessons - 2
 			hasNextPage = true
 		} else {

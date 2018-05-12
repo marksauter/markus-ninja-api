@@ -8,7 +8,6 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
-	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -85,11 +84,16 @@ type Cursor struct {
 	v *string
 }
 
-func NewCursor(cursor *string) *Cursor {
-	return &Cursor{
-		s: cursor,
-		v: data.DecodeCursor(cursor),
+func NewCursor(cursor *string) (*Cursor, error) {
+	v, err := data.DecodeCursor(cursor)
+	if err != nil {
+		return nil, err
 	}
+	c := &Cursor{
+		s: cursor,
+		v: v,
+	}
+	return c, nil
 }
 
 func (c *Cursor) String() string {
@@ -129,10 +133,18 @@ func NewPagination(after, before *string, first, last *int32) (*Pagination, erro
 		pagination.Direction = BackwardPagination
 	}
 	if after != nil {
-		pagination.After = NewCursor(after)
+		a, err := NewCursor(after)
+		if err != nil {
+			return nil, err
+		}
+		pagination.After = a
 	}
 	if before != nil {
-		pagination.Before = NewCursor(before)
+		b, err := NewCursor(before)
+		if err != nil {
+			return nil, err
+		}
+		pagination.Before = b
 	}
 	return pagination, nil
 }
@@ -174,20 +186,16 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	pagination := NewPagination(args.After, args.Before, args.First, args.Last)
-
-	pageOptions := &data.PageOptions{
-		Order: lessonOrder,
-		Limit: pagination.Limit(),
+	pagination, err := NewPagination(args.After, args.Before, args.First, args.Last)
+	if err != nil {
+		return nil, err
 	}
 
-	switch pagination.Direction {
-	case ForwardPagination:
-		pageOptions.Relation = data.GreaterThan
-	case BackwardPagination:
-		pageOptions.Relation = data.LessThan
-	default:
-		return nil, myerr.UnexpectedError{"invalid type for Pagination.direction"}
+	pageOptions := &data.PageOptions{
+		After:  pagination.After.Value(),
+		Before: pagination.Before.Value(),
+		Order:  lessonOrder,
+		Limit:  pagination.Limit(),
 	}
 
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
@@ -200,7 +208,7 @@ func (r *studyResolver) Lessons(
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		lessons,
-		pageOptions,
+		pagination,
 		count,
 		r.Repos,
 	)
