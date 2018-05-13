@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -22,44 +23,54 @@ func NewLessonConnectionResolver(
 		edges[i] = lessonEdge
 	}
 
+	n := int32(len(edges))
 	var hasNextPage, hasPreviousPage bool
 	var end, start int32
-	nLessons := int32(len(lessons))
-	if pagination.After != nil {
-		firstCursor := edges[0].Cursor()
-		lastCursor := edges[len(edges)-1].Cursor()
-		if pagination.After.String() == firstCursor || pagination.Before.String() == lastCursor {
-			start = 0
-			hasPreviousPage = false
-			if nLessons > pagination.Limit() || pagination.Before.String() == lastCursor {
-				end = nLessons - 2
-				hasNextPage = true
-			} else {
-				end = nLessons - 1
-				hasNextPage = false
+	if pagination.After != nil || pagination.Before != nil {
+		for i, e := range edges {
+			if pagination.After != nil && e.Cursor() == pagination.After.String() {
+				start = int32(i + 1)
+				if i != 0 {
+					hasPreviousPage = true
+				} else {
+					hasPreviousPage = false
+				}
 			}
+			if pagination.Before != nil && e.Cursor() == pagination.Before.String() {
+				end = int32(i - 1)
+				if i != len(edges)-1 {
+					hasNextPage = true
+				} else {
+					hasNextPage = false
+				}
+			}
+		}
+		if pagination.After == nil && int32(len(edges[:end])) > pagination.Limit() {
+			start = 2
+			hasNextPage = true
 		} else {
-			start = 1
-			hasPreviousPage = true
-			if nLessons > pagination.Limit()+1 {
-				end = nLessons - 2
-				hasNextPage = true
-			} else {
-				end = nLessons - 1
-				hasNextPage = false
-			}
+			end = n - 1
+			hasNextPage = false
+		}
+		if pagination.Before == nil && int32(len(edges[start:])) > pagination.Limit() {
+			end = n - 2
+			hasNextPage = true
+		} else {
+			end = n - 1
+			hasNextPage = false
 		}
 	} else {
 		start = 0
 		hasPreviousPage = false
-		if nLessons > pagination.Limit() {
-			end = nLessons - 2
+		if n > pagination.Limit() {
+			end = n - 2
 			hasNextPage = true
 		} else {
-			end = nLessons - 1
+			end = n - 1
 			hasNextPage = false
 		}
 	}
+	mylog.Log.Debug(start)
 	endCursor := edges[end].Cursor()
 	startCursor := edges[start].Cursor()
 

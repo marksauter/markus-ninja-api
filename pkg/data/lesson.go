@@ -134,12 +134,12 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 
 	var joins, whereAnds []string
 	if po.After != "" {
-		joins = append(joins, `lesson l2 ON l2.id = `+args.Append(po.After))
-		whereAnds = append(whereAnds, `l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
+		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
 	}
 	if po.Before != "" {
-		joins = append(joins, `lesson l3 ON l3.id = `+args.Append(po.Before))
-		whereAnds = append(whereAnds, `l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
+		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
 	}
 
 	sql := `
@@ -154,9 +154,9 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 			l1.updated_at,
 			l1.user_id
 		FROM lesson l1 ` +
-		strings.Join(joins, " INNER JOIN ") + `
+		strings.Join(joins, " ") + `
 		WHERE l1.study_id = ` + args.Append(studyId) + `
-		` + strings.Join(whereAnds, " AND ") + `
+		` + strings.Join(whereAnds, " ") + `
 		ORDER BY l1.` + po.Order.Field() + ` ` + po.Order.Direction() + `
 		LIMIT ` + args.Append(po.Limit+2)
 

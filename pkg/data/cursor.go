@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
-
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 func DecodeCursor(cursor *string) (*string, error) {
@@ -17,7 +15,6 @@ func DecodeCursor(cursor *string) (*string, error) {
 		}
 		decodedValue = strings.TrimPrefix(string(bs), "cursor:")
 	}
-	mylog.Log.Debug(decodedValue)
 	return &decodedValue, nil
 }
 

@@ -192,10 +192,14 @@ func (r *studyResolver) Lessons(
 	}
 
 	pageOptions := &data.PageOptions{
-		After:  pagination.After.Value(),
-		Before: pagination.Before.Value(),
-		Order:  lessonOrder,
-		Limit:  pagination.Limit(),
+		Order: lessonOrder,
+		Limit: pagination.Limit(),
+	}
+	if pagination.After != nil {
+		pageOptions.After = pagination.After.Value()
+	}
+	if pagination.Before != nil {
+		pageOptions.Before = pagination.Before.Value()
 	}
 
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
