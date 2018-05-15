@@ -6,6 +6,37 @@ import (
 	"strings"
 )
 
+type Cursor struct {
+	s *string
+	v *string
+}
+
+func NewCursor(cursor *string) (*Cursor, error) {
+	v, err := DecodeCursor(cursor)
+	if err != nil {
+		return nil, err
+	}
+	c := &Cursor{
+		s: cursor,
+		v: v,
+	}
+	return c, nil
+}
+
+func (c *Cursor) String() string {
+	if c.s != nil {
+		return *c.s
+	}
+	return ""
+}
+
+func (c *Cursor) Value() string {
+	if c.v != nil {
+		return *c.v
+	}
+	return ""
+}
+
 func DecodeCursor(cursor *string) (*string, error) {
 	var decodedValue string
 	if cursor != nil {

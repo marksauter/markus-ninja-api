@@ -6,8 +6,11 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -67,6 +70,69 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	return viewerId == id, nil
 }
 
+func (r *userResolver) Lessons(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *LessonOrderArg
+	},
+) (*lessonConnectionResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadLesson,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Lesson().AddPermission(queryPerm)
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	lessonOrder, err := ParseLessonOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		lessonOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lessons, err := r.Repos.Lesson().GetByUserId(id, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Lesson().CountByUser(id)
+	if err != nil {
+		return nil, err
+	}
+	lessonConnectionResolver, err := NewLessonConnectionResolver(
+		lessons,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return lessonConnectionResolver, nil
+}
+
 func (r *userResolver) Login() (string, error) {
 	return r.User.Login()
 }
@@ -83,6 +149,69 @@ func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	}
 	uri = mygql.URI(fmt.Sprintf("/%s", login))
 	return uri, nil
+}
+
+func (r *userResolver) Studies(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *StudyOrderArg
+	},
+) (*studyConnectionResolver, error) {
+	viewer, ok := myctx.User.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	queryPerm, err := r.Repos.Perm().GetQueryPermission(
+		perm.ReadStudy,
+		viewer.Roles()...,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error retrieving query permission")
+		return nil, repo.ErrAccessDenied
+	}
+	r.Repos.Study().AddPermission(queryPerm)
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	studyOrder, err := ParseStudyOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		studyOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studies, err := r.Repos.Study().GetByUserId(id, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Study().CountByUser(id)
+	if err != nil {
+		return nil, err
+	}
+	studyConnectionResolver, err := NewStudyConnectionResolver(
+		studies,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return studyConnectionResolver, nil
 }
 
 func (r *userResolver) UpdatedAt() (graphql.Time, error) {

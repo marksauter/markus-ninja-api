@@ -72,88 +72,6 @@ func (r *studyResolver) Lesson(
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
-type PageDirection int
-
-const (
-	ForwardPagination PageDirection = iota
-	BackwardPagination
-)
-
-type Cursor struct {
-	s *string
-	v *string
-}
-
-func NewCursor(cursor *string) (*Cursor, error) {
-	v, err := data.DecodeCursor(cursor)
-	if err != nil {
-		return nil, err
-	}
-	c := &Cursor{
-		s: cursor,
-		v: v,
-	}
-	return c, nil
-}
-
-func (c *Cursor) String() string {
-	if c.s != nil {
-		return *c.s
-	}
-	return ""
-}
-
-func (c *Cursor) Value() string {
-	if c.v != nil {
-		return *c.v
-	}
-	return ""
-}
-
-type Pagination struct {
-	After     *Cursor
-	Before    *Cursor
-	Direction PageDirection
-	first     int32
-	last      int32
-}
-
-func NewPagination(after, before *string, first, last *int32) (*Pagination, error) {
-	pagination := &Pagination{}
-	if first == nil && last == nil {
-		return nil, fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
-	} else if first != nil {
-		if last != nil {
-			return nil, fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
-		}
-		pagination.first = *first
-		pagination.Direction = ForwardPagination
-	} else {
-		pagination.last = *last
-		pagination.Direction = BackwardPagination
-	}
-	if after != nil {
-		a, err := NewCursor(after)
-		if err != nil {
-			return nil, err
-		}
-		pagination.After = a
-	}
-	if before != nil {
-		b, err := NewCursor(before)
-		if err != nil {
-			return nil, err
-		}
-		pagination.Before = b
-	}
-	return pagination, nil
-}
-
-func (p *Pagination) Limit() int32 {
-	// Assuming one of these is 0, so the sum will be the non-zero field
-	return p.first + p.last
-}
-
 func (r *studyResolver) Lessons(
 	ctx context.Context,
 	args struct {
@@ -186,20 +104,15 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	pagination, err := NewPagination(args.After, args.Before, args.First, args.Last)
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		lessonOrder,
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	pageOptions := &data.PageOptions{
-		Order: lessonOrder,
-		Limit: pagination.Limit(),
-	}
-	if pagination.After != nil {
-		pageOptions.After = pagination.After.Value()
-	}
-	if pagination.Before != nil {
-		pageOptions.Before = pagination.Before.Value()
 	}
 
 	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
@@ -212,7 +125,7 @@ func (r *studyResolver) Lessons(
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		lessons,
-		pagination,
+		pageOptions,
 		count,
 		r.Repos,
 	)

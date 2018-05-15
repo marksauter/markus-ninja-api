@@ -122,6 +122,7 @@ type NodeType int64
 const (
 	UserType NodeType = iota
 	LessonType
+	LessonCommentType
 	StudyType
 )
 
@@ -131,6 +132,8 @@ func (nt NodeType) String() string {
 		return "User"
 	case LessonType:
 		return "Lesson"
+	case LessonCommentType:
+		return "LessonComment"
 	case StudyType:
 		return "Study"
 	default:
@@ -142,6 +145,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
 	case "lesson":
 		return LessonType, nil
+	case "lesson_comment":
+		return LessonCommentType, nil
 	case "study":
 		return StudyType, nil
 	case "user":
@@ -186,6 +191,13 @@ var (
 	UpdateLesson     = Operation{UpdateAccess, LessonType}
 	ConnectLesson    = Operation{ConnectAccess, LessonType}
 	DisconnectLesson = Operation{DisconnectAccess, LessonType}
+
+	CreateLessonComment     = Operation{CreateAccess, LessonCommentType}
+	DeleteLessonComment     = Operation{DeleteAccess, LessonCommentType}
+	ReadLessonComment       = Operation{ReadAccess, LessonCommentType}
+	UpdateLessonComment     = Operation{UpdateAccess, LessonCommentType}
+	ConnectLessonComment    = Operation{ConnectAccess, LessonCommentType}
+	DisconnectLessonComment = Operation{DisconnectAccess, LessonCommentType}
 
 	CreateStudy     = Operation{CreateAccess, StudyType}
 	DeleteStudy     = Operation{DeleteAccess, StudyType}

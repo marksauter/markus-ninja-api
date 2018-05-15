@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -36,6 +37,20 @@ func (s *LessonService) Count() (int32, error) {
 	mylog.Log.Info("Count()")
 	var n int32
 	err := prepareQueryRow(s.db, "countLesson", countLessonSQL).Scan(&n)
+	return n, err
+}
+
+const countLessonByUserSQL = `SELECT COUNT(*) FROM lesson WHERE user_id = $1`
+
+func (s *LessonService) CountByUser(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countLessonByUser",
+		countLessonByUserSQL,
+		userId,
+	).Scan(&n)
 	return n, err
 }
 
@@ -128,18 +143,94 @@ func (s *LessonService) GetByPK(id string) (*Lesson, error) {
 	return s.get("getLessonByPK", getLessonByPKSQL, id)
 }
 
+func (s *LessonService) GetByUserId(userId string, po *PageOptions) ([]*Lesson, error) {
+	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) Lesson")
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+
+	var joins, whereAnds []string
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
+	}
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
+	}
+
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
+	}
+
+	sql := `
+		SELECT
+			l1.body,
+			l1.created_at,
+			l1.id,
+			l1.number,
+			l1.published_at,
+			l1.study_id,
+			l1.title,
+			l1.updated_at,
+			l1.user_id
+		FROM lesson l1 ` +
+		strings.Join(joins, " ") + `
+		WHERE l1.user_id = ` + args.Append(userId) + `
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
+		LIMIT ` + args.Append(limit)
+
+	if po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			po.Order.Field(),
+			po.Order.Direction().String(),
+		)
+	}
+
+	psName := preparedName("getLessonsByUserId", sql)
+
+	return s.getMany(psName, sql, args...)
+}
+
 func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var joins, whereAnds []string
-	if po.After != "" {
-		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After))
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
 		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
 	}
-	if po.Before != "" {
-		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before))
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
 		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
+	}
+
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
 	}
 
 	sql := `
@@ -157,8 +248,17 @@ func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson
 		strings.Join(joins, " ") + `
 		WHERE l1.study_id = ` + args.Append(studyId) + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + po.Order.Direction() + `
-		LIMIT ` + args.Append(po.Limit+2)
+		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
+		LIMIT ` + args.Append(limit)
+
+	if po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			po.Order.Field(),
+			po.Order.Direction().String(),
+		)
+	}
 
 	psName := preparedName("getLessonsByStudyId", sql)
 

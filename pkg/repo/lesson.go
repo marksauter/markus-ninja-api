@@ -139,6 +139,15 @@ func (r *LessonRepo) ClearPermissions() {
 
 // Service methods
 
+func (r *LessonRepo) CountByUser(userId string) (int32, error) {
+	_, ok := r.CheckPermission(perm.ReadLesson)
+	if !ok {
+		var count int32
+		return count, ErrAccessDenied
+	}
+	return r.svc.CountByUser(userId)
+}
+
 func (r *LessonRepo) CountByStudy(studyId string) (int32, error) {
 	_, ok := r.CheckPermission(perm.ReadLesson)
 	if !ok {
@@ -183,6 +192,26 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonPermit, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
+	if !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.load == nil {
+		mylog.Log.Error("lesson connection closed")
+		return nil, ErrConnClosed
+	}
+	lessons, err := r.svc.GetByUserId(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	for i, l := range lessons {
+		lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+	}
+	return lessonPermits, nil
 }
 
 func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonPermit, error) {

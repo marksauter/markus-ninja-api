@@ -59,3 +59,27 @@ type Study implements Node, UniformResourceLocatable {
   # The HTTP URL for this study.
   url: URI!
 }
+
+# An edge type for Study.
+type StudyEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Study
+}
+
+# A connection type for Study.
+type StudyConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [StudyEdge]
+
+  # A list of nodes.
+  nodes: [Study]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

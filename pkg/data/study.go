@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -36,6 +37,20 @@ func (s *StudyService) Count() (int64, error) {
 	return n, err
 }
 
+const countStudyByUserSQL = `SELECT COUNT(*) FROM study WHERE user_id = $1`
+
+func (s *StudyService) CountByUser(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countStudyByUser",
+		countStudyByUserSQL,
+		userId,
+	).Scan(&n)
+	return n, err
+}
+
 func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study, error) {
 	var row Study
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
@@ -57,6 +72,36 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 	return &row, nil
 }
 
+func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
+	var rows []*Study
+
+	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Study
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.Name,
+			&row.UpdatedAt,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 const getStudyByPKSQL = `
 	SELECT
 		advanced_at,
@@ -73,6 +118,65 @@ const getStudyByPKSQL = `
 func (s *StudyService) GetByPK(id string) (*Study, error) {
 	mylog.Log.WithField("id", id).Info("GetByPK(id) Study")
 	return s.get("getStudyByPK", getStudyByPKSQL, id)
+}
+
+func (s *StudyService) GetByUserId(userId string, po *PageOptions) ([]*Study, error) {
+	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) Study")
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+
+	var joins, whereAnds []string
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN study s2 ON s2.id = `+args.Append(po.After.Value()))
+		whereAnds = append(whereAnds, `AND s1.`+po.Order.Field()+` >= s2.`+po.Order.Field())
+	}
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN study s3 ON s3.id = `+args.Append(po.Before.Value()))
+		whereAnds = append(whereAnds, `AND s1.`+po.Order.Field()+` <= s3.`+po.Order.Field())
+	}
+
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
+	}
+
+	sql := `
+		SELECT
+			s1.advanced_at,
+			s1.created_at,
+			s1.description,
+			s1.id,
+			s1.name,
+			s1.updated_at,
+			s1.user_id
+		FROM study s1 ` +
+		strings.Join(joins, " ") + `
+		WHERE s1.user_id = ` + args.Append(userId) + `
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY s1.` + po.Order.Field() + ` ` + direction.String() + `
+		LIMIT ` + args.Append(limit)
+
+	if po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			po.Order.Field(),
+			po.Order.Direction().String(),
+		)
+	}
+
+	psName := preparedName("getStudysByUserId", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 const getStudyByUserAndNameSQL = `

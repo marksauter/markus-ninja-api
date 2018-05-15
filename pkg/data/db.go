@@ -80,11 +80,11 @@ func preparedName(baseName, sql string) string {
 	return fmt.Sprintf("%s%d", baseName, h.Sum32())
 }
 
-type OrderDirection int
+type OrderDirection bool
 
 const (
-	ASC OrderDirection = iota
-	DESC
+	ASC  OrderDirection = false
+	DESC OrderDirection = true
 )
 
 func ParseOrderDirection(s string) (OrderDirection, error) {
@@ -141,13 +141,50 @@ func (od OrderDirection) String() string {
 // }
 
 type Order interface {
-	Direction() string
+	Direction() OrderDirection
 	Field() string
 }
 
 type PageOptions struct {
-	After  string
-	Before string
+	After  *Cursor
+	Before *Cursor
+	First  int32
+	Last   int32
 	Order  Order
-	Limit  int32
+}
+
+func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOptions, error) {
+	pageOptions := &PageOptions{
+		Order: o,
+	}
+	if first == nil && last == nil {
+		return nil, fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+	} else if first != nil {
+		if last != nil {
+			return nil, fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+		}
+		pageOptions.First = *first
+	} else {
+		pageOptions.Last = *last
+	}
+	if after != nil {
+		a, err := NewCursor(after)
+		if err != nil {
+			return nil, err
+		}
+		pageOptions.After = a
+	}
+	if before != nil {
+		b, err := NewCursor(before)
+		if err != nil {
+			return nil, err
+		}
+		pageOptions.Before = b
+	}
+	return pageOptions, nil
+}
+
+func (p *PageOptions) Limit() int32 {
+	// Assuming one of these is 0, so the sum will be the non-zero field
+	return p.First + p.Last
 }

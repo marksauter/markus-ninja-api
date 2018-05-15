@@ -8,6 +8,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -123,6 +124,15 @@ func (r *StudyRepo) ClearPermissions() {
 
 // Service methods
 
+func (r *StudyRepo) CountByUser(userId string) (int32, error) {
+	_, ok := r.CheckPermission(perm.ReadStudy)
+	if !ok {
+		var count int32
+		return count, ErrAccessDenied
+	}
+	return r.svc.CountByUser(userId)
+}
+
 func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.CreateStudy)
 	if !ok {
@@ -156,6 +166,26 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
+}
+
+func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
+	if !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.load == nil {
+		mylog.Log.Error("study connection closed")
+		return nil, ErrConnClosed
+	}
+	studies, err := r.svc.GetByUserId(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	studyPermits := make([]*StudyPermit, len(studies))
+	for i, l := range studies {
+		studyPermits[i] = &StudyPermit{fieldPermFn, l}
+	}
+	return studyPermits, nil
 }
 
 func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, error) {
