@@ -23,6 +23,15 @@ type StudyLoader struct {
 	batchGetByLogin *dataloader.Loader
 }
 
+func (r *StudyLoader) Clear(id string) {
+	ctx := context.Background()
+	r.batchGet.Clear(ctx, dataloader.StringKey(id))
+}
+
+func (r *StudyLoader) ClearAll() {
+	r.batchGet.ClearAll()
+}
+
 func (r *StudyLoader) Get(id string) (*data.Study, error) {
 	ctx := context.Background()
 	studyData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()

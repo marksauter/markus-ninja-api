@@ -100,3 +100,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/badoux/checkmail"
+
+[[constraint]]
+  name = "github.com/writeas/go-strip-markdown"
+  version = "2.0.0"

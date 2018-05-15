@@ -47,6 +47,12 @@ type User implements Node, UniformResourceLocatable {
   # The HTTP path for this user.
   resourcePath: URI!
 
+  # Find study by its name.
+  study(
+    # Name of study to find.
+    name: String!
+  ): Study
+
   # A list of studies that the user owns.
   studies(
     # Returns the elements in the list that come after the specified global ID.

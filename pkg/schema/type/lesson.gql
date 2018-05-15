@@ -9,13 +9,13 @@ type Lesson implements Node, UniformResourceLocatable, Updateable {
   # The body of the lesson rendered to HTML.
   bodyHTML: HTML!
 
+  # The body of the lesson rendered to text.
+  bodyText: String!
+
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
   id: ID!
-
-  # Identifies the date and time when the object was last edited.
-  lastEditedAt: Time!
 
   # Identifies the lesson number.
   number: Int!
@@ -31,6 +31,9 @@ type Lesson implements Node, UniformResourceLocatable, Updateable {
 
   # The HTTP path for this lesson.
   resourcePath: URI!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
 
   # The HTTP URL for this lesson.
   url: URI!

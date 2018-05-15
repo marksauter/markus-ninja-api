@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -84,18 +85,31 @@ func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	return r.LessonComment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentRepo(svc *data.LessonCommentService) *LessonCommentRepo {
-	return &LessonCommentRepo{svc: svc}
+func NewLessonCommentRepo(
+	permSvc *data.PermService,
+	lessonCommentSvc *data.LessonCommentService,
+) *LessonCommentRepo {
+	return &LessonCommentRepo{
+		svc:     lessonCommentSvc,
+		permSvc: permSvc,
+	}
 }
 
 type LessonCommentRepo struct {
-	svc   *data.LessonCommentService
-	load  *loader.LessonCommentLoader
-	perms map[string][]string
+	svc      *data.LessonCommentService
+	load     *loader.LessonCommentLoader
+	perms    map[string][]string
+	permSvc  *data.PermService
+	permLoad *loader.QueryPermLoader
 }
 
-func (r *LessonCommentRepo) Open() {
+func (r *LessonCommentRepo) Open(ctx context.Context) {
+	roles := []string{}
+	if viewer, ok := UserFromContext(ctx); ok {
+		roles = append(roles, viewer.Roles()...)
+	}
 	r.load = loader.NewLessonCommentLoader(r.svc)
+	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
 }
 
 func (r *LessonCommentRepo) Close() {
@@ -103,13 +117,22 @@ func (r *LessonCommentRepo) Close() {
 	r.perms = nil
 }
 
-func (r *LessonCommentRepo) AddPermission(p *perm.QueryPermission) {
+func (r *LessonCommentRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	if p != nil {
-		r.perms[p.Operation.String()] = p.Fields
+	fields, found := r.perms[o.String()]
+	if !found {
+		r.permLoad.AddRoles(roles...)
+		queryPerm, err := r.permLoad.Get(o.String())
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, ErrAccessDenied
+		}
+		r.perms[o.String()] = queryPerm.Fields
+		return queryPerm.Fields, nil
 	}
+	return fields, nil
 }
 
 func (r *LessonCommentRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
@@ -281,7 +304,7 @@ func (r *LessonCommentRepo) Update(lessonComment *data.LessonComment) (*LessonCo
 // Middleware
 func (r *LessonCommentRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open()
+		r.Open(req.Context())
 		defer r.Close()
 		h.ServeHTTP(rw, req)
 	})

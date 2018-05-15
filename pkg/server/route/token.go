@@ -20,7 +20,6 @@ func Token(svcs *service.Services, repos *repo.Repos) http.Handler {
 	}
 	return middleware.CommonMiddleware.Append(
 		tokenCors.Handler,
-		repos.User().Use,
 	).Then(tokenHandler)
 }
 
@@ -36,6 +35,9 @@ type TokenHandler struct {
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	h.Repos.User().Open(req.Context())
+	defer h.Repos.User().Close()
+
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")

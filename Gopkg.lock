@@ -266,6 +266,12 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/writeas/go-strip-markdown"
+  packages = ["."]
+  revision = "135c36d3fc27c66a8cfe556f1d6d33d3e84d5213"
+  version = "v2.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -322,6 +328,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e215db81613bac6b868c49049eedf03b4a04c93280a283851ba2941d6ec51d4a"
+  inputs-digest = "8cb02c1978b208b14f2a3a1eec77948235a4c3614efc9e678fd0968a12b55609"
   solver-name = "gps-cdcl"
   solver-version = 1

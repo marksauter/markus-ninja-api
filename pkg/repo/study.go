@@ -1,7 +1,11 @@
 package repo
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -15,6 +19,27 @@ import (
 type StudyPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	study                *data.Study
+}
+
+func (r *StudyPermit) ViewerCanAdmin(ctx context.Context) error {
+	viewer, ok := UserFromContext(ctx)
+	if !ok {
+		return errors.New("viewer not found")
+	}
+	viewerId, err := viewer.ID()
+	if err != nil {
+		return err
+	}
+	userId, err := r.UserId()
+	if err != nil {
+		return err
+	}
+	if viewerId == userId {
+		r.checkFieldPermission = func(field string) bool {
+			return true
+		}
+	}
+	return nil
 }
 
 func (r *StudyPermit) PreCheckPermissions() error {
@@ -77,18 +102,28 @@ func (r *StudyPermit) UserId() (string, error) {
 	return r.study.UserId.String, nil
 }
 
-func NewStudyRepo(svc *data.StudyService) *StudyRepo {
-	return &StudyRepo{svc: svc}
+func NewStudyRepo(permSvc *data.PermService, studySvc *data.StudyService) *StudyRepo {
+	return &StudyRepo{
+		svc:     studySvc,
+		permSvc: permSvc,
+	}
 }
 
 type StudyRepo struct {
-	svc   *data.StudyService
-	load  *loader.StudyLoader
-	perms map[string][]string
+	svc      *data.StudyService
+	load     *loader.StudyLoader
+	perms    map[string][]string
+	permSvc  *data.PermService
+	permLoad *loader.QueryPermLoader
 }
 
-func (r *StudyRepo) Open() {
+func (r *StudyRepo) Open(ctx context.Context) {
+	roles := []string{}
+	if viewer, ok := UserFromContext(ctx); ok {
+		roles = append(roles, viewer.Roles()...)
+	}
 	r.load = loader.NewStudyLoader(r.svc)
+	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
 }
 
 func (r *StudyRepo) Close() {
@@ -96,13 +131,22 @@ func (r *StudyRepo) Close() {
 	r.perms = nil
 }
 
-func (r *StudyRepo) AddPermission(p *perm.QueryPermission) {
+func (r *StudyRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	if p != nil {
-		r.perms[p.Operation.String()] = p.Fields
+	fields, found := r.perms[o.String()]
+	if !found {
+		r.permLoad.AddRoles(roles...)
+		queryPerm, err := r.permLoad.Get(o.String())
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, ErrAccessDenied
+		}
+		r.perms[o.String()] = queryPerm.Fields
+		return queryPerm.Fields, nil
 	}
+	return fields, nil
 }
 
 func (r *StudyRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
@@ -141,8 +185,14 @@ func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
 	if r.load == nil {
 		return nil, ErrConnClosed
 	}
+	name := strings.TrimSpace(study.Name.String)
+	toKabob := regexp.MustCompile(`\s+`)
+	err := study.Name.Set(toKabob.ReplaceAllString(name, "-"))
+	if err != nil {
+		return nil, err
+	}
 	studyPermit := &StudyPermit{fieldPermFn, study}
-	err := studyPermit.PreCheckPermissions()
+	err = studyPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +238,7 @@ func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPe
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error) {
 	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
 	if !ok {
 		return nil, ErrAccessDenied
@@ -196,7 +246,22 @@ func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, e
 	if r.load == nil {
 		return nil, ErrConnClosed
 	}
-	study, err := r.svc.GetByUserAndName(owner, name)
+	study, err := r.svc.GetByUserIdAndName(userId, name)
+	if err != nil {
+		return nil, err
+	}
+	return &StudyPermit{fieldPermFn, study}, nil
+}
+
+func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPermit, error) {
+	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
+	if !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.load == nil {
+		return nil, ErrConnClosed
+	}
+	study, err := r.svc.GetByUserLoginAndName(owner, name)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +306,7 @@ func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {
 // Middleware
 func (r *StudyRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open()
+		r.Open(req.Context())
 		defer r.Close()
 		h.ServeHTTP(rw, req)
 	})

@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LessonComment = lessonCommentResolver
@@ -18,7 +19,7 @@ type lessonCommentResolver struct {
 	Repos         *repo.Repos
 }
 
-func (r *lessonCommentResolver) Author() (*userResolver, error) {
+func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return nil, err
@@ -27,20 +28,33 @@ func (r *lessonCommentResolver) Author() (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = user.ViewerCanAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) Body() (string, error) {
-	return r.Body()
+	return r.LessonComment.Body()
 }
 
 func (r *lessonCommentResolver) BodyHTML() (mygql.HTML, error) {
-	body, err := r.Body()
+	body, err := r.LessonComment.Body()
 	if err != nil {
 		return "", err
 	}
-	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", body))
-	return h, nil
+	bodyHTML := util.MarkdownToHTML([]byte(body))
+	gqlHTML := mygql.HTML(bodyHTML)
+	return gqlHTML, nil
+}
+
+func (r *lessonCommentResolver) BodyText() (string, error) {
+	body, err := r.LessonComment.Body()
+	if err != nil {
+		return "", err
+	}
+	return util.MarkdownToText(body), nil
 }
 
 func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
@@ -53,26 +67,41 @@ func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id), err
 }
 
-func (r *lessonCommentResolver) LessonId() (string, error) {
-	return r.LessonComment.LessonId()
+func (r *lessonCommentResolver) Lesson() (*lessonResolver, error) {
+	lessonId, err := r.LessonComment.LessonId()
+	if err != nil {
+		return nil, err
+	}
+	lesson, err := r.Repos.Lesson().Get(lessonId)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
-func (r *lessonCommentResolver) PublishedAt() (graphql.Time, error) {
+func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
 	t, err := r.LessonComment.PublishedAt()
-	return graphql.Time{t}, err
+	if err != nil {
+		return nil, err
+	}
+	return &graphql.Time{t}, nil
 }
 
-func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
+func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
 	study, err := r.Study()
 	if err != nil {
 		return uri, err
 	}
-	studyResourcePath, err := study.ResourcePath()
+	studyResourcePath, err := study.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
-	lessonId, err := r.LessonId()
+	lessonId, err := r.LessonComment.ID()
+	if err != nil {
+		return uri, err
+	}
+	_, err = r.Repos.Lesson().AddPermission(perm.ReadLesson)
 	if err != nil {
 		return uri, err
 	}
@@ -109,9 +138,9 @@ func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonCommentResolver) URL() (mygql.URI, error) {
+func (r *lessonCommentResolver) URL(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -119,8 +148,8 @@ func (r *lessonCommentResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) (bool, error) {
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
@@ -134,7 +163,21 @@ func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, erro
 }
 
 func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	viewerId, _ := viewer.ID()
+	userId, err := r.LessonComment.UserId()
+	if err != nil {
+		return false, err
+	}
+
+	return viewerId == userId, nil
+}
+
+func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}

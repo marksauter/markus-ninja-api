@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -24,9 +25,9 @@ var ErrAccessDenied = errors.New("access denied")
 type FieldPermissionFunc = func(field string) bool
 
 type Repo interface {
-	Open()
+	Open(ctx context.Context)
 	Close()
-	AddPermission(*perm.QueryPermission)
+	AddPermission(perm.Operation, ...string) ([]string, error)
 	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
 	ClearPermissions()
 }
@@ -38,18 +39,17 @@ type Repos struct {
 func NewRepos(svcs *service.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
-			lessonRepoKey:        NewLessonRepo(svcs.Lesson),
-			lessonCommentRepoKey: NewLessonCommentRepo(svcs.LessonComment),
-			permRepoKey:          NewPermRepo(svcs.Perm),
-			studyRepoKey:         NewStudyRepo(svcs.Study),
-			userRepoKey:          NewUserRepo(svcs.User),
+			lessonRepoKey:        NewLessonRepo(svcs.Perm, svcs.Lesson),
+			lessonCommentRepoKey: NewLessonCommentRepo(svcs.Perm, svcs.LessonComment),
+			studyRepoKey:         NewStudyRepo(svcs.Perm, svcs.Study),
+			userRepoKey:          NewUserRepo(svcs.Perm, svcs.User),
 		},
 	}
 }
 
-func (r *Repos) OpenAll() {
+func (r *Repos) OpenAll(ctx context.Context) {
 	for _, repo := range r.lookup {
-		repo.Open()
+		repo.Open(ctx)
 	}
 }
 
@@ -69,11 +69,6 @@ func (r *Repos) LessonComment() *LessonCommentRepo {
 	return repo
 }
 
-func (r *Repos) Perm() *PermRepo {
-	repo, _ := r.lookup[permRepoKey].(*PermRepo)
-	return repo
-}
-
 func (r *Repos) Study() *StudyRepo {
 	repo, _ := r.lookup[studyRepoKey].(*StudyRepo)
 	return repo
@@ -86,7 +81,7 @@ func (r *Repos) User() *UserRepo {
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.OpenAll()
+		r.OpenAll(req.Context())
 		defer r.CloseAll()
 		h.ServeHTTP(rw, req)
 	})

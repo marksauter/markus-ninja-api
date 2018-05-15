@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -15,7 +14,7 @@ func (r *RootResolver) Node(
 	ctx context.Context,
 	args struct{ Id string },
 ) (*nodeResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		mylog.Log.Error("viewer not found")
 	}
@@ -25,30 +24,20 @@ func (r *RootResolver) Node(
 	}
 	switch parsedId.Type() {
 	case "Lesson":
-		queryPerm, err := r.Repos.Perm().GetQueryPermission(
-			perm.ReadLesson,
-			viewer.Roles()...,
-		)
+		_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, repo.ErrAccessDenied
+			return nil, err
 		}
-		r.Repos.Lesson().AddPermission(queryPerm)
 		lesson, err := r.Repos.Lesson().Get(args.Id)
 		if err != nil {
 			return nil, err
 		}
 		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
 	case "Study":
-		queryPerm, err := r.Repos.Perm().GetQueryPermission(
-			perm.ReadStudy,
-			viewer.Roles()...,
-		)
+		_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, repo.ErrAccessDenied
+			return nil, err
 		}
-		r.Repos.Study().AddPermission(queryPerm)
 		study, err := r.Repos.Study().Get(args.Id)
 		if err != nil {
 			return nil, err
@@ -60,16 +49,15 @@ func (r *RootResolver) Node(
 		if args.Id == viewerId {
 			user = viewer
 		} else {
-			queryPerm, err := r.Repos.Perm().GetQueryPermission(
-				perm.ReadUser,
-				viewer.Roles()...,
-			)
+			_, err := r.Repos.User().AddPermission(perm.ReadUser)
 			if err != nil {
-				mylog.Log.WithError(err).Error("error retrieving query permission")
-				return nil, repo.ErrAccessDenied
+				return nil, err
 			}
-			r.Repos.User().AddPermission(queryPerm)
 			user, err = r.Repos.User().Get(args.Id)
+			if err != nil {
+				return nil, err
+			}
+			err = user.ViewerCanAdmin(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -84,7 +72,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 	Ids []string
 }) ([]*nodeResolver, error) {
 	nodes := make([]*nodeResolver, len(args.Ids))
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		mylog.Log.Error("viewer not found")
 	}
@@ -100,16 +88,15 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 			if id == viewerId {
 				user = viewer
 			} else {
-				queryPerm, err := r.Repos.Perm().GetQueryPermission(
-					perm.ReadUser,
-					viewer.Roles()...,
-				)
+				_, err := r.Repos.User().AddPermission(perm.ReadUser)
 				if err != nil {
-					mylog.Log.WithError(err).Error("error retrieving query permission")
-					return nil, repo.ErrAccessDenied
+					return nil, err
 				}
-				r.Repos.User().AddPermission(queryPerm)
 				user, err = r.Repos.User().Get(id)
+				if err != nil {
+					return nil, err
+				}
+				err = user.ViewerCanAdmin(ctx)
 				if err != nil {
 					return nil, err
 				}
@@ -130,20 +117,15 @@ func (r *RootResolver) Study(
 	},
 ) (*studyResolver, error) {
 	var study *repo.StudyPermit
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadStudy,
-		viewer.Roles()...,
-	)
+	_, err := r.Repos.Study().AddPermission(perm.ReadStudy, viewer.Roles()...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Study().AddPermission(queryPerm)
-	study, err = r.Repos.Study().GetByUserAndName(args.Owner, args.Name)
+	study, err = r.Repos.Study().GetByUserLoginAndName(args.Owner, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +135,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
 	var user *repo.UserPermit
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
@@ -161,16 +143,15 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 	if login == args.Login {
 		user = viewer
 	} else {
-		queryPerm, err := r.Repos.Perm().GetQueryPermission(
-			perm.ReadUser,
-			viewer.Roles()...,
-		)
+		_, err := r.Repos.User().AddPermission(perm.ReadUser)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, repo.ErrAccessDenied
+			return nil, err
 		}
-		r.Repos.User().AddPermission(queryPerm)
 		user, err = r.Repos.User().GetByLogin(args.Login)
+		if err != nil {
+			return nil, err
+		}
+		err = user.ViewerCanAdmin(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -179,9 +160,13 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
+	}
+	err := viewer.ViewerCanAdmin(ctx)
+	if err != nil {
+		return nil, err
 	}
 	return &userResolver{User: viewer, Repos: r.Repos}, nil
 }

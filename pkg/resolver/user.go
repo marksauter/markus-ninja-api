@@ -7,9 +7,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -58,7 +56,7 @@ func (r *userResolver) IsSiteAdmin() bool {
 }
 
 func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
@@ -80,19 +78,10 @@ func (r *userResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadLesson,
-		viewer.Roles()...,
-	)
+	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Lesson().AddPermission(queryPerm)
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -151,6 +140,28 @@ func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *userResolver) Study(
+	ctx context.Context,
+	args struct{ Name string },
+) (*studyResolver, error) {
+	_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
+	if err != nil {
+		return nil, err
+	}
+	userId, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	study, err := r.Repos.Study().GetByUserIdAndName(userId, args.Name)
+	if err != nil {
+		return nil, err
+	}
+	study.ViewerCanAdmin(ctx)
+
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
+
 func (r *userResolver) Studies(
 	ctx context.Context,
 	args struct {
@@ -161,19 +172,10 @@ func (r *userResolver) Studies(
 		OrderBy *StudyOrderArg
 	},
 ) (*studyConnectionResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadStudy,
-		viewer.Roles()...,
-	)
+	_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Study().AddPermission(queryPerm)
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err

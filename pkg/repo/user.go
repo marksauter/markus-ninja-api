@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -14,9 +15,41 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
+var userContextKey key = "user"
+
+func NewUserContext(ctx context.Context, u *UserPermit) context.Context {
+	return context.WithValue(ctx, userContextKey, u)
+}
+
+func UserFromContext(ctx context.Context) (*UserPermit, bool) {
+	u, ok := ctx.Value(userContextKey).(*UserPermit)
+	return u, ok
+}
+
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	user                 *data.User
+}
+
+func (r *UserPermit) ViewerCanAdmin(ctx context.Context) error {
+	viewer, ok := UserFromContext(ctx)
+	if !ok {
+		return errors.New("viewer not found")
+	}
+	viewerId, err := viewer.ID()
+	if err != nil {
+		return err
+	}
+	userId, err := r.ID()
+	if err != nil {
+		return err
+	}
+	if viewerId == userId {
+		r.checkFieldPermission = func(field string) bool {
+			return true
+		}
+	}
+	return nil
 }
 
 func (r *UserPermit) PreCheckPermissions() error {
@@ -83,35 +116,55 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	return r.user.UpdatedAt.Time, nil
 }
 
-func NewUserRepo(svc *data.UserService) *UserRepo {
-	return &UserRepo{svc: svc}
+func NewUserRepo(permSvc *data.PermService, userSvc *data.UserService) *UserRepo {
+	return &UserRepo{
+		svc:     userSvc,
+		permSvc: permSvc,
+	}
 }
 
 type UserRepo struct {
-	svc   *data.UserService
-	load  *loader.UserLoader
-	perms map[string][]string
+	svc      *data.UserService
+	load     *loader.UserLoader
+	perms    map[string][]string
+	permSvc  *data.PermService
+	permLoad *loader.QueryPermLoader
 }
 
-func (r *UserRepo) Open() {
+func (r *UserRepo) Open(ctx context.Context) {
+	roles := []string{}
+	if viewer, ok := UserFromContext(ctx); ok {
+		roles = append(roles, viewer.Roles()...)
+	}
 	r.load = loader.NewUserLoader(r.svc)
+	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
 }
 
 func (r *UserRepo) Close() {
 	r.load = nil
+	r.permLoad = nil
 	r.perms = nil
 }
 
-func (r *UserRepo) AddPermission(p *perm.QueryPermission) {
+func (r *UserRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	if p != nil {
-		r.perms[p.Operation.String()] = p.Fields
+	fields, found := r.perms[o.String()]
+	if !found {
+		r.permLoad.AddRoles(roles...)
+		queryPerm, err := r.permLoad.Get(o.String())
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, ErrAccessDenied
+		}
+		r.perms[o.String()] = queryPerm.Fields
+		return queryPerm.Fields, nil
 	}
+	return fields, nil
 }
 
-func (r *UserRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
+func (r *UserRepo) CheckPermission(o perm.Operation) (FieldPermissionFunc, bool) {
 	fields, ok := r.perms[o.String()]
 	checkField := func(field string) bool {
 		for _, f := range fields {
@@ -125,7 +178,9 @@ func (r *UserRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
 }
 
 func (r *UserRepo) ClearPermissions() {
+	mylog.Log.Info("UserRepo permissions cleared")
 	r.perms = nil
+	r.permLoad.ClearAll()
 }
 
 // Service methods
@@ -280,7 +335,7 @@ func (r *UserRepo) VerifyCredentials(
 // Middleware
 func (r *UserRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open()
+		r.Open(req.Context())
 		defer r.Close()
 		h.ServeHTTP(rw, req)
 	})

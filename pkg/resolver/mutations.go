@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
@@ -26,19 +25,10 @@ func (r *RootResolver) CreateUser(
 	ctx context.Context,
 	args struct{ Input CreateUserInput },
 ) (*userResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.CreateUser,
-		viewer.Roles()...,
-	)
+	fields, err := r.Repos.User().AddPermission(perm.CreateUser)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to retrieve query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.User().AddPermission(queryPerm)
 
 	var user data.User
 
@@ -60,7 +50,7 @@ func (r *RootResolver) CreateUser(
 	if err == repo.ErrAccessDenied {
 		return nil, fmt.Errorf(
 			`access_denied: you may only include %s`,
-			strings.Join(queryPerm.Fields, ", "),
+			strings.Join(fields, ", "),
 		)
 	}
 	if err != nil {
@@ -106,24 +96,10 @@ func (r *RootResolver) DeleteUser(
 	ctx context.Context,
 	args struct{ Input DeleteUserInput },
 ) (*string, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	viewerId, _ := viewer.ID()
-	roles := viewer.Roles()
-	if viewerId == args.Input.UserId {
-		roles = append(roles, "SELF")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.DeleteUser,
-		roles...,
-	)
+	_, err := r.Repos.User().AddPermission(perm.DeleteUser)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.User().AddPermission(queryPerm)
 
 	id, err := oid.Parse(args.Input.UserId)
 	if err != nil {
@@ -149,24 +125,10 @@ func (r *RootResolver) UpdateUser(
 	ctx context.Context,
 	args struct{ Input UpdateUserInput },
 ) (*userResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	viewerId, _ := viewer.ID()
-	roles := viewer.Roles()
-	if viewerId == args.Input.UserId {
-		roles = append(roles, "SELF")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.UpdateUser,
-		roles...,
-	)
+	_, err := r.Repos.User().AddPermission(perm.UpdateUser)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.User().AddPermission(queryPerm)
 
 	var user data.User
 
@@ -203,21 +165,16 @@ func (r *RootResolver) CreateLesson(
 	ctx context.Context,
 	args struct{ Input CreateLessonInput },
 ) (*lessonResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
 	viewerId, _ := viewer.ID()
 
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.CreateLesson,
-		viewer.Roles()...,
-	)
+	fields, err := r.Repos.Lesson().AddPermission(perm.CreateLesson)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Lesson().AddPermission(queryPerm)
 
 	var lesson data.Lesson
 
@@ -230,7 +187,7 @@ func (r *RootResolver) CreateLesson(
 	if err == repo.ErrAccessDenied {
 		return nil, fmt.Errorf(
 			`access_denied: you may only include %s`,
-			strings.Join(queryPerm.Fields, ", "),
+			strings.Join(fields, ", "),
 		)
 	}
 	if err != nil {
@@ -258,21 +215,16 @@ func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
 ) (*studyResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
 	viewerId, _ := viewer.ID()
 
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.CreateStudy,
-		viewer.Roles()...,
-	)
+	fields, err := r.Repos.Study().AddPermission(perm.CreateStudy)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Study().AddPermission(queryPerm)
 
 	var study data.Study
 
@@ -286,7 +238,7 @@ func (r *RootResolver) CreateStudy(
 	if err == repo.ErrAccessDenied {
 		return nil, fmt.Errorf(
 			`access_denied: you may only include %s`,
-			strings.Join(queryPerm.Fields, ", "),
+			strings.Join(fields, ", "),
 		)
 	}
 	if err != nil {

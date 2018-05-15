@@ -14,7 +14,7 @@ func GraphiQL() http.Handler {
 type GraphiQLHandler struct{}
 
 func (h GraphiQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	// viewer, ok := myctx.User.FromContext(req.Context())
+	// viewer, ok := repo.UserFromContext(req.Context())
 	// if !ok {
 	//   mylog.Log.Error("viewer not found")
 	// }

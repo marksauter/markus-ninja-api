@@ -179,7 +179,28 @@ func (s *StudyService) GetByUserId(userId string, po *PageOptions) ([]*Study, er
 	return s.getMany(psName, sql, args...)
 }
 
-const getStudyByUserAndNameSQL = `
+const getStudyByUserIdAndNameSQL = `
+	SELECT
+		s.advanced_at,
+		s.created_at,
+		s.description,
+		s.id,
+		s.name,
+		s.updated_at,
+		s.user_id
+	FROM study s
+	WHERE s.user_id = $1 AND s.name = $2
+`
+
+func (s *StudyService) GetByUserIdAndName(userId, name string) (*Study, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"userId": userId,
+		"name":   name,
+	}).Info("GetByUserIdAndName(owner, name) Study")
+	return s.get("getStudyByUserIdAndName", getStudyByUserIdAndNameSQL, userId, name)
+}
+
+const getStudyByUserLoginAndNameSQL = `
 	SELECT
 		s.advanced_at,
 		s.created_at,
@@ -193,12 +214,12 @@ const getStudyByUserAndNameSQL = `
 	WHERE s.name = $2 AND s.user_id = a.id
 `
 
-func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
+func (s *StudyService) GetByUserLoginAndName(owner, name string) (*Study, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"owner": owner,
 		"name":  name,
-	}).Info("GetByUserAndName(owner, name) Study")
-	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	}).Info("GetByUserLoginAndName(owner, name) Study")
+	return s.get("getStudyByUserLoginAndName", getStudyByUserLoginAndNameSQL, owner, name)
 }
 
 func (s *StudyService) Create(row *Study) error {

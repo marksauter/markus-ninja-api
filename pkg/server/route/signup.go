@@ -17,8 +17,8 @@ import (
 
 func Signup(svcs *service.Services, repos *repo.Repos) http.Handler {
 	authMiddleware := middleware.Authenticate{
-		Svcs:  svcs,
-		Repos: repos,
+		Svcs:     svcs,
+		UserRepo: repos.User(),
 	}
 	signupHandler := SignupHandler{
 		Svcs:  svcs,
@@ -26,7 +26,6 @@ func Signup(svcs *service.Services, repos *repo.Repos) http.Handler {
 	}
 	return middleware.CommonMiddleware.Append(
 		SignupCors.Handler,
-		repos.Use,
 		authMiddleware.Use,
 	).Then(signupHandler)
 }
@@ -43,6 +42,9 @@ type SignupHandler struct {
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	h.Repos.OpenAll(req.Context())
+	defer h.Repos.CloseAll()
+
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
@@ -116,13 +118,12 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(registration.Email)
 
-	createUserPerm, err := h.Repos.Perm().GetQueryPermission(perm.CreateUser)
+	_, err = h.Repos.User().AddPermission(perm.CreateUser)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	h.Repos.User().AddPermission(createUserPerm)
 	_, err = h.Repos.User().Create(user)
 	if err != nil {
 		var response *myhttp.ErrorResponse

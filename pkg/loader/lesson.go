@@ -23,6 +23,15 @@ type LessonLoader struct {
 	batchGetByLogin *dataloader.Loader
 }
 
+func (r *LessonLoader) Clear(id string) {
+	ctx := context.Background()
+	r.batchGet.Clear(ctx, dataloader.StringKey(id))
+}
+
+func (r *LessonLoader) ClearAll() {
+	r.batchGet.ClearAll()
+}
+
 func (r *LessonLoader) Get(id string) (*data.Lesson, error) {
 	ctx := context.Background()
 	lessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()

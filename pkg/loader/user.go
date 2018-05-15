@@ -24,6 +24,15 @@ type UserLoader struct {
 	batchGetByLogin *dataloader.Loader
 }
 
+func (r *UserLoader) Clear(id string) {
+	ctx := context.Background()
+	r.batchGet.Clear(ctx, dataloader.StringKey(id))
+}
+
+func (r *UserLoader) ClearAll() {
+	r.batchGet.ClearAll()
+}
+
 func (r *UserLoader) Get(id string) (*data.User, error) {
 	ctx := context.Background()
 	userData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()

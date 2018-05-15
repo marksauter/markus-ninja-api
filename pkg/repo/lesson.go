@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LessonPermit struct {
@@ -32,7 +34,7 @@ func (r *LessonPermit) Body() (string, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.lesson.Body.String, nil
+	return util.DecompressString(r.lesson.Body.String)
 }
 
 func (r *LessonPermit) CreatedAt() (time.Time, error) {
@@ -47,13 +49,6 @@ func (r *LessonPermit) ID() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.lesson.Id.String, nil
-}
-
-func (r *LessonPermit) LastEditedAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("last_edited_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.lesson.UpdatedAt.Time, nil
 }
 
 func (r *LessonPermit) Number() (int32, error) {
@@ -85,6 +80,13 @@ func (r *LessonPermit) Title() (string, error) {
 	return r.lesson.Title.String, nil
 }
 
+func (r *LessonPermit) UpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.lesson.UpdatedAt.Time, nil
+}
+
 func (r *LessonPermit) UserId() (string, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return "", ErrAccessDenied
@@ -92,18 +94,28 @@ func (r *LessonPermit) UserId() (string, error) {
 	return r.lesson.UserId.String, nil
 }
 
-func NewLessonRepo(svc *data.LessonService) *LessonRepo {
-	return &LessonRepo{svc: svc}
+func NewLessonRepo(permSvc *data.PermService, lessonSvc *data.LessonService) *LessonRepo {
+	return &LessonRepo{
+		svc:     lessonSvc,
+		permSvc: permSvc,
+	}
 }
 
 type LessonRepo struct {
-	svc   *data.LessonService
-	load  *loader.LessonLoader
-	perms map[string][]string
+	svc      *data.LessonService
+	load     *loader.LessonLoader
+	perms    map[string][]string
+	permSvc  *data.PermService
+	permLoad *loader.QueryPermLoader
 }
 
-func (r *LessonRepo) Open() {
+func (r *LessonRepo) Open(ctx context.Context) {
+	roles := []string{}
+	if viewer, ok := UserFromContext(ctx); ok {
+		roles = append(roles, viewer.Roles()...)
+	}
 	r.load = loader.NewLessonLoader(r.svc)
+	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
 }
 
 func (r *LessonRepo) Close() {
@@ -111,13 +123,22 @@ func (r *LessonRepo) Close() {
 	r.perms = nil
 }
 
-func (r *LessonRepo) AddPermission(p *perm.QueryPermission) {
+func (r *LessonRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	if p != nil {
-		r.perms[p.Operation.String()] = p.Fields
+	fields, found := r.perms[o.String()]
+	if !found {
+		r.permLoad.AddRoles(roles...)
+		queryPerm, err := r.permLoad.Get(o.String())
+		if err != nil {
+			mylog.Log.WithError(err).Error("error retrieving query permission")
+			return nil, ErrAccessDenied
+		}
+		r.perms[o.String()] = queryPerm.Fields
+		return queryPerm.Fields, nil
 	}
+	return fields, nil
 }
 
 func (r *LessonRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
@@ -166,8 +187,16 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 		mylog.Log.Error("lesson connection closed")
 		return nil, ErrConnClosed
 	}
+	body, err := util.CompressString(lesson.Body.String)
+	if err != nil {
+		return nil, err
+	}
+	err = lesson.Body.Set(body)
+	if err != nil {
+		return nil, err
+	}
 	lessonPermit := &LessonPermit{fieldPermFn, lesson}
-	err := lessonPermit.PreCheckPermissions()
+	err = lessonPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +314,7 @@ func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
 // Middleware
 func (r *LessonRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open()
+		r.Open(req.Context())
 		defer r.Close()
 		h.ServeHTTP(rw, req)
 	})

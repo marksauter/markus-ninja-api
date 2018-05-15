@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/writeas/go-strip-markdown"
 	blackfriday "gopkg.in/russross/blackfriday.v2"
 )
 
@@ -38,31 +39,35 @@ func MarkdownToHTML(input []byte) []byte {
 	return bluemonday.UGCPolicy().SanitizeBytes(unsafe)
 }
 
-func CompressString(s string) string {
+func MarkdownToText(s string) string {
+	return stripmd.Strip(s)
+}
+
+func CompressString(s string) (string, error) {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 	if _, err := gz.Write([]byte(s)); err != nil {
-		panic(err)
+		return "", err
 	}
 	if err := gz.Flush(); err != nil {
-		panic(err)
+		return "", err
 	}
 	if err := gz.Close(); err != nil {
-		panic(err)
+		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(b.Bytes())
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
-func DecompressString(s string) string {
+func DecompressString(s string) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	rdata := bytes.NewReader(data)
 	r, err := gzip.NewReader(rdata)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	bs, err := ioutil.ReadAll(r)
-	return string(bs)
+	return string(bs), err
 }

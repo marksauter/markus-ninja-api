@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 var clientURL = "http://localhost:3000"
@@ -20,7 +21,7 @@ type lessonResolver struct {
 	Repos  *repo.Repos
 }
 
-func (r *lessonResolver) Author() (*userResolver, error) {
+func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Lesson.UserId()
 	if err != nil {
 		return nil, err
@@ -29,20 +30,33 @@ func (r *lessonResolver) Author() (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = user.ViewerCanAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) Body() (string, error) {
-	return r.Body()
+	return r.Lesson.Body()
 }
 
 func (r *lessonResolver) BodyHTML() (mygql.HTML, error) {
-	body, err := r.Body()
+	body, err := r.Lesson.Body()
 	if err != nil {
 		return "", err
 	}
-	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", body))
-	return h, nil
+	bodyHTML := util.MarkdownToHTML([]byte(body))
+	gqlHTML := mygql.HTML(bodyHTML)
+	return gqlHTML, nil
+}
+
+func (r *lessonResolver) BodyText() (string, error) {
+	body, err := r.Lesson.Body()
+	if err != nil {
+		return "", err
+	}
+	return util.MarkdownToText(body), nil
 }
 
 func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
@@ -55,11 +69,6 @@ func (r *lessonResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id), err
 }
 
-func (r *lessonResolver) LastEditedAt() (graphql.Time, error) {
-	t, err := r.Lesson.LastEditedAt()
-	return graphql.Time{t}, err
-}
-
 func (r *lessonResolver) Number() (int32, error) {
 	return r.Lesson.Number()
 }
@@ -69,13 +78,13 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
+func (r *lessonResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	study, err := r.Study()
+	study, err := r.Study(ctx)
 	if err != nil {
 		return uri, err
 	}
-	studyResourcePath, err := study.ResourcePath()
+	studyResourcePath, err := study.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -83,12 +92,16 @@ func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/lesson/%s", studyResourcePath, number))
+	uri = mygql.URI(fmt.Sprintf("%s/lesson/%d", studyResourcePath, number))
 	return uri, nil
 }
 
-func (r *lessonResolver) Study() (*studyResolver, error) {
+func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	studyId, err := r.Lesson.StudyId()
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.Repos.Study().AddPermission(perm.ReadStudy)
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +116,14 @@ func (r *lessonResolver) Title() (string, error) {
 	return r.Lesson.Title()
 }
 
-func (r *lessonResolver) URL() (mygql.URI, error) {
+func (r *lessonResolver) UpdatedAt() (graphql.Time, error) {
+	t, err := r.Lesson.UpdatedAt()
+	return graphql.Time{t}, err
+}
+
+func (r *lessonResolver) URL(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -114,7 +132,7 @@ func (r *lessonResolver) URL() (mygql.URI, error) {
 }
 
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
@@ -128,7 +146,7 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 }
 
 func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}

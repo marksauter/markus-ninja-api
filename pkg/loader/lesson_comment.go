@@ -23,6 +23,15 @@ type LessonCommentLoader struct {
 	batchGetByLogin *dataloader.Loader
 }
 
+func (r *LessonCommentLoader) Clear(id string) {
+	ctx := context.Background()
+	r.batchGet.Clear(ctx, dataloader.StringKey(id))
+}
+
+func (r *LessonCommentLoader) ClearAll() {
+	r.batchGet.ClearAll()
+}
+
 func (r *LessonCommentLoader) Get(id string) (*data.LessonComment, error) {
 	ctx := context.Background()
 	lessonCommentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()

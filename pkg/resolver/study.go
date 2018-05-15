@@ -7,9 +7,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -48,19 +46,10 @@ func (r *studyResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadLesson,
-		viewer.Roles()...,
-	)
+	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Lesson().AddPermission(queryPerm)
 	id, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -82,19 +71,10 @@ func (r *studyResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	queryPerm, err := r.Repos.Perm().GetQueryPermission(
-		perm.ReadLesson,
-		viewer.Roles()...,
-	)
+	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error retrieving query permission")
-		return nil, repo.ErrAccessDenied
+		return nil, err
 	}
-	r.Repos.Lesson().AddPermission(queryPerm)
 	id, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -148,24 +128,36 @@ func (r *studyResolver) Name() (string, error) {
 	return r.Study.Name()
 }
 
-func (r *studyResolver) NameWithOwner() (string, error) {
+func (r *studyResolver) NameWithOwner(ctx context.Context) (string, error) {
 	name, err := r.Name()
 	if err != nil {
 		return "", err
 	}
-	owner, err := r.Owner()
+	owner, err := r.Owner(ctx)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s/%s", owner, name), nil
+	ownerLogin, err := owner.Login()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/%s", ownerLogin, name), nil
 }
 
-func (r *studyResolver) Owner() (*userResolver, error) {
+func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Study.UserId()
 	if err != nil {
 		return nil, err
 	}
+	_, err = r.Repos.User().AddPermission(perm.ReadUser)
+	if err != nil {
+		return nil, err
+	}
 	user, err := r.Repos.User().Get(userId)
+	if err != nil {
+		return nil, err
+	}
+	err = user.ViewerCanAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +169,9 @@ func (r *studyResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *studyResolver) ResourcePath() (mygql.URI, error) {
+func (r *studyResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	nameWithOwner, err := r.NameWithOwner()
+	nameWithOwner, err := r.NameWithOwner(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -192,9 +184,9 @@ func (r *studyResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *studyResolver) URL() (mygql.URI, error) {
+func (r *studyResolver) URL(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -203,7 +195,7 @@ func (r *studyResolver) URL() (mygql.URI, error) {
 }
 
 func (r *studyResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.User.FromContext(ctx)
+	viewer, ok := repo.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -16,7 +15,7 @@ import (
 )
 
 type Middleware interface {
-	Use(http.Handler) http.Handler
+	Use(context.Context, http.Handler) http.Handler
 }
 
 var CommonMiddleware = alice.New(
@@ -35,8 +34,8 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	Svcs  *service.Services
-	Repos *repo.Repos
+	Svcs     *service.Services
+	UserRepo *repo.UserRepo
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
@@ -55,23 +54,23 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		queryPerm, err := a.Repos.Perm().GetQueryPermission(perm.ReadUser, "SELF")
+		a.UserRepo.Open(req.Context())
+		_, err = a.UserRepo.AddPermission(perm.ReadUser)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-		a.Repos.User().AddPermission(queryPerm)
 
-		user, err := a.Repos.User().Get(payload.Sub)
+		user, err := a.UserRepo.Get(payload.Sub)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-		a.Repos.User().ClearPermissions()
+		a.UserRepo.Close()
 
-		ctx := myctx.User.NewContext(req.Context(), user)
+		ctx := repo.NewUserContext(req.Context(), user)
 		h.ServeHTTP(rw, req.WithContext(ctx))
 	})
 }

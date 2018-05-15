@@ -162,7 +162,7 @@ DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
   id            VARCHAR(40)   PRIMARY KEY,
   user_id       VARCHAR(40)   NOT NULL,
-  name          TEXT          NOT NULL,
+  name          TEXT          NOT NULL CHECK (name !~' '),
   created_at    TIMESTAMPTZ   DEFAULT NOW(),
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
   advanced_at   TIMESTAMPTZ,

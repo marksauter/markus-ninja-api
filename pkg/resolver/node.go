@@ -17,6 +17,11 @@ func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
+	resolver, ok := r.Node.(*lessonCommentResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
 	resolver, ok := r.Node.(*studyResolver)
 	return resolver, ok
