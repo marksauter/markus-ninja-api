@@ -301,7 +301,7 @@ func (s *LessonService) Create(row *Lesson) error {
 
 	var columns, values []string
 
-	id := oid.New("Lesson")
+	id, _ := oid.New("Lesson")
 	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

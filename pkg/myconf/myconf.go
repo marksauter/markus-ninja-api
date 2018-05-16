@@ -9,6 +9,9 @@ import (
 type Config struct {
 	AppName string
 
+	AWSRegion       string
+	AWSUploadBucket string
+
 	DBHost     string
 	DBPort     uint16
 	DBUser     string
@@ -34,6 +37,9 @@ func Load(name string) *Config {
 
 	return &Config{
 		AppName: config.Get("app.name").(string),
+
+		AWSRegion:       config.Get("aws.region").(string),
+		AWSUploadBucket: config.Get("aws.upload_bucket").(string),
 
 		DBHost:     config.Get("db.host").(string),
 		DBPort:     uint16(config.Get("db.port").(int64)),

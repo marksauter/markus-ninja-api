@@ -230,8 +230,8 @@ func (s *UserService) Create(user *User) error {
 
 	var columns, values []string
 
-	userId := oid.New("User")
-	user.Id.Set(userId.String())
+	id, _ := oid.New("User")
+	user.Id.Set(id.String())
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&user.Id))
 

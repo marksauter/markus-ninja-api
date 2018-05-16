@@ -22,7 +22,7 @@ func (r *RootResolver) Node(
 	if err != nil {
 		return nil, err
 	}
-	switch parsedId.Type() {
+	switch parsedId.Type {
 	case "Lesson":
 		_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
 		if err != nil {
@@ -81,7 +81,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 		if err != nil {
 			return nil, err
 		}
-		switch parsedId.Type() {
+		switch parsedId.Type {
 		case "User":
 			var user *repo.UserPermit
 			viewerId, _ := viewer.ID()

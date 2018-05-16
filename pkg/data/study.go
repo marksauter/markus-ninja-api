@@ -228,7 +228,7 @@ func (s *StudyService) Create(row *Study) error {
 
 	var columns, values []string
 
-	id := oid.New("Study")
+	id, _ := oid.New("Study")
 	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

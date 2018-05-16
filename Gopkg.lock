@@ -77,6 +77,12 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/gorilla/csrf"
+  packages = ["."]
+  revision = "69581736821c33d85bbf378f42f6ad864dbd85de"
+  version = "v1.5"
+
+[[projects]]
   name = "github.com/gorilla/handlers"
   packages = ["."]
   revision = "90663712d74cb411cbef281bc1e08c19d1a76145"
@@ -87,6 +93,12 @@
   packages = ["."]
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
+
+[[projects]]
+  name = "github.com/gorilla/securecookie"
+  packages = ["."]
+  revision = "e59506cc896acb7f7bf732d4fdf5e25f7ccd8983"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/graph-gophers/dataloader"
@@ -368,6 +380,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5ed9a8d6c974c86e49c188f75fc270692647157a6a0fee82a9a47c0fb914babb"
+  inputs-digest = "8c2b11c90fc0cc8aff8923d404b0dbc8ddd2644fcf93c8a7e7119e3b280225fd"
   solver-name = "gps-cdcl"
   solver-version = 1

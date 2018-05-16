@@ -49,20 +49,21 @@ func NewRoleService(db Queryer) *RoleService {
 	return &RoleService{db}
 }
 
+var createRoleSQL = `
+	INSERT INTO role(id, name)
+	VALUES ($1, $2)
+	ON CONFLICT ON CONSTRAINT role_name_key DO NOTHING
+	RETURNING
+		id,
+		name,
+		created_at,
+		updated_at
+`
+
 func (s *RoleService) Create(name string) (*RoleModel, error) {
 	mylog.Log.WithField("name", name).Info("Create(name) Role")
-	roleId := oid.New("Role")
-	roleSQL := `
-		INSERT INTO role(id, name)
-		VALUES ($1, $2)
-		ON CONFLICT ON CONSTRAINT role_name_key DO NOTHING
-		RETURNING
-			id,
-			name,
-			created_at,
-			updated_at
-	`
-	row := s.db.QueryRow(roleSQL, roleId, name)
+	id, _ := oid.New("Role")
+	row := s.db.QueryRow(createRoleSQL, id, name)
 	role := new(RoleModel)
 	err := row.Scan(
 		&role.Id,

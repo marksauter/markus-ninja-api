@@ -63,9 +63,10 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	field := pgtype.Text{}
 	for _, al := range accessLevelsWithFields {
 		for _, f := range fields {
+			id, _ := oid.New("Perm")
 			field.Set(strcase.ToSnake(f))
 			permissions[i] = []interface{}{
-				oid.New("Perm"),
+				id,
 				al,
 				mType,
 				perm.Authenticated,
@@ -76,8 +77,9 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	}
 	field.Set(nil)
 	for _, al := range accessLevelsWithoutFields {
+		id, _ := oid.New("Perm")
 		permissions[i] = []interface{}{
-			oid.New("Perm"),
+			id,
 			al,
 			mType,
 			perm.Authenticated,

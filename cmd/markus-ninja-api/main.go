@@ -39,7 +39,7 @@ import (
 )
 
 func main() {
-	conf := myconf.Load("config")
+	conf := myconf.Load("config.development")
 	dbConfig := pgx.ConnConfig{
 		User:     conf.DBUser,
 		Password: conf.DBPassword,
@@ -228,7 +228,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		"n": userPermissionsCount,
 	}).Infof("role permissions created for USER")
 
-	guestId := oid.New("User")
+	guestId, _ := oid.New("User")
 	guestPassword, _ := passwd.New("guest")
 	guest := &data.User{}
 	guest.Id.Set(guestId.String())
@@ -245,7 +245,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 
-	markusId := oid.New("User")
+	markusId, _ := oid.New("User")
 	markusPassword, _ := passwd.New("fender917")
 	markus := &data.User{}
 	markus.Id.Set(markusId.String())

@@ -1,0 +1,21 @@
+[app]
+name = "api.rkus.ninja"
+
+[aws]
+region = "us-east-1"
+upload_bucket = "markus-ninja-development-user-asset-us-east-1"
+
+[db]
+host = "localhost:3000"
+port = 5432
+name = "markusninja"
+user = "markus"
+password = "fender917"
+
+[smtp]
+host = "email-smtp.us-east-1.amazonaws.com"
+port = "587"
+from_address = "noreply@rkus.ninja"
+root_url = "http://localhost:3000"
+user = "AKIAJAKGPARBNEWK7RTA"
+password = "AgqJhceQBXmjsDxBOPsctSpRO8kWk2HCGPsBLNvnjmL0"

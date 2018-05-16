@@ -36,28 +36,20 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	// hash := sha1.New()
-	// io.Copy(hash, file)
-	//
-	// filename := fmt.Sprintf("%x", hash.Sum(nil))
-	// fmt.Printf("File name %s \n", header.Filename)
-
-	// file.Seek(0, 0)
-	// basepath := path.Dir("test")
-	// if err := os.MkdirAll(basepath, 0666); err != nil {
-	//   response := myhttp.InternalServerErrorResponse(err.Error())
-	//   myhttp.WriteResponseTo(rw, response)
-	//   return
-	// }
-	// f, err := os.Create(strings.Join([]string{basepath, filename}, "/"))
-	// if err != nil {
-	//   response := myhttp.InternalServerErrorResponse(err.Error())
-	//   myhttp.WriteResponseTo(rw, response)
-	//   return
-	// }
-	// defer f.Close()
-	// io.Copy(f, file)
 
 	rw.WriteHeader(http.StatusCreated)
 	return
+}
+
+type Asset struct {
+	Id          string
+	Name        string
+	Size        int64
+	ContentType string
+	Href        string
+}
+
+type UploadSuccessResponse struct {
+	UploadUrl string
+	Asset     Asset
 }
