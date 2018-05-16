@@ -76,6 +76,8 @@ func main() {
 	r.Handle("/permissions", route.Permissions())
 	r.Handle("/signup", route.Signup(svcs, repos))
 	r.Handle("/token", route.Token(svcs, repos))
+	r.Handle("/upload", route.Upload())
+	r.Handle("/upload/assets", route.UploadAssets())
 	r.Handle(
 		"/users/{login}/emails/confirm_verification/{token}",
 		route.ConfirmVerification(svcs),

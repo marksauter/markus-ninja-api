@@ -29,9 +29,12 @@
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
+    "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
     "service/kms",
     "service/kms/kmsiface",
+    "service/s3",
+    "service/s3/s3iface",
     "service/sts"
   ]
   revision = "5a33d0a4f5d9c27e6cd10b4c156e85b46c4501d7"
@@ -42,6 +45,12 @@
   name = "github.com/badoux/checkmail"
   packages = ["."]
   revision = "0755fe2dc241caebab64327c352006712f6a55c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "02af3965c54e8cacf948b97fef38925c4120652c"
 
 [[projects]]
   name = "github.com/fatih/structs"
@@ -165,6 +174,25 @@
   revision = "995366fdf961d03629cd17361bddd32745718e2c"
 
 [[projects]]
+  name = "github.com/minio/minio-go"
+  packages = [
+    ".",
+    "pkg/credentials",
+    "pkg/encrypt",
+    "pkg/s3signer",
+    "pkg/s3utils",
+    "pkg/set"
+  ]
+  revision = "c6108c47ba5d86548404ebf9e51c5ca18769fe79"
+  version = "6.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+
+[[projects]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
@@ -275,7 +303,9 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
+    "argon2",
     "bcrypt",
+    "blake2b",
     "blowfish",
     "ssh/terminal"
   ]
@@ -287,7 +317,9 @@
   packages = [
     "context",
     "html",
-    "html/atom"
+    "html/atom",
+    "idna",
+    "lex/httplex"
   ]
   revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
 
@@ -303,12 +335,20 @@
 [[projects]]
   name = "golang.org/x/text"
   packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
     "internal/gen",
+    "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "language",
+    "secure/bidirule",
     "transform",
+    "unicode/bidi",
     "unicode/cldr",
-    "unicode/norm"
+    "unicode/norm",
+    "unicode/rangetable"
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
@@ -328,6 +368,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8cb02c1978b208b14f2a3a1eec77948235a4c3614efc9e678fd0968a12b55609"
+  inputs-digest = "5ed9a8d6c974c86e49c188f75fc270692647157a6a0fee82a9a47c0fb914babb"
   solver-name = "gps-cdcl"
   solver-version = 1
