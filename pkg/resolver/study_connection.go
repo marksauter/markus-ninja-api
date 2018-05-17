@@ -17,7 +17,7 @@ func NewStudyConnectionResolver(
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id)
+		cursor := data.EncodeCursor(id.String)
 		studyEdge := NewStudyEdgeResolver(cursor, studys[i], repos)
 		edges[i] = studyEdge
 	}

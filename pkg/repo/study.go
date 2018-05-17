@@ -12,7 +12,9 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -67,11 +69,15 @@ func (r *StudyPermit) Description() (string, error) {
 	return r.study.Description.String, nil
 }
 
-func (r *StudyPermit) ID() (string, error) {
+func (r *StudyPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.study.Id.String, nil
+	id, ok := r.study.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id`"}
+	}
+	return &id, nil
 }
 
 func (r *StudyPermit) Name() (string, error) {
@@ -95,11 +101,15 @@ func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	return r.study.UpdatedAt.Time, nil
 }
 
-func (r *StudyPermit) UserId() (string, error) {
+func (r *StudyPermit) UserId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.study.UserId.String, nil
+	id, ok := r.study.UserId.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `user_id`"}
+	}
+	return &id, nil
 }
 
 func NewStudyRepo(permSvc *data.PermService, studySvc *data.StudyService) *StudyRepo {

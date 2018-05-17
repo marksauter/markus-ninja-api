@@ -1,11 +1,13 @@
 package data
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
 var BackupEmail = pgtype.Text{String: "BACKUP", Status: pgtype.Present}
@@ -15,9 +17,9 @@ var PublicEmail = pgtype.Text{String: "PUBLIC", Status: pgtype.Present}
 
 type AccountEmailModel struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
-	EmailId    pgtype.Varchar     `db:"email_id"`
+	EmailId    oid.MaybeOID       `db:"email_id"`
 	Type       pgtype.Text        `db:"type"`
-	UserId     pgtype.Varchar     `db:"user_id"`
+	UserId     oid.MaybeOID       `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
@@ -30,23 +32,23 @@ type AccountEmailService struct {
 	db Queryer
 }
 
-func (s *AccountEmailService) Create(ae *AccountEmailModel) error {
+func (s *AccountEmailService) Create(row *AccountEmailModel) error {
 	mylog.Log.Info("Create() AccountEmail")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	var columns, values []string
 
-	if ae.EmailId.Status != pgtype.Undefined {
+	if _, ok := row.EmailId.Get().(oid.OID); ok {
 		columns = append(columns, `email_id`)
-		values = append(values, args.Append(&ae.EmailId))
+		values = append(values, args.Append(&row.EmailId))
 	}
-	if ae.Type.Status != pgtype.Undefined {
+	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
-		values = append(values, args.Append(&ae.Type))
+		values = append(values, args.Append(&row.Type))
 	}
-	if ae.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&ae.UserId))
+		values = append(values, args.Append(&row.UserId))
 	}
 
 	createAccountEmailSQL := `
@@ -60,8 +62,8 @@ func (s *AccountEmailService) Create(ae *AccountEmailModel) error {
 	psName := preparedName("createAccountEmail", createAccountEmailSQL)
 
 	err := prepareQueryRow(s.db, psName, createAccountEmailSQL, args...).Scan(
-		&ae.CreatedAt,
-		&ae.UpdatedAt,
+		&row.CreatedAt,
+		&row.UpdatedAt,
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -102,22 +104,31 @@ func (s *AccountEmailService) Delete(user_id, email_id string) error {
 	return nil
 }
 
-func (s *AccountEmailService) Update(ae *AccountEmailModel) error {
+func (s *AccountEmailService) Update(row *AccountEmailModel) error {
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
-	if ae.Type.Status != pgtype.Undefined {
-		sets = append(sets, `type`+"="+args.Append(&ae.Type))
+	userId, ok := row.UserId.Get().(oid.OID)
+	if !ok {
+		return errors.New("must include field `user_id` to update")
 	}
-	if ae.VerifiedAt.Status != pgtype.Undefined {
-		sets = append(sets, `verified_at`+"="+args.Append(&ae.VerifiedAt))
+	emailId, ok := row.EmailId.Get().(oid.OID)
+	if !ok {
+		return errors.New("must include field `email_id` to update")
+	}
+
+	if row.Type.Status != pgtype.Undefined {
+		sets = append(sets, `type`+"="+args.Append(&row.Type))
+	}
+	if row.VerifiedAt.Status != pgtype.Undefined {
+		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
 	sql := `
 		UPDATE account_email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + `user_id=` + args.Append(ae.UserId.String) + `
-		AND ` + `email_id=` + args.Append(ae.EmailId.String)
+		WHERE ` + `user_id=` + args.Append(userId.String) + `
+		AND ` + `email_id=` + args.Append(emailId.String)
 
 	psName := preparedName("updateAccountEmail", sql)
 

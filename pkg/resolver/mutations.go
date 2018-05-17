@@ -57,7 +57,12 @@ func (r *RootResolver) CreateUser(
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: user.Id.String})
+	id, ok := user.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id"}
+	}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: id.String})
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +73,7 @@ func (r *RootResolver) CreateUser(
 
 	if user.Login.String != "guest" {
 		avt := &data.EmailVerificationTokenModel{}
-		avt.UserId.Set(user.Id.String)
+		avt.UserId = user.Id
 
 		err = r.Svcs.AVT.Create(avt)
 		if err != nil {
@@ -106,7 +111,7 @@ func (r *RootResolver) DeleteUser(
 		return nil, err
 	}
 
-	err = r.Repos.User().Delete(id.String())
+	err = r.Repos.User().Delete(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +141,7 @@ func (r *RootResolver) UpdateUser(
 	if err != nil {
 		return nil, err
 	}
-	user.Id.Set(id.String())
+	user.Id.Just(id)
 
 	if args.Input.Bio != nil {
 		user.Bio.Set(args.Input.Bio)
@@ -194,7 +199,12 @@ func (r *RootResolver) CreateLesson(
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: lesson.Id.String})
+	id, ok := lesson.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id"}
+	}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: id.String})
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +242,7 @@ func (r *RootResolver) CreateStudy(
 		study.Description.Set(args.Input.Description)
 	}
 	study.Name.Set(args.Input.Name)
-	study.UserId.Set(viewerId)
+	study.UserId.Just(viewerId)
 
 	_, err = r.Repos.Study().Create(&study)
 	if err == repo.ErrAccessDenied {
@@ -245,7 +255,12 @@ func (r *RootResolver) CreateStudy(
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: study.Id.String})
+	id, ok := study.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id"}
+	}
+
+	node, err := r.Node(ctx, struct{ Id string }{Id: id.String})
 	if err != nil {
 		return nil, err
 	}

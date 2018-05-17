@@ -7,6 +7,8 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
 func NewUserLoader(svc *data.UserService) *UserLoader {
@@ -81,8 +83,12 @@ func (r *UserLoader) GetByLogin(login string) (*data.User, error) {
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+	id, ok := user.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"user missing `id` field"}
+	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(user.Id.String), user)
+	r.batchGet.Prime(ctx, dataloader.StringKey(id.String), user)
 
 	return user, nil
 }

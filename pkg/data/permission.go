@@ -7,6 +7,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/maybe"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -25,13 +26,13 @@ var accessLevelsWithoutFields = []perm.AccessLevel{
 }
 
 type Permission struct {
-	AccessLevel string      `db:"access_level"`
-	Audience    string      `db:"audience"`
-	CreatedAt   time.Time   `db:"created_at"`
-	Id          string      `db:"id"`
-	Field       pgtype.Text `db:"field"`
-	Type        string      `db:"type"`
-	UpdatedAt   time.Time   `db:"updated_at"`
+	AccessLevel string       `db:"access_level"`
+	Audience    string       `db:"audience"`
+	CreatedAt   time.Time    `db:"created_at"`
+	Id          oid.MaybeOID `db:"id"`
+	Field       pgtype.Text  `db:"field"`
+	Type        string       `db:"type"`
+	UpdatedAt   time.Time    `db:"updated_at"`
 }
 
 type PermService struct {
@@ -66,7 +67,7 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 			id, _ := oid.New("Perm")
 			field.Set(strcase.ToSnake(f))
 			permissions[i] = []interface{}{
-				id,
+				&oid.MaybeOID{Status: maybe.Just, oid: id},
 				al,
 				mType,
 				perm.Authenticated,
@@ -79,7 +80,7 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	for _, al := range accessLevelsWithoutFields {
 		id, _ := oid.New("Perm")
 		permissions[i] = []interface{}{
-			id,
+			&oid.MaybeOID{Status: maybe.Just, oid: id},
 			al,
 			mType,
 			perm.Authenticated,

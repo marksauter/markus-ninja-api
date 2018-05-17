@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 type Lesson struct {
 	Body        pgtype.Text        `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          pgtype.Varchar     `db:"id" permit:"read"`
+	Id          oid.MaybeOID       `db:"id" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
 	StudyId     pgtype.Varchar     `db:"study_id" permit:"read"`
@@ -302,7 +303,7 @@ func (s *LessonService) Create(row *Lesson) error {
 	var columns, values []string
 
 	id, _ := oid.New("Lesson")
-	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
+	row.Id.Just(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
@@ -318,7 +319,7 @@ func (s *LessonService) Create(row *Lesson) error {
 		columns = append(columns, "published_at")
 		values = append(values, args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if _, ok := row.StudyId.Get().(oid.OID); ok {
 		columns = append(columns, "study_id")
 		values = append(values, args.Append(&row.StudyId))
 	}
@@ -326,7 +327,7 @@ func (s *LessonService) Create(row *Lesson) error {
 		columns = append(columns, "title")
 		values = append(values, args.Append(&row.Title))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
 	}
@@ -386,6 +387,11 @@ func (s *LessonService) Update(row *Lesson) error {
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
+	id, ok := row.Id.Get().(oid.OID)
+	if !ok {
+		return errors.New("must include field `id` to update")
+	}
+
 	if row.Body.Status != pgtype.Undefined {
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
@@ -395,7 +401,10 @@ func (s *LessonService) Update(row *Lesson) error {
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	// if v, ok := row.StudyId.Get().(oid.OID); ok {
+	//   sets = append(sets, `study_id`+"="+args.Append(&v))
+	// }
+	if _, ok := row.StudyId.Get().(oid.OID); ok {
 		sets = append(sets, `study_id`+"="+args.Append(&row.StudyId))
 	}
 	if row.Title.Status != pgtype.Undefined {
@@ -405,7 +414,7 @@ func (s *LessonService) Update(row *Lesson) error {
 	sql := `
 		UPDATE lessons
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE ` + args.Append(id.String) + `
 		RETURNING
 			body,
 			created_at,

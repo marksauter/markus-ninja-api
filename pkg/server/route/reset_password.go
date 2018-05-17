@@ -10,6 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -64,7 +65,7 @@ func (h ResetPasswordHandler) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	if pwrt.UserId.Status != pgtype.Present {
+	if _, ok := pwrt.UserId.Get().(oid.OID); !ok {
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -117,8 +118,10 @@ func (h ResetPasswordHandler) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
 
+	userId, _ := user.Id.Get().(oid.OID)
+
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
-	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: userId.String}
 	jwt, err := h.Svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())

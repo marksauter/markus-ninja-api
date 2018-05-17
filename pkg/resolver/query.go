@@ -46,7 +46,7 @@ func (r *RootResolver) Node(
 	case "User":
 		var user *repo.UserPermit
 		viewerId, _ := viewer.ID()
-		if args.Id == viewerId {
+		if args.Id == viewerId.String {
 			user = viewer
 		} else {
 			_, err := r.Repos.User().AddPermission(perm.ReadUser)
@@ -85,7 +85,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 		case "User":
 			var user *repo.UserPermit
 			viewerId, _ := viewer.ID()
-			if id == viewerId {
+			if id == viewerId.String {
 				user = viewer
 			} else {
 				_, err := r.Repos.User().AddPermission(perm.ReadUser)

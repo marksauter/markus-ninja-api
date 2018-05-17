@@ -6,18 +6,19 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
 )
 
 type PasswordResetTokenModel struct {
-	Token     pgtype.Varchar
-	Email     pgtype.Varchar
-	UserId    pgtype.Varchar
-	RequestIP pgtype.Inet
-	IssuedAt  pgtype.Timestamptz
-	ExpiresAt pgtype.Timestamptz
-	EndIP     pgtype.Inet
-	EndedAt   pgtype.Timestamptz
+	Token     pgtype.Varchar     `db:"token"`
+	Email     pgtype.Varchar     `db:"email"`
+	UserId    oid.MaybeOID       `db:"user_id"`
+	RequestIP pgtype.Inet        `db:"request_ip"`
+	IssuedAt  pgtype.Timestamptz `db:"issued_at"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at"`
+	EndIP     pgtype.Inet        `db:"end_ip"`
+	EndedAt   pgtype.Timestamptz `db:"ended_at"`
 }
 
 func NewPasswordResetTokenService(q Queryer) *PasswordResetTokenService {
@@ -85,7 +86,7 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 		columns = append(columns, `email`)
 		values = append(values, args.Append(&row.Email))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, `user_id`)
 		values = append(values, args.Append(&row.UserId))
 	}
@@ -125,24 +126,9 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 func (s *PasswordResetTokenService) Update(
 	row *PasswordResetTokenModel,
 ) error {
-	sets := make([]string, 0, 7)
-	args := pgx.QueryArgs(make([]interface{}, 0, 7))
+	sets := make([]string, 0, 2)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
-	if row.Email.Status != pgtype.Undefined {
-		sets = append(sets, `email`+"="+args.Append(&row.Email))
-	}
-	if row.UserId.Status != pgtype.Undefined {
-		sets = append(sets, `user_id`+"="+args.Append(&row.UserId))
-	}
-	if row.RequestIP.Status != pgtype.Undefined {
-		sets = append(sets, `request_ip`+"="+args.Append(&row.RequestIP))
-	}
-	if row.IssuedAt.Status != pgtype.Undefined {
-		sets = append(sets, `issued_at`+"="+args.Append(&row.IssuedAt))
-	}
-	if row.ExpiresAt.Status != pgtype.Undefined {
-		sets = append(sets, `expires_at`+"="+args.Append(&row.ExpiresAt))
-	}
 	if row.EndIP.Status != pgtype.Undefined {
 		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
 	}

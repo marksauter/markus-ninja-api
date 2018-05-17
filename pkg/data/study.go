@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,10 +16,10 @@ type Study struct {
 	AdvancedAt  pgtype.Timestamptz `db:"advanced_at" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"read"`
-	Id          pgtype.Varchar     `db:"id" permit:"read"`
+	Id          oid.MaybeOID       `db:"id" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      pgtype.Varchar     `db:"user_id" permit:"read"`
+	UserId      oid.MaybeOID       `db:"user_id" permit:"read"`
 }
 
 func NewStudyService(db Queryer) *StudyService {
@@ -229,7 +230,7 @@ func (s *StudyService) Create(row *Study) error {
 	var columns, values []string
 
 	id, _ := oid.New("Study")
-	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
+	row.Id.Just(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
@@ -245,7 +246,7 @@ func (s *StudyService) Create(row *Study) error {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
 	}
@@ -305,6 +306,11 @@ func (s *StudyService) Update(row *Study) error {
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
+	id, ok := row.Id.Get().(oid.OID)
+	if !ok {
+		return errors.New("must include field `id` to update")
+	}
+
 	if row.AdvancedAt.Status != pgtype.Undefined {
 		sets = append(sets, `advanced_at`+"="+args.Append(&row.AdvancedAt))
 	}
@@ -315,7 +321,7 @@ func (s *StudyService) Update(row *Study) error {
 	sql := `
 		UPDATE studys
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE ` + args.Append(id.String) + `
 		RETURNING
 			advanced_at,
 			created_at,

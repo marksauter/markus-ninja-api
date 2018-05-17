@@ -1,10 +1,11 @@
 package data
 
 import (
-	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
@@ -35,10 +36,10 @@ func (r Role) String() string {
 }
 
 type RoleModel struct {
-	Id        string    `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	Id        oid.MaybeOID   `db:"id"`
+	Name      pgtype.Varchar `db:"name"`
+	CreatedAt time.Time      `db:"created_at"`
+	UpdatedAt time.Time      `db:"updated_at"`
 }
 
 type RoleService struct {
@@ -60,34 +61,57 @@ var createRoleSQL = `
 		updated_at
 `
 
-func (s *RoleService) Create(name string) (*RoleModel, error) {
-	mylog.Log.WithField("name", name).Info("Create(name) Role")
+func (s *RoleService) Create(row *RoleModel) error {
+	mylog.Log.WithField("name", row.Name.String).Info("Create(name) Role")
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+
+	var columns, values []string
+
 	id, _ := oid.New("Role")
-	row := s.db.QueryRow(createRoleSQL, id, name)
-	role := new(RoleModel)
-	err := row.Scan(
-		&role.Id,
-		&role.Name,
-		&role.CreatedAt,
-		&role.UpdatedAt,
+	row.Id.Just(id)
+	columns = append(columns, `id`)
+	values = append(values, args.Append(&row.Id))
+
+	if row.Name.Status != pgtype.Undefined {
+		columns = append(columns, `name`)
+		values = append(values, args.Append(&row.Name))
+	}
+
+	createRoleSQL := `
+		INSERT INTO role(` + strings.Join(columns, ",") + `)
+		VALUES(` + strings.Join(values, ",") + `)
+		ON CONFLICT ON CONSTRAINT role_name_key DO NOTHING
+		RETURNING
+			created_at,
+			updated_at
+	`
+
+	psName := preparedName("createRole", createRoleSQL)
+
+	err := prepareQueryRow(s.db, psName, createRoleSQL, args...).Scan(
+		&row.CreatedAt,
+		&row.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return role, nil
+			return nil
 		}
-		mylog.Log.WithField("error", err).Error("error during scan")
 		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
-			default:
-				return nil, err
+			case NotNullViolation:
+				return RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return nil, fmt.Errorf(`role "%v" already exists`, name)
+				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return err
 			}
 		}
+		mylog.Log.WithError(err).Error("error during query")
+		return err
 	}
 
-	mylog.Log.Debug("role created")
-	return role, nil
+	return nil
 }
 
 func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {

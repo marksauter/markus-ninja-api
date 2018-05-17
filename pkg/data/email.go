@@ -11,7 +11,7 @@ import (
 
 type EmailModel struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
-	Id        pgtype.Varchar     `db:"id"`
+	Id        oid.MaybeOID       `db:"id"`
 	Value     pgtype.Varchar     `db:"value"`
 }
 
@@ -29,8 +29,8 @@ func (s *EmailService) Create(email *EmailModel) error {
 
 	var columns, values []string
 
-	emailId, _ := oid.New("Email")
-	email.Id.Set(emailId.String())
+	id, _ := oid.New("Email")
+	email.Id.Just(id)
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&email.Id))
 

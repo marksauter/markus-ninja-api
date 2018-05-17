@@ -119,7 +119,9 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
 
 	for _, name := range roleNames {
-		if _, err := svcs.Role.Create(name); err != nil {
+		role := &data.RoleModel{}
+		role.Name.Set(name)
+		if err := svcs.Role.Create(role); err != nil {
 			mylog.Log.WithError(err).Fatal("error during role creation")
 			return err
 		}
@@ -231,7 +233,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	guestId, _ := oid.New("User")
 	guestPassword, _ := passwd.New("guest")
 	guest := &data.User{}
-	guest.Id.Set(guestId.String())
+	guest.Id.Just(guestId)
 	guest.Login.Set("guest")
 	guest.Password.Set(guestPassword.Hash())
 	guest.PrimaryEmail.Set("guest@rkus.ninja")
@@ -248,7 +250,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	markusId, _ := oid.New("User")
 	markusPassword, _ := passwd.New("fender917")
 	markus := &data.User{}
-	markus.Id.Set(markusId.String())
+	markus.Id.Just(markusId)
 	markus.Login.Set("markus")
 	markus.Password.Set(markusPassword.Hash())
 	markus.PrimaryEmail.Set("m@rkus.ninja")
@@ -261,7 +263,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 			mylog.Log.Info("markus account already exists")
 		}
 	}
-	if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
+	if err := svcs.Role.GrantUser(markusId.String, data.AdminRole); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to grant markus admin role")

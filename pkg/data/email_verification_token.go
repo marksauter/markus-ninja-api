@@ -6,15 +6,16 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
 )
 
 type EmailVerificationTokenModel struct {
-	UserId     pgtype.Varchar
-	Token      pgtype.Varchar
-	IssuedAt   pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
-	VerifiedAt pgtype.Timestamptz
+	UserId     oid.MaybeOID       `db:"user_id"`
+	Token      pgtype.Varchar     `db:"token"`
+	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at"`
+	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
 func NewEmailVerificationTokenService(q Queryer) *EmailVerificationTokenService {
@@ -83,7 +84,7 @@ func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel)
 	columns = append(columns, `token`)
 	values = append(values, args.Append(&row.Token))
 
-	if row.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, `user_id`)
 		values = append(values, args.Append(&row.UserId))
 	}

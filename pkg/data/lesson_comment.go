@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -13,12 +14,12 @@ import (
 type LessonComment struct {
 	Body        pgtype.Text        `db:"body"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
-	Id          pgtype.Varchar     `db:"id"`
-	LessonId    pgtype.Varchar     `db:"lesson_id"`
+	Id          oid.MaybeOID       `db:"id"`
+	LessonId    oid.MaybeOID       `db:"lesson_id"`
 	PublishedAt pgtype.Timestamptz `db:"published_at"`
-	StudyId     pgtype.Varchar     `db:"study_id"`
+	StudyId     oid.MaybeOID       `db:"study_id"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at"`
-	UserId      pgtype.Varchar     `db:"user_id"`
+	UserId      oid.MaybeOID       `db:"user_id"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {
@@ -339,7 +340,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 	var columns, values []string
 
 	id, _ := oid.New("LessonComment")
-	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
+	row.Id.Just(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
@@ -347,7 +348,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 		columns = append(columns, "body")
 		values = append(values, args.Append(&row.Body))
 	}
-	if row.LessonId.Status != pgtype.Undefined {
+	if _, ok := row.LessonId.Get().(oid.OID); ok {
 		columns = append(columns, "lesson_id")
 		values = append(values, args.Append(&row.LessonId))
 	}
@@ -355,11 +356,11 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 		columns = append(columns, "published_at")
 		values = append(values, args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if _, ok := row.StudyId.Get().(oid.OID); ok {
 		columns = append(columns, "study_id")
 		values = append(values, args.Append(&row.StudyId))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if _, ok := row.UserId.Get().(oid.OID); ok {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
 	}
@@ -419,20 +420,25 @@ func (s *LessonCommentService) Update(row *LessonComment) error {
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
+	id, ok := row.Id.Get().(oid.OID)
+	if !ok {
+		return errors.New("must include field `id` to update")
+	}
+
 	if row.Body.Status != pgtype.Undefined {
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if _, ok := row.StudyId.Get().(oid.OID); ok {
 		sets = append(sets, `study_id`+"="+args.Append(&row.StudyId))
 	}
 
 	sql := `
 		UPDATE lesson_comments
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE ` + args.Append(id.String) + `
 		RETURNING
 			body,
 			created_at,

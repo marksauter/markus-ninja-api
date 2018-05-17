@@ -9,17 +9,19 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LessonCommentPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	LessonComment        *data.LessonComment
+	lessonComment        *data.LessonComment
 }
 
 func (r *LessonCommentPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.LessonComment) {
+	for _, f := range structs.Fields(r.lessonComment) {
 		if !f.IsZero() {
 			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
 				return ErrAccessDenied
@@ -33,56 +35,72 @@ func (r *LessonCommentPermit) Body() (string, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.LessonComment.Body.String, nil
+	return r.lessonComment.Body.String, nil
 }
 
 func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.CreatedAt.Time, nil
+	return r.lessonComment.CreatedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) ID() (string, error) {
+func (r *LessonCommentPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.Id.String, nil
+	id, ok := r.lessonComment.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id`"}
+	}
+	return &id, nil
 }
 
-func (r *LessonCommentPermit) LessonId() (string, error) {
+func (r *LessonCommentPermit) LessonId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("lesson_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.LessonId.String, nil
+	id, ok := r.lessonComment.LessonId.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `lesson_id`"}
+	}
+	return &id, nil
 }
 
 func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.PublishedAt.Time, nil
+	return r.lessonComment.PublishedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) StudyId() (string, error) {
+func (r *LessonCommentPermit) StudyId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.StudyId.String, nil
+	id, ok := r.lessonComment.StudyId.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `study_id`"}
+	}
+	return &id, nil
 }
 
-func (r *LessonCommentPermit) UserId() (string, error) {
+func (r *LessonCommentPermit) UserId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.UserId.String, nil
+	id, ok := r.lessonComment.UserId.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `user_id`"}
+	}
+	return &id, nil
 }
 
 func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.UpdatedAt.Time, nil
+	return r.lessonComment.UpdatedAt.Time, nil
 }
 
 func NewLessonCommentRepo(

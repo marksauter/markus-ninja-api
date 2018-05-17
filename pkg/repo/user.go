@@ -10,7 +10,9 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
@@ -77,11 +79,15 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 	return r.user.CreatedAt.Time, nil
 }
 
-func (r *UserPermit) ID() (string, error) {
+func (r *UserPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.user.Id.String, nil
+	id, ok := r.user.Id.Get().(oid.OID)
+	if !ok {
+		return nil, myerr.UnexpectedError{"missing field `id`"}
+	}
+	return &id, nil
 }
 
 func (r *UserPermit) Login() (string, error) {

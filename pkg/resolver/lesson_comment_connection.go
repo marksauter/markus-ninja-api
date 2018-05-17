@@ -17,7 +17,7 @@ func NewLessonCommentConnectionResolver(
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id)
+		cursor := data.EncodeCursor(id.String)
 		lessonCommentEdge := NewLessonCommentEdgeResolver(cursor, lessonComments[i], repos)
 		edges[i] = lessonCommentEdge
 	}
