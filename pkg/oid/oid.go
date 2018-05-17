@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/maybe"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/rs/xid"
 )
 
@@ -57,8 +58,16 @@ func Parse(id string) (*OID, error) {
 }
 
 type MaybeOID struct {
-	oid    *OID
 	Status maybe.MaybeStatus
+	oid    *OID
+}
+
+func NewMaybe(objType string) (*MaybeOID, error) {
+	oid, err := New(objType)
+	if err != nil {
+		return nil, err
+	}
+	return &MaybeOID{Status: maybe.Just, oid: oid}, nil
 }
 
 func (src *MaybeOID) Get() interface{} {
@@ -87,25 +96,28 @@ func (dst *MaybeOID) Just(src interface{}) error {
 	return nil
 }
 
-func (dst *MaybeOID) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
-	if src == nil {
-		*dst = MaybeOID{Status: maybe.Just}
-		return nil
-	}
-
-	oid, err := Parse(string(src))
-	if err != nil {
-		return err
-	}
-	*dst = MaybeOID{Status: maybe.Just, oid: oid}
-	return nil
-}
-
-func (dst *MaybeOID) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
-	return dst.DecodeText(ci, src)
-}
+// func (dst *MaybeOID) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
+//   mylog.Log.Debug("DecodeText")
+//   if src == nil {
+//     *dst = MaybeOID{Status: maybe.Just}
+//     return nil
+//   }
+//
+//   oid, err := Parse(string(src))
+//   if err != nil {
+//     return err
+//   }
+//   *dst = MaybeOID{Status: maybe.Just, oid: oid}
+//   return nil
+// }
+//
+// func (dst *MaybeOID) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
+//   mylog.Log.Debug("DecodeBinary")
+//   return dst.DecodeText(ci, src)
+// }
 
 func (src *MaybeOID) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+	mylog.Log.Debug("EncodeText")
 	switch src.Status {
 	case maybe.Just:
 		// Treating empty string as null value in db.
@@ -119,12 +131,14 @@ func (src *MaybeOID) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error)
 }
 
 func (src *MaybeOID) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+	mylog.Log.Debug("EncodeBinary")
 	return src.EncodeText(ci, buf)
 }
 
 var errNothing = errors.New("cannot encode status nothing")
 
 func (dst *MaybeOID) Scan(src interface{}) error {
+	mylog.Log.Debug("Scan")
 	if src == nil {
 		*dst = MaybeOID{Status: maybe.Just}
 		return nil
@@ -136,6 +150,7 @@ func (dst *MaybeOID) Scan(src interface{}) error {
 			return err
 		}
 		*dst = MaybeOID{Status: maybe.Just, oid: oid}
+		return nil
 	case []byte:
 		srcCopy := make([]byte, len(src))
 		copy(srcCopy, src)
@@ -144,12 +159,14 @@ func (dst *MaybeOID) Scan(src interface{}) error {
 			return err
 		}
 		*dst = MaybeOID{Status: maybe.Just, oid: oid}
+		return nil
 	}
 
 	return fmt.Errorf("cannot scan %T", src)
 }
 
 func (src *MaybeOID) Value() (driver.Value, error) {
+	mylog.Log.Debug("Value")
 	switch src.Status {
 	case maybe.Just:
 		// Treating empty string as null value in db.
