@@ -6,15 +6,17 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
 )
 
 type EmailVerificationTokenModel struct {
-	UserId     pgtype.Varchar
-	Token      pgtype.Varchar
-	IssuedAt   pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
-	VerifiedAt pgtype.Timestamptz
+	EmailId    oid.OID            `db:"email_id"`
+	UserId     oid.OID            `db:"user_id"`
+	Token      pgtype.Varchar     `db:"token"`
+	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at"`
+	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
 func NewEmailVerificationTokenService(q Queryer) *EmailVerificationTokenService {
@@ -32,6 +34,7 @@ func (s *EmailVerificationTokenService) get(
 ) (*EmailVerificationTokenModel, error) {
 	var row EmailVerificationTokenModel
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+		&row.EmailId,
 		&row.UserId,
 		&row.Token,
 		&row.IssuedAt,
@@ -49,6 +52,7 @@ func (s *EmailVerificationTokenService) get(
 
 const getEmailVerificationTokenByPKSQL = `
 	SELECT
+		email_id,
 		user_id,
 		token,
 		issued_at,
@@ -59,6 +63,7 @@ const getEmailVerificationTokenByPKSQL = `
 `
 
 func (s *EmailVerificationTokenService) GetByPK(
+	emailId,
 	userId,
 	token string,
 ) (*EmailVerificationTokenModel, error) {
@@ -68,13 +73,14 @@ func (s *EmailVerificationTokenService) GetByPK(
 	return s.get(
 		"getEmailVerificationTokenByPK",
 		getEmailVerificationTokenByPKSQL,
+		emailId,
 		userId,
 		token,
 	)
 }
 
 func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 7))
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
 
@@ -83,6 +89,10 @@ func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel)
 	columns = append(columns, `token`)
 	values = append(values, args.Append(&row.Token))
 
+	if row.EmailId.Status != pgtype.Undefined {
+		columns = append(columns, `email_id`)
+		values = append(values, args.Append(&row.EmailId))
+	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
 		values = append(values, args.Append(&row.UserId))
@@ -119,8 +129,8 @@ func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel)
 func (s *EmailVerificationTokenService) Update(
 	row *EmailVerificationTokenModel,
 ) error {
-	sets := make([]string, 0, 7)
-	args := pgx.QueryArgs(make([]interface{}, 0, 7))
+	sets := make([]string, 0, 1)
+	args := pgx.QueryArgs(make([]interface{}, 0, 1))
 
 	if row.VerifiedAt.Status != pgtype.Undefined {
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))

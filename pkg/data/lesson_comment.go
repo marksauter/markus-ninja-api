@@ -13,12 +13,12 @@ import (
 type LessonComment struct {
 	Body        pgtype.Text        `db:"body"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
-	Id          pgtype.Varchar     `db:"id"`
-	LessonId    pgtype.Varchar     `db:"lesson_id"`
+	Id          oid.OID            `db:"id"`
+	LessonId    oid.OID            `db:"lesson_id"`
 	PublishedAt pgtype.Timestamptz `db:"published_at"`
-	StudyId     pgtype.Varchar     `db:"study_id"`
+	StudyId     oid.OID            `db:"study_id"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at"`
-	UserId      pgtype.Varchar     `db:"user_id"`
+	UserId      oid.OID            `db:"user_id"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {
@@ -339,7 +339,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 	var columns, values []string
 
 	id, _ := oid.New("LessonComment")
-	row.Id = pgtype.Varchar{String: id.String, Status: pgtype.Present}
+	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 

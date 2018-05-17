@@ -6,13 +6,14 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
 )
 
 type PasswordResetTokenModel struct {
 	Token     pgtype.Varchar
 	Email     pgtype.Varchar
-	UserId    pgtype.Varchar
+	UserId    oid.OID
 	RequestIP pgtype.Inet
 	IssuedAt  pgtype.Timestamptz
 	ExpiresAt pgtype.Timestamptz

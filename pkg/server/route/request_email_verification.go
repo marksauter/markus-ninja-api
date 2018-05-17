@@ -7,6 +7,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -73,7 +74,14 @@ func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *
 		return
 	}
 
+	emailId, err := oid.Parse(routeVars["id"])
+	if err != nil {
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
 	avt := &data.EmailVerificationTokenModel{}
+	avt.EmailId.Set(emailId)
 	avt.UserId = user.Id
 
 	err = h.Svcs.AVT.Create(avt)

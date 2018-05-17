@@ -52,8 +52,9 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
+	emailId := routeVars["id"]
 	token := routeVars["token"]
-	avt, err := h.Svcs.AVT.GetByPK(user.Id.String, token)
+	avt, err := h.Svcs.AVT.GetByPK(emailId, user.Id.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return

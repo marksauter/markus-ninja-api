@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
 var BackupEmail = pgtype.Text{String: "BACKUP", Status: pgtype.Present}
@@ -15,9 +16,9 @@ var PublicEmail = pgtype.Text{String: "PUBLIC", Status: pgtype.Present}
 
 type AccountEmailModel struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
-	EmailId    pgtype.Varchar     `db:"email_id"`
+	EmailId    oid.OID            `db:"email_id"`
 	Type       pgtype.Text        `db:"type"`
-	UserId     pgtype.Varchar     `db:"user_id"`
+	UserId     oid.OID            `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }

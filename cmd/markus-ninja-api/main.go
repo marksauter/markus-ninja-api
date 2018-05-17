@@ -79,11 +79,11 @@ func main() {
 	r.Handle("/upload", route.Upload())
 	r.Handle("/upload/assets", route.UploadAssets())
 	r.Handle(
-		"/users/{login}/emails/confirm_verification/{token}",
+		"/users/{login}/emails/{id}/confirm_verification/{token}",
 		route.ConfirmVerification(svcs),
 	)
 	r.Handle(
-		"/users/{login}/emails/request_verification",
+		"/users/{login}/emails/{id}/request_verification",
 		route.RequestEmailVerification(svcs),
 	)
 	r.Handle(

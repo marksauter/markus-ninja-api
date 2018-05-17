@@ -14,7 +14,7 @@ type User struct {
 	BackupEmail  pgtype.Varchar     `db:"backup_email"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	ExtraEmails  []string           `db:"extra_emails"`
-	Id           pgtype.Varchar     `db:"id" permit:"read"`
+	Id           oid.OID            `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     pgtype.Bytea       `db:"password" permit:"create"`
@@ -231,7 +231,7 @@ func (s *UserService) Create(user *User) error {
 	var columns, values []string
 
 	id, _ := oid.New("User")
-	user.Id.Set(id.String)
+	user.Id.Set(id)
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&user.Id))
 
