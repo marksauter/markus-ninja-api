@@ -231,7 +231,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	guestId, _ := oid.New("User")
 	guestPassword, _ := passwd.New("guest")
 	guest := &data.User{}
-	guest.Id.Set(guestId.String())
+	guest.Id.Set(guestId.String)
 	guest.Login.Set("guest")
 	guest.Password.Set(guestPassword.Hash())
 	guest.PrimaryEmail.Set("guest@rkus.ninja")
@@ -248,7 +248,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	markusId, _ := oid.New("User")
 	markusPassword, _ := passwd.New("fender917")
 	markus := &data.User{}
-	markus.Id.Set(markusId.String())
+	markus.Id.Set(markusId.String)
 	markus.Login.Set("markus")
 	markus.Password.Set(markusPassword.Hash())
 	markus.PrimaryEmail.Set("m@rkus.ninja")

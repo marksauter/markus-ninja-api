@@ -106,7 +106,7 @@ func (r *RootResolver) DeleteUser(
 		return nil, err
 	}
 
-	err = r.Repos.User().Delete(id.String())
+	err = r.Repos.User().Delete(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (r *RootResolver) UpdateUser(
 	if err != nil {
 		return nil, err
 	}
-	user.Id.Set(id.String())
+	user.Id.Set(id.String)
 
 	if args.Input.Bio != nil {
 		user.Bio.Set(args.Input.Bio)

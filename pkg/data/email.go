@@ -30,7 +30,7 @@ func (s *EmailService) Create(email *EmailModel) error {
 	var columns, values []string
 
 	emailId, _ := oid.New("Email")
-	email.Id.Set(emailId.String())
+	email.Id.Set(emailId.String)
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&email.Id))
 

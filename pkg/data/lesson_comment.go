@@ -339,7 +339,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 	var columns, values []string
 
 	id, _ := oid.New("LessonComment")
-	row.Id = pgtype.Varchar{String: id.String(), Status: pgtype.Present}
+	row.Id = pgtype.Varchar{String: id.String, Status: pgtype.Present}
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
