@@ -67,7 +67,8 @@ func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *
 		return
 	}
 
-	user, err := h.Svcs.User.GetCredentialsByEmail(verify.Email)
+	login := routeVars["login"]
+	user, err := h.Svcs.User.GetCredentialsByLogin(login)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -99,7 +100,6 @@ func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *
 		return
 	}
 
-	login := routeVars["login"]
 	err = h.Svcs.Mail.SendEmailVerificationMail(verify.Email, login, avt.Token.String)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())

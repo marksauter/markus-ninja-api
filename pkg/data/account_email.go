@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/sirupsen/logrus"
 )
 
 var BackupEmail = pgtype.Text{String: "BACKUP", Status: pgtype.Present}
@@ -14,7 +15,7 @@ var ExtraEmail = pgtype.Text{String: "EXTRA", Status: pgtype.Present}
 var PrimaryEmail = pgtype.Text{String: "PRIMARY", Status: pgtype.Present}
 var PublicEmail = pgtype.Text{String: "PUBLIC", Status: pgtype.Present}
 
-type AccountEmailModel struct {
+type AccountEmail struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
 	EmailId    oid.OID            `db:"email_id"`
 	Type       pgtype.Text        `db:"type"`
@@ -31,7 +32,47 @@ type AccountEmailService struct {
 	db Queryer
 }
 
-func (s *AccountEmailService) Create(ae *AccountEmailModel) error {
+func (s *AccountEmailService) get(name string, sql string, args ...interface{}) (*AccountEmail, error) {
+	var row AccountEmail
+	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+		&row.CreatedAt,
+		&row.EmailId,
+		&row.Type,
+		&row.UserId,
+		&row.UpdatedAt,
+		&row.VerifiedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	} else if err != nil {
+		mylog.Log.WithError(err).Error("failed to get email")
+		return nil, err
+	}
+
+	return &row, nil
+}
+
+const getAccountEmailByPKSQL = `
+	SELECT
+		created_at,
+		email_id,
+		type,
+		user_id,
+		updated_at
+		verified_at
+	FROM account_email
+	WHERE user_id = $1 AND email_id = $2
+`
+
+func (s *AccountEmailService) GetByPK(userId, emailId string) (*AccountEmail, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id":  userId,
+		"email_id": emailId,
+	}).Info("GetByPK(id) AccountEmail")
+	return s.get("getAccountEmailByPK", getAccountEmailByPKSQL, userId, emailId)
+}
+
+func (s *AccountEmailService) Create(ae *AccountEmail) error {
 	mylog.Log.Info("Create() AccountEmail")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -103,7 +144,7 @@ func (s *AccountEmailService) Delete(user_id, email_id string) error {
 	return nil
 }
 
-func (s *AccountEmailService) Update(ae *AccountEmailModel) error {
+func (s *AccountEmailService) Update(ae *AccountEmail) error {
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 

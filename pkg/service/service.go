@@ -8,6 +8,7 @@ import (
 type Services struct {
 	Auth          *AuthService
 	AVT           *data.EmailVerificationTokenService
+	Email         *data.EmailService
 	Lesson        *data.LessonService
 	LessonComment *data.LessonCommentService
 	Mail          *MailService
@@ -30,6 +31,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 	return &Services{
 		Auth:          NewAuthService(),
 		AVT:           data.NewEmailVerificationTokenService(db),
+		Email:         data.EmailService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
 		Mail:          NewMailService(mailConfig),

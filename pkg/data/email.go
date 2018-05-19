@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
-type EmailModel struct {
+type Email struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
 	Id        oid.OID            `db:"id"`
 	Value     pgtype.Varchar     `db:"value"`
@@ -23,7 +23,38 @@ type EmailService struct {
 	db Queryer
 }
 
-func (s *EmailService) Create(row *EmailModel) error {
+func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email, error) {
+	var row Email
+	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+		&row.CreatedAt,
+		&row.Id,
+		&row.Value,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	} else if err != nil {
+		mylog.Log.WithError(err).Error("failed to get email")
+		return nil, err
+	}
+
+	return &row, nil
+}
+
+const getEmailByPKSQL = `
+	SELECT
+		created_at,
+		id,
+		value
+	FROM email
+	WHERE id = $1
+`
+
+func (s *EmailService) GetByPK(id string) (*Email, error) {
+	mylog.Log.WithField("id", id).Info("GetByPK(id) Email")
+	return s.get("getEmailByPK", getEmailByPKSQL, id)
+}
+
+func (s *EmailService) Create(row *Email) error {
 	mylog.Log.WithField("email", row.Value.String).Info("Create() Email")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 

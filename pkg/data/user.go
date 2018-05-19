@@ -282,7 +282,7 @@ func (s *UserService) Create(user *User) error {
 	}
 
 	emailSvc := NewEmailService(tx)
-	email := &EmailModel{Value: user.PrimaryEmail}
+	email := &Email{Value: user.PrimaryEmail}
 	err = emailSvc.Create(email)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create email")
@@ -290,7 +290,7 @@ func (s *UserService) Create(user *User) error {
 	}
 
 	accountEmailSvc := NewAccountEmailService(tx)
-	accountEmail := &AccountEmailModel{
+	accountEmail := &AccountEmail{
 		EmailId: email.Id,
 		Type:    PrimaryEmail,
 		UserId:  user.Id,
