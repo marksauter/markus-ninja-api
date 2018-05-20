@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -10,12 +11,47 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var BackupEmail = pgtype.Text{String: "BACKUP", Status: pgtype.Present}
-var ExtraEmail = pgtype.Text{String: "EXTRA", Status: pgtype.Present}
-var PrimaryEmail = pgtype.Text{String: "PRIMARY", Status: pgtype.Present}
-var PublicEmail = pgtype.Text{String: "PUBLIC", Status: pgtype.Present}
+type UserEmailTypeValue int
 
-type AccountEmail struct {
+const (
+	BackupEmail UserEmailTypeValue = iota
+	ExtraEmail
+	PrimaryEmail
+)
+
+func ParseUserEmailTypeValue(s string) (UserEmailType, error) {
+	switch strings.ToUpper(s) {
+	case "BACKUP":
+		return BackupEmail, nil
+	case "EXTRA":
+		return ExtraEmail, nil
+	case "PRIMARY":
+		return PrimaryEmail, nil
+	default:
+		var o UserEmailType
+		return o, fmt.Errorf("invalid UserEmailType: %q", s)
+	}
+}
+
+func (src UserEmailTypeValue) String() string {
+	switch src {
+	case BackupEmail:
+		return "BACKUP"
+	case ExtraEmail:
+		return "EXTRA"
+	case PrimaryEmail:
+		return "PRIMARY"
+	default:
+		return "unknown"
+	}
+}
+
+type UserEmailType struct {
+	Status pgtype.Status
+	String UserEmailTypeValue
+}
+
+type UserEmail struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
 	EmailId    oid.OID            `db:"email_id"`
 	Type       pgtype.Text        `db:"type"`
@@ -24,16 +60,16 @@ type AccountEmail struct {
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
-func NewAccountEmailService(q Queryer) *AccountEmailService {
-	return &AccountEmailService{q}
+func NewUserEmailService(q Queryer) *UserEmailService {
+	return &UserEmailService{q}
 }
 
-type AccountEmailService struct {
+type UserEmailService struct {
 	db Queryer
 }
 
-func (s *AccountEmailService) get(name string, sql string, args ...interface{}) (*AccountEmail, error) {
-	var row AccountEmail
+func (s *UserEmailService) get(name string, sql string, args ...interface{}) (*UserEmail, error) {
+	var row UserEmail
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.EmailId,
@@ -52,7 +88,7 @@ func (s *AccountEmailService) get(name string, sql string, args ...interface{}) 
 	return &row, nil
 }
 
-const getAccountEmailByPKSQL = `
+const getUserEmailByPKSQL = `
 	SELECT
 		created_at,
 		email_id,
@@ -60,20 +96,20 @@ const getAccountEmailByPKSQL = `
 		user_id,
 		updated_at
 		verified_at
-	FROM account_email
+	FROM user_email
 	WHERE user_id = $1 AND email_id = $2
 `
 
-func (s *AccountEmailService) GetByPK(userId, emailId string) (*AccountEmail, error) {
+func (s *UserEmailService) GetByPK(userId, emailId string) (*UserEmail, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id":  userId,
 		"email_id": emailId,
-	}).Info("GetByPK(id) AccountEmail")
-	return s.get("getAccountEmailByPK", getAccountEmailByPKSQL, userId, emailId)
+	}).Info("GetByPK(id) UserEmail")
+	return s.get("getUserEmailByPK", getUserEmailByPKSQL, userId, emailId)
 }
 
-func (s *AccountEmailService) Create(ae *AccountEmail) error {
-	mylog.Log.Info("Create() AccountEmail")
+func (s *UserEmailService) Create(ae *UserEmail) error {
+	mylog.Log.Info("Create() UserEmail")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	var columns, values []string
@@ -91,17 +127,17 @@ func (s *AccountEmailService) Create(ae *AccountEmail) error {
 		values = append(values, args.Append(&ae.UserId))
 	}
 
-	createAccountEmailSQL := `
-		INSERT INTO account_email(` + strings.Join(columns, ",") + `)
+	createUserEmailSQL := `
+		INSERT INTO user_email(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 		RETURNING
 			created_at,
 			updated_at
 	`
 
-	psName := preparedName("createAccountEmail", createAccountEmailSQL)
+	psName := preparedName("createUserEmail", createUserEmailSQL)
 
-	err := prepareQueryRow(s.db, psName, createAccountEmailSQL, args...).Scan(
+	err := prepareQueryRow(s.db, psName, createUserEmailSQL, args...).Scan(
 		&ae.CreatedAt,
 		&ae.UpdatedAt,
 	)
@@ -124,17 +160,17 @@ func (s *AccountEmailService) Create(ae *AccountEmail) error {
 	return nil
 }
 
-func (s *AccountEmailService) Delete(user_id, email_id string) error {
+func (s *UserEmailService) Delete(user_id, email_id string) error {
 	args := pgx.QueryArgs(make([]interface{}, 0, 1))
 
 	sql := `
-		DELETE FROM account_email
+		DELETE FROM user_email
 		WHERE ` + `user_id=` + args.Append(user_id) + `
 		AND ` + `email_id=` + args.Append(email_id)
 
-	commandTag, err := prepareExec(s.db, "deleteAccountEmail", sql, args...)
+	commandTag, err := prepareExec(s.db, "deleteUserEmail", sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to delete account_email")
+		mylog.Log.WithError(err).Error("failed to delete user_email")
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -144,7 +180,7 @@ func (s *AccountEmailService) Delete(user_id, email_id string) error {
 	return nil
 }
 
-func (s *AccountEmailService) Update(ae *AccountEmail) error {
+func (s *UserEmailService) Update(ae *UserEmail) error {
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -156,16 +192,16 @@ func (s *AccountEmailService) Update(ae *AccountEmail) error {
 	}
 
 	sql := `
-		UPDATE account_email
+		UPDATE user_email
 		SET ` + strings.Join(sets, ",") + `
 		WHERE ` + `user_id=` + args.Append(ae.UserId.String) + `
 		AND ` + `email_id=` + args.Append(ae.EmailId.String)
 
-	psName := preparedName("updateAccountEmail", sql)
+	psName := preparedName("updateUserEmail", sql)
 
 	commandTag, err := prepareExec(s.db, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update account_email")
+		mylog.Log.WithError(err).Error("failed to update user_email")
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {

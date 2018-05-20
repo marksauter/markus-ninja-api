@@ -1,0 +1,11 @@
+# Input type for UpdateUserEmail.
+input UpdateUserEmailInput {
+  # Id of the email.
+  emailId: ID!
+
+  # The type of the email.
+  type: UserEmailType
+
+  # Id of the user.
+  userId: ID!
+}

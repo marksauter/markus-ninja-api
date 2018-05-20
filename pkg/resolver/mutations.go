@@ -15,6 +15,55 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
+type AddUserEmailInput struct {
+	Email  string
+	UserId string
+}
+
+func (r *RootResolver) AddUserEmail(
+	ctx context.Context,
+	args struct{ Input AddUserEmailInput },
+) (*userEmailResolver, error) {
+	fields, err := r.Repos.UserEmail().AddPermission(perm.CreateUserEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	email := data.Email{}
+	email.Value.Set(args.Input.Email)
+	err = r.Repos.Email().Create(email)
+	if err != nil {
+		return nil, err
+	}
+
+	user := data.User{}
+	err = r.Repos.User().Get(args.Input.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	userEmail := data.UserEmail{}
+	userEmail.EmailId.Set(email.Id)
+	userEmail.UserId.Set(user.Id)
+
+	err = r.Repos.UserEmail().Create(userEmail)
+	if err != nil {
+		return nil, err
+	}
+
+}
+
+type DeleteUserEmailInput struct {
+	EmailId string
+	UserId  string
+}
+
+type UpdateUserEmailInput struct {
+	EmailId string
+	Type    string
+	UserId  string
+}
+
 type CreateUserInput struct {
 	Email    string
 	Login    string

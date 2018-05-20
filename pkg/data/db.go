@@ -110,36 +110,6 @@ func (od OrderDirection) String() string {
 	}
 }
 
-// type KeysetRelation int
-//
-// const (
-//   GreaterThan KeysetRelation = iota
-//   LessThan
-// )
-//
-// func (kr KeysetRelation) String() string {
-//   switch kr {
-//   case GreaterThan:
-//     return ">="
-//   case LessThan:
-//     return "<="
-//   default:
-//     return "unknown"
-//   }
-// }
-
-// type OrderFieldValue interface {
-//   pgtype.Value
-//   driver.Valuer
-// }
-
-// type OrderField interface {
-//   DecodeCursor(string) error
-//   EncodeCursor(src interface{}) (string, error)
-//   Name() string
-//   Value() OrderFieldValue
-// }
-
 type Order interface {
 	Direction() OrderDirection
 	Field() string

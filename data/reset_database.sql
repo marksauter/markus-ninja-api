@@ -5,6 +5,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+# Account = User
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
   id            VARCHAR(40) PRIMARY KEY,
@@ -16,10 +17,10 @@ CREATE TABLE account(
   name          TEXT
 );
 
-CREATE UNIQUE INDEX account_unique_login_idx
+CREATE UNIQUE INDEX user_unique_login_idx
   ON account (LOWER(login));
 
-CREATE TRIGGER account_updated_at_modtime
+CREATE TRIGGER user_updated_at_modtime
   BEFORE UPDATE
   ON account
   FOR EACH ROW
@@ -35,13 +36,13 @@ CREATE TABLE email(
 CREATE UNIQUE INDEX email_unique_lower_value_idx
   ON email (LOWER(value));
 
-CREATE TYPE account_email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY', 'PUBLIC');
+CREATE TYPE user_email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
 
-DROP TABLE IF EXISTS account_email CASCADE;
-CREATE TABLE account_email(
+DROP TABLE IF EXISTS user_email CASCADE;
+CREATE TABLE user_email(
   user_id     VARCHAR(40),
   email_id    VARCHAR(40),
-  type        account_email_type DEFAULT 'EXTRA',
+  type        user_email_type DEFAULT 'EXTRA',
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
@@ -54,13 +55,13 @@ CREATE TABLE account_email(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX account_email_user_id_type_key
-  ON account_email (user_id, type)
+CREATE UNIQUE INDEX user_email_user_id_type_key
+  ON user_email (user_id, type)
   WHERE type = ANY('{"PRIMARY", "BACKUP"}');
 
-CREATE TRIGGER account_email_updated_at_modtime
+CREATE TRIGGER user_email_updated_at_modtime
   BEFORE UPDATE
-  ON account_email
+  ON user_email
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
 
@@ -76,8 +77,8 @@ CREATE TRIGGER role_updated_at_modtime
 BEFORE UPDATE ON role
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-DROP TABLE IF EXISTS account_role CASCADE;
-CREATE TABLE account_role(
+DROP TABLE IF EXISTS user_role CASCADE;
+CREATE TABLE user_role(
   user_id     VARCHAR(40),
   role_id     VARCHAR(40),
   granted_at  TIMESTAMPTZ   DEFAULT NOW(),

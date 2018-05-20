@@ -70,6 +70,7 @@ func (s *EmailService) Create(row *Email) error {
 		values = append(values, args.Append(&row.Value))
 	}
 
+	// Create email if it doesn't already exist
 	createEmailSQL := `
 		INSERT INTO email(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
@@ -85,24 +86,6 @@ func (s *EmailService) Create(row *Email) error {
 	)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (s *EmailService) Delete(id string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
-
-	sql := `
-		DELETE FROM email
-		WHERE ` + `id=` + args.Append(id)
-
-	commandTag, err := prepareExec(s.db, "deleteEmail", sql, args...)
-	if err != nil {
-		return err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
 	}
 
 	return nil

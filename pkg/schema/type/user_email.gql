@@ -1,0 +1,19 @@
+# Represents a user email.
+type UserEmail implements Node {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The email associated with the user email.
+  email: Email!
+
+  id: ID!
+
+  # Identifies the type of user email.
+  type: UserEmailType!
+
+  # The user associated with the user email.
+  user: User!
+
+  # Identifies when the lesson was verified at.
+  verifiedAt: Time!
+}

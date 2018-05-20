@@ -33,6 +33,9 @@ type Query {
   viewer: User!
 }
 type Mutation {
+  addUserEmail(input: AddUserEmailInput!): UserEmail
+  deleteUserEmail(input: DeleteUserEmailInput!): ID
+  updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
   createLesson(input: CreateLessonInput!): Lesson
   # deleteLesson(input: DeleteLessonInput!): Boolean!
   # updateLesson(input: UpdateLessonInput!): Lesson!
@@ -40,6 +43,6 @@ type Mutation {
   # deleteStudy(input: DeleteStudyInput!): Boolean!
   # updateStudy(input: UpdateStudyInput!): Study!
   createUser(input: CreateUserInput!): User
-  deleteUser(input: DeleteUserInput!): String
+  deleteUser(input: DeleteUserInput!): ID
   updateUser(input: UpdateUserInput!): User!
 }
