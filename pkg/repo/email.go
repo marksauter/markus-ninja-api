@@ -79,19 +79,19 @@ func (r *EmailRepo) Close() {
 	r.perms = nil
 }
 
-func (r *EmailRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
+func (r *EmailRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
 	fields, found := r.perms[o.String()]
 	if !found {
-		r.permLoad.AddRoles(roles...)
+		o := perm.Operation{access, perm.EmailType}
 		queryPerm, err := r.permLoad.Get(o.String())
 		if err != nil {
 			mylog.Log.WithError(err).Error("error retrieving query permission")
 			return nil, ErrAccessDenied
 		}
-		r.perms[o.String()] = queryPerm.Fields
+		r.perms[access.String()] = queryPerm.Fields
 		return queryPerm.Fields, nil
 	}
 	return fields, nil
@@ -126,7 +126,7 @@ func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 		return nil, ErrConnClosed
 	}
 	emailPermit := &EmailPermit{fieldPermFn, email}
-	err = emailPermit.PreCheckPermissions()
+	err := emailPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}

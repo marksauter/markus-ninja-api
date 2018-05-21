@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -11,50 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type UserEmailTypeValue int
-
-const (
-	BackupEmail UserEmailTypeValue = iota
-	ExtraEmail
-	PrimaryEmail
-)
-
-func ParseUserEmailTypeValue(s string) (UserEmailType, error) {
-	switch strings.ToUpper(s) {
-	case "BACKUP":
-		return BackupEmail, nil
-	case "EXTRA":
-		return ExtraEmail, nil
-	case "PRIMARY":
-		return PrimaryEmail, nil
-	default:
-		var o UserEmailType
-		return o, fmt.Errorf("invalid UserEmailType: %q", s)
-	}
-}
-
-func (src UserEmailTypeValue) String() string {
-	switch src {
-	case BackupEmail:
-		return "BACKUP"
-	case ExtraEmail:
-		return "EXTRA"
-	case PrimaryEmail:
-		return "PRIMARY"
-	default:
-		return "unknown"
-	}
-}
-
-type UserEmailType struct {
-	Status pgtype.Status
-	String UserEmailTypeValue
-}
-
 type UserEmail struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
 	EmailId    oid.OID            `db:"email_id"`
-	Type       pgtype.Text        `db:"type"`
+	Type       UserEmailType      `db:"type"`
 	UserId     oid.OID            `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`

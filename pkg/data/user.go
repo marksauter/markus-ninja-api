@@ -119,12 +119,12 @@ const getUserByIdSQL = `
 				r.name
 			FROM
 				role r
-			INNER JOIN account_role ar ON ar.user_id = a.id
+			INNER JOIN user_role ar ON ar.user_id = a.id
 			WHERE
 				r.id = ar.role_id
 		) roles
 	FROM account a
-	LEFT JOIN account_email ae ON ae.user_id = a.id
+	LEFT JOIN user_email ae ON ae.user_id = a.id
 		AND ae.type = 'PUBLIC'
 	LEFT JOIN email e ON e.id = ae.email_id
 	WHERE a.id = $1
@@ -149,12 +149,12 @@ const getUserByLoginSQL = `
 				r.name
 			FROM
 				role r
-			INNER JOIN account_role ar ON ar.user_id = a.id
+			INNER JOIN user_role ar ON ar.user_id = a.id
 			WHERE
 				r.id = ar.role_id
 		) roles
 	FROM account a
-	LEFT JOIN account_email ae ON ae.user_id = a.id
+	LEFT JOIN user_email ae ON ae.user_id = a.id
 		AND ae.type = 'PUBLIC'
 	LEFT JOIN email e ON e.id = ae.email_id
 	WHERE a.login = $1
@@ -205,7 +205,7 @@ const getUserCredentialsByEmailSQL = `
 		a.id,
 		a.password
 	FROM account a
-	INNER JOIN account_email ae ON ae.user_id = a.id 
+	INNER JOIN user_email ae ON ae.user_id = a.id 
 		AND ae.type = ANY('{"PRIMARY", "BACKUP"}')
 	INNER JOIN email e ON e.id = ae.email_id
 		AND e.value = $1
@@ -289,15 +289,15 @@ func (s *UserService) Create(user *User) error {
 		return err
 	}
 
-	accountEmailSvc := NewAccountEmailService(tx)
-	accountEmail := &AccountEmail{
+	userEmailSvc := NewUserEmailService(tx)
+	userEmail := &UserEmail{
 		EmailId: email.Id,
-		Type:    PrimaryEmail,
+		Type:    NewUserEmailType(PrimaryEmail),
 		UserId:  user.Id,
 	}
-	err = accountEmailSvc.Create(accountEmail)
+	err = userEmailSvc.Create(userEmail)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user primary_email")
+		mylog.Log.WithError(err).Error("failed to create user primary email")
 		return err
 	}
 

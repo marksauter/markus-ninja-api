@@ -131,19 +131,19 @@ func (r *StudyRepo) Close() {
 	r.perms = nil
 }
 
-func (r *StudyRepo) AddPermission(o perm.Operation, roles ...string) ([]string, error) {
+func (r *StudyRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
 	if r.perms == nil {
 		r.perms = make(map[string][]string)
 	}
-	fields, found := r.perms[o.String()]
+	fields, found := r.perms[access.String()]
 	if !found {
-		r.permLoad.AddRoles(roles...)
+		o := perm.Operation{access, perm.StudyType}
 		queryPerm, err := r.permLoad.Get(o.String())
 		if err != nil {
 			mylog.Log.WithError(err).Error("error retrieving query permission")
 			return nil, ErrAccessDenied
 		}
-		r.perms[o.String()] = queryPerm.Fields
+		r.perms[access.String()] = queryPerm.Fields
 		return queryPerm.Fields, nil
 	}
 	return fields, nil

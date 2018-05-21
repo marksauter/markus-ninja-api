@@ -118,7 +118,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(registration.Email)
 
-	_, err = h.Repos.User().AddPermission(perm.CreateUser)
+	_, err = h.Repos.User().AddPermission(perm.Create)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

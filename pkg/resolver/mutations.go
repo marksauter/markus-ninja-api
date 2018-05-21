@@ -24,7 +24,7 @@ func (r *RootResolver) AddUserEmail(
 	ctx context.Context,
 	args struct{ Input AddUserEmailInput },
 ) (*userEmailResolver, error) {
-	fields, err := r.Repos.UserEmail().AddPermission(perm.CreateUserEmail)
+	fields, err := r.Repos.UserEmail().AddPermission(perm.Create)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *RootResolver) CreateUser(
 	ctx context.Context,
 	args struct{ Input CreateUserInput },
 ) (*userResolver, error) {
-	fields, err := r.Repos.User().AddPermission(perm.CreateUser)
+	fields, err := r.Repos.User().AddPermission(perm.Create)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (r *RootResolver) DeleteUser(
 	ctx context.Context,
 	args struct{ Input DeleteUserInput },
 ) (*string, error) {
-	_, err := r.Repos.User().AddPermission(perm.DeleteUser)
+	_, err := r.Repos.User().AddPermission(perm.Delete)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (r *RootResolver) UpdateUser(
 	ctx context.Context,
 	args struct{ Input UpdateUserInput },
 ) (*userResolver, error) {
-	_, err := r.Repos.User().AddPermission(perm.UpdateUser)
+	_, err := r.Repos.User().AddPermission(perm.Update)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (r *RootResolver) CreateLesson(
 	}
 	viewerId, _ := viewer.ID()
 
-	fields, err := r.Repos.Lesson().AddPermission(perm.CreateLesson)
+	fields, err := r.Repos.Lesson().AddPermission(perm.Create)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (r *RootResolver) CreateStudy(
 	}
 	viewerId, _ := viewer.ID()
 
-	fields, err := r.Repos.Study().AddPermission(perm.CreateStudy)
+	fields, err := r.Repos.Study().AddPermission(perm.Create)
 	if err != nil {
 		return nil, err
 	}
@@ -304,4 +304,43 @@ func (r *RootResolver) CreateStudy(
 	}
 
 	return resolver, nil
+}
+
+type RequestEmailVerificationInput struct {
+	EmailId string
+}
+
+func (r *RootResolver) RequestEmailVerification(
+	ctx context.Context,
+	args struct{ Input RequestEmailVerificationInput },
+) (bool, error) {
+	viewer, ok := repo.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	viewerId, _ := viewer.ID()
+
+	_, err := r.Repos.UserEmail().AddPermission(perm.Read)
+	if err != nil {
+		return nil, err
+	}
+
+	userEmail, err := r.Repos.UserEmail().Get(viewerId, args.Input.EmailId)
+	if err != nil {
+		return false, err
+	}
+
+	fields, err := r.Repos.EVT().AddPermission(perm.Create)
+	if err != nil {
+		return false, err
+	}
+
+	evt := &data.EmailVerificationTokenModel{}
+	evt.EmailId.Set(&userEmail.EmailId)
+	evt.UserId.Set(&userEmail.UserId)
+
+	err = r.Repos.EVT().Create(evt)
+	if err != nil {
+		return false, err
+	}
 }

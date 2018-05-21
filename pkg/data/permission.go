@@ -14,14 +14,14 @@ import (
 )
 
 var accessLevelsWithFields = []perm.AccessLevel{
-	perm.CreateAccess,
-	perm.ReadAccess,
-	perm.UpdateAccess,
+	perm.Create,
+	perm.Read,
+	perm.Update,
 }
 var accessLevelsWithoutFields = []perm.AccessLevel{
-	perm.ConnectAccess,
-	perm.DeleteAccess,
-	perm.DisconnectAccess,
+	perm.Connect,
+	perm.Delete,
+	perm.Disconnect,
 }
 
 type Permission struct {
@@ -127,8 +127,8 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 		return err
 	}
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.ReadAccess, NodeType: mType},
-		permissableUserFields.Filter(perm.ReadAccess).Names(),
+		perm.Operation{AccessLevel: perm.Read, NodeType: mType},
+		permissableUserFields.Filter(perm.Read).Names(),
 		perm.Everyone,
 	)
 	if err != nil {
@@ -137,8 +137,8 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.CreateAccess, NodeType: mType},
-		permissableUserFields.Filter(perm.CreateAccess).Names(),
+		perm.Operation{AccessLevel: perm.Create, NodeType: mType},
+		permissableUserFields.Filter(perm.Create).Names(),
 		perm.Everyone,
 	)
 	if err != nil {
@@ -147,8 +147,8 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.UpdateAccess, NodeType: mType},
-		permissableUserFields.Filter(perm.UpdateAccess).Names(),
+		perm.Operation{AccessLevel: perm.Update, NodeType: mType},
+		permissableUserFields.Filter(perm.Update).Names(),
 		perm.Everyone,
 	)
 	if err != nil {

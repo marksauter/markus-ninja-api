@@ -8,30 +8,30 @@ import (
 	"github.com/fatih/structs"
 )
 
-type AccessLevel int64
+type AccessLevel int
 
 const (
-	ReadAccess AccessLevel = iota
-	CreateAccess
-	ConnectAccess
-	DeleteAccess
-	DisconnectAccess
-	UpdateAccess
+	Read AccessLevel = iota
+	Create
+	Connect
+	Delete
+	Disconnect
+	Update
 )
 
 func (al AccessLevel) String() string {
 	switch al {
-	case ReadAccess:
+	case Read:
 		return "Read"
-	case CreateAccess:
+	case Create:
 		return "Create"
-	case ConnectAccess:
+	case Connect:
 		return "Connect"
-	case DeleteAccess:
+	case Delete:
 		return "Delete"
-	case DisconnectAccess:
+	case Disconnect:
 		return "Disconnect"
-	case UpdateAccess:
+	case Update:
 		return "Update"
 	default:
 		return "unknown"
@@ -41,20 +41,20 @@ func (al AccessLevel) String() string {
 func ParseAccessLevel(lvl string) (AccessLevel, error) {
 	switch strings.ToLower(lvl) {
 	case "read":
-		return ReadAccess, nil
+		return Read, nil
 	case "create":
-		return CreateAccess, nil
+		return Create, nil
 	case "connect":
-		return ConnectAccess, nil
+		return Connect, nil
 	case "delete":
-		return DeleteAccess, nil
+		return Delete, nil
 	case "disconnect":
-		return DisconnectAccess, nil
+		return Disconnect, nil
 	case "update":
-		return UpdateAccess, nil
+		return Update, nil
 	default:
 		var al AccessLevel
-		return al, fmt.Errorf("invalid access level: %q", lvl)
+		return al, fmt.Errorf("invalid AccessLevel: %q", lvl)
 	}
 }
 
@@ -64,7 +64,7 @@ func (al *AccessLevel) Scan(value interface{}) (err error) {
 		*al, err = ParseAccessLevel(v)
 		return
 	default:
-		err = fmt.Errorf("invalid type for access level %T", v)
+		err = fmt.Errorf("invalid type for AccessLevel %T", v)
 		return
 	}
 }
@@ -72,7 +72,7 @@ func (al AccessLevel) Value() (driver.Value, error) {
 	return al.String(), nil
 }
 
-type Audience int64
+type Audience int
 
 const (
 	NoAudience Audience = iota
@@ -117,25 +117,31 @@ func (a Audience) Value() (driver.Value, error) {
 	return a.String(), nil
 }
 
-type NodeType int64
+type NodeType int
 
 const (
-	UserType NodeType = iota
+	EmailType NodeType = iota
 	LessonType
 	LessonCommentType
 	StudyType
+	UserType
+	UserEmailType
 )
 
 func (nt NodeType) String() string {
 	switch nt {
-	case UserType:
-		return "User"
+	case EmailType:
+		return "Email"
 	case LessonType:
 		return "Lesson"
 	case LessonCommentType:
 		return "LessonComment"
 	case StudyType:
 		return "Study"
+	case UserType:
+		return "User"
+	case UserEmailType:
+		return "UserEmail"
 	default:
 		return "unknown"
 	}
@@ -151,6 +157,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return StudyType, nil
 	case "user":
 		return UserType, nil
+	case "user_email":
+		return UserEmailType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)
@@ -161,6 +169,9 @@ func (nt *NodeType) Scan(value interface{}) (err error) {
 	switch v := value.(type) {
 	case string:
 		*nt, err = ParseNodeType(v)
+		return
+	case []byte:
+		*nt, err = ParseNodeType(string(v))
 		return
 	default:
 		err = fmt.Errorf("invalid type for node type %T", v)
@@ -178,33 +189,40 @@ type Operation struct {
 }
 
 var (
-	CreateUser     = Operation{CreateAccess, UserType}
-	DeleteUser     = Operation{DeleteAccess, UserType}
-	ReadUser       = Operation{ReadAccess, UserType}
-	UpdateUser     = Operation{UpdateAccess, UserType}
-	ConnectUser    = Operation{ConnectAccess, UserType}
-	DisconnectUser = Operation{DisconnectAccess, UserType}
+	CreateEmail     = Operation{Create, EmailType}
+	DeleteEmail     = Operation{Delete, EmailType}
+	ReadEmail       = Operation{Read, EmailType}
+	UpdateEmail     = Operation{Update, EmailType}
+	ConnectEmail    = Operation{Connect, EmailType}
+	DisconnectEmail = Operation{Disconnect, EmailType}
 
-	CreateLesson     = Operation{CreateAccess, LessonType}
-	DeleteLesson     = Operation{DeleteAccess, LessonType}
-	ReadLesson       = Operation{ReadAccess, LessonType}
-	UpdateLesson     = Operation{UpdateAccess, LessonType}
-	ConnectLesson    = Operation{ConnectAccess, LessonType}
-	DisconnectLesson = Operation{DisconnectAccess, LessonType}
+	CreateLesson     = Operation{Create, LessonType}
+	DeleteLesson     = Operation{Delete, LessonType}
+	ReadLesson       = Operation{Read, LessonType}
+	UpdateLesson     = Operation{Update, LessonType}
+	ConnectLesson    = Operation{Connect, LessonType}
+	DisconnectLesson = Operation{Disconnect, LessonType}
 
-	CreateLessonComment     = Operation{CreateAccess, LessonCommentType}
-	DeleteLessonComment     = Operation{DeleteAccess, LessonCommentType}
-	ReadLessonComment       = Operation{ReadAccess, LessonCommentType}
-	UpdateLessonComment     = Operation{UpdateAccess, LessonCommentType}
-	ConnectLessonComment    = Operation{ConnectAccess, LessonCommentType}
-	DisconnectLessonComment = Operation{DisconnectAccess, LessonCommentType}
+	CreateLessonComment     = Operation{Create, LessonCommentType}
+	DeleteLessonComment     = Operation{Delete, LessonCommentType}
+	ReadLessonComment       = Operation{Read, LessonCommentType}
+	UpdateLessonComment     = Operation{Update, LessonCommentType}
+	ConnectLessonComment    = Operation{Connect, LessonCommentType}
+	DisconnectLessonComment = Operation{Disconnect, LessonCommentType}
 
-	CreateStudy     = Operation{CreateAccess, StudyType}
-	DeleteStudy     = Operation{DeleteAccess, StudyType}
-	ReadStudy       = Operation{ReadAccess, StudyType}
-	UpdateStudy     = Operation{UpdateAccess, StudyType}
-	ConnectStudy    = Operation{ConnectAccess, StudyType}
-	DisconnectStudy = Operation{DisconnectAccess, StudyType}
+	CreateStudy     = Operation{Create, StudyType}
+	DeleteStudy     = Operation{Delete, StudyType}
+	ReadStudy       = Operation{Read, StudyType}
+	UpdateStudy     = Operation{Update, StudyType}
+	ConnectStudy    = Operation{Connect, StudyType}
+	DisconnectStudy = Operation{Disconnect, StudyType}
+
+	CreateUser     = Operation{Create, UserType}
+	DeleteUser     = Operation{Delete, UserType}
+	ReadUser       = Operation{Read, UserType}
+	UpdateUser     = Operation{Update, UserType}
+	ConnectUser    = Operation{Connect, UserType}
+	DisconnectUser = Operation{Disconnect, UserType}
 )
 
 func (o Operation) String() string {

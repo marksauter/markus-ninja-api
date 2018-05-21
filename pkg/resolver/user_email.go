@@ -24,7 +24,7 @@ func (r *userEmailResolver) Email(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	_, err := r.Repos.Email().AddPermission(perm.ReadEmail)
+	_, err := r.Repos.Email().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (r *userEmailResolver) User(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Repos.User().AddPermission(perm.ReadUser)
+	_, err = r.Repos.User().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}

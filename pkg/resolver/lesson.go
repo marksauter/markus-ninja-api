@@ -101,7 +101,7 @@ func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Repos.Study().AddPermission(perm.ReadStudy)
+	_, err = r.Repos.Study().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}

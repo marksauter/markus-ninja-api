@@ -36,13 +36,20 @@ type Mutation {
   addUserEmail(input: AddUserEmailInput!): UserEmail
   deleteUserEmail(input: DeleteUserEmailInput!): ID
   updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
+
   createLesson(input: CreateLessonInput!): Lesson
   # deleteLesson(input: DeleteLessonInput!): Boolean!
   # updateLesson(input: UpdateLessonInput!): Lesson!
+
   createStudy(input: CreateStudyInput!): Study
   # deleteStudy(input: DeleteStudyInput!): Boolean!
   # updateStudy(input: UpdateStudyInput!): Study!
+
   createUser(input: CreateUserInput!): User
   deleteUser(input: DeleteUserInput!): ID
   updateUser(input: UpdateUserInput!): User!
+
+  requestEmailVerification(input: RequestEmailVerificationInput!): Boolean!
+  requestPasswordReset(input: RequestPasswordReset!): Boolean!
+  resetPassword(input: ResetPasswordInput!): Boolean!
 }

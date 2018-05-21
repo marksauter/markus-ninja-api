@@ -78,7 +78,7 @@ func (r *userResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
+	_, err := r.Repos.Lesson().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (r *userResolver) Study(
 	ctx context.Context,
 	args struct{ Name string },
 ) (*studyResolver, error) {
-	_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
+	_, err := r.Repos.Study().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (r *userResolver) Studies(
 		OrderBy *StudyOrderArg
 	},
 ) (*studyConnectionResolver, error) {
-	_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
+	_, err := r.Repos.Study().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}

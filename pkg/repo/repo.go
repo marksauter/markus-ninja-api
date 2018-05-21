@@ -29,7 +29,7 @@ type FieldPermissionFunc = func(field string) bool
 type Repo interface {
 	Open(ctx context.Context)
 	Close()
-	AddPermission(perm.Operation, ...string) ([]string, error)
+	AddPermission(perm.Operation) ([]string, error)
 	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
 	ClearPermissions()
 }

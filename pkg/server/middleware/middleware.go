@@ -55,7 +55,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 		}
 
 		a.UserRepo.Open(req.Context())
-		_, err = a.UserRepo.AddPermission(perm.ReadUser)
+		_, err = a.UserRepo.AddPermission(perm.Read)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)

@@ -46,7 +46,7 @@ func (r *studyResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
+	_, err := r.Repos.Lesson().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (r *studyResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
+	_, err := r.Repos.Lesson().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Repos.User().AddPermission(perm.ReadUser)
+	_, err = r.Repos.User().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}

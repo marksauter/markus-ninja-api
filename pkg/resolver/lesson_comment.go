@@ -101,7 +101,7 @@ func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, er
 	if err != nil {
 		return uri, err
 	}
-	_, err = r.Repos.Lesson().AddPermission(perm.ReadLesson)
+	_, err = r.Repos.Lesson().AddPermission(perm.Read)
 	if err != nil {
 		return uri, err
 	}

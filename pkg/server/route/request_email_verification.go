@@ -7,7 +7,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -41,31 +40,31 @@ func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *
 
 	routeVars := mux.Vars(req)
 
-	var verify struct {
-		Email string `json:"email"`
-	}
-
-	err := myhttp.UnmarshalRequestBody(req, &verify)
-	if err != nil {
-		response := myhttp.InvalidRequestErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-	if verify.Email == "" {
-		response := &myhttp.ErrorResponse{
-			Error:            myhttp.InvalidCredentials,
-			ErrorDescription: "The request email was invalid",
-		}
-		myhttp.WriteResponseTo(rw, response)
-	}
-	if len(verify.Email) > 40 {
-		response := &myhttp.ErrorResponse{
-			Error:            myhttp.InvalidCredentials,
-			ErrorDescription: "The request email must be less than or equal to 40 characters",
-		}
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
+	// var verify struct {
+	//   Email string `json:"email"`
+	// }
+	//
+	// err := myhttp.UnmarshalRequestBody(req, &verify)
+	// if err != nil {
+	//   response := myhttp.InvalidRequestErrorResponse(err.Error())
+	//   myhttp.WriteResponseTo(rw, response)
+	//   return
+	// }
+	// if verify.Email == "" {
+	//   response := &myhttp.ErrorResponse{
+	//     Error:            myhttp.InvalidCredentials,
+	//     ErrorDescription: "The request email was invalid",
+	//   }
+	//   myhttp.WriteResponseTo(rw, response)
+	// }
+	// if len(verify.Email) > 40 {
+	//   response := &myhttp.ErrorResponse{
+	//     Error:            myhttp.InvalidCredentials,
+	//     ErrorDescription: "The request email must be less than or equal to 40 characters",
+	//   }
+	//   myhttp.WriteResponseTo(rw, response)
+	//   return
+	// }
 
 	login := routeVars["login"]
 	user, err := h.Svcs.User.GetCredentialsByLogin(login)
@@ -75,15 +74,16 @@ func (h RequestEmailVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *
 		return
 	}
 
-	emailId, err := oid.Parse(routeVars["id"])
+	emailId := routeVars["id"]
+	email, err := h.Svcs.Email.GetByPK(emailId)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 	avt := &data.EmailVerificationTokenModel{}
-	avt.EmailId.Set(emailId)
-	avt.UserId = user.Id
+	avt.EmailId.Set(email.Id)
+	avt.UserId.Set(user.Id)
 
 	err = h.Svcs.AVT.Create(avt)
 	if err != nil {

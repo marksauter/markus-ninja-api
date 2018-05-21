@@ -24,7 +24,7 @@ func (r *RootResolver) Node(
 	}
 	switch parsedId.Type {
 	case "Lesson":
-		_, err := r.Repos.Lesson().AddPermission(perm.ReadLesson)
+		_, err := r.Repos.Lesson().AddPermission(perm.Read)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +34,7 @@ func (r *RootResolver) Node(
 		}
 		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
 	case "Study":
-		_, err := r.Repos.Study().AddPermission(perm.ReadStudy)
+		_, err := r.Repos.Study().AddPermission(perm.Read)
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func (r *RootResolver) Node(
 		if args.Id == viewerId {
 			user = viewer
 		} else {
-			_, err := r.Repos.User().AddPermission(perm.ReadUser)
+			_, err := r.Repos.User().AddPermission(perm.Read)
 			if err != nil {
 				return nil, err
 			}
@@ -88,7 +88,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 			if id == viewerId {
 				user = viewer
 			} else {
-				_, err := r.Repos.User().AddPermission(perm.ReadUser)
+				_, err := r.Repos.User().AddPermission(perm.Read)
 				if err != nil {
 					return nil, err
 				}
@@ -121,7 +121,7 @@ func (r *RootResolver) Study(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	_, err := r.Repos.Study().AddPermission(perm.ReadStudy, viewer.Roles()...)
+	_, err := r.Repos.Study().AddPermission(perm.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 	if login == args.Login {
 		user = viewer
 	} else {
-		_, err := r.Repos.User().AddPermission(perm.ReadUser)
+		_, err := r.Repos.User().AddPermission(perm.Read)
 		if err != nil {
 			return nil, err
 		}
