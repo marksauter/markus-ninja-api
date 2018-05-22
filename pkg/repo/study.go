@@ -22,19 +22,11 @@ type StudyPermit struct {
 }
 
 func (r *StudyPermit) ViewerCanAdmin(ctx context.Context) error {
-	viewer, ok := UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return errors.New("viewer not found")
 	}
-	viewerId, err := viewer.ID()
-	if err != nil {
-		return err
-	}
-	userId, err := r.UserId()
-	if err != nil {
-		return err
-	}
-	if viewerId == userId {
+	if viewer.Id.String == r.study.UserId.String {
 		r.checkFieldPermission = func(field string) bool {
 			return true
 		}
@@ -102,96 +94,60 @@ func (r *StudyPermit) UserId() (string, error) {
 	return r.study.UserId.String, nil
 }
 
-func NewStudyRepo(permSvc *data.PermService, studySvc *data.StudyService) *StudyRepo {
+func NewStudyRepo(perms *PermRepo, svc *data.StudyService) *StudyRepo {
 	return &StudyRepo{
-		svc:     studySvc,
-		permSvc: permSvc,
+		perms: perms,
+		svc:   svc,
 	}
 }
 
 type StudyRepo struct {
-	svc      *data.StudyService
-	load     *loader.StudyLoader
-	perms    map[string][]string
-	permSvc  *data.PermService
-	permLoad *loader.QueryPermLoader
+	load  *loader.StudyLoader
+	perms *PermRepo
+	svc   *data.StudyService
 }
 
-func (r *StudyRepo) Open(ctx context.Context) {
-	roles := []string{}
-	if viewer, ok := UserFromContext(ctx); ok {
-		roles = append(roles, viewer.Roles()...)
+func (r *StudyRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
 	}
-	r.load = loader.NewStudyLoader(r.svc)
-	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
+	if r.load == nil {
+		r.load = loader.NewStudyLoader(r.svc)
+	}
+	return nil
 }
 
 func (r *StudyRepo) Close() {
 	r.load = nil
-	r.perms = nil
-}
-
-func (r *StudyRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
-	if r.perms == nil {
-		r.perms = make(map[string][]string)
-	}
-	fields, found := r.perms[access.String()]
-	if !found {
-		o := perm.Operation{access, perm.StudyType}
-		queryPerm, err := r.permLoad.Get(o.String())
-		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, ErrAccessDenied
-		}
-		r.perms[access.String()] = queryPerm.Fields
-		return queryPerm.Fields, nil
-	}
-	return fields, nil
-}
-
-func (r *StudyRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
-	fields, ok := r.perms[o.String()]
-	checkField := func(field string) bool {
-		for _, f := range fields {
-			if f == field {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, ok
-}
-
-func (r *StudyRepo) ClearPermissions() {
-	r.perms = nil
 }
 
 // Service methods
 
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
-	_, ok := r.CheckPermission(perm.ReadStudy)
-	if !ok {
+	_, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
 		var count int32
-		return count, ErrAccessDenied
+		return count, err
 	}
 	return r.svc.CountByUser(userId)
 }
 
 func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.CreateStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	createFieldPermFn, err := r.perms.Check(perm.CreateStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		return nil, ErrConnClosed
 	}
 	name := strings.TrimSpace(study.Name.String)
 	toKabob := regexp.MustCompile(`\s+`)
-	err := study.Name.Set(toKabob.ReplaceAllString(name, "-"))
+	err = study.Name.Set(toKabob.ReplaceAllString(name, "-"))
 	if err != nil {
 		return nil, err
 	}
-	studyPermit := &StudyPermit{fieldPermFn, study}
+	studyPermit := &StudyPermit{createFieldPermFn, study}
 	err = studyPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
@@ -200,13 +156,18 @@ func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
+	readFieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
+		return nil, err
+	}
+	studyPermit.checkFieldPermission = readFieldPermFn
 	return studyPermit, nil
 }
 
 func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		return nil, ErrConnClosed
@@ -219,9 +180,9 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 }
 
 func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("study connection closed")
@@ -239,9 +200,9 @@ func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPe
 }
 
 func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		return nil, ErrConnClosed
@@ -254,9 +215,9 @@ func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error
 }
 
 func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		return nil, ErrConnClosed
@@ -269,14 +230,14 @@ func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPerm
 }
 
 func (r *StudyRepo) Delete(id string) error {
-	_, ok := r.CheckPermission(perm.DeleteStudy)
-	if !ok {
-		return ErrAccessDenied
+	_, err := r.perms.Check(perm.DeleteStudy)
+	if err != nil {
+		return err
 	}
 	if r.load == nil {
 		return ErrConnClosed
 	}
-	err := r.svc.Delete(id)
+	err = r.svc.Delete(id)
 	if err != nil {
 		return err
 	}
@@ -284,15 +245,15 @@ func (r *StudyRepo) Delete(id string) error {
 }
 
 func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.UpdateStudy)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.UpdateStudy)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		return nil, ErrConnClosed
 	}
 	studyPermit := &StudyPermit{fieldPermFn, study}
-	err := studyPermit.PreCheckPermissions()
+	err = studyPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}

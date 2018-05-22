@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -101,10 +101,6 @@ func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, er
 	if err != nil {
 		return uri, err
 	}
-	_, err = r.Repos.Lesson().AddPermission(perm.Read)
-	if err != nil {
-		return uri, err
-	}
 	lesson, err := r.Repos.Lesson().Get(lessonId)
 	if err != nil {
 		return uri, err
@@ -149,43 +145,40 @@ func (r *lessonCommentResolver) URL(ctx context.Context) (mygql.URI, error) {
 }
 
 func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }
 
 func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }
 
 func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }

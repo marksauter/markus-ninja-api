@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/sirupsen/logrus"
 )
 
 type Role int
@@ -15,7 +16,6 @@ const (
 	UnknownRole Role = iota
 	AdminRole
 	MemberRole
-	SelfRole
 	UserRole
 )
 
@@ -25,8 +25,6 @@ func (r Role) String() string {
 		return "ADMIN"
 	case MemberRole:
 		return "MEMBER"
-	case SelfRole:
-		return "SELF"
 	case UserRole:
 		return "USER"
 	default:
@@ -100,7 +98,7 @@ func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
 			created_at,
 		FROM
 			role
-		INNER JOIN account_role ar ON role.id = ar.role_id
+		INNER JOIN user_role ar ON role.id = ar.role_id
 		WHERE ar.user_id = $1
 	`
 	rows, err := s.db.Query(roleSQL, userId)
@@ -128,14 +126,19 @@ func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
 }
 
 const grantUserRolesSQL = `
-	INSERT INTO account_role (user_id, role_id)
+	INSERT INTO user_role (user_id, role_id)
 	SELECT DISTINCT a.id, r.id
 	FROM account a
 	INNER JOIN role r ON r.name = ANY($1)
 	WHERE a.id = $2
+	ON CONFLICT ON CONSTRAINT user_role_pkey DO NOTHING
 `
 
 func (s *RoleService) GrantUser(userId string, roles ...Role) error {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": userId,
+		"roles":   roles,
+	}).Info("GrantUser(user_id, roles)")
 	if len(roles) > 0 {
 		roleArgs := make([]string, len(roles))
 		for i, r := range roles {

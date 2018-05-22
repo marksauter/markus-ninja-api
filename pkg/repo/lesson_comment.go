@@ -86,103 +86,67 @@ func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 }
 
 func NewLessonCommentRepo(
-	permSvc *data.PermService,
-	lessonCommentSvc *data.LessonCommentService,
+	perms *PermRepo,
+	svc *data.LessonCommentService,
 ) *LessonCommentRepo {
 	return &LessonCommentRepo{
-		svc:     lessonCommentSvc,
-		permSvc: permSvc,
+		perms: perms,
+		svc:   svc,
 	}
 }
 
 type LessonCommentRepo struct {
-	svc      *data.LessonCommentService
-	load     *loader.LessonCommentLoader
-	perms    map[string][]string
-	permSvc  *data.PermService
-	permLoad *loader.QueryPermLoader
+	load  *loader.LessonCommentLoader
+	perms *PermRepo
+	svc   *data.LessonCommentService
 }
 
-func (r *LessonCommentRepo) Open(ctx context.Context) {
-	roles := []string{}
-	if viewer, ok := UserFromContext(ctx); ok {
-		roles = append(roles, viewer.Roles()...)
+func (r *LessonCommentRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
 	}
-	r.load = loader.NewLessonCommentLoader(r.svc)
-	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
+	if r.load == nil {
+		r.load = loader.NewLessonCommentLoader(r.svc)
+	}
+	return nil
 }
 
 func (r *LessonCommentRepo) Close() {
 	r.load = nil
-	r.perms = nil
-}
-
-func (r *LessonCommentRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
-	if r.perms == nil {
-		r.perms = make(map[string][]string)
-	}
-	fields, found := r.perms[access.String()]
-	if !found {
-		o := perm.Operation{access, perm.LessonCommentType}
-		queryPerm, err := r.permLoad.Get(o.String())
-		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, ErrAccessDenied
-		}
-		r.perms[access.String()] = queryPerm.Fields
-		return queryPerm.Fields, nil
-	}
-	return fields, nil
-}
-
-func (r *LessonCommentRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
-	fields, ok := r.perms[o.String()]
-	checkField := func(field string) bool {
-		for _, f := range fields {
-			if f == field {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, ok
-}
-
-func (r *LessonCommentRepo) ClearPermissions() {
-	r.perms = nil
 }
 
 // Service methods
 
 func (r *LessonCommentRepo) CountByUser(userId string) (int32, error) {
-	_, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
+	_, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
 		var count int32
-		return count, ErrAccessDenied
+		return count, err
 	}
 	return r.svc.CountByUser(userId)
 }
 
 func (r *LessonCommentRepo) CountByStudy(studyId string) (int32, error) {
-	_, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
+	_, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
 		var count int32
-		return count, ErrAccessDenied
+		return count, err
 	}
 	return r.svc.CountByStudy(studyId)
 }
 
 func (r *LessonCommentRepo) Create(lessonComment *data.LessonComment) (*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.CreateLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	createFieldPermFn, err := r.perms.Check(perm.CreateLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
 		return nil, ErrConnClosed
 	}
-	lessonCommentPermit := &LessonCommentPermit{fieldPermFn, lessonComment}
-	err := lessonCommentPermit.PreCheckPermissions()
+	lessonCommentPermit := &LessonCommentPermit{createFieldPermFn, lessonComment}
+	err = lessonCommentPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
@@ -190,13 +154,18 @@ func (r *LessonCommentRepo) Create(lessonComment *data.LessonComment) (*LessonCo
 	if err != nil {
 		return nil, err
 	}
+	readFieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentPermit.checkFieldPermission = readFieldPermFn
 	return lessonCommentPermit, nil
 }
 
 func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
@@ -210,9 +179,9 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 }
 
 func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
@@ -230,9 +199,9 @@ func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions)
 }
 
 func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
@@ -250,9 +219,9 @@ func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) (
 }
 
 func (r *LessonCommentRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
@@ -270,15 +239,15 @@ func (r *LessonCommentRepo) GetByUserId(userId string, po *data.PageOptions) ([]
 }
 
 func (r *LessonCommentRepo) Delete(id string) error {
-	_, ok := r.CheckPermission(perm.DeleteLessonComment)
-	if !ok {
-		return ErrAccessDenied
+	_, err := r.perms.Check(perm.DeleteLessonComment)
+	if err != nil {
+		return err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
 		return ErrConnClosed
 	}
-	err := r.svc.Delete(id)
+	err = r.svc.Delete(id)
 	if err != nil {
 		return err
 	}
@@ -286,15 +255,15 @@ func (r *LessonCommentRepo) Delete(id string) error {
 }
 
 func (r *LessonCommentRepo) Update(lessonComment *data.LessonComment) (*LessonCommentPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.UpdateLessonComment)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.UpdateLessonComment)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson_comment connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Update(lessonComment)
+	err = r.svc.Update(lessonComment)
 	if err != nil {
 		return nil, err
 	}

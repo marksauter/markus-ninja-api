@@ -8,7 +8,6 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -56,7 +55,7 @@ func (r *userResolver) IsSiteAdmin() bool {
 }
 
 func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
@@ -64,8 +63,7 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	viewerId, _ := viewer.ID()
-	return viewerId == id, nil
+	return viewer.Id.String == id, nil
 }
 
 func (r *userResolver) Lessons(
@@ -78,10 +76,6 @@ func (r *userResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -144,10 +138,6 @@ func (r *userResolver) Study(
 	ctx context.Context,
 	args struct{ Name string },
 ) (*studyResolver, error) {
-	_, err := r.Repos.Study().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	userId, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -172,10 +162,6 @@ func (r *userResolver) Studies(
 		OrderBy *StudyOrderArg
 	},
 ) (*studyConnectionResolver, error) {
-	_, err := r.Repos.Study().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err

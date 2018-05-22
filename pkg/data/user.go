@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -22,6 +23,19 @@ type User struct {
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+}
+
+type key string
+
+var userContextKey key = "user"
+
+func NewUserContext(ctx context.Context, u *User) context.Context {
+	return context.WithValue(ctx, userContextKey, u)
+}
+
+func UserFromContext(ctx context.Context) (*User, bool) {
+	u, ok := ctx.Value(userContextKey).(*User)
+	return u, ok
 }
 
 func NewUserService(q Queryer) *UserService {
@@ -47,7 +61,6 @@ const batchGetUserSQL = `
 		id,
 		login,
 		name,
-		public_email,
 		updated_at
 	FROM account
 	WHERE id = ANY($1)
@@ -119,13 +132,13 @@ const getUserByIdSQL = `
 				r.name
 			FROM
 				role r
-			INNER JOIN user_role ar ON ar.user_id = a.id
+			INNER JOIN user_role ur ON ur.user_id = a.id
 			WHERE
-				r.id = ar.role_id
+				r.id = ur.role_id
 		) roles
 	FROM account a
 	LEFT JOIN user_email ae ON ae.user_id = a.id
-		AND ae.type = 'PUBLIC'
+		AND ae.public = TRUE
 	LEFT JOIN email e ON e.id = ae.email_id
 	WHERE a.id = $1
 `
@@ -149,13 +162,13 @@ const getUserByLoginSQL = `
 				r.name
 			FROM
 				role r
-			INNER JOIN user_role ar ON ar.user_id = a.id
+			INNER JOIN user_role ur ON ur.user_id = a.id
 			WHERE
-				r.id = ar.role_id
+				r.id = ur.role_id
 		) roles
 	FROM account a
 	LEFT JOIN user_email ae ON ae.user_id = a.id
-		AND ae.type = 'PUBLIC'
+		AND ae.public = TRUE
 	LEFT JOIN email e ON e.id = ae.email_id
 	WHERE a.login = $1
 `

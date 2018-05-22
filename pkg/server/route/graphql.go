@@ -17,8 +17,7 @@ import (
 
 func GraphQL(schema *graphql.Schema, svcs *service.Services, repos *repo.Repos) http.Handler {
 	authMiddleware := middleware.Authenticate{
-		Svcs:     svcs,
-		UserRepo: repos.User(),
+		Svcs: svcs,
 	}
 	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
 	return middleware.CommonMiddleware.Append(

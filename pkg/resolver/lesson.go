@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -101,10 +101,6 @@ func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Repos.Study().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	study, err := r.Repos.Study().Get(studyId)
 	if err != nil {
 		return nil, err
@@ -132,29 +128,27 @@ func (r *lessonResolver) URL(ctx context.Context) (mygql.URI, error) {
 }
 
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.Lesson.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }
 
 func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.Lesson.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }

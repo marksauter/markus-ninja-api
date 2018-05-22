@@ -6,11 +6,10 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -34,8 +33,7 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	Svcs     *service.Services
-	UserRepo *repo.UserRepo
+	Svcs *service.Services
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
@@ -54,23 +52,14 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		a.UserRepo.Open(req.Context())
-		_, err = a.UserRepo.AddPermission(perm.Read)
-		if err != nil {
-			response := myhttp.InternalServerErrorResponse(err.Error())
-			myhttp.WriteResponseTo(rw, response)
-			return
-		}
-
-		user, err := a.UserRepo.Get(payload.Sub)
+		user, err := a.Svcs.User.GetById(payload.Sub)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-		a.UserRepo.Close()
 
-		ctx := repo.NewUserContext(req.Context(), user)
+		ctx := data.NewUserContext(req.Context(), user)
 		h.ServeHTTP(rw, req.WithContext(ctx))
 	})
 }

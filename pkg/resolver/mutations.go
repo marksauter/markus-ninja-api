@@ -3,16 +3,12 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type AddUserEmailInput struct {
@@ -20,38 +16,33 @@ type AddUserEmailInput struct {
 	UserId string
 }
 
-func (r *RootResolver) AddUserEmail(
-	ctx context.Context,
-	args struct{ Input AddUserEmailInput },
-) (*userEmailResolver, error) {
-	fields, err := r.Repos.UserEmail().AddPermission(perm.Create)
-	if err != nil {
-		return nil, err
-	}
-
-	email := data.Email{}
-	email.Value.Set(args.Input.Email)
-	err = r.Repos.Email().Create(email)
-	if err != nil {
-		return nil, err
-	}
-
-	user := data.User{}
-	err = r.Repos.User().Get(args.Input.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	userEmail := data.UserEmail{}
-	userEmail.EmailId.Set(email.Id)
-	userEmail.UserId.Set(user.Id)
-
-	err = r.Repos.UserEmail().Create(userEmail)
-	if err != nil {
-		return nil, err
-	}
-
-}
+// func (r *RootResolver) AddUserEmail(
+//   ctx context.Context,
+//   args struct{ Input AddUserEmailInput },
+// ) (*userEmailResolver, error) {
+//   email := data.Email{}
+//   email.Value.Set(args.Input.Email)
+//   err = r.Repos.Email().Create(email)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   user := data.User{}
+//   err = r.Repos.User().Get(args.Input.UserId)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   userEmail := data.UserEmail{}
+//   userEmail.EmailId.Set(email.Id)
+//   userEmail.UserId.Set(user.Id)
+//
+//   err = r.Repos.UserEmail().Create(userEmail)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+// }
 
 type DeleteUserEmailInput struct {
 	EmailId string
@@ -74,11 +65,6 @@ func (r *RootResolver) CreateUser(
 	ctx context.Context,
 	args struct{ Input CreateUserInput },
 ) (*userResolver, error) {
-	fields, err := r.Repos.User().AddPermission(perm.Create)
-	if err != nil {
-		return nil, err
-	}
-
 	var user data.User
 
 	password, err := passwd.New(args.Input.Password)
@@ -95,25 +81,12 @@ func (r *RootResolver) CreateUser(
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(args.Input.Email)
 
-	_, err = r.Repos.User().Create(&user)
-	if err == repo.ErrAccessDenied {
-		return nil, fmt.Errorf(
-			`access_denied: you may only include %s`,
-			strings.Join(fields, ", "),
-		)
-	}
+	userPermit, err := r.Repos.User().Create(&user)
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: user.Id.String})
-	if err != nil {
-		return nil, err
-	}
-	uResolver, ok := node.ToUser()
-	if !ok {
-		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to userResolver"}
-	}
+	uResolver := &userResolver{User: userPermit, Repos: r.Repos}
 
 	if user.Login.String != "guest" {
 		avt := &data.EmailVerificationTokenModel{}
@@ -144,12 +117,7 @@ type DeleteUserInput struct {
 func (r *RootResolver) DeleteUser(
 	ctx context.Context,
 	args struct{ Input DeleteUserInput },
-) (*string, error) {
-	_, err := r.Repos.User().AddPermission(perm.Delete)
-	if err != nil {
-		return nil, err
-	}
-
+) (*graphql.ID, error) {
 	id, err := oid.Parse(args.Input.UserId)
 	if err != nil {
 		return nil, err
@@ -159,8 +127,9 @@ func (r *RootResolver) DeleteUser(
 	if err != nil {
 		return nil, err
 	}
+	gqlID := graphql.ID(args.Input.UserId)
 
-	return &args.Input.UserId, nil
+	return &gqlID, nil
 }
 
 type UpdateUserInput struct {
@@ -174,11 +143,6 @@ func (r *RootResolver) UpdateUser(
 	ctx context.Context,
 	args struct{ Input UpdateUserInput },
 ) (*userResolver, error) {
-	_, err := r.Repos.User().AddPermission(perm.Update)
-	if err != nil {
-		return nil, err
-	}
-
 	var user data.User
 
 	id, err := oid.Parse(args.Input.UserId)
@@ -214,15 +178,9 @@ func (r *RootResolver) CreateLesson(
 	ctx context.Context,
 	args struct{ Input CreateLessonInput },
 ) (*lessonResolver, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
-	}
-	viewerId, _ := viewer.ID()
-
-	fields, err := r.Repos.Lesson().AddPermission(perm.Create)
-	if err != nil {
-		return nil, err
 	}
 
 	var lesson data.Lesson
@@ -230,29 +188,14 @@ func (r *RootResolver) CreateLesson(
 	lesson.Body.Set(args.Input.Body)
 	lesson.StudyId.Set(args.Input.StudyId)
 	lesson.Title.Set(args.Input.Title)
-	lesson.UserId.Set(viewerId)
+	lesson.UserId.Set(viewer.Id.String)
 
-	_, err = r.Repos.Lesson().Create(&lesson)
-	if err == repo.ErrAccessDenied {
-		return nil, fmt.Errorf(
-			`access_denied: you may only include %s`,
-			strings.Join(fields, ", "),
-		)
-	}
+	lessonPermit, err := r.Repos.Lesson().Create(&lesson)
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: lesson.Id.String})
-	if err != nil {
-		return nil, err
-	}
-	resolver, ok := node.ToLesson()
-	if !ok {
-		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to lessonResolver"}
-	}
-
-	return resolver, nil
+	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
 }
 
 type CreateStudyInput struct {
@@ -264,15 +207,9 @@ func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
 ) (*studyResolver, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
-	}
-	viewerId, _ := viewer.ID()
-
-	fields, err := r.Repos.Study().AddPermission(perm.Create)
-	if err != nil {
-		return nil, err
 	}
 
 	var study data.Study
@@ -281,66 +218,40 @@ func (r *RootResolver) CreateStudy(
 		study.Description.Set(args.Input.Description)
 	}
 	study.Name.Set(args.Input.Name)
-	study.UserId.Set(viewerId)
+	study.UserId.Set(viewer.Id.String)
 
-	_, err = r.Repos.Study().Create(&study)
-	if err == repo.ErrAccessDenied {
-		return nil, fmt.Errorf(
-			`access_denied: you may only include %s`,
-			strings.Join(fields, ", "),
-		)
-	}
+	studyPermit, err := r.Repos.Study().Create(&study)
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := r.Node(ctx, struct{ Id string }{Id: study.Id.String})
-	if err != nil {
-		return nil, err
-	}
-	resolver, ok := node.ToStudy()
-	if !ok {
-		return nil, myerr.UnexpectedError{"failed to convert nodeResolver to studyResolver"}
-	}
-
-	return resolver, nil
+	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
 }
 
-type RequestEmailVerificationInput struct {
-	EmailId string
-}
-
-func (r *RootResolver) RequestEmailVerification(
-	ctx context.Context,
-	args struct{ Input RequestEmailVerificationInput },
-) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	viewerId, _ := viewer.ID()
-
-	_, err := r.Repos.UserEmail().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
-
-	userEmail, err := r.Repos.UserEmail().Get(viewerId, args.Input.EmailId)
-	if err != nil {
-		return false, err
-	}
-
-	fields, err := r.Repos.EVT().AddPermission(perm.Create)
-	if err != nil {
-		return false, err
-	}
-
-	evt := &data.EmailVerificationTokenModel{}
-	evt.EmailId.Set(&userEmail.EmailId)
-	evt.UserId.Set(&userEmail.UserId)
-
-	err = r.Repos.EVT().Create(evt)
-	if err != nil {
-		return false, err
-	}
-}
+// type RequestEmailVerificationInput struct {
+//   EmailId string
+// }
+//
+// func (r *RootResolver) RequestEmailVerification(
+//   ctx context.Context,
+//   args struct{ Input RequestEmailVerificationInput },
+// ) (bool, error) {
+//   viewer, ok := data.UserFromContext(ctx)
+//   if !ok {
+//     return false, errors.New("viewer not found")
+//   }
+//
+//   userEmail, err := r.Repos.UserEmail().Get(viewer.Id.String, args.Input.EmailId)
+//   if err != nil {
+//     return false, err
+//   }
+//
+//   evt := &data.EmailVerificationTokenModel{}
+//   evt.EmailId.Set(&userEmail.EmailId)
+//   evt.UserId.Set(&userEmail.UserId)
+//
+//   err = r.Repos.EVT().Create(evt)
+//   if err != nil {
+//     return false, err
+//   }
+// }

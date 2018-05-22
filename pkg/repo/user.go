@@ -10,21 +10,10 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
-
-var userContextKey key = "user"
-
-func NewUserContext(ctx context.Context, u *UserPermit) context.Context {
-	return context.WithValue(ctx, userContextKey, u)
-}
-
-func UserFromContext(ctx context.Context) (*UserPermit, bool) {
-	u, ok := ctx.Value(userContextKey).(*UserPermit)
-	return u, ok
-}
 
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
@@ -32,19 +21,11 @@ type UserPermit struct {
 }
 
 func (r *UserPermit) ViewerCanAdmin(ctx context.Context) error {
-	viewer, ok := UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return errors.New("viewer not found")
 	}
-	viewerId, err := viewer.ID()
-	if err != nil {
-		return err
-	}
-	userId, err := r.ID()
-	if err != nil {
-		return err
-	}
-	if viewerId == userId {
+	if viewer.Id.String == r.user.Id.String {
 		r.checkFieldPermission = func(field string) bool {
 			return true
 		}
@@ -116,86 +97,47 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	return r.user.UpdatedAt.Time, nil
 }
 
-func NewUserRepo(permSvc *data.PermService, userSvc *data.UserService) *UserRepo {
+func NewUserRepo(perms *PermRepo, svc *data.UserService) *UserRepo {
 	return &UserRepo{
-		svc:     userSvc,
-		permSvc: permSvc,
+		perms: perms,
+		svc:   svc,
 	}
 }
 
 type UserRepo struct {
-	svc      *data.UserService
-	load     *loader.UserLoader
-	perms    map[string][]string
-	permSvc  *data.PermService
-	permLoad *loader.QueryPermLoader
+	perms *PermRepo
+	load  *loader.UserLoader
+	svc   *data.UserService
 }
 
-func (r *UserRepo) Open(ctx context.Context) {
-	roles := []string{}
-	if viewer, ok := UserFromContext(ctx); ok {
-		roles = append(roles, viewer.Roles()...)
+func (r *UserRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
 	}
-	r.load = loader.NewUserLoader(r.svc)
-	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
+	if r.load == nil {
+		r.load = loader.NewUserLoader(r.svc)
+	}
+	return nil
 }
 
 func (r *UserRepo) Close() {
 	r.load = nil
-	r.permLoad = nil
-	r.perms = nil
-}
-
-func (r *UserRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
-	if r.perms == nil {
-		r.perms = make(map[string][]string)
-	}
-	fields, found := r.perms[access.String()]
-	if !found {
-		o := perm.Operation{access, perm.UserType}
-		queryPerm, err := r.permLoad.Get(o.String())
-		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, ErrAccessDenied
-		}
-		r.perms[access.String()] = queryPerm.Fields
-		return queryPerm.Fields, nil
-	}
-	return fields, nil
-}
-
-func (r *UserRepo) CheckPermission(o perm.Operation) (FieldPermissionFunc, bool) {
-	fields, ok := r.perms[o.String()]
-	checkField := func(field string) bool {
-		for _, f := range fields {
-			if f == field {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, ok
-}
-
-func (r *UserRepo) ClearPermissions() {
-	mylog.Log.Info("UserRepo permissions cleared")
-	r.perms = nil
-	r.permLoad.ClearAll()
 }
 
 // Service methods
 
 func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.CreateUser)
-	if !ok {
-		return nil, ErrAccessDenied
+	createFieldPermFn, err := r.perms.Check(perm.CreateUser)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	userPermit := &UserPermit{fieldPermFn, user}
-	err := userPermit.PreCheckPermissions()
+	userPermit := &UserPermit{createFieldPermFn, user}
+	err = userPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
@@ -203,13 +145,18 @@ func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
+	readFieldPermFn, err := r.perms.Check(perm.ReadUser)
+	if err != nil {
+		return nil, err
+	}
+	userPermit.checkFieldPermission = readFieldPermFn
 	return userPermit, nil
 }
 
 func (r *UserRepo) Get(id string) (*UserPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadUser)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadUser)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
@@ -243,9 +190,9 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 // }
 
 func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadUser)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadUser)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
@@ -259,15 +206,15 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 }
 
 func (r *UserRepo) Delete(id string) error {
-	_, ok := r.CheckPermission(perm.DeleteUser)
-	if !ok {
-		return ErrAccessDenied
+	_, err := r.perms.Check(perm.DeleteUser)
+	if err != nil {
+		return err
 	}
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return ErrConnClosed
 	}
-	err := r.svc.Delete(id)
+	err = r.svc.Delete(id)
 	if err != nil {
 		return err
 	}
@@ -275,67 +222,82 @@ func (r *UserRepo) Delete(id string) error {
 }
 
 func (r *UserRepo) Update(user *data.User) (*UserPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.UpdateUser)
-	if !ok {
-		return nil, ErrAccessDenied
+	updateFieldPermFn, err := r.perms.Check(perm.UpdateUser)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("user connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Update(user)
+	userPermit := &UserPermit{updateFieldPermFn, user}
+	err = userPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
-	return &UserPermit{fieldPermFn, user}, nil
-}
-
-type VerifyCredentialsInput struct {
-	Email    string
-	Login    string
-	Password string
-}
-
-func (r *UserRepo) VerifyCredentials(
-	input *VerifyCredentialsInput,
-) (*data.User, error) {
-	mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
-	if r.load == nil {
-		mylog.Log.Error("user connection closed")
-		return nil, ErrConnClosed
-	}
-
-	var user *data.User
-	var err error
-	if input.Email != "" {
-		user, err = r.svc.GetCredentialsByEmail(input.Email)
-	} else if input.Login != "" {
-		user, err = r.svc.GetCredentialsByLogin(input.Login)
-	} else {
-		return nil, errors.New("unauthorized access")
-	}
+	err = r.svc.Update(user)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user")
-		return nil, errors.New("unauthorized access")
-	}
-	password, err := passwd.New(input.Password)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to make new password")
 		return nil, err
 	}
-	if err = password.CompareToHash(user.Password.Bytes); err != nil {
-		mylog.Log.WithError(err).Error("passwords do not match")
-		return nil, errors.New("unauthorized access")
+	readFieldPermFn, err := r.perms.Check(perm.ReadUser)
+	if err != nil {
+		return nil, err
 	}
-
-	mylog.Log.Debug("credentials verified")
-	return user, nil
+	userPermit.checkFieldPermission = readFieldPermFn
+	return userPermit, nil
 }
+
+// type VerifyCredentialsInput struct {
+//   Email    string
+//   Login    string
+//   Password string
+// }
+//
+// func (r *UserRepo) VerifyCredentials(
+//   input *VerifyCredentialsInput,
+// ) (*data.User, error) {
+//   mylog.Log.WithField("login", input.Login).Info("VerifyCredentials()")
+//   if r.load == nil {
+//     mylog.Log.Error("user connection closed")
+//     return nil, ErrConnClosed
+//   }
+//
+//   var user *data.User
+//   var err error
+//   if input.Email != "" {
+//     user, err = r.svc.GetCredentialsByEmail(input.Email)
+//   } else if input.Login != "" {
+//     user, err = r.svc.GetCredentialsByLogin(input.Login)
+//   } else {
+//     return nil, errors.New("unauthorized access")
+//   }
+//   if err != nil {
+//     mylog.Log.WithError(err).Error("failed to get user")
+//     return nil, errors.New("unauthorized access")
+//   }
+//   password, err := passwd.New(input.Password)
+//   if err != nil {
+//     mylog.Log.WithError(err).Error("failed to make new password")
+//     return nil, err
+//   }
+//   if err = password.CompareToHash(user.Password.Bytes); err != nil {
+//     mylog.Log.WithError(err).Error("passwords do not match")
+//     return nil, errors.New("unauthorized access")
+//   }
+//
+//   mylog.Log.Debug("credentials verified")
+//   return user, nil
+// }
 
 // Middleware
 func (r *UserRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
+		err := r.Open(req.Context())
+		if err != nil {
+			response := myhttp.InternalServerErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
 		defer r.Close()
 		h.ServeHTTP(rw, req)
 	})

@@ -8,7 +8,6 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -46,10 +45,6 @@ func (r *studyResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	id, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -71,10 +66,6 @@ func (r *studyResolver) Lessons(
 		OrderBy *LessonOrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	_, err := r.Repos.Lesson().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	id, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -149,10 +140,6 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Repos.User().AddPermission(perm.Read)
-	if err != nil {
-		return nil, err
-	}
 	user, err := r.Repos.User().Get(userId)
 	if err != nil {
 		return nil, err
@@ -195,15 +182,14 @@ func (r *studyResolver) URL(ctx context.Context) (mygql.URI, error) {
 }
 
 func (r *studyResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := repo.UserFromContext(ctx)
+	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	viewerId, _ := viewer.ID()
 	userId, err := r.Study.UserId()
 	if err != nil {
 		return false, err
 	}
 
-	return viewerId == userId, nil
+	return viewer.Id.String == userId, nil
 }

@@ -50,83 +50,47 @@ func (r *EmailPermit) Value() (string, error) {
 	return r.email.Value.String, nil
 }
 
-func NewEmailRepo(permSvc *data.PermService, emailSvc *data.EmailService) *EmailRepo {
+func NewEmailRepo(perms *PermRepo, svc *data.EmailService) *EmailRepo {
 	return &EmailRepo{
-		svc:     emailSvc,
-		permSvc: permSvc,
+		perms: perms,
+		svc:   svc,
 	}
 }
 
 type EmailRepo struct {
-	svc      *data.EmailService
-	load     *loader.EmailLoader
-	perms    map[string][]string
-	permSvc  *data.PermService
-	permLoad *loader.QueryPermLoader
+	load  *loader.EmailLoader
+	perms *PermRepo
+	svc   *data.EmailService
 }
 
-func (r *EmailRepo) Open(ctx context.Context) {
-	roles := []string{}
-	if viewer, ok := UserFromContext(ctx); ok {
-		roles = append(roles, viewer.Roles()...)
+func (r *EmailRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
 	}
-	r.load = loader.NewEmailLoader(r.svc)
-	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
+	if r.load == nil {
+		r.load = loader.NewEmailLoader(r.svc)
+	}
+	return nil
 }
 
 func (r *EmailRepo) Close() {
 	r.load = nil
-	r.perms = nil
-}
-
-func (r *EmailRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
-	if r.perms == nil {
-		r.perms = make(map[string][]string)
-	}
-	fields, found := r.perms[o.String()]
-	if !found {
-		o := perm.Operation{access, perm.EmailType}
-		queryPerm, err := r.permLoad.Get(o.String())
-		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, ErrAccessDenied
-		}
-		r.perms[access.String()] = queryPerm.Fields
-		return queryPerm.Fields, nil
-	}
-	return fields, nil
-}
-
-func (r *EmailRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
-	fields, ok := r.perms[o.String()]
-	checkField := func(field string) bool {
-		for _, f := range fields {
-			if f == field {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, ok
-}
-
-func (r *EmailRepo) ClearPermissions() {
-	r.perms = nil
 }
 
 // Service methods
 
 func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.CreateEmail)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.CreateEmail)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("email connection closed")
 		return nil, ErrConnClosed
 	}
 	emailPermit := &EmailPermit{fieldPermFn, email}
-	err := emailPermit.PreCheckPermissions()
+	err = emailPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
 	}
@@ -138,9 +102,9 @@ func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 }
 
 func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadEmail)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadEmail)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("email connection closed")

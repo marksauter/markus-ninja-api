@@ -8,21 +8,17 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Signup(svcs *service.Services, repos *repo.Repos) http.Handler {
+func Signup(svcs *service.Services) http.Handler {
 	authMiddleware := middleware.Authenticate{
-		Svcs:     svcs,
-		UserRepo: repos.User(),
+		Svcs: svcs,
 	}
 	signupHandler := SignupHandler{
-		Svcs:  svcs,
-		Repos: repos,
+		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
 		SignupCors.Handler,
@@ -37,14 +33,10 @@ var SignupCors = cors.New(cors.Options{
 })
 
 type SignupHandler struct {
-	Svcs  *service.Services
-	Repos *repo.Repos
+	Svcs *service.Services
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	h.Repos.OpenAll(req.Context())
-	defer h.Repos.CloseAll()
-
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
@@ -118,13 +110,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	user.Password.Set(password.Hash())
 	user.PrimaryEmail.Set(registration.Email)
 
-	_, err = h.Repos.User().AddPermission(perm.Create)
-	if err != nil {
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-	_, err = h.Repos.User().Create(user)
+	err = h.Svcs.User.Create(user)
 	if err != nil {
 		var response *myhttp.ErrorResponse
 		if dfErr, ok := err.(data.DataFieldError); ok {

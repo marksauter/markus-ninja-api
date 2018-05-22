@@ -94,94 +94,58 @@ func (r *LessonPermit) UserId() (string, error) {
 	return r.lesson.UserId.String, nil
 }
 
-func NewLessonRepo(permSvc *data.PermService, lessonSvc *data.LessonService) *LessonRepo {
+func NewLessonRepo(perms *PermRepo, svc *data.LessonService) *LessonRepo {
 	return &LessonRepo{
-		svc:     lessonSvc,
-		permSvc: permSvc,
+		perms: perms,
+		svc:   svc,
 	}
 }
 
 type LessonRepo struct {
-	svc      *data.LessonService
-	load     *loader.LessonLoader
-	perms    map[string][]string
-	permSvc  *data.PermService
-	permLoad *loader.QueryPermLoader
+	load  *loader.LessonLoader
+	perms *PermRepo
+	svc   *data.LessonService
 }
 
-func (r *LessonRepo) Open(ctx context.Context) {
-	roles := []string{}
-	if viewer, ok := UserFromContext(ctx); ok {
-		roles = append(roles, viewer.Roles()...)
+func (r *LessonRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
 	}
-	r.load = loader.NewLessonLoader(r.svc)
-	r.permLoad = loader.NewQueryPermLoader(r.permSvc, roles...)
+	if r.load == nil {
+		r.load = loader.NewLessonLoader(r.svc)
+	}
+	return nil
 }
 
 func (r *LessonRepo) Close() {
 	r.load = nil
-	r.perms = nil
-}
-
-func (r *LessonRepo) AddPermission(access perm.AccessLevel) ([]string, error) {
-	if r.perms == nil {
-		r.perms = make(map[string][]string)
-	}
-	fields, found := r.perms[access.String()]
-	if !found {
-		o := perm.Operation{access, perm.LessonType}
-		queryPerm, err := r.permLoad.Get(o.String())
-		if err != nil {
-			mylog.Log.WithError(err).Error("error retrieving query permission")
-			return nil, ErrAccessDenied
-		}
-		r.perms[access.String()] = queryPerm.Fields
-		return queryPerm.Fields, nil
-	}
-	return fields, nil
-}
-
-func (r *LessonRepo) CheckPermission(o perm.Operation) (func(string) bool, bool) {
-	fields, ok := r.perms[o.String()]
-	checkField := func(field string) bool {
-		for _, f := range fields {
-			if f == field {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, ok
-}
-
-func (r *LessonRepo) ClearPermissions() {
-	r.perms = nil
 }
 
 // Service methods
 
 func (r *LessonRepo) CountByUser(userId string) (int32, error) {
-	_, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
+	_, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
 		var count int32
-		return count, ErrAccessDenied
+		return count, err
 	}
 	return r.svc.CountByUser(userId)
 }
 
 func (r *LessonRepo) CountByStudy(studyId string) (int32, error) {
-	_, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
+	_, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
 		var count int32
-		return count, ErrAccessDenied
+		return count, err
 	}
 	return r.svc.CountByStudy(studyId)
 }
 
 func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.CreateLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	createFieldPermFn, err := r.perms.Check(perm.CreateLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
@@ -195,7 +159,7 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	lessonPermit := &LessonPermit{fieldPermFn, lesson}
+	lessonPermit := &LessonPermit{createFieldPermFn, lesson}
 	err = lessonPermit.PreCheckPermissions()
 	if err != nil {
 		return nil, err
@@ -204,13 +168,18 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 	if err != nil {
 		return nil, err
 	}
+	readFieldPermFn, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermit.checkFieldPermission = readFieldPermFn
 	return lessonPermit, nil
 }
 
 func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
@@ -224,9 +193,9 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 }
 
 func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
@@ -244,9 +213,9 @@ func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*Lesson
 }
 
 func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
@@ -264,9 +233,9 @@ func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*Less
 }
 
 func (r *LessonRepo) GetByStudyNumber(studyId string, number int32) (*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.ReadLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.ReadLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
@@ -280,15 +249,15 @@ func (r *LessonRepo) GetByStudyNumber(studyId string, number int32) (*LessonPerm
 }
 
 func (r *LessonRepo) Delete(id string) error {
-	_, ok := r.CheckPermission(perm.DeleteLesson)
-	if !ok {
-		return ErrAccessDenied
+	_, err := r.perms.Check(perm.DeleteLesson)
+	if err != nil {
+		return err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
 		return ErrConnClosed
 	}
-	err := r.svc.Delete(id)
+	err = r.svc.Delete(id)
 	if err != nil {
 		return err
 	}
@@ -296,15 +265,15 @@ func (r *LessonRepo) Delete(id string) error {
 }
 
 func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
-	fieldPermFn, ok := r.CheckPermission(perm.UpdateLesson)
-	if !ok {
-		return nil, ErrAccessDenied
+	fieldPermFn, err := r.perms.Check(perm.UpdateLesson)
+	if err != nil {
+		return nil, err
 	}
 	if r.load == nil {
 		mylog.Log.Error("lesson connection closed")
 		return nil, ErrConnClosed
 	}
-	err := r.svc.Update(lesson)
+	err = r.svc.Update(lesson)
 	if err != nil {
 		return nil, err
 	}

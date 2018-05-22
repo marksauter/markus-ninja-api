@@ -74,23 +74,23 @@ func main() {
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs, repos))
 	r.Handle("/graphiql", route.GraphiQL())
 	r.Handle("/permissions", route.Permissions())
-	r.Handle("/signup", route.Signup(svcs, repos))
-	r.Handle("/token", route.Token(svcs, repos))
+	r.Handle("/signup", route.Signup(svcs))
+	r.Handle("/token", route.Token(svcs))
 	r.Handle("/upload", route.Upload())
 	r.Handle("/upload/assets", route.UploadAssets())
 	r.Handle(
 		"/users/{login}/emails/{id}/confirm_verification/{token}",
 		route.ConfirmVerification(svcs),
 	)
-	r.Handle(
-		"/users/{login}/emails/{id}/request_verification",
-		route.RequestEmailVerification(svcs),
-	)
-	r.Handle(
-		"/users/{login}/request_password_reset",
-		route.RequestPasswordReset(svcs),
-	)
-	r.Handle("/users/{login}/reset_password", route.ResetPassword(svcs))
+	// r.Handle(
+	//   "/users/{login}/emails/{id}/request_verification",
+	//   route.RequestEmailVerification(svcs),
+	// )
+	// r.Handle(
+	//   "/users/{login}/request_password_reset",
+	//   route.RequestPasswordReset(svcs),
+	// )
+	// r.Handle("/users/{login}/reset_password", route.ResetPassword(svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
@@ -116,7 +116,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}()
 
-	roleNames := []string{"ADMIN", "MEMBER", "SELF", "USER"}
+	roleNames := []string{"ADMIN", "MEMBER", "USER"}
 
 	for _, name := range roleNames {
 		if _, err := svcs.Role.Create(name); err != nil {
@@ -242,6 +242,8 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 				return err
 			}
 			mylog.Log.Info("guest account already exists")
+		} else {
+			return err
 		}
 	}
 
@@ -259,6 +261,12 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 				return err
 			}
 			mylog.Log.Info("markus account already exists")
+			markus, err = svcs.User.GetByLogin("markus")
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
 		}
 	}
 	if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
@@ -268,6 +276,8 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 				return err
 			}
 			mylog.Log.Info("markus is already an admin")
+		} else {
+			return err
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -27,11 +26,8 @@ var ErrAccessDenied = errors.New("access denied")
 type FieldPermissionFunc = func(field string) bool
 
 type Repo interface {
-	Open(ctx context.Context)
+	Open(context.Context) error
 	Close()
-	AddPermission(perm.Operation) ([]string, error)
-	CheckPermission(perm.Operation) (FieldPermissionFunc, bool)
-	ClearPermissions()
 }
 
 type Repos struct {
@@ -39,22 +35,28 @@ type Repos struct {
 }
 
 func NewRepos(svcs *service.Services) *Repos {
+	permRepo := NewPermRepo(svcs.Perm)
 	return &Repos{
 		lookup: map[key]Repo{
-			emailRepoKey:         NewEmailRepo(svcs.Perm, svcs.Email),
-			lessonRepoKey:        NewLessonRepo(svcs.Perm, svcs.Lesson),
-			lessonCommentRepoKey: NewLessonCommentRepo(svcs.Perm, svcs.LessonComment),
-			studyRepoKey:         NewStudyRepo(svcs.Perm, svcs.Study),
-			userRepoKey:          NewUserRepo(svcs.Perm, svcs.User),
-			userEmailRepoKey:     NewUserEmailRepo(svcs.Perm, svcs.UserEmail),
+			emailRepoKey:         NewEmailRepo(permRepo, svcs.Email),
+			lessonRepoKey:        NewLessonRepo(permRepo, svcs.Lesson),
+			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
+			permRepoKey:          permRepo,
+			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
+			userRepoKey:          NewUserRepo(permRepo, svcs.User),
+			// userEmailRepoKey:     NewUserEmailRepo(permRepo, svcs.UserEmail),
 		},
 	}
 }
 
-func (r *Repos) OpenAll(ctx context.Context) {
+func (r *Repos) OpenAll(ctx context.Context) error {
 	for _, repo := range r.lookup {
-		repo.Open(ctx)
+		err := repo.Open(ctx)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (r *Repos) CloseAll() {
@@ -78,6 +80,11 @@ func (r *Repos) LessonComment() *LessonCommentRepo {
 	return repo
 }
 
+func (r *Repos) Perm() *PermRepo {
+	repo, _ := r.lookup[permRepoKey].(*PermRepo)
+	return repo
+}
+
 func (r *Repos) Study() *StudyRepo {
 	repo, _ := r.lookup[studyRepoKey].(*StudyRepo)
 	return repo
@@ -88,10 +95,10 @@ func (r *Repos) User() *UserRepo {
 	return repo
 }
 
-func (r *Repos) UserEmail() *UserEmailRepo {
-	repo, _ := r.lookup[userEmailRepoKey].(*UserEmailRepo)
-	return repo
-}
+// func (r *Repos) UserEmail() *UserEmailRepo {
+//   repo, _ := r.lookup[userEmailRepoKey].(*UserEmailRepo)
+//   return repo
+// }
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

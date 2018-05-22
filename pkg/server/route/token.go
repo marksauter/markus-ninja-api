@@ -5,18 +5,19 @@ import (
 	"time"
 
 	"github.com/badoux/checkmail"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Token(svcs *service.Services, repos *repo.Repos) http.Handler {
+func Token(svcs *service.Services) http.Handler {
 	tokenHandler := TokenHandler{
-		Svcs:  svcs,
-		Repos: repos,
+		Svcs: svcs,
 	}
 	return middleware.CommonMiddleware.Append(
 		tokenCors.Handler,
@@ -30,14 +31,10 @@ var tokenCors = cors.New(cors.Options{
 })
 
 type TokenHandler struct {
-	Svcs  *service.Services
-	Repos *repo.Repos
+	Svcs *service.Services
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	h.Repos.User().Open(req.Context())
-	defer h.Repos.User().Close()
-
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
@@ -47,9 +44,9 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	validationOutput, err := myhttp.ValidateBasicAuthHeader(req)
+	creds, err := myhttp.ValidateBasicAuthHeader(req)
 	if err == myhttp.ErrNoAuthHeader {
-		validationOutput = &myhttp.ValidateBasicAuthHeaderOutput{
+		creds = &myhttp.ValidateBasicAuthHeaderOutput{
 			Login:    "guest",
 			Password: "guest",
 		}
@@ -59,18 +56,33 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	verificationInput := repo.VerifyCredentialsInput{
-		Password: validationOutput.Password,
-	}
-	err = checkmail.ValidateFormat(validationOutput.Login)
+	var user *data.User
+	err = checkmail.ValidateFormat(creds.Login)
 	if err != nil {
-		verificationInput.Login = validationOutput.Login
+		user, err = h.Svcs.User.GetCredentialsByLogin(creds.Login)
+		if err != nil {
+			response := myhttp.InvalidCredentialsErrorResponse()
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
 	} else {
-		verificationInput.Email = validationOutput.Login
+		user, err = h.Svcs.User.GetCredentialsByEmail(creds.Login)
+		if err != nil {
+			response := myhttp.InvalidCredentialsErrorResponse()
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
 	}
 
-	user, err := h.Repos.User().VerifyCredentials(&verificationInput)
+	password, err := passwd.New(creds.Password)
 	if err != nil {
+		mylog.Log.WithError(err).Error("failed to make new password")
+		response := myhttp.InvalidCredentialsErrorResponse()
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	if err = password.CompareToHash(user.Password.Bytes); err != nil {
+		mylog.Log.WithError(err).Error("passwords do not match")
 		response := myhttp.InvalidCredentialsErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return

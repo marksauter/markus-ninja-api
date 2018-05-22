@@ -26,9 +26,9 @@ type QueryPermLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *QueryPermLoader) Clear(id string) {
+func (r *QueryPermLoader) Clear(o perm.Operation) {
 	ctx := context.Background()
-	r.batchGet.Clear(ctx, dataloader.StringKey(id))
+	r.batchGet.Clear(ctx, dataloader.StringKey(o.String()))
 }
 
 func (r *QueryPermLoader) ClearAll() {
@@ -40,9 +40,9 @@ func (r *QueryPermLoader) AddRoles(roles ...string) *QueryPermLoader {
 	return r
 }
 
-func (r *QueryPermLoader) Get(operation string) (*perm.QueryPermission, error) {
+func (r *QueryPermLoader) Get(o perm.Operation) (*perm.QueryPermission, error) {
 	ctx := context.Background()
-	permData, err := r.batchGet.Load(ctx, dataloader.StringKey(operation))()
+	permData, err := r.batchGet.Load(ctx, dataloader.StringKey(o.String()))()
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +54,11 @@ func (r *QueryPermLoader) Get(operation string) (*perm.QueryPermission, error) {
 	return perm, nil
 }
 
-func (r *QueryPermLoader) GetMany(operations *[]string) ([]*perm.QueryPermission, []error) {
+func (r *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission, []error) {
 	ctx := context.Background()
-	keys := make(dataloader.Keys, len(*operations))
-	for i, o := range *operations {
-		keys[i] = dataloader.StringKey(o)
+	keys := make(dataloader.Keys, len(os))
+	for i, o := range os {
+		keys[i] = dataloader.StringKey(o.String())
 	}
 	permData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {

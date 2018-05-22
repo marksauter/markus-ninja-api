@@ -43,8 +43,9 @@ CREATE TABLE user_email(
   user_id     VARCHAR(40),
   email_id    VARCHAR(40),
   type        user_email_type DEFAULT 'EXTRA',
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  public      BOOLEAN         DEFAULT FALSE CHECK (verified_at IS NULL),
+  created_at  TIMESTAMPTZ     DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ     DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
   PRIMARY KEY (user_id, email_id),
   FOREIGN KEY (user_id)
@@ -323,7 +324,7 @@ CREATE TABLE lesson_comment(
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (study_id)
     REFERENCES study (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
+    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
