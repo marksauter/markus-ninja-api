@@ -124,6 +124,7 @@ const (
 	EVTType
 	LessonType
 	LessonCommentType
+	PRTType
 	StudyType
 	UserType
 	UserEmailType
@@ -139,6 +140,8 @@ func (nt NodeType) String() string {
 		return "Lesson"
 	case LessonCommentType:
 		return "LessonComment"
+	case PRTType:
+		return "PRT"
 	case StudyType:
 		return "Study"
 	case UserType:
@@ -160,6 +163,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return LessonType, nil
 	case "lessoncomment":
 		return LessonCommentType, nil
+	case "prt":
+		return PRTType, nil
 	case "study":
 		return StudyType, nil
 	case "user":

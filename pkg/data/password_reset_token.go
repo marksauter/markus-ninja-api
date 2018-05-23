@@ -10,59 +10,57 @@ import (
 	"github.com/rs/xid"
 )
 
-type PasswordResetTokenModel struct {
-	Token     pgtype.Varchar
+type PRT struct {
 	Email     pgtype.Varchar
-	UserId    oid.OID
-	RequestIP pgtype.Inet
-	IssuedAt  pgtype.Timestamptz
-	ExpiresAt pgtype.Timestamptz
-	EndIP     pgtype.Inet
 	EndedAt   pgtype.Timestamptz
+	EndIP     pgtype.Inet
+	ExpiresAt pgtype.Timestamptz
+	IssuedAt  pgtype.Timestamptz
+	RequestIP pgtype.Inet
+	UserId    oid.OID
+	Token     pgtype.Varchar
 }
 
-func NewPasswordResetTokenService(q Queryer) *PasswordResetTokenService {
-	return &PasswordResetTokenService{q}
+func NewPRTService(q Queryer) *PRTService {
+	return &PRTService{q}
 }
 
-type PasswordResetTokenService struct {
+type PRTService struct {
 	db Queryer
 }
 
-const getPasswordResetTokenByPKSQL = `
+const getPRTByPKSQL = `
 	SELECT
-		token,
 		email,
-		user_id,
-		request_ip,
-		issued_at,
-		expires_at,
+		ended_at,
 		end_ip,
-		ended_at
+		expires_at,
+		issued_at,
+		request_ip,
+		user_id,
+		token
 	FROM
 		password_reset_token
 	WHERE
 		token = $1
 `
 
-func (s *PasswordResetTokenService) GetByPK(
-	token string,
-) (*PasswordResetTokenModel, error) {
-	var row PasswordResetTokenModel
+func (s *PRTService) GetByPK(user_id, token string) (*PRT, error) {
+	var row PRT
 	err := prepareQueryRow(
 		s.db,
-		"getPasswordResetTokenByPK",
-		getPasswordResetTokenByPKSQL,
+		"getPRTByPK",
+		getPRTByPKSQL,
 		token,
 	).Scan(
-		&row.Token,
 		&row.Email,
-		&row.UserId,
-		&row.RequestIP,
-		&row.IssuedAt,
-		&row.ExpiresAt,
-		&row.EndIP,
 		&row.EndedAt,
+		&row.EndIP,
+		&row.ExpiresAt,
+		&row.IssuedAt,
+		&row.RequestIP,
+		&row.UserId,
+		&row.Token,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -73,8 +71,8 @@ func (s *PasswordResetTokenService) GetByPK(
 	return &row, nil
 }
 
-func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 7))
+func (s *PRTService) Create(row *PRT) error {
+	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
 	var columns, values []string
 
@@ -115,35 +113,24 @@ func (s *PasswordResetTokenService) Create(row *PasswordResetTokenModel) error {
 		INSERT INTO password_reset_token(` + strings.Join(columns, ", ") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 		RETURNING
-			token
+			issued_at,
+			expires_at
   `
 
-	psName := preparedName("insertPasswordResetToken", sql)
+	psName := preparedName("insertPRT", sql)
 
-	return prepareQueryRow(s.db, psName, sql, args...).Scan(&row.Token)
+	return prepareQueryRow(s.db, psName, sql, args...).Scan(
+		&row.IssuedAt,
+		&row.ExpiresAt,
+	)
 }
 
-func (s *PasswordResetTokenService) Update(
-	row *PasswordResetTokenModel,
+func (s *PRTService) Update(
+	row *PRT,
 ) error {
-	sets := make([]string, 0, 7)
-	args := pgx.QueryArgs(make([]interface{}, 0, 7))
+	sets := make([]string, 0, 2)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
-	if row.Email.Status != pgtype.Undefined {
-		sets = append(sets, `email`+"="+args.Append(&row.Email))
-	}
-	if row.UserId.Status != pgtype.Undefined {
-		sets = append(sets, `user_id`+"="+args.Append(&row.UserId))
-	}
-	if row.RequestIP.Status != pgtype.Undefined {
-		sets = append(sets, `request_ip`+"="+args.Append(&row.RequestIP))
-	}
-	if row.IssuedAt.Status != pgtype.Undefined {
-		sets = append(sets, `issued_at`+"="+args.Append(&row.IssuedAt))
-	}
-	if row.ExpiresAt.Status != pgtype.Undefined {
-		sets = append(sets, `expires_at`+"="+args.Append(&row.ExpiresAt))
-	}
 	if row.EndIP.Status != pgtype.Undefined {
 		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
 	}
@@ -161,24 +148,24 @@ func (s *PasswordResetTokenService) Update(
 		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
 		RETURNING
 			email,
-			user_id,
-			request_ip,
-			issued_at,
-			expires_at,
+			ended_at,
 			end_ip,
-			ended_at
+			expires_at,
+			issued_at,
+			request_ip,
+			user_id
 	`
 
-	psName := preparedName("updatePasswordResetToken", sql)
+	psName := preparedName("updatePRT", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.Email,
-		&row.UserId,
-		&row.RequestIP,
-		&row.IssuedAt,
-		&row.ExpiresAt,
-		&row.EndIP,
 		&row.EndedAt,
+		&row.EndIP,
+		&row.ExpiresAt,
+		&row.IssuedAt,
+		&row.RequestIP,
+		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
@@ -201,14 +188,13 @@ func (s *PasswordResetTokenService) Update(
 	return nil
 }
 
-func (s *PasswordResetTokenService) Delete(token string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
+const deletePRTSQL = `
+	DELETE FROM password_reset_token 
+	WHERE user_id = $1 AND token = $2
+`
 
-	sql := `
-		DELETE FROM password_reset_token 
-		WHERE ` + `"token"=` + args.Append(token)
-
-	commandTag, err := prepareExec(s.db, "deletePasswordResetToken", sql, args...)
+func (s *PRTService) Delete(userId, token string) error {
+	commandTag, err := prepareExec(s.db, "deletePRT", deletePRTSQL, userId, token)
 	if err != nil {
 		return err
 	}

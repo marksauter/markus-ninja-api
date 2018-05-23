@@ -116,15 +116,11 @@ func (r *EVTRepo) Create(evt *data.EVT) (*EVTPermit, error) {
 	return &EVTPermit{fieldPermFn, evt}, nil
 }
 
-func (r *EVTRepo) Get(
-	emailId,
-	userId,
-	token string,
-) (*EVTPermit, error) {
+func (r *EVTRepo) Get(emailId, token string) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	evt, err := r.load.Get(emailId, userId, token)
+	evt, err := r.load.Get(emailId, token)
 	if err != nil {
 		return nil, err
 	}

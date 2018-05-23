@@ -12,10 +12,10 @@ import (
 
 type EVT struct {
 	EmailId    oid.OID            `db:"email_id"`
-	UserId     oid.OID            `db:"user_id"`
-	Token      pgtype.Varchar     `db:"token"`
-	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
 	ExpiresAt  pgtype.Timestamptz `db:"expires_at"`
+	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
+	Token      pgtype.Varchar     `db:"token"`
+	UserId     oid.OID            `db:"user_id"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
@@ -35,10 +35,10 @@ func (s *EVTService) get(
 	var row EVT
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.EmailId,
-		&row.UserId,
-		&row.Token,
-		&row.IssuedAt,
 		&row.ExpiresAt,
+		&row.IssuedAt,
+		&row.Token,
+		&row.UserId,
 		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -53,18 +53,17 @@ func (s *EVTService) get(
 const getEVTByPKSQL = `
 	SELECT
 		email_id,
-		user_id,
-		token,
-		issued_at,
 		expires_at,
+		issued_at,
+		token,
+		user_id,
 		verified_at
 	FROM email_verification_token
-	WHERE user_id = $1 AND token = $2
+	WHERE email_id = $1 AND token = $2
 `
 
 func (s *EVTService) GetByPK(
 	emailId,
-	userId,
 	token string,
 ) (*EVT, error) {
 	mylog.Log.WithField(
@@ -74,7 +73,6 @@ func (s *EVTService) GetByPK(
 		"getEVTByPK",
 		getEVTByPKSQL,
 		emailId,
-		userId,
 		token,
 	)
 }
@@ -129,8 +127,8 @@ func (s *EVTService) Create(row *EVT) error {
 func (s *EVTService) Update(
 	row *EVT,
 ) error {
-	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
+	sets := make([]string, 0, 2)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	if row.VerifiedAt.Status != pgtype.Undefined {
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
@@ -161,17 +159,16 @@ func (s *EVTService) Update(
 
 const deleteEVTSQL = `
 	DELETE FROM email_verification_token 
-	WHERE token = $1
+	WHERE email_id = $1 AND token = $2
 `
 
-func (s *EVTService) Delete(token string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
-
+func (s *EVTService) Delete(emailId, token string) error {
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteEVT",
 		deleteEVTSQL,
-		args...,
+		emailId,
+		token,
 	)
 	if err != nil {
 		return err

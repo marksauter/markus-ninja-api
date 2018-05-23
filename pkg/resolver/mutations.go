@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"net"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -101,6 +102,7 @@ func (r *RootResolver) CreateUser(
 		err = r.Svcs.Mail.SendEmailVerificationMail(
 			user.PrimaryEmail.Value.String,
 			user.Login.String,
+			user.PrimaryEmail.Id.String,
 			evt.Token.String,
 		)
 		if err != nil {
@@ -244,15 +246,21 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("viewer not found")
 	}
 
-	userEmail, err := r.Repos.UserEmail().GetByUserIdAndEmail(
-		viewer.Id.String,
+	userEmail, err := r.Repos.UserEmail().GetByEmail(
 		args.Input.Email,
 	)
 	if err != nil {
 		if err == data.ErrNotFound {
-			return nil, errors.New("email not found for current viewer")
+			return nil, errors.New("`email` not found")
 		}
 		return nil, err
+	}
+	userId, err := userEmail.UserId()
+	if err != nil {
+		return nil, err
+	}
+	if viewer.Id.String != userId {
+		return nil, errors.New("email already registered to another user")
 	}
 
 	isVerified, err := userEmail.IsVerified()
@@ -263,9 +271,14 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("email already verified")
 	}
 
+	emailId, err := userEmail.EmailId()
+	if err != nil {
+		return nil, err
+	}
+
 	evt := &data.EVT{}
-	evt.EmailId.Set(userEmail.EmailId)
-	evt.UserId.Set(userEmail.UserId)
+	evt.EmailId.Set(emailId)
+	evt.UserId.Set(userId)
 
 	evtPermit, err := r.Repos.EVT().Create(evt)
 	if err != nil {
@@ -277,6 +290,7 @@ func (r *RootResolver) RequestEmailVerification(
 	err = r.Svcs.Mail.SendEmailVerificationMail(
 		userEmail.EmailValue(),
 		userEmail.UserLogin(),
+		emailId,
 		evt.Token.String,
 	)
 	if err != nil {
@@ -284,4 +298,69 @@ func (r *RootResolver) RequestEmailVerification(
 	}
 
 	return resolver, nil
+}
+
+type RequestPasswordResetInput struct {
+	Email string
+}
+
+func (r *RootResolver) RequestPasswordReset(
+	ctx context.Context,
+	args struct{ Input RequestPasswordResetInput },
+) (*prtResolver, error) {
+	user, err := r.Svcs.User.GetCredentialsByEmail(args.Input.Email)
+	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, errors.New("`email` not found")
+		}
+		return nil, err
+	}
+
+	requestIp, ok := ctx.Value("requester_ip").(*net.IPNet)
+	if !ok {
+		return nil, errors.New("requester ip not found")
+	}
+
+	prt := &data.PRT{}
+	prt.Email.Set(args.Input.Email)
+	prt.UserId.Set(user.Id)
+	err = prt.RequestIP.Set(requestIp)
+	if err != nil {
+		return nil, err
+	}
+
+	prtPermit, err := r.Repos.PRT().Create(prt)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver := &prtResolver{PRT: prtPermit, Repos: r.Repos}
+
+	err = r.Svcs.Mail.SendPasswordResetMail(
+		args.Input.Email,
+		user.Login.String,
+		prt.Token.String,
+	)
+	if err != nil {
+		return resolver, err
+	}
+
+	return resolver, nil
+}
+
+type ResetPasswordInput struct {
+	Email    string
+	Token    string
+	Password string
+}
+
+func (r *RootResolver) ResetPassword(
+	ctx context.Context,
+	args struct{ Input ResetPasswordInput },
+) (bool, error) {
+	prt, err := r.Svcs.PRT.GetByPK(args.Input.Token)
+	if err != nil {
+		return false, err
+	}
+	return false, nil
 }

@@ -67,15 +67,14 @@ const getUserEmailByPKSQL = `
 	FROM user_email ue
 	INNER JOIN account a ON a.id = ue.user_id
 	INNER JOIN email e ON e.id = ue.email_id
-	WHERE user_id = $1 AND email_id = $2
+	WHERE email_id = $2
 `
 
-func (s *UserEmailService) GetByPK(userId, emailId string) (*UserEmail, error) {
+func (s *UserEmailService) GetByPK(emailId string) (*UserEmail, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"user_id":  userId,
 		"email_id": emailId,
-	}).Info("GetByPK(id) UserEmail")
-	return s.get("getUserEmailByPK", getUserEmailByPKSQL, userId, emailId)
+	}).Info("GetByPK(email_id) UserEmail")
+	return s.get("getUserEmailByPK", getUserEmailByPKSQL, emailId)
 }
 
 const getUserEmailByUserIdAndEmailSQL = `
@@ -92,25 +91,23 @@ const getUserEmailByUserIdAndEmailSQL = `
 	FROM user_email ue
 	INNER JOIN account a ON a.id = ue.user_id
 	INNER JOIN email e ON e.value = $1
-	WHERE user_id = $2 AND email_id = e.id
+	WHERE email_id = e.id
 `
 
-func (s *UserEmailService) GetByUserIdAndEmail(userId, email string) (*UserEmail, error) {
+func (s *UserEmailService) GetByEmail(email string) (*UserEmail, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userId,
-		"email":   email,
-	}).Info("GetByUserIdAndEmail(id) UserEmail")
+		"email": email,
+	}).Info("GetByEmail(email) UserEmail")
 	return s.get(
-		"getUserEmailByUserIdAndEmail",
+		"getUserEmailByEmail",
 		getUserEmailByUserIdAndEmailSQL,
 		email,
-		userId,
 	)
 }
 
 func (s *UserEmailService) Create(ae *UserEmail) error {
 	mylog.Log.Info("Create() UserEmail")
-	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
 
@@ -166,15 +163,14 @@ func (s *UserEmailService) Create(ae *UserEmail) error {
 
 const deleteUserEmailSQL = `
 	DELETE FROM user_email
-	WHERE user_id= $1 AND email_id= $2
+	WHERE email_id= $2
 `
 
-func (s *UserEmailService) Delete(userId, emailId string) error {
+func (s *UserEmailService) Delete(emailId string) error {
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteUserEmail",
 		deleteUserEmailSQL,
-		userId,
 		emailId,
 	)
 	if err != nil {
@@ -189,8 +185,8 @@ func (s *UserEmailService) Delete(userId, emailId string) error {
 }
 
 func (s *UserEmailService) Update(ae *UserEmail) error {
-	sets := make([]string, 0, 3)
-	args := pgx.QueryArgs(make([]interface{}, 0, 3))
+	sets := make([]string, 0, 4)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	if ae.Public.Status != pgtype.Undefined {
 		sets = append(sets, `public`+"="+args.Append(&ae.Public))
@@ -205,8 +201,7 @@ func (s *UserEmailService) Update(ae *UserEmail) error {
 	sql := `
 		UPDATE user_email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + `user_id=` + args.Append(ae.UserId.String) + `
-		AND ` + `email_id=` + args.Append(ae.EmailId.String)
+		WHERE ` + `email_id=` + args.Append(ae.EmailId.String)
 
 	psName := preparedName("updateUserEmail", sql)
 

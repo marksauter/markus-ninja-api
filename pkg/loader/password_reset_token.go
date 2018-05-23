@@ -9,10 +9,10 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewEVTLoader(
-	svc *data.EVTService,
-) *EVTLoader {
-	return &EVTLoader{
+func NewPRTLoader(
+	svc *data.PRTService,
+) *PRTLoader {
+	return &PRTLoader{
 		svc: svc,
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
@@ -28,8 +28,8 @@ func NewEVTLoader(
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
 						ks := splitCompositeKey(key)
-						evt, err := svc.GetByPK(ks[0], ks[1])
-						results[i] = &dataloader.Result{Data: evt, Error: err}
+						prt, err := svc.GetByPK(ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: prt, Error: err}
 					}(i, key)
 				}
 
@@ -41,33 +41,33 @@ func NewEVTLoader(
 	}
 }
 
-type EVTLoader struct {
-	svc *data.EVTService
+type PRTLoader struct {
+	svc *data.PRTService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *EVTLoader) Clear(emailId, token string) {
+func (r *PRTLoader) Clear(emailId, token string) {
 	ctx := context.Background()
 	compositeKey := newCompositeKey(emailId, token)
 	r.batchGet.Clear(ctx, compositeKey)
 }
 
-func (r *EVTLoader) ClearAll() {
+func (r *PRTLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *EVTLoader) Get(emailId, token string) (*data.EVT, error) {
+func (r *PRTLoader) Get(emailId, token string) (*data.PRT, error) {
 	ctx := context.Background()
 	compositeKey := newCompositeKey(emailId, token)
-	evtData, err := r.batchGet.Load(ctx, compositeKey)()
+	prtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
-	evt, ok := evtData.(*data.EVT)
+	prt, ok := prtData.(*data.PRT)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return evt, nil
+	return prt, nil
 }

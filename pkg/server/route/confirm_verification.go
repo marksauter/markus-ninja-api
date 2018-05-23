@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -52,9 +54,14 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	emailId := routeVars["id"]
+	emailId, err := oid.NewFromShort("User", routeVars["id"])
+	if err != nil {
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
 	token := routeVars["token"]
-	avt, err := h.Svcs.EVT.GetByPK(emailId, user.Id.String, token)
+	evt, err := h.Svcs.EVT.GetByPK(emailId.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -64,30 +71,37 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	if avt.VerifiedAt.Status == pgtype.Present {
+	if evt.UserId.String != user.Id.String {
+		mylog.Log.WithField(
+			"login", user.Login.String,
+		).Warn("user attempting to use another user's email verification token")
+		rw.WriteHeader(http.StatusNotFound)
+	}
+
+	if evt.VerifiedAt.Status == pgtype.Present {
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	if avt.ExpiresAt.Time.Before(time.Now()) {
+	if evt.ExpiresAt.Time.Before(time.Now()) {
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	err = h.Svcs.Role.GrantUser(avt.UserId.String, data.UserRole)
+	err = h.Svcs.Role.GrantUser(evt.UserId.String, data.UserRole)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	err = avt.VerifiedAt.Set(time.Now())
+	err = evt.VerifiedAt.Set(time.Now())
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	err = h.Svcs.EVT.Update(avt)
+	err = h.Svcs.EVT.Update(evt)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

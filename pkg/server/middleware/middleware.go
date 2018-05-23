@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/handlers"
@@ -60,6 +61,22 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 		}
 
 		ctx := data.NewUserContext(req.Context(), user)
+		host, _, err := net.SplitHostPort(req.RemoteAddr)
+		if err != nil {
+			response := myhttp.InternalServerErrorResponse("failed to parse requester ip")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+		if ip := net.ParseIP(host); ip != nil {
+			mask := net.CIDRMask(len(ip)*8, len(ip)*8)
+			ipNet := &net.IPNet{IP: ip, Mask: mask}
+			ctx = context.WithValue(ctx, "requester_ip", ipNet)
+		} else {
+			response := myhttp.InternalServerErrorResponse("failed to parse requester ip")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+
 		h.ServeHTTP(rw, req.WithContext(ctx))
 	})
 }

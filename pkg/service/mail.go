@@ -46,16 +46,18 @@ var emailVerificationMailTemplate = template.Must(
 	),
 )
 
-func (s *MailService) SendEmailVerificationMail(to, login, token string) error {
+func (s *MailService) SendEmailVerificationMail(to, login, emailId, token string) error {
 	var data = struct {
-		To      string
+		EmailId string
 		Login   string
 		RootURL string
+		To      string
 		Token   string
 	}{
-		To:      to,
+		EmailId: emailId,
 		Login:   login,
 		RootURL: s.rootURL,
+		To:      to,
 		Token:   token,
 	}
 
@@ -114,11 +116,12 @@ func (s *MailService) SendPasswordResetMail(to, login, token string) error {
 			"to":    to,
 			"error": err,
 		}).Error("failed to send password reset email")
+		return err
 	}
 
 	mylog.Log.WithFields(logrus.Fields{
 		"to": to,
-	}).Error("sent password reset email")
+	}).Info("sent password reset email")
 
 	return nil
 }

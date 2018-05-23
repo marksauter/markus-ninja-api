@@ -185,6 +185,7 @@ func (s *UserService) getCredentials(
 	var row User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
 		&row.Id,
+		&row.Login,
 		&row.Password,
 	)
 	if err == pgx.ErrNoRows {
@@ -200,6 +201,7 @@ func (s *UserService) getCredentials(
 const getUserCredentialsByLoginSQL = `  
 	SELECT
 		id,
+		login,
 		password
 	FROM account
 	WHERE login = $1
@@ -215,6 +217,7 @@ func (s *UserService) GetCredentialsByLogin(
 const getUserCredentialsByEmailSQL = `
 	SELECT
 		a.id,
+		a.login,
 		a.password
 	FROM account a
 	INNER JOIN user_email ae ON ae.user_id = a.id 

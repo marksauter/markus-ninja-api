@@ -1,5 +1,4 @@
 interface Token {
   expiresAt: Time!
   issuedAt: Time!
-  verifiedAt: Time
 }

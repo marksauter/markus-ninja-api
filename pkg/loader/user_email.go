@@ -11,17 +11,17 @@ import (
 
 func NewUserEmailLoader(svc *data.UserEmailService) *UserEmailLoader {
 	return &UserEmailLoader{
-		svc:                      svc,
-		batchGet:                 createLoader(newBatchGetUserEmailFn(svc.GetByPK)),
-		batchGetByUserIdAndEmail: createLoader(newBatchGetUserEmailFn(svc.GetByUserIdAndEmail)),
+		svc:             svc,
+		batchGet:        createLoader(newBatchGetUserEmailFn(svc.GetByPK)),
+		batchGetByEmail: createLoader(newBatchGetUserEmailFn(svc.GetByEmail)),
 	}
 }
 
 type UserEmailLoader struct {
 	svc *data.UserEmailService
 
-	batchGet                 *dataloader.Loader
-	batchGetByUserIdAndEmail *dataloader.Loader
+	batchGet        *dataloader.Loader
+	batchGetByEmail *dataloader.Loader
 }
 
 func (r *UserEmailLoader) Clear(id string) {
@@ -33,10 +33,9 @@ func (r *UserEmailLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *UserEmailLoader) Get(userId, emailId string) (*data.UserEmail, error) {
+func (r *UserEmailLoader) Get(emailId string) (*data.UserEmail, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(userId, emailId)
-	userEmailData, err := r.batchGet.Load(ctx, compositeKey)()
+	userEmailData, err := r.batchGet.Load(ctx, dataloader.StringKey(emailId))()
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +43,15 @@ func (r *UserEmailLoader) Get(userId, emailId string) (*data.UserEmail, error) {
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+
+	r.batchGetByEmail.Prime(ctx, dataloader.StringKey(userEmail.EmailValue.String), userEmail)
 
 	return userEmail, nil
 }
 
-func (r *UserEmailLoader) GetByUserIdAndEmail(userId, email string) (*data.UserEmail, error) {
+func (r *UserEmailLoader) GetByEmail(email string) (*data.UserEmail, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(userId, email)
-	userEmailData, err := r.batchGetByUserIdAndEmail.Load(ctx, compositeKey)()
+	userEmailData, err := r.batchGetByEmail.Load(ctx, dataloader.StringKey(email))()
 	if err != nil {
 		return nil, err
 	}
@@ -60,13 +60,13 @@ func (r *UserEmailLoader) GetByUserIdAndEmail(userId, email string) (*data.UserE
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, newCompositeKey(userId, userEmail.EmailId.String), userEmail)
+	r.batchGet.Prime(ctx, dataloader.StringKey(userEmail.EmailId.String), userEmail)
 
 	return userEmail, nil
 }
 
 func newBatchGetUserEmailFn(
-	getter func(string, string) (*data.UserEmail, error),
+	getter func(string) (*data.UserEmail, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -80,8 +80,7 @@ func newBatchGetUserEmailFn(
 		for i, key := range keys {
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
-				ks := splitCompositeKey(key)
-				userEmail, err := getter(ks[0], ks[1])
+				userEmail, err := getter(key.String())
 				results[i] = &dataloader.Result{Data: userEmail, Error: err}
 			}(i, key)
 		}

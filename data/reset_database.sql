@@ -39,21 +39,22 @@ CREATE TYPE user_email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
 
 DROP TABLE IF EXISTS user_email CASCADE;
 CREATE TABLE user_email(
-  user_id     VARCHAR(40),
-  email_id    VARCHAR(40),
+  email_id    VARCHAR(40)     PRIMARY KEY,
+  user_id     VARCHAR(40)     NOT NULL,
   type        user_email_type DEFAULT 'EXTRA',
   public      BOOLEAN         DEFAULT FALSE CHECK (verified_at IS NULL),
   created_at  TIMESTAMPTZ     DEFAULT NOW(),
   updated_at  TIMESTAMPTZ     DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
-  PRIMARY KEY (user_id, email_id),
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (email_id)
     REFERENCES email (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE INDEX user_email_user_id_idx ON user_email (user_id);
 
 CREATE UNIQUE INDEX user_email_user_id_type_key
   ON user_email (user_id, type)
@@ -96,7 +97,7 @@ CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Upd
 DROP TYPE IF EXISTS audience CASCADE;
 CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
 DROP TYPE IF EXISTS node_type CASCADE;
-CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'Study', 'User', 'UserEmail');
+CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'PRT', 'Study', 'User', 'UserEmail');
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
@@ -137,12 +138,12 @@ CREATE TABLE role_permission(
 DROP TABLE IF EXISTS email_verification_token CASCADE;
 CREATE TABLE email_verification_token(
   email_id      VARCHAR(40),
-  user_id       VARCHAR(40),
   token         VARCHAR(40),
+  user_id       VARCHAR(40)   NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
   verified_at   TIMESTAMPTZ,
-  PRIMARY KEY (email_id, user_id, token),
+  PRIMARY KEY (email_id, token),
   FOREIGN KEY (email_id)
     REFERENCES email (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -151,18 +152,24 @@ CREATE TABLE email_verification_token(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+CREATE INDEX email_verification_token_user_id_idx ON email_verification_token (user_id); 
+
 DROP TABLE IF EXISTS password_reset_token CASCADE;
 CREATE TABLE password_reset_token(
-  token         VARCHAR(40)   PRIMARY KEY,
-  email         VARCHAR(40)   NOT NULL,
+  user_id       VARCHAR(40),
+  token         VARCHAR(40),
+  email_id      VARCHAR(40)   NOT NULL,
   request_ip    INET          NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
   end_ip        INET,
   ended_at      TIMESTAMPTZ,
-  user_id       VARCHAR(40),
+  PRIMARY KEY (user_id, token),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE NO ACTION,
+  FOREIGN KEY (email_id)
+    REFERENCES email (id)
     ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 

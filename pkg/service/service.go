@@ -13,7 +13,7 @@ type Services struct {
 	LessonComment *data.LessonCommentService
 	Mail          *MailService
 	Perm          *data.PermService
-	PWRT          *data.PasswordResetTokenService
+	PRT           *data.PRTService
 	Role          *data.RoleService
 	Study         *data.StudyService
 	User          *data.UserService
@@ -37,7 +37,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 		LessonComment: data.NewLessonCommentService(db),
 		Mail:          NewMailService(mailConfig),
 		Perm:          data.NewPermService(db),
-		PWRT:          data.NewPasswordResetTokenService(db),
+		PRT:           data.NewPRTService(db),
 		Role:          data.NewRoleService(db),
 		Study:         data.NewStudyService(db),
 		User:          data.NewUserService(db),

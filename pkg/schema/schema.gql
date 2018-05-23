@@ -50,6 +50,6 @@ type Mutation {
   updateUser(input: UpdateUserInput!): User!
 
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
-  # requestPasswordReset(input: RequestPasswordReset!): Boolean!
+  requestPasswordReset(input: RequestPasswordResetInput!): PRT!
   # resetPassword(input: ResetPasswordInput!): Boolean!
 }

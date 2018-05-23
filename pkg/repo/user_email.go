@@ -132,11 +132,11 @@ func (r *UserEmailRepo) Create(userEmail *data.UserEmail) (*UserEmailPermit, err
 	return &UserEmailPermit{fieldPermFn, userEmail}, nil
 }
 
-func (r *UserEmailRepo) Get(userId, emailId string) (*UserEmailPermit, error) {
+func (r *UserEmailRepo) Get(emailId string) (*UserEmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userEmail, err := r.load.Get(userId, emailId)
+	userEmail, err := r.load.Get(emailId)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +147,11 @@ func (r *UserEmailRepo) Get(userId, emailId string) (*UserEmailPermit, error) {
 	return &UserEmailPermit{fieldPermFn, userEmail}, nil
 }
 
-func (r *UserEmailRepo) GetByUserIdAndEmail(userId, email string) (*UserEmailPermit, error) {
+func (r *UserEmailRepo) GetByEmail(email string) (*UserEmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userEmail, err := r.load.GetByUserIdAndEmail(userId, email)
+	userEmail, err := r.load.GetByEmail(email)
 	if err != nil {
 		return nil, err
 	}
