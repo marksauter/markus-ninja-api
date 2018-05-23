@@ -116,10 +116,15 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}()
 
-	roleNames := []string{"ADMIN", "MEMBER", "USER"}
+	roles := []data.Role{
+		data.AdminRole,
+		data.MemberRole,
+		data.OwnerRole,
+		data.UserRole,
+	}
 
-	for _, name := range roleNames {
-		if _, err := svcs.Role.Create(name); err != nil {
+	for _, r := range roles {
+		if _, err := svcs.Role.Create(r.String()); err != nil {
 			mylog.Log.WithError(err).Fatal("error during role creation")
 			return err
 		}
@@ -148,7 +153,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		FROM
 			role r
 		INNER JOIN permission p ON true
-		WHERE r.name = 'ADMIN'
+		WHERE r.name = ANY('{"ADMIN", "OWNER"}')
 	`
 	rows, err := db.Query(adminPermissionsSQL)
 	if err != nil {

@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -16,17 +14,6 @@ import (
 type LessonCommentPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	LessonComment        *data.LessonComment
-}
-
-func (r *LessonCommentPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.LessonComment) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
 }
 
 func (r *LessonCommentPermit) Body() (string, error) {
@@ -116,62 +103,50 @@ func (r *LessonCommentRepo) Close() {
 	r.load = nil
 }
 
+func (r *LessonCommentRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("lesson_comment connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 // Service methods
 
 func (r *LessonCommentRepo) CountByUser(userId string) (int32, error) {
-	_, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
-		var count int32
-		return count, err
-	}
 	return r.svc.CountByUser(userId)
 }
 
 func (r *LessonCommentRepo) CountByStudy(studyId string) (int32, error) {
-	_, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
-		var count int32
-		return count, err
-	}
 	return r.svc.CountByStudy(studyId)
 }
 
 func (r *LessonCommentRepo) Create(lessonComment *data.LessonComment) (*LessonCommentPermit, error) {
-	createFieldPermFn, err := r.perms.Check(perm.CreateLessonComment)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Create, lessonComment); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Create(lessonComment); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
-	}
-	lessonCommentPermit := &LessonCommentPermit{createFieldPermFn, lessonComment}
-	err = lessonCommentPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Create(lessonComment)
-	if err != nil {
-		return nil, err
-	}
-	readFieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
-		return nil, err
-	}
-	lessonCommentPermit.checkFieldPermission = readFieldPermFn
-	return lessonCommentPermit, nil
+	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
 func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	lessonComment, err := r.load.Get(id)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
-	}
-	lessonComment, err := r.load.Get(id)
+	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -179,91 +154,89 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 }
 
 func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
-	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
 	}
 	lessonComments, err := r.svc.GetByLessonId(lessonId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	for i, l := range lessonComments {
-		lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+	if len(lessonComments) > 0 {
+		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessonComments {
+			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+		}
 	}
 	return lessonCommentPermits, nil
 }
 
 func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
-	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
 	}
 	lessonComments, err := r.svc.GetByStudyId(studyId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	for i, l := range lessonComments {
-		lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+	if len(lessonComments) > 0 {
+		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessonComments {
+			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+		}
 	}
 	return lessonCommentPermits, nil
 }
 
 func (r *LessonCommentRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadLessonComment)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
-	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
 	}
 	lessonComments, err := r.svc.GetByUserId(userId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	for i, l := range lessonComments {
-		lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+	if len(lessonComments) > 0 {
+		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessonComments {
+			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+		}
 	}
 	return lessonCommentPermits, nil
 }
 
-func (r *LessonCommentRepo) Delete(id string) error {
-	_, err := r.perms.Check(perm.DeleteLessonComment)
-	if err != nil {
+func (r *LessonCommentRepo) Delete(lessonComment *data.LessonComment) error {
+	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return ErrConnClosed
-	}
-	err = r.svc.Delete(id)
-	if err != nil {
+	if _, err := r.perms.Check2(perm.Delete, lessonComment); err != nil {
 		return err
 	}
-	return nil
+	return r.svc.Delete(lessonComment.Id.String)
 }
 
 func (r *LessonCommentRepo) Update(lessonComment *data.LessonComment) (*LessonCommentPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.UpdateLessonComment)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("lesson_comment connection closed")
-		return nil, ErrConnClosed
+	if _, err := r.perms.Check2(perm.Update, lessonComment); err != nil {
+		return nil, err
 	}
-	err = r.svc.Update(lessonComment)
+	if err := r.svc.Update(lessonComment); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}

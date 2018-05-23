@@ -13,9 +13,9 @@ import (
 type Role int
 
 const (
-	UnknownRole Role = iota
-	AdminRole
+	AdminRole Role = iota
 	MemberRole
+	OwnerRole
 	UserRole
 )
 
@@ -25,10 +25,12 @@ func (r Role) String() string {
 		return "ADMIN"
 	case MemberRole:
 		return "MEMBER"
+	case OwnerRole:
+		return "OWNER"
 	case UserRole:
 		return "USER"
 	default:
-		return "UNKNOWN"
+		return "unknown"
 	}
 }
 

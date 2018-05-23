@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -16,17 +14,6 @@ import (
 type UserEmailPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	userEmail            *data.UserEmail
-}
-
-func (r *UserEmailPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.userEmail) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
 }
 
 func (r *UserEmailPermit) CreatedAt() (time.Time, error) {
@@ -102,44 +89,42 @@ func (r *UserEmailRepo) Close() {
 	r.load = nil
 }
 
+func (r *UserEmailRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("user_email connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 // Service methods
 
 func (r *UserEmailRepo) Create(userEmail *data.UserEmail) (*UserEmailPermit, error) {
-	createFieldPermFn, err := r.perms.Check(perm.CreateUserEmail)
+	if _, err := r.perms.Check2(perm.Create, userEmail); err != nil {
+		return nil, err
+	}
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Create(userEmail); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, userEmail)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("userEmail connection closed")
-		return nil, ErrConnClosed
-	}
-	userEmailPermit := &UserEmailPermit{createFieldPermFn, userEmail}
-	err = userEmailPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Create(userEmail)
-	if err != nil {
-		return nil, err
-	}
-	readFieldPermFn, err := r.perms.Check(perm.ReadUserEmail)
-	if err != nil {
-		return nil, err
-	}
-	userEmailPermit.checkFieldPermission = readFieldPermFn
-	return userEmailPermit, nil
+	return &UserEmailPermit{fieldPermFn, userEmail}, nil
 }
 
 func (r *UserEmailRepo) Get(userId, emailId string) (*UserEmailPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadUserEmail)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userEmail, err := r.load.Get(userId, emailId)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("userEmail connection closed")
-		return nil, ErrConnClosed
-	}
-	userEmail, err := r.load.Get(userId, emailId)
+	fieldPermFn, err := r.perms.Check2(perm.Read, userEmail)
 	if err != nil {
 		return nil, err
 	}
@@ -147,15 +132,14 @@ func (r *UserEmailRepo) Get(userId, emailId string) (*UserEmailPermit, error) {
 }
 
 func (r *UserEmailRepo) GetByUserIdAndEmail(userId, email string) (*UserEmailPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadUserEmail)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userEmail, err := r.load.GetByUserIdAndEmail(userId, email)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("userEmail connection closed")
-		return nil, ErrConnClosed
-	}
-	userEmail, err := r.load.GetByUserIdAndEmail(userId, email)
+	fieldPermFn, err := r.perms.Check2(perm.Read, userEmail)
 	if err != nil {
 		return nil, err
 	}

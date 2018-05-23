@@ -26,6 +26,8 @@ var ErrAccessDenied = errors.New("access denied")
 
 type FieldPermissionFunc = func(field string) bool
 
+var AdminPermissionFunc = func(field string) bool { return true }
+
 type Repo interface {
 	Open(context.Context) error
 	Close()

@@ -5,7 +5,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-# Account = User
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
   id            VARCHAR(40) PRIMARY KEY,

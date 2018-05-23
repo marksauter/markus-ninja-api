@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -16,17 +14,6 @@ import (
 type EmailPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	email                *data.Email
-}
-
-func (r *EmailPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.email) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
 }
 
 func (r *EmailPermit) CreatedAt() (time.Time, error) {
@@ -78,39 +65,42 @@ func (r *EmailRepo) Close() {
 	r.load = nil
 }
 
+func (r *EmailRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("email connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 // Service methods
 
 func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.CreateEmail)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Create, email); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Create(email); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("email connection closed")
-		return nil, ErrConnClosed
-	}
-	emailPermit := &EmailPermit{fieldPermFn, email}
-	err = emailPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Create(email)
-	if err != nil {
-		return nil, err
-	}
-	return emailPermit, nil
+	return &EmailPermit{fieldPermFn, email}, nil
 }
 
 func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadEmail)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	email, err := r.load.Get(id)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("email connection closed")
-		return nil, ErrConnClosed
-	}
-	email, err := r.load.Get(id)
+	fieldPermFn, err := r.perms.Check2(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}

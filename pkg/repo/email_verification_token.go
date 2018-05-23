@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -14,61 +12,50 @@ import (
 )
 
 type EVTPermit struct {
-	checkFieldPermission   FieldPermissionFunc
-	emailVerificationToken *data.EVT
-}
-
-func (r *EVTPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.emailVerificationToken) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
+	checkFieldPermission FieldPermissionFunc
+	evt                  *data.EVT
 }
 
 func (r *EVTPermit) EmailId() (string, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.emailVerificationToken.EmailId.String, nil
+	return r.evt.EmailId.String, nil
 }
 
 func (r *EVTPermit) ExpiresAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("expires_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.emailVerificationToken.ExpiresAt.Time, nil
+	return r.evt.ExpiresAt.Time, nil
 }
 
 func (r *EVTPermit) IssuedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("issued_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.emailVerificationToken.IssuedAt.Time, nil
+	return r.evt.IssuedAt.Time, nil
 }
 
 func (r *EVTPermit) Token() (string, error) {
 	if ok := r.checkFieldPermission("token"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.emailVerificationToken.Token.String, nil
+	return r.evt.Token.String, nil
 }
 
 func (r *EVTPermit) UserId() (string, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.emailVerificationToken.UserId.String, nil
+	return r.evt.UserId.String, nil
 }
 
 func (r *EVTPermit) VerifiedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("verified_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.emailVerificationToken.VerifiedAt.Time, nil
+	return r.evt.VerifiedAt.Time, nil
 }
 
 func NewEVTRepo(
@@ -102,32 +89,31 @@ func (r *EVTRepo) Close() {
 	r.load = nil
 }
 
+func (r *EVTRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("evt connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 // Service methods
 
-func (r *EVTRepo) Create(emailVerificationToken *data.EVT) (*EVTPermit, error) {
-	createFieldPermFn, err := r.perms.Check(perm.CreateEVT)
+func (r *EVTRepo) Create(evt *data.EVT) (*EVTPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Create, evt); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Create(evt); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, evt)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("emailVerificationToken connection closed")
-		return nil, ErrConnClosed
-	}
-	emailVerificationTokenPermit := &EVTPermit{createFieldPermFn, emailVerificationToken}
-	err = emailVerificationTokenPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Create(emailVerificationToken)
-	if err != nil {
-		return nil, err
-	}
-	readFieldPermFn, err := r.perms.Check(perm.ReadEVT)
-	if err != nil {
-		return nil, err
-	}
-	emailVerificationTokenPermit.checkFieldPermission = readFieldPermFn
-	return emailVerificationTokenPermit, nil
+	return &EVTPermit{fieldPermFn, evt}, nil
 }
 
 func (r *EVTRepo) Get(
@@ -135,19 +121,18 @@ func (r *EVTRepo) Get(
 	userId,
 	token string,
 ) (*EVTPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadEVT)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	evt, err := r.load.Get(emailId, userId, token)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		mylog.Log.Error("emailVerificationToken connection closed")
-		return nil, ErrConnClosed
-	}
-	emailVerificationToken, err := r.load.Get(emailId, userId, token)
+	fieldPermFn, err := r.perms.Check2(perm.Read, evt)
 	if err != nil {
 		return nil, err
 	}
-	return &EVTPermit{fieldPermFn, emailVerificationToken}, nil
+	return &EVTPermit{fieldPermFn, evt}, nil
 }
 
 // Middleware

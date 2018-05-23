@@ -89,10 +89,10 @@ func (r *RootResolver) CreateUser(
 	uResolver := &userResolver{User: userPermit, Repos: r.Repos}
 
 	if user.Login.String != "guest" {
-		avt := &data.EVT{}
-		avt.UserId.Set(user.Id.String)
+		evt := &data.EVT{}
+		evt.UserId.Set(user.Id)
 
-		err = r.Svcs.EVT.Create(avt)
+		err = r.Svcs.EVT.Create(evt)
 		if err != nil {
 			return uResolver, err
 		}
@@ -100,7 +100,7 @@ func (r *RootResolver) CreateUser(
 		err = r.Svcs.Mail.SendEmailVerificationMail(
 			user.PrimaryEmail.String,
 			user.Login.String,
-			avt.Token.String,
+			evt.Token.String,
 		)
 		if err != nil {
 			return uResolver, err
@@ -123,7 +123,9 @@ func (r *RootResolver) DeleteUser(
 		return nil, err
 	}
 
-	err = r.Repos.User().Delete(id.String)
+	user := &data.User{Id: *id}
+
+	err = r.Repos.User().Delete(user)
 	if err != nil {
 		return nil, err
 	}

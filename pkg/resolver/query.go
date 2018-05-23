@@ -34,10 +34,6 @@ func (r *RootResolver) Node(
 		if err != nil {
 			return nil, err
 		}
-		err = user.ViewerCanAdmin(ctx)
-		if err != nil {
-			return nil, err
-		}
 		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
 	default:
 		return nil, errors.New("invalid id")
@@ -56,10 +52,6 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 		switch parsedId.Type {
 		case "User":
 			user, err := r.Repos.User().Get(id)
-			if err != nil {
-				return nil, err
-			}
-			err = user.ViewerCanAdmin(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -91,10 +83,6 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 	if err != nil {
 		return nil, err
 	}
-	err = user.ViewerCanAdmin(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
@@ -104,10 +92,6 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 		return nil, errors.New("viewer not found")
 	}
 	user, err := r.Repos.User().Get(viewer.Id.String)
-	if err != nil {
-		return nil, err
-	}
-	err = user.ViewerCanAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}

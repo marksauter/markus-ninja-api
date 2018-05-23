@@ -14,7 +14,6 @@ type User struct {
 	Bio          pgtype.Text        `db:"bio" permit:"read"`
 	BackupEmail  pgtype.Varchar     `db:"backup_email"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	ExtraEmails  []string           `db:"extra_emails"`
 	Id           oid.OID            `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`

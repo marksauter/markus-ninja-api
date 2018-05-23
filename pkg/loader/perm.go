@@ -26,23 +26,43 @@ type QueryPermLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *QueryPermLoader) Clear(o perm.Operation) {
+func (l *QueryPermLoader) Clear(o perm.Operation) {
 	ctx := context.Background()
-	r.batchGet.Clear(ctx, dataloader.StringKey(o.String()))
+	l.batchGet.Clear(ctx, dataloader.StringKey(o.String()))
 }
 
-func (r *QueryPermLoader) ClearAll() {
-	r.batchGet.ClearAll()
+func (l *QueryPermLoader) ClearAll() {
+	l.batchGet.ClearAll()
 }
 
-func (r *QueryPermLoader) AddRoles(roles ...string) *QueryPermLoader {
-	r.viewerRoles = append(r.viewerRoles, roles...)
-	return r
+func (l *QueryPermLoader) AddRoles(roles ...data.Role) *QueryPermLoader {
+	for _, r := range roles {
+		l.viewerRoles = append(l.viewerRoles, r.String())
+	}
+	return l
 }
 
-func (r *QueryPermLoader) Get(o perm.Operation) (*perm.QueryPermission, error) {
+func (l *QueryPermLoader) RemoveRoles(roles ...data.Role) *QueryPermLoader {
+	viewerRoles := make([]string, 0, len(l.viewerRoles))
+	for _, vr := range l.viewerRoles {
+		remove := false
+		for _, r := range roles {
+			if vr == r.String() {
+				remove = true
+			}
+		}
+		if !remove {
+			viewerRoles = append(viewerRoles, vr)
+		}
+		remove = false
+	}
+	l.viewerRoles = viewerRoles
+	return l
+}
+
+func (l *QueryPermLoader) Get(o perm.Operation) (*perm.QueryPermission, error) {
 	ctx := context.Background()
-	permData, err := r.batchGet.Load(ctx, dataloader.StringKey(o.String()))()
+	permData, err := l.batchGet.Load(ctx, dataloader.StringKey(o.String()))()
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +74,13 @@ func (r *QueryPermLoader) Get(o perm.Operation) (*perm.QueryPermission, error) {
 	return perm, nil
 }
 
-func (r *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission, []error) {
+func (l *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(os))
 	for i, o := range os {
 		keys[i] = dataloader.StringKey(o.String())
 	}
-	permData, errs := r.batchGet.LoadMany(ctx, keys)()
+	permData, errs := l.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}
@@ -76,7 +96,7 @@ func (r *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission,
 	return perms, nil
 }
 
-func (r *QueryPermLoader) batchGetFunc(
+func (l *QueryPermLoader) batchGetFunc(
 	ctx context.Context,
 	keys dataloader.Keys,
 ) []*dataloader.Result {
@@ -96,7 +116,7 @@ func (r *QueryPermLoader) batchGetFunc(
 				results[i] = &dataloader.Result{Data: nil, Error: err}
 				return
 			}
-			queryPerm, err := r.svc.GetQueryPermission(operation, r.viewerRoles...)
+			queryPerm, err := l.svc.GetQueryPermission(operation, l.viewerRoles...)
 			results[i] = &dataloader.Result{Data: queryPerm, Error: err}
 		}(i, key)
 	}

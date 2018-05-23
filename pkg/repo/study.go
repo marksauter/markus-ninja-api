@@ -122,57 +122,51 @@ func (r *StudyRepo) Close() {
 	r.load = nil
 }
 
+func (r *StudyRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("study connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 // Service methods
 
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
-	_, err := r.perms.Check(perm.ReadStudy)
-	if err != nil {
-		var count int32
-		return count, err
-	}
 	return r.svc.CountByUser(userId)
 }
 
 func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
-	createFieldPermFn, err := r.perms.Check(perm.CreateStudy)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		return nil, ErrConnClosed
+	if _, err := r.perms.Check2(perm.Create, study); err != nil {
+		return nil, err
 	}
 	name := strings.TrimSpace(study.Name.String)
 	toKabob := regexp.MustCompile(`\s+`)
-	err = study.Name.Set(toKabob.ReplaceAllString(name, "-"))
+	if err := study.Name.Set(toKabob.ReplaceAllString(name, "-")); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Create(study); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
-	studyPermit := &StudyPermit{createFieldPermFn, study}
-	err = studyPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Create(study)
-	if err != nil {
-		return nil, err
-	}
-	readFieldPermFn, err := r.perms.Check(perm.ReadStudy)
-	if err != nil {
-		return nil, err
-	}
-	studyPermit.checkFieldPermission = readFieldPermFn
-	return studyPermit, nil
+	return &StudyPermit{fieldPermFn, study}, nil
 }
 
 func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	study, err := r.load.Get(id)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		return nil, ErrConnClosed
-	}
-	study, err := r.load.Get(id)
+	fieldPermFn, err := r.perms.Check2(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -180,34 +174,35 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 }
 
 func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
-	if err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
-	}
-	if r.load == nil {
-		mylog.Log.Error("study connection closed")
-		return nil, ErrConnClosed
 	}
 	studies, err := r.svc.GetByUserId(userId, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
-	for i, l := range studies {
-		studyPermits[i] = &StudyPermit{fieldPermFn, l}
+	if len(studies) > 0 {
+		fieldPermFn, err := r.perms.Check2(perm.Read, studies[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range studies {
+			studyPermits[i] = &StudyPermit{fieldPermFn, l}
+		}
 	}
 	return studyPermits, nil
 }
 
 func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	study, err := r.svc.GetByUserIdAndName(userId, name)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		return nil, ErrConnClosed
-	}
-	study, err := r.svc.GetByUserIdAndName(userId, name)
+	fieldPermFn, err := r.perms.Check2(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -215,53 +210,45 @@ func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error
 }
 
 func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.ReadStudy)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	study, err := r.svc.GetByUserLoginAndName(owner, name)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		return nil, ErrConnClosed
-	}
-	study, err := r.svc.GetByUserLoginAndName(owner, name)
+	fieldPermFn, err := r.perms.Check2(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) Delete(id string) error {
-	_, err := r.perms.Check(perm.DeleteStudy)
-	if err != nil {
+func (r *StudyRepo) Delete(study *data.Study) error {
+	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if r.load == nil {
-		return ErrConnClosed
-	}
-	err = r.svc.Delete(id)
-	if err != nil {
+	if _, err := r.perms.Check2(perm.Delete, study); err != nil {
 		return err
 	}
-	return nil
+	return r.svc.Delete(study.Id.String)
 }
 
 func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {
-	fieldPermFn, err := r.perms.Check(perm.UpdateStudy)
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Update, study); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Update(study); err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
-	if r.load == nil {
-		return nil, ErrConnClosed
-	}
-	studyPermit := &StudyPermit{fieldPermFn, study}
-	err = studyPermit.PreCheckPermissions()
-	if err != nil {
-		return nil, err
-	}
-	err = r.svc.Update(study)
-	if err != nil {
-		return nil, err
-	}
-	return studyPermit, nil
+	return &StudyPermit{fieldPermFn, study}, nil
 }
 
 // Middleware

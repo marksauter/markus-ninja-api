@@ -30,10 +30,6 @@ func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = user.ViewerCanAdmin(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 

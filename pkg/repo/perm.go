@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/fatih/structs"
+	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -16,17 +18,19 @@ func NewPermRepo(svc *data.PermService) *PermRepo {
 }
 
 type PermRepo struct {
-	load *loader.QueryPermLoader
-	svc  *data.PermService
+	load   *loader.QueryPermLoader
+	svc    *data.PermService
+	viewer *data.User
 }
 
 func (r *PermRepo) Open(ctx context.Context) error {
 	if r.load == nil {
-		viewer, ok := data.UserFromContext(ctx)
+		var ok bool
+		r.viewer, ok = data.UserFromContext(ctx)
 		if !ok {
 			return fmt.Errorf("viewer not found")
 		}
-		r.load = loader.NewQueryPermLoader(r.svc, viewer.Roles...)
+		r.load = loader.NewQueryPermLoader(r.svc, r.viewer.Roles...)
 	}
 	return nil
 }
@@ -66,6 +70,77 @@ func (r *PermRepo) Check(o perm.Operation) (FieldPermissionFunc, error) {
 		return false
 	}
 	return checkField, nil
+}
+
+func (r *PermRepo) Check2(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
+	var checkField FieldPermissionFunc
+	if r.load == nil {
+		mylog.Log.Error("permission connection closed")
+		return checkField, ErrConnClosed
+	}
+	if ok := r.viewerCanAdmin(node); ok {
+		r.load.AddRoles(data.OwnerRole)
+		defer r.load.RemoveRoles(data.OwnerRole)
+	}
+	nt, err := perm.ParseNodeType(structs.Name(node))
+	if err != nil {
+		return checkField, err
+	}
+	o := perm.Operation{a, nt}
+	queryPerm, err := r.load.Get(o)
+	if err != nil {
+		if err == data.ErrNotFound {
+			return checkField, ErrAccessDenied
+		} else {
+			return checkField, err
+		}
+	}
+	checkField = func(field string) bool {
+		for _, f := range queryPerm.Fields {
+			if f == field {
+				return true
+			}
+		}
+		return false
+	}
+	if a == perm.Create || a == perm.Update {
+		for _, f := range structs.Fields(node) {
+			if !f.IsZero() {
+				if ok := checkField(strcase.ToSnake(f.Name())); !ok {
+					return checkField, ErrAccessDenied
+				}
+			}
+		}
+	}
+	return checkField, nil
+}
+
+func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
+	vid := r.viewer.Id.String
+	switch node := node.(type) {
+	case data.Lesson:
+		return vid == node.UserId.String
+	case *data.Lesson:
+		return vid == node.UserId.String
+	case data.LessonComment:
+		return vid == node.UserId.String
+	case *data.LessonComment:
+		return vid == node.UserId.String
+	case data.Study:
+		return vid == node.UserId.String
+	case *data.Study:
+		return vid == node.UserId.String
+	case data.User:
+		return vid == node.Id.String
+	case *data.User:
+		return vid == node.Id.String
+	case data.UserEmail:
+		return vid == node.UserId.String
+	case *data.UserEmail:
+		return vid == node.UserId.String
+	default:
+		return false
+	}
 }
 
 // Middleware
