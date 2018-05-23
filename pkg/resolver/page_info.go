@@ -1,14 +1,18 @@
 package resolver
 
-import "github.com/marksauter/markus-ninja-api/pkg/data"
+import (
+	"math"
+
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+)
 
 type pageInfoResolver struct {
 	end             int32
-	endCursor       string
+	endCursor       *string
 	hasNextPage     bool
 	hasPreviousPage bool
 	start           int32
-	startCursor     string
+	startCursor     *string
 }
 
 type EdgeResolver interface {
@@ -19,7 +23,11 @@ func NewPageInfoResolver(
 	edges []EdgeResolver,
 	pageOptions *data.PageOptions,
 ) *pageInfoResolver {
+	pageInfo := &pageInfoResolver{}
 	n := int32(len(edges))
+	if n == 0 {
+		return pageInfo
+	}
 	var hasNextPage, hasPreviousPage bool
 	end := int32(n - 1)
 	start := int32(0)
@@ -97,25 +105,25 @@ func NewPageInfoResolver(
 				start = int32(0)
 				hasPreviousPage = false
 			}
-
 		}
 	}
+
+	end = int32(math.Max(0, float64(end)))
 	endCursor := edges[end].Cursor()
 	startCursor := edges[start].Cursor()
 
-	pageInfo := &pageInfoResolver{
-		end:             end,
-		endCursor:       endCursor,
-		hasNextPage:     hasNextPage,
-		hasPreviousPage: hasPreviousPage,
-		start:           start,
-		startCursor:     startCursor,
-	}
+	pageInfo.end = end
+	pageInfo.endCursor = &endCursor
+	pageInfo.hasNextPage = hasNextPage
+	pageInfo.hasPreviousPage = hasPreviousPage
+	pageInfo.start = start
+	pageInfo.startCursor = &startCursor
+
 	return pageInfo
 }
 
 func (r *pageInfoResolver) EndCursor() *string {
-	return &r.endCursor
+	return r.endCursor
 }
 
 func (r *pageInfoResolver) HasNextPage() bool {
@@ -127,5 +135,5 @@ func (r *pageInfoResolver) HasPreviousPage() bool {
 }
 
 func (r *pageInfoResolver) StartCursor() *string {
-	return &r.startCursor
+	return r.startCursor
 }

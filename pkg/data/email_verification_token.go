@@ -10,7 +10,7 @@ import (
 	"github.com/rs/xid"
 )
 
-type EmailVerificationTokenModel struct {
+type EVT struct {
 	EmailId    oid.OID            `db:"email_id"`
 	UserId     oid.OID            `db:"user_id"`
 	Token      pgtype.Varchar     `db:"token"`
@@ -19,20 +19,20 @@ type EmailVerificationTokenModel struct {
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 
-func NewEmailVerificationTokenService(q Queryer) *EmailVerificationTokenService {
-	return &EmailVerificationTokenService{q}
+func NewEVTService(q Queryer) *EVTService {
+	return &EVTService{q}
 }
 
-type EmailVerificationTokenService struct {
+type EVTService struct {
 	db Queryer
 }
 
-func (s *EmailVerificationTokenService) get(
+func (s *EVTService) get(
 	name string,
 	sql string,
 	args ...interface{},
-) (*EmailVerificationTokenModel, error) {
-	var row EmailVerificationTokenModel
+) (*EVT, error) {
+	var row EVT
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.EmailId,
 		&row.UserId,
@@ -50,7 +50,7 @@ func (s *EmailVerificationTokenService) get(
 	return &row, nil
 }
 
-const getEmailVerificationTokenByPKSQL = `
+const getEVTByPKSQL = `
 	SELECT
 		email_id,
 		user_id,
@@ -62,24 +62,24 @@ const getEmailVerificationTokenByPKSQL = `
 	WHERE user_id = $1 AND token = $2
 `
 
-func (s *EmailVerificationTokenService) GetByPK(
+func (s *EVTService) GetByPK(
 	emailId,
 	userId,
 	token string,
-) (*EmailVerificationTokenModel, error) {
+) (*EVT, error) {
 	mylog.Log.WithField(
 		"token", token,
-	).Info("GetByPK(token) EmailVerificationToken")
+	).Info("GetByPK(token) EVT")
 	return s.get(
-		"getEmailVerificationTokenByPK",
-		getEmailVerificationTokenByPKSQL,
+		"getEVTByPK",
+		getEVTByPKSQL,
 		emailId,
 		userId,
 		token,
 	)
 }
 
-func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel) error {
+func (s *EVTService) Create(row *EVT) error {
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -118,7 +118,7 @@ func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel)
 			expires_at
   `
 
-	psName := preparedName("insertEmailVerificationToken", sql)
+	psName := preparedName("insertEVT", sql)
 
 	return prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.IssuedAt,
@@ -126,8 +126,8 @@ func (s *EmailVerificationTokenService) Create(row *EmailVerificationTokenModel)
 	)
 }
 
-func (s *EmailVerificationTokenService) Update(
-	row *EmailVerificationTokenModel,
+func (s *EVTService) Update(
+	row *EVT,
 ) error {
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 1))
@@ -146,7 +146,7 @@ func (s *EmailVerificationTokenService) Update(
 		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
 	`
 
-	psName := preparedName("updateEmailVerificationToken", sql)
+	psName := preparedName("updateEVT", sql)
 
 	commandTag, err := prepareExec(s.db, psName, sql, args...)
 	if err != nil {
@@ -159,14 +159,20 @@ func (s *EmailVerificationTokenService) Update(
 	return nil
 }
 
-func (s *EmailVerificationTokenService) Delete(token string) error {
+const deleteEVTSQL = `
+	DELETE FROM email_verification_token 
+	WHERE token = $1
+`
+
+func (s *EVTService) Delete(token string) error {
 	args := pgx.QueryArgs(make([]interface{}, 0, 1))
 
-	sql := `
-		DELETE FROM email_verification_token 
-		WHERE ` + `"token"=` + args.Append(token)
-
-	commandTag, err := prepareExec(s.db, "deleteEmailVerificationToken", sql, args...)
+	commandTag, err := prepareExec(
+		s.db,
+		"deleteEVT",
+		deleteEVTSQL,
+		args...,
+	)
 	if err != nil {
 		return err
 	}

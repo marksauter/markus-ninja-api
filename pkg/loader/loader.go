@@ -1,6 +1,8 @@
 package loader
 
 import (
+	"strings"
+
 	"github.com/graph-gophers/dataloader"
 )
 
@@ -11,4 +13,13 @@ type Loader interface {
 
 func createLoader(batchFn dataloader.BatchFunc) *dataloader.Loader {
 	return dataloader.NewBatchedLoader(batchFn)
+}
+
+func newCompositeKey(strs ...string) dataloader.Key {
+	return dataloader.StringKey(strings.Join(strs, ":"))
+}
+
+func splitCompositeKey(k dataloader.Key) []string {
+	s := k.Raw().(string)
+	return strings.Split(s, ":")
 }

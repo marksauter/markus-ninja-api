@@ -92,9 +92,12 @@ CREATE TABLE user_role(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+DROP TYPE IF EXISTS access_level CASCADE;
 CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Update', 'Delete');
+DROP TYPE IF EXISTS audience CASCADE;
 CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
-CREATE TYPE node_type AS ENUM('Label', 'Lesson', 'LessonComment', 'Study', 'User');
+DROP TYPE IF EXISTS node_type CASCADE;
+CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'Study', 'User', 'UserEmail');
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(

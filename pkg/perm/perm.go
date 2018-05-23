@@ -92,10 +92,10 @@ func (a Audience) String() string {
 }
 
 func ParseAudience(aud string) (Audience, error) {
-	switch strings.ToLower(aud) {
-	case "authenticated":
+	switch strings.ToUpper(aud) {
+	case "AUTHENTICATED":
 		return Authenticated, nil
-	case "everyone":
+	case "EVERYONE":
 		return Everyone, nil
 	default:
 		var a Audience
@@ -121,6 +121,7 @@ type NodeType int
 
 const (
 	EmailType NodeType = iota
+	EVTType
 	LessonType
 	LessonCommentType
 	StudyType
@@ -132,6 +133,8 @@ func (nt NodeType) String() string {
 	switch nt {
 	case EmailType:
 		return "Email"
+	case EVTType:
+		return "EVT"
 	case LessonType:
 		return "Lesson"
 	case LessonCommentType:
@@ -149,15 +152,19 @@ func (nt NodeType) String() string {
 
 func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
+	case "email":
+		return EmailType, nil
+	case "evt":
+		return EVTType, nil
 	case "lesson":
 		return LessonType, nil
-	case "lesson_comment":
+	case "lessoncomment":
 		return LessonCommentType, nil
 	case "study":
 		return StudyType, nil
 	case "user":
 		return UserType, nil
-	case "user_email":
+	case "useremail":
 		return UserEmailType, nil
 	default:
 		var t NodeType
@@ -196,6 +203,13 @@ var (
 	ConnectEmail    = Operation{Connect, EmailType}
 	DisconnectEmail = Operation{Disconnect, EmailType}
 
+	CreateEVT     = Operation{Create, EVTType}
+	DeleteEVT     = Operation{Delete, EVTType}
+	ReadEVT       = Operation{Read, EVTType}
+	UpdateEVT     = Operation{Update, EVTType}
+	ConnectEVT    = Operation{Connect, EVTType}
+	DisconnectEVT = Operation{Disconnect, EVTType}
+
 	CreateLesson     = Operation{Create, LessonType}
 	DeleteLesson     = Operation{Delete, LessonType}
 	ReadLesson       = Operation{Read, LessonType}
@@ -223,6 +237,13 @@ var (
 	UpdateUser     = Operation{Update, UserType}
 	ConnectUser    = Operation{Connect, UserType}
 	DisconnectUser = Operation{Disconnect, UserType}
+
+	CreateUserEmail     = Operation{Create, UserEmailType}
+	DeleteUserEmail     = Operation{Delete, UserEmailType}
+	ReadUserEmail       = Operation{Read, UserEmailType}
+	UpdateUserEmail     = Operation{Update, UserEmailType}
+	ConnectUserEmail    = Operation{Connect, UserEmailType}
+	DisconnectUserEmail = Operation{Disconnect, UserEmailType}
 )
 
 func (o Operation) String() string {
@@ -232,7 +253,7 @@ func (o Operation) String() string {
 func ParseOperation(operation string) (Operation, error) {
 	var o Operation
 
-	parsedOperation := strings.SplitN(strings.ToLower(operation), " ", 2)
+	parsedOperation := strings.SplitN(operation, " ", 2)
 	if len(parsedOperation) != 2 {
 		return o, fmt.Errorf("invalid operation: %q", operation)
 	}

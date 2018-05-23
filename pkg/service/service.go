@@ -7,8 +7,8 @@ import (
 
 type Services struct {
 	Auth          *AuthService
-	AVT           *data.EmailVerificationTokenService
 	Email         *data.EmailService
+	EVT           *data.EVTService
 	Lesson        *data.LessonService
 	LessonComment *data.LessonCommentService
 	Mail          *MailService
@@ -17,6 +17,7 @@ type Services struct {
 	Role          *data.RoleService
 	Study         *data.StudyService
 	User          *data.UserService
+	UserEmail     *data.UserEmailService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) *Services {
@@ -30,7 +31,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 	}
 	return &Services{
 		Auth:          NewAuthService(),
-		AVT:           data.NewEmailVerificationTokenService(db),
+		EVT:           data.NewEVTService(db),
 		Email:         data.NewEmailService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
@@ -40,5 +41,6 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 		Role:          data.NewRoleService(db),
 		Study:         data.NewStudyService(db),
 		User:          data.NewUserService(db),
+		UserEmail:     data.NewUserEmailService(db),
 	}
 }

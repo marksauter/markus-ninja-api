@@ -89,10 +89,10 @@ func (r *RootResolver) CreateUser(
 	uResolver := &userResolver{User: userPermit, Repos: r.Repos}
 
 	if user.Login.String != "guest" {
-		avt := &data.EmailVerificationTokenModel{}
+		avt := &data.EVT{}
 		avt.UserId.Set(user.Id.String)
 
-		err = r.Svcs.AVT.Create(avt)
+		err = r.Svcs.EVT.Create(avt)
 		if err != nil {
 			return uResolver, err
 		}
@@ -228,30 +228,35 @@ func (r *RootResolver) CreateStudy(
 	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
 }
 
-// type RequestEmailVerificationInput struct {
-//   EmailId string
-// }
-//
-// func (r *RootResolver) RequestEmailVerification(
-//   ctx context.Context,
-//   args struct{ Input RequestEmailVerificationInput },
-// ) (bool, error) {
-//   viewer, ok := data.UserFromContext(ctx)
-//   if !ok {
-//     return false, errors.New("viewer not found")
-//   }
-//
-//   userEmail, err := r.Repos.UserEmail().Get(viewer.Id.String, args.Input.EmailId)
-//   if err != nil {
-//     return false, err
-//   }
-//
-//   evt := &data.EmailVerificationTokenModel{}
-//   evt.EmailId.Set(&userEmail.EmailId)
-//   evt.UserId.Set(&userEmail.UserId)
-//
-//   err = r.Repos.EVT().Create(evt)
-//   if err != nil {
-//     return false, err
-//   }
-// }
+type RequestEmailVerificationInput struct {
+	Email string
+}
+
+func (r *RootResolver) RequestEmailVerification(
+	ctx context.Context,
+	args struct{ Input RequestEmailVerificationInput },
+) (*evtResolver, error) {
+	viewer, ok := data.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	userEmail, err := r.Repos.UserEmail().GetByUserIdAndEmail(
+		viewer.Id.String,
+		args.Input.Email,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	evt := &data.EVT{}
+	evt.EmailId.Set(userEmail.EmailId)
+	evt.UserId.Set(userEmail.UserId)
+
+	evtPermit, err := r.Repos.EVT().Create(evt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
+}

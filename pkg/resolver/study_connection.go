@@ -6,19 +6,19 @@ import (
 )
 
 func NewStudyConnectionResolver(
-	studys []*repo.StudyPermit,
+	studies []*repo.StudyPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
 ) (*studyConnectionResolver, error) {
-	edges := make([]*studyEdgeResolver, len(studys))
+	edges := make([]*studyEdgeResolver, len(studies))
 	for i := range edges {
-		id, err := studys[i].ID()
+		id, err := studies[i].ID()
 		if err != nil {
 			return nil, err
 		}
 		cursor := data.EncodeCursor(id)
-		studyEdge := NewStudyEdgeResolver(cursor, studys[i], repos)
+		studyEdge := NewStudyEdgeResolver(cursor, studies[i], repos)
 		edges[i] = studyEdge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
@@ -30,7 +30,7 @@ func NewStudyConnectionResolver(
 
 	resolver := &studyConnectionResolver{
 		edges:      edges,
-		studys:     studys,
+		studies:    studies,
 		pageInfo:   pageInfo,
 		repos:      repos,
 		totalCount: totalCount,
@@ -40,22 +40,28 @@ func NewStudyConnectionResolver(
 
 type studyConnectionResolver struct {
 	edges      []*studyEdgeResolver
-	studys     []*repo.StudyPermit
+	studies    []*repo.StudyPermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	totalCount int32
 }
 
 func (r *studyConnectionResolver) Edges() *[]*studyEdgeResolver {
-	edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
-	return &edges
+	if len(r.edges) > 0 {
+		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
+		return &edges
+	}
+	return &r.edges
 }
 
 func (r *studyConnectionResolver) Nodes() *[]*studyResolver {
-	studys := r.studys[r.pageInfo.start : r.pageInfo.end+1]
-	nodes := make([]*studyResolver, len(studys))
-	for i := range nodes {
-		nodes[i] = &studyResolver{Study: studys[i], Repos: r.repos}
+	n := len(r.studies)
+	nodes := make([]*studyResolver, 0, n)
+	if n > 0 {
+		studies := r.studies[r.pageInfo.start : r.pageInfo.end+1]
+		for i := range nodes {
+			nodes[i] = &studyResolver{Study: studies[i], Repos: r.repos}
+		}
 	}
 	return &nodes
 }

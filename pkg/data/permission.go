@@ -159,12 +159,7 @@ func (s *PermService) UpdatePermissionSuite(model interface{}) error {
 	return nil
 }
 
-func (s *PermService) GetByRoleName(
-	roleName string,
-) ([]Permission, error) {
-	permissions := make([]Permission, 0)
-
-	permissionSQL := `
+const getPermissionByRoleNameSQL = `
 		SELECT
 			id,
 			access_level,
@@ -178,7 +173,13 @@ func (s *PermService) GetByRoleName(
 		INNER JOIN role r ON r.id = rp.role_id
 		WHERE r.name = $1
 	`
-	rows, err := s.db.Query(permissionSQL, roleName)
+
+func (s *PermService) GetByRoleName(
+	roleName string,
+) ([]Permission, error) {
+	permissions := make([]Permission, 0)
+
+	rows, err := s.db.Query(getPermissionByRoleNameSQL, roleName)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
@@ -283,13 +284,14 @@ func (s *PermService) GetQueryPermission(
 	return p, nil
 }
 
+const updatePermissionSQL = `
+	UPDATE permission
+	SET audience = $1
+	WHERE id = $2
+`
+
 func (s *PermService) Update(permissionId string, a perm.Audience) error {
-	permissionSQL := `
-		UPDATE permission
-		SET audience = $1
-		WHERE id = $2
-	`
-	_, err := s.db.Exec(permissionSQL, a, permissionId)
+	_, err := s.db.Exec(updatePermissionSQL, a, permissionId)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during execution")
 		return err
@@ -298,21 +300,25 @@ func (s *PermService) Update(permissionId string, a perm.Audience) error {
 	return nil
 }
 
+const updateOperationForFieldsSQL = `
+	UPDATE permission
+	SET audience = $1
+	WHERE access_level = $2
+		AND audience != $1
+		AND type = $3
+		AND field = ANY($4)
+`
+
 func (s *PermService) UpdateOperationForFields(
 	o perm.Operation,
 	fields []string,
 	a perm.Audience,
 ) error {
-	permissionSQL := `
-		UPDATE permission
-		SET audience = $1
-		WHERE access_level = $2
-			AND audience != $1
-			AND type = $3
-			AND field = ANY($4)
-	`
+	if len(fields) == 0 {
+		return nil
+	}
 	_, err := s.db.Exec(
-		permissionSQL,
+		updateOperationForFieldsSQL,
 		a,
 		o.AccessLevel,
 		o.NodeType,

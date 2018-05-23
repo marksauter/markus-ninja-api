@@ -1,8 +1,5 @@
 # Input type for RequestEmailVerification
 input RequestEmailVerificationInput {
-  # ID of the email to verify. 
-  emailId: ID!
-
-  # ID of the user for which to verify the email.
-  userId: ID!
+  # Email to verify. 
+  email: String!
 }

@@ -12,6 +12,7 @@ type key string
 
 const (
 	emailRepoKey         key = "email"
+	evtRepoKey           key = "evt"
 	lessonRepoKey        key = "lesson"
 	lessonCommentRepoKey key = "lesson_comment"
 	permRepoKey          key = "perm"
@@ -39,12 +40,13 @@ func NewRepos(svcs *service.Services) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
 			emailRepoKey:         NewEmailRepo(permRepo, svcs.Email),
+			evtRepoKey:           NewEVTRepo(permRepo, svcs.EVT),
 			lessonRepoKey:        NewLessonRepo(permRepo, svcs.Lesson),
 			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
 			permRepoKey:          permRepo,
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
-			// userEmailRepoKey:     NewUserEmailRepo(permRepo, svcs.UserEmail),
+			userEmailRepoKey:     NewUserEmailRepo(permRepo, svcs.UserEmail),
 		},
 	}
 }
@@ -67,6 +69,11 @@ func (r *Repos) CloseAll() {
 
 func (r *Repos) Email() *EmailRepo {
 	repo, _ := r.lookup[emailRepoKey].(*EmailRepo)
+	return repo
+}
+
+func (r *Repos) EVT() *EVTRepo {
+	repo, _ := r.lookup[evtRepoKey].(*EVTRepo)
 	return repo
 }
 
@@ -95,10 +102,10 @@ func (r *Repos) User() *UserRepo {
 	return repo
 }
 
-// func (r *Repos) UserEmail() *UserEmailRepo {
-//   repo, _ := r.lookup[userEmailRepoKey].(*UserEmailRepo)
-//   return repo
-// }
+func (r *Repos) UserEmail() *UserEmailRepo {
+	repo, _ := r.lookup[userEmailRepoKey].(*UserEmailRepo)
+	return repo
+}
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

@@ -126,9 +126,12 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
+		new(data.EVT),
 		new(data.Lesson),
+		new(data.LessonComment),
 		new(data.Study),
 		new(data.User),
+		new(data.UserEmail),
 	}
 
 	for _, model := range modelTypes {

@@ -13,6 +13,7 @@ import (
 type UserEmail struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
 	EmailId    oid.OID            `db:"email_id"`
+	Public     pgtype.Bool        `db:"public"`
 	Type       UserEmailType      `db:"type"`
 	UserId     oid.OID            `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
@@ -32,6 +33,7 @@ func (s *UserEmailService) get(name string, sql string, args ...interface{}) (*U
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.EmailId,
+		&row.Public,
 		&row.Type,
 		&row.UserId,
 		&row.UpdatedAt,
@@ -51,9 +53,10 @@ const getUserEmailByPKSQL = `
 	SELECT
 		created_at,
 		email_id,
+		public,
 		type,
 		user_id,
-		updated_at
+		updated_at,
 		verified_at
 	FROM user_email
 	WHERE user_id = $1 AND email_id = $2
@@ -67,6 +70,33 @@ func (s *UserEmailService) GetByPK(userId, emailId string) (*UserEmail, error) {
 	return s.get("getUserEmailByPK", getUserEmailByPKSQL, userId, emailId)
 }
 
+const getUserEmailByUserIdAndEmailSQL = `
+	SELECT
+		ue.created_at,
+		ue.email_id,
+		ue.public,
+		ue.type,
+		ue.user_id,
+		ue.updated_at,
+		ue.verified_at
+	FROM user_email ue
+	INNER JOIN email e ON e.value = $1
+	WHERE user_id = $2 AND email_id = e.id
+`
+
+func (s *UserEmailService) GetByUserIdAndEmail(userId, email string) (*UserEmail, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": userId,
+		"email":   email,
+	}).Info("GetByUserIdAndEmail(id) UserEmail")
+	return s.get(
+		"getUserEmailByUserIdAndEmail",
+		getUserEmailByUserIdAndEmailSQL,
+		email,
+		userId,
+	)
+}
+
 func (s *UserEmailService) Create(ae *UserEmail) error {
 	mylog.Log.Info("Create() UserEmail")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
@@ -76,6 +106,10 @@ func (s *UserEmailService) Create(ae *UserEmail) error {
 	if ae.EmailId.Status != pgtype.Undefined {
 		columns = append(columns, `email_id`)
 		values = append(values, args.Append(&ae.EmailId))
+	}
+	if ae.Public.Status != pgtype.Undefined {
+		columns = append(columns, `public`)
+		values = append(values, args.Append(&ae.Public))
 	}
 	if ae.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
@@ -119,15 +153,19 @@ func (s *UserEmailService) Create(ae *UserEmail) error {
 	return nil
 }
 
-func (s *UserEmailService) Delete(user_id, email_id string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
+const deleteUserEmailSQL = `
+	DELETE FROM user_email
+	WHERE user_id= $1 AND email_id= $2
+`
 
-	sql := `
-		DELETE FROM user_email
-		WHERE ` + `user_id=` + args.Append(user_id) + `
-		AND ` + `email_id=` + args.Append(email_id)
-
-	commandTag, err := prepareExec(s.db, "deleteUserEmail", sql, args...)
+func (s *UserEmailService) Delete(userId, emailId string) error {
+	commandTag, err := prepareExec(
+		s.db,
+		"deleteUserEmail",
+		deleteUserEmailSQL,
+		userId,
+		emailId,
+	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to delete user_email")
 		return err
@@ -140,9 +178,12 @@ func (s *UserEmailService) Delete(user_id, email_id string) error {
 }
 
 func (s *UserEmailService) Update(ae *UserEmail) error {
-	sets := make([]string, 0, 2)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	sets := make([]string, 0, 3)
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
+	if ae.Public.Status != pgtype.Undefined {
+		sets = append(sets, `public`+"="+args.Append(&ae.Public))
+	}
 	if ae.Type.Status != pgtype.Undefined {
 		sets = append(sets, `type`+"="+args.Append(&ae.Type))
 	}
