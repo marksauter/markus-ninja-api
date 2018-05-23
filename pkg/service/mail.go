@@ -71,6 +71,7 @@ func (s *MailService) SendEmailVerificationMail(to, login, token string) error {
 			"to":    to,
 			"error": err,
 		}).Error("failed to send email verification email")
+		return err
 	}
 
 	mylog.Log.WithFields(logrus.Fields{

@@ -118,7 +118,7 @@ func (s *EVTService) Create(row *EVT) error {
 			expires_at
   `
 
-	psName := preparedName("insertEVT", sql)
+	psName := preparedName("createEVT", sql)
 
 	return prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.IssuedAt,

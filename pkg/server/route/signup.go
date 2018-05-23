@@ -108,7 +108,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	user := &data.User{}
 	user.Login.Set(registration.Username)
 	user.Password.Set(password.Hash())
-	user.PrimaryEmail.Set(registration.Email)
+	user.PrimaryEmail.Value.Set(registration.Email)
 
 	err = h.Svcs.User.Create(user)
 	if err != nil {

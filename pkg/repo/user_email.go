@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -23,11 +24,22 @@ func (r *UserEmailPermit) CreatedAt() (time.Time, error) {
 	return r.userEmail.CreatedAt.Time, nil
 }
 
+func (r *UserEmailPermit) EmailValue() string {
+	return r.userEmail.EmailValue.String
+}
+
 func (r *UserEmailPermit) EmailId() (string, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return "", ErrAccessDenied
 	}
 	return r.userEmail.EmailId.String, nil
+}
+
+func (r *UserEmailPermit) IsVerified() (bool, error) {
+	if ok := r.checkFieldPermission("verified_at"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.userEmail.VerifiedAt.Status == pgtype.Null, nil
 }
 
 func (r *UserEmailPermit) Type() (string, error) {
@@ -42,6 +54,10 @@ func (r *UserEmailPermit) UpdatedAt() (time.Time, error) {
 		return time.Time{}, ErrAccessDenied
 	}
 	return r.userEmail.UpdatedAt.Time, nil
+}
+
+func (r *UserEmailPermit) UserLogin() string {
+	return r.userEmail.UserLogin.String
 }
 
 func (r *UserEmailPermit) UserId() (string, error) {

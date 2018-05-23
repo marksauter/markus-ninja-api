@@ -20,6 +20,5 @@ func newCompositeKey(strs ...string) dataloader.Key {
 }
 
 func splitCompositeKey(k dataloader.Key) []string {
-	s := k.Raw().(string)
-	return strings.Split(s, ":")
+	return strings.Split(k.String(), ":")
 }

@@ -12,9 +12,11 @@ import (
 
 type UserEmail struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
+	EmailValue pgtype.Varchar     `db:"email"`
 	EmailId    oid.OID            `db:"email_id"`
 	Public     pgtype.Bool        `db:"public"`
 	Type       UserEmailType      `db:"type"`
+	UserLogin  pgtype.Varchar     `db:"user"`
 	UserId     oid.OID            `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
@@ -32,9 +34,11 @@ func (s *UserEmailService) get(name string, sql string, args ...interface{}) (*U
 	var row UserEmail
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
+		&row.EmailValue,
 		&row.EmailId,
 		&row.Public,
 		&row.Type,
+		&row.UserLogin,
 		&row.UserId,
 		&row.UpdatedAt,
 		&row.VerifiedAt,
@@ -51,14 +55,18 @@ func (s *UserEmailService) get(name string, sql string, args ...interface{}) (*U
 
 const getUserEmailByPKSQL = `
 	SELECT
-		created_at,
-		email_id,
-		public,
-		type,
-		user_id,
-		updated_at,
-		verified_at
-	FROM user_email
+		ue.created_at,
+		e.value email_value,
+		ue.email_id,
+		ue.public,
+		ue.type,
+		a.login user_login,
+		ue.user_id,
+		ue.updated_at,
+		ue.verified_at
+	FROM user_email ue
+	INNER JOIN account a ON a.id = ue.user_id
+	INNER JOIN email e ON e.id = ue.email_id
 	WHERE user_id = $1 AND email_id = $2
 `
 
@@ -73,13 +81,16 @@ func (s *UserEmailService) GetByPK(userId, emailId string) (*UserEmail, error) {
 const getUserEmailByUserIdAndEmailSQL = `
 	SELECT
 		ue.created_at,
+		e.value email_value,
 		ue.email_id,
 		ue.public,
 		ue.type,
+		a.login user_login,
 		ue.user_id,
 		ue.updated_at,
 		ue.verified_at
 	FROM user_email ue
+	INNER JOIN account a ON a.id = ue.user_id
 	INNER JOIN email e ON e.value = $1
 	WHERE user_id = $2 AND email_id = e.id
 `

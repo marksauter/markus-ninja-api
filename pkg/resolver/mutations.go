@@ -79,7 +79,7 @@ func (r *RootResolver) CreateUser(
 
 	user.Login.Set(args.Input.Login)
 	user.Password.Set(password.Hash())
-	user.PrimaryEmail.Set(args.Input.Email)
+	user.PrimaryEmail.Value.Set(args.Input.Email)
 
 	userPermit, err := r.Repos.User().Create(&user)
 	if err != nil {
@@ -90,6 +90,7 @@ func (r *RootResolver) CreateUser(
 
 	if user.Login.String != "guest" {
 		evt := &data.EVT{}
+		evt.EmailId.Set(user.PrimaryEmail.Id)
 		evt.UserId.Set(user.Id)
 
 		err = r.Svcs.EVT.Create(evt)
@@ -98,7 +99,7 @@ func (r *RootResolver) CreateUser(
 		}
 
 		err = r.Svcs.Mail.SendEmailVerificationMail(
-			user.PrimaryEmail.String,
+			user.PrimaryEmail.Value.String,
 			user.Login.String,
 			evt.Token.String,
 		)
@@ -248,7 +249,18 @@ func (r *RootResolver) RequestEmailVerification(
 		args.Input.Email,
 	)
 	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, errors.New("email not found for current viewer")
+		}
 		return nil, err
+	}
+
+	isVerified, err := userEmail.IsVerified()
+	if err != nil {
+		return nil, err
+	}
+	if isVerified {
+		return nil, errors.New("email already verified")
 	}
 
 	evt := &data.EVT{}
@@ -260,5 +272,16 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, err
 	}
 
-	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
+	resolver := &evtResolver{EVT: evtPermit, Repos: r.Repos}
+
+	err = r.Svcs.Mail.SendEmailVerificationMail(
+		userEmail.EmailValue(),
+		userEmail.UserLogin(),
+		evt.Token.String,
+	)
+	if err != nil {
+		return resolver, err
+	}
+
+	return resolver, nil
 }

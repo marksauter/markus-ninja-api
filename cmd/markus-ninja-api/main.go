@@ -242,7 +242,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	guest.Id.Set(guestId.String)
 	guest.Login.Set("guest")
 	guest.Password.Set(guestPassword.Hash())
-	guest.PrimaryEmail.Set("guest@rkus.ninja")
+	guest.PrimaryEmail.Value.Set("guest@rkus.ninja")
 	if err := svcs.User.Create(guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
@@ -261,7 +261,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	markus.Id.Set(markusId.String)
 	markus.Login.Set("markus")
 	markus.Password.Set(markusPassword.Hash())
-	markus.PrimaryEmail.Set("m@rkus.ninja")
+	markus.PrimaryEmail.Value.Set("m@rkus.ninja")
 	if err := svcs.User.Create(markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {

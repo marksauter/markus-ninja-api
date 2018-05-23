@@ -18,7 +18,7 @@ type User struct {
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     pgtype.Bytea       `db:"password" permit:"create"`
-	PrimaryEmail pgtype.Varchar     `db:"primary_email" permit:"create"`
+	PrimaryEmail Email              `db:"primary_email" permit:"create"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -294,8 +294,7 @@ func (s *UserService) Create(user *User) error {
 	}
 
 	emailSvc := NewEmailService(tx)
-	email := &Email{Value: user.PrimaryEmail}
-	err = emailSvc.Create(email)
+	err = emailSvc.Create(&user.PrimaryEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create email")
 		return err
@@ -303,7 +302,7 @@ func (s *UserService) Create(user *User) error {
 
 	userEmailSvc := NewUserEmailService(tx)
 	userEmail := &UserEmail{
-		EmailId: email.Id,
+		EmailId: user.PrimaryEmail.Id,
 		Type:    NewUserEmailType(PrimaryEmail),
 		UserId:  user.Id,
 	}
