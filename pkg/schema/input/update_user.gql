@@ -1,7 +1,17 @@
 # Input type for UpdateUser.
 input UpdateUserInput {
-  bio:     String
-  userId:  ID!
-  login:   String
-  name:    String
+  # The user's public profile bio.
+  bio: String
+
+  # The user's public profile email.
+  email: String
+
+  # The username used to login.
+  login: String
+
+  # The user's public profile name.
+  name: String
+
+  # ID of the user.
+  userId: String!
 }

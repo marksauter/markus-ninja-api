@@ -1,8 +1,5 @@
 # Input type for AddUserEmail.
 input AddUserEmailInput {
   # Value of the email address to add.
-  email:   String!
-
-  # Id of the user for which to add the email.
-  userId:  ID!
+  email: String!
 }

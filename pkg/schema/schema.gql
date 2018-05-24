@@ -33,17 +33,17 @@ type Query {
   viewer: User!
 }
 type Mutation {
-  # addUserEmail(input: AddUserEmailInput!): UserEmail
+  addUserEmail(input: AddUserEmailInput!): UserEmail
   # deleteUserEmail(input: DeleteUserEmailInput!): ID
   # updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
 
   createLesson(input: CreateLessonInput!): Lesson
-  # deleteLesson(input: DeleteLessonInput!): Boolean!
-  # updateLesson(input: UpdateLessonInput!): Lesson!
+  deleteLesson(input: DeleteLessonInput!): ID
+  updateLesson(input: UpdateLessonInput!): Lesson!
 
   createStudy(input: CreateStudyInput!): Study
-  # deleteStudy(input: DeleteStudyInput!): Boolean!
-  # updateStudy(input: UpdateStudyInput!): Study!
+  deleteStudy(input: DeleteStudyInput!): ID
+  updateStudy(input: UpdateStudyInput!): Study!
 
   createUser(input: CreateUserInput!): User
   deleteUser(input: DeleteUserInput!): ID
@@ -51,5 +51,5 @@ type Mutation {
 
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
   requestPasswordReset(input: RequestPasswordResetInput!): PRT!
-  # resetPassword(input: ResetPasswordInput!): Boolean!
+  resetPassword(input: ResetPasswordInput!): Boolean!
 }

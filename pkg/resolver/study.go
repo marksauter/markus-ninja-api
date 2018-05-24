@@ -24,7 +24,7 @@ func (r *studyResolver) CreatedAt() (graphql.Time, error) {
 }
 
 func (r *studyResolver) Description() (string, error) {
-	return r.Description()
+	return r.Study.Description()
 }
 
 func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
@@ -38,7 +38,7 @@ func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
 
 func (r *studyResolver) ID() (graphql.ID, error) {
 	id, err := r.Study.ID()
-	return graphql.ID(id), err
+	return graphql.ID(id.String), err
 }
 
 func (r *studyResolver) Lesson(
@@ -49,7 +49,7 @@ func (r *studyResolver) Lesson(
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().GetByStudyNumber(id, args.Number)
+	lesson, err := r.Repos.Lesson().GetByStudyNumber(id.String, args.Number)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +86,11 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByStudyId(id, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByStudyId(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByStudy(id)
+	count, err := r.Repos.Lesson().CountByStudy(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (r *studyResolver) LessonCount() (int32, error) {
 		var count int32
 		return count, err
 	}
-	return r.Repos.Lesson().CountByStudy(id)
+	return r.Repos.Lesson().CountByStudy(id.String)
 }
 
 func (r *studyResolver) Name() (string, error) {
@@ -140,7 +140,7 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId)
+	user, err := r.Repos.User().Get(userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -187,5 +187,5 @@ func (r *studyResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }

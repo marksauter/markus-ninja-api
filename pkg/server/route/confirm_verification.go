@@ -54,7 +54,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	emailId, err := oid.NewFromShort("User", routeVars["id"])
+	emailId, err := oid.NewFromShort("Email", routeVars["id"])
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -79,11 +79,13 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 	}
 
 	if evt.VerifiedAt.Status == pgtype.Present {
+		mylog.Log.Warn("token has already by used")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if evt.ExpiresAt.Time.Before(time.Now()) {
+		mylog.Log.Warn("token has expired")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}

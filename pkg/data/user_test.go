@@ -12,7 +12,7 @@ func newUser() *data.User {
 	user := data.User{}
 	user.Login.Set("test")
 	user.Password.Set([]byte("password"))
-	user.PrimaryEmail.Set("test@example.com")
+	user.PrimaryEmail.Value.Set("test@example.com")
 	return &user
 }
 

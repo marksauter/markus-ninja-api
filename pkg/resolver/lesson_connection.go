@@ -17,9 +17,9 @@ func NewLessonConnectionResolver(
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id)
-		lessonEdge := NewLessonEdgeResolver(cursor, lessons[i], repos)
-		edges[i] = lessonEdge
+		cursor := data.EncodeCursor(id.String)
+		edge := NewLessonEdgeResolver(cursor, lessons[i], repos)
+		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
 	for i, e := range edges {
@@ -47,15 +47,21 @@ type lessonConnectionResolver struct {
 }
 
 func (r *lessonConnectionResolver) Edges() *[]*lessonEdgeResolver {
-	edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
-	return &edges
+	if len(r.edges) > 0 {
+		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
+		return &edges
+	}
+	return &r.edges
 }
 
 func (r *lessonConnectionResolver) Nodes() *[]*lessonResolver {
-	lessons := r.lessons[r.pageInfo.start : r.pageInfo.end+1]
-	nodes := make([]*lessonResolver, len(lessons))
-	for i := range nodes {
-		nodes[i] = &lessonResolver{Lesson: lessons[i], Repos: r.repos}
+	n := len(r.lessons)
+	nodes := make([]*lessonResolver, 0, n)
+	if n > 0 {
+		lessons := r.lessons[r.pageInfo.start : r.pageInfo.end+1]
+		for _, l := range lessons {
+			nodes = append(nodes, &lessonResolver{Lesson: l, Repos: r.repos})
+		}
 	}
 	return &nodes
 }

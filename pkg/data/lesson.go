@@ -363,14 +363,13 @@ func (s *LessonService) Create(row *Lesson) error {
 	return nil
 }
 
+const deleteLessonSQl = `
+	DELETE FROM lesson
+	WHERE id = $1
+`
+
 func (s *LessonService) Delete(id string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
-
-	sql := `
-		DELETE FROM lesson
-		WHERE ` + `id=` + args.Append(id)
-
-	commandTag, err := prepareExec(s.db, "deleteLesson", sql, args...)
+	commandTag, err := prepareExec(s.db, "deleteLesson", deleteLessonSQl, id)
 	if err != nil {
 		return err
 	}
@@ -384,7 +383,7 @@ func (s *LessonService) Delete(id string) error {
 func (s *LessonService) Update(row *Lesson) error {
 	mylog.Log.Info("Update() Lesson")
 	sets := make([]string, 0, 5)
-	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	if row.Body.Status != pgtype.Undefined {
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
@@ -403,13 +402,12 @@ func (s *LessonService) Update(row *Lesson) error {
 	}
 
 	sql := `
-		UPDATE lessons
+		UPDATE lesson
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
 			body,
 			created_at,
-			id,
 			number,
 			published_at,
 			study_id,
@@ -423,7 +421,6 @@ func (s *LessonService) Update(row *Lesson) error {
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
-		&row.Id,
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyId,

@@ -24,7 +24,7 @@ func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, erro
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId)
+	user, err := r.Repos.User().Get(userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	id, err := r.LessonComment.ID()
-	return graphql.ID(id), err
+	return graphql.ID(id.String), err
 }
 
 func (r *lessonCommentResolver) Lesson() (*lessonResolver, error) {
@@ -68,7 +68,7 @@ func (r *lessonCommentResolver) Lesson() (*lessonResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(lessonId)
+	lesson, err := r.Repos.Lesson().Get(lessonId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, er
 	if err != nil {
 		return uri, err
 	}
-	lesson, err := r.Repos.Lesson().Get(lessonId)
+	lesson, err := r.Repos.Lesson().Get(lessonId.String)
 	if err != nil {
 		return uri, err
 	}
@@ -118,7 +118,7 @@ func (r *lessonCommentResolver) Study() (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId)
+	study, err := r.Repos.Study().Get(studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) (bool, erro
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }
 
 func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
@@ -163,7 +163,7 @@ func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) (bool, erro
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }
 
 func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
@@ -176,5 +176,5 @@ func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, erro
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }

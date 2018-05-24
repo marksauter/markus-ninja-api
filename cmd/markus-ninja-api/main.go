@@ -78,19 +78,9 @@ func main() {
 	r.Handle("/token", route.Token(svcs))
 	r.Handle("/upload", route.Upload())
 	r.Handle("/upload/assets", route.UploadAssets())
-	r.Handle(
-		"/users/{login}/emails/{id}/confirm_verification/{token}",
+	r.Handle("/users/{login}/emails/{id}/confirm_verification/{token}",
 		route.ConfirmVerification(svcs),
 	)
-	// r.Handle(
-	//   "/users/{login}/emails/{id}/request_verification",
-	//   route.RequestEmailVerification(svcs),
-	// )
-	// r.Handle(
-	//   "/users/{login}/request_password_reset",
-	//   route.RequestPasswordReset(svcs),
-	// )
-	// r.Handle("/users/{login}/reset_password", route.ResetPassword(svcs))
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {

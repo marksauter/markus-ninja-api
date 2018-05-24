@@ -42,7 +42,7 @@ func (r *userResolver) Email() (string, error) {
 
 func (r *userResolver) ID() (graphql.ID, error) {
 	id, err := r.User.ID()
-	return graphql.ID(id), err
+	return graphql.ID(id.String), err
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
@@ -63,7 +63,7 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return viewer.Id.String == id, nil
+	return viewer.Id.String == id.String, nil
 }
 
 func (r *userResolver) Lessons(
@@ -96,11 +96,11 @@ func (r *userResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByUserId(id, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByUserId(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByUser(id)
+	count, err := r.Repos.Lesson().CountByUser(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (r *userResolver) Study(
 		return nil, err
 	}
 
-	study, err := r.Repos.Study().GetByUserIdAndName(userId, args.Name)
+	study, err := r.Repos.Study().GetByUserIdAndName(userId.String, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +182,11 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByUserId(id, pageOptions)
+	studies, err := r.Repos.Study().GetByUserId(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Study().CountByUser(id)
+	count, err := r.Repos.Study().CountByUser(id.String)
 	if err != nil {
 		return nil, err
 	}

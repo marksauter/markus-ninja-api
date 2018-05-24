@@ -5,15 +5,29 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type EmailPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	email                *data.Email
+}
+
+func (r *EmailPermit) Get() *data.Email {
+	email := r.email
+	fields := structs.Fields(email)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
+	}
+	return email
 }
 
 func (r *EmailPermit) CreatedAt() (time.Time, error) {
@@ -23,11 +37,11 @@ func (r *EmailPermit) CreatedAt() (time.Time, error) {
 	return r.email.CreatedAt.Time, nil
 }
 
-func (r *EmailPermit) ID() (string, error) {
+func (r *EmailPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.email.Id.String, nil
+	return &r.email.Id, nil
 }
 
 func (r *EmailPermit) Value() (string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/iancoleman/strcase"
@@ -63,7 +64,7 @@ func (r *PermRepo) Check(o perm.Operation) (FieldPermissionFunc, error) {
 	}
 	checkField = func(field string) bool {
 		for _, f := range queryPerm.Fields {
-			if f == field {
+			if f == strings.ToLower(field) {
 				return true
 			}
 		}
@@ -118,6 +119,10 @@ func (r *PermRepo) Check2(a perm.AccessLevel, node interface{}) (FieldPermission
 func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 	vid := r.viewer.Id.String
 	switch node := node.(type) {
+	case data.EVT:
+		return vid == node.UserId.String
+	case *data.EVT:
+		return vid == node.UserId.String
 	case data.Lesson:
 		return vid == node.UserId.String
 	case *data.Lesson:
@@ -125,6 +130,10 @@ func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 	case data.LessonComment:
 		return vid == node.UserId.String
 	case *data.LessonComment:
+		return vid == node.UserId.String
+	case data.PRT:
+		return vid == node.UserId.String
+	case *data.PRT:
 		return vid == node.UserId.String
 	case data.Study:
 		return vid == node.UserId.String

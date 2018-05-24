@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
+	"github.com/sirupsen/logrus"
 )
 
 type EVT struct {
@@ -66,9 +67,10 @@ func (s *EVTService) GetByPK(
 	emailId,
 	token string,
 ) (*EVT, error) {
-	mylog.Log.WithField(
-		"token", token,
-	).Info("GetByPK(token) EVT")
+	mylog.Log.WithFields(logrus.Fields{
+		"email_id": emailId,
+		"token":    token,
+	}).Info("GetByPK(token) EVT")
 	return s.get(
 		"getEVTByPK",
 		getEVTByPKSQL,

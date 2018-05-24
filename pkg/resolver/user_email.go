@@ -19,19 +19,8 @@ func (r *userEmailResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *userEmailResolver) Email(
-	ctx context.Context,
-	args struct{ Number int32 },
-) (*emailResolver, error) {
-	id, err := r.UserEmail.EmailId()
-	if err != nil {
-		return nil, err
-	}
-	email, err := r.Repos.Email().Get(id)
-	if err != nil {
-		return nil, err
-	}
-	return &emailResolver{Email: email, Repos: r.Repos}, nil
+func (r *userEmailResolver) Email() (string, error) {
+	return r.UserEmail.EmailValue()
 }
 
 func (r *userEmailResolver) Type() (string, error) {
@@ -43,7 +32,7 @@ func (r *userEmailResolver) User(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId)
+	user, err := r.Repos.User().Get(userId.String)
 	if err != nil {
 		return nil, err
 	}

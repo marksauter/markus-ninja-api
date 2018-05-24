@@ -19,7 +19,7 @@ func (r *emailResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *emailResolver) ID() (graphql.ID, error) {
 	id, err := r.Email.ID()
-	return graphql.ID(id), err
+	return graphql.ID(id.String), err
 }
 
 func (r *emailResolver) Value() (string, error) {

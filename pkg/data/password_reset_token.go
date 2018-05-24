@@ -5,20 +5,22 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/rs/xid"
+	"github.com/sirupsen/logrus"
 )
 
 type PRT struct {
-	Email     pgtype.Varchar
-	EndedAt   pgtype.Timestamptz
-	EndIP     pgtype.Inet
-	ExpiresAt pgtype.Timestamptz
-	IssuedAt  pgtype.Timestamptz
-	RequestIP pgtype.Inet
-	UserId    oid.OID
-	Token     pgtype.Varchar
+	EmailId   oid.OID            `db:"email_id" permit:"create"`
+	EndedAt   pgtype.Timestamptz `db:"ended_at"`
+	EndIP     pgtype.Inet        `db:"end_ip"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at" permit:"read"`
+	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"read"`
+	RequestIP pgtype.Inet        `db:"request_ip" permit:"create"`
+	UserId    oid.OID            `db:"user_id" permit:"create"`
+	Token     pgtype.Varchar     `db:"token"`
 }
 
 func NewPRTService(q Queryer) *PRTService {
@@ -31,7 +33,7 @@ type PRTService struct {
 
 const getPRTByPKSQL = `
 	SELECT
-		email,
+		email_id,
 		ended_at,
 		end_ip,
 		expires_at,
@@ -39,21 +41,25 @@ const getPRTByPKSQL = `
 		request_ip,
 		user_id,
 		token
-	FROM
-		password_reset_token
-	WHERE
-		token = $1
+	FROM password_reset_token
+	WHERE user_id = $1 AND token = $2
 `
 
-func (s *PRTService) GetByPK(user_id, token string) (*PRT, error) {
+func (s *PRTService) GetByPK(userId, token string) (*PRT, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": userId,
+		"token":   token,
+	}).Info("GetByPK(user_id, token) PRT")
+
 	var row PRT
 	err := prepareQueryRow(
 		s.db,
 		"getPRTByPK",
 		getPRTByPKSQL,
+		userId,
 		token,
 	).Scan(
-		&row.Email,
+		&row.EmailId,
 		&row.EndedAt,
 		&row.EndIP,
 		&row.ExpiresAt,
@@ -72,17 +78,21 @@ func (s *PRTService) GetByPK(user_id, token string) (*PRT, error) {
 }
 
 func (s *PRTService) Create(row *PRT) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 8))
+	mylog.Log.Info("Create() PRT")
 
+	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 	var columns, values []string
 
 	token := xid.New()
+	if err := row.Token.Set(token.String()); err != nil {
+		return myerr.UnexpectedError{"failed to set prt token"}
+	}
 	columns = append(columns, `token`)
 	values = append(values, args.Append(token))
 
-	if row.Email.Status != pgtype.Undefined {
-		columns = append(columns, `email`)
-		values = append(values, args.Append(&row.Email))
+	if row.EmailId.Status != pgtype.Undefined {
+		columns = append(columns, `email_id`)
+		values = append(values, args.Append(&row.EmailId))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
@@ -125,11 +135,11 @@ func (s *PRTService) Create(row *PRT) error {
 	)
 }
 
-func (s *PRTService) Update(
-	row *PRT,
-) error {
-	sets := make([]string, 0, 2)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+func (s *PRTService) Update(row *PRT) error {
+	mylog.Log.Info("Update() PRT")
+
+	sets := make([]string, 0, 4)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	if row.EndIP.Status != pgtype.Undefined {
 		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
@@ -145,27 +155,26 @@ func (s *PRTService) Update(
 	sql := `
 		UPDATE password_reset_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
+		WHERE token = ` + args.Append(row.Token.String) + `
+		AND user_id = ` + args.Append(row.UserId.String) + `
 		RETURNING
-			email,
+			email_id,
 			ended_at,
 			end_ip,
 			expires_at,
 			issued_at,
-			request_ip,
-			user_id
+			request_ip
 	`
 
 	psName := preparedName("updatePRT", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.Email,
+		&row.EmailId,
 		&row.EndedAt,
 		&row.EndIP,
 		&row.ExpiresAt,
 		&row.IssuedAt,
 		&row.RequestIP,
-		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
@@ -194,6 +203,8 @@ const deletePRTSQL = `
 `
 
 func (s *PRTService) Delete(userId, token string) error {
+	mylog.Log.Info("Delete() PRT")
+
 	commandTag, err := prepareExec(s.db, "deletePRT", deletePRTSQL, userId, token)
 	if err != nil {
 		return err

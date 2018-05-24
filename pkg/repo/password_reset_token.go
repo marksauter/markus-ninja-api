@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -16,11 +18,23 @@ type PRTPermit struct {
 	prt                  *data.PRT
 }
 
-func (r *PRTPermit) Email() (string, error) {
-	if ok := r.checkFieldPermission("email"); !ok {
-		return "", ErrAccessDenied
+func (r *PRTPermit) Get() *data.PRT {
+	prt := r.prt
+	fields := structs.Fields(prt)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
 	}
-	return r.prt.Email.String, nil
+	return prt
+}
+
+func (r *PRTPermit) EmailId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("email_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.prt.EmailId, nil
 }
 
 func (r *PRTPermit) ExpiresAt() (time.Time, error) {
@@ -44,11 +58,11 @@ func (r *PRTPermit) Token() (string, error) {
 	return r.prt.Token.String, nil
 }
 
-func (r *PRTPermit) UserId() (string, error) {
+func (r *PRTPermit) UserId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.prt.UserId.String, nil
+	return &r.prt.UserId, nil
 }
 
 func (r *PRTPermit) EndedAt() (time.Time, error) {

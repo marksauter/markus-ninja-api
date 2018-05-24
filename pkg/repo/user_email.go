@@ -5,16 +5,30 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type UserEmailPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	userEmail            *data.UserEmail
+}
+
+func (r *UserEmailPermit) Get() *data.UserEmail {
+	userEmail := r.userEmail
+	fields := structs.Fields(userEmail)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
+	}
+	return userEmail
 }
 
 func (r *UserEmailPermit) CreatedAt() (time.Time, error) {
@@ -24,22 +38,25 @@ func (r *UserEmailPermit) CreatedAt() (time.Time, error) {
 	return r.userEmail.CreatedAt.Time, nil
 }
 
-func (r *UserEmailPermit) EmailValue() string {
-	return r.userEmail.EmailValue.String
-}
-
-func (r *UserEmailPermit) EmailId() (string, error) {
+func (r *UserEmailPermit) EmailValue() (string, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.userEmail.EmailId.String, nil
+	return r.userEmail.EmailValue.String, nil
+}
+
+func (r *UserEmailPermit) EmailId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("email_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.userEmail.EmailId, nil
 }
 
 func (r *UserEmailPermit) IsVerified() (bool, error) {
 	if ok := r.checkFieldPermission("verified_at"); !ok {
 		return false, ErrAccessDenied
 	}
-	return r.userEmail.VerifiedAt.Status == pgtype.Null, nil
+	return r.userEmail.VerifiedAt.Status != pgtype.Null, nil
 }
 
 func (r *UserEmailPermit) Type() (string, error) {
@@ -56,15 +73,18 @@ func (r *UserEmailPermit) UpdatedAt() (time.Time, error) {
 	return r.userEmail.UpdatedAt.Time, nil
 }
 
-func (r *UserEmailPermit) UserLogin() string {
-	return r.userEmail.UserLogin.String
-}
-
-func (r *UserEmailPermit) UserId() (string, error) {
+func (r *UserEmailPermit) UserLogin() (string, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.userEmail.UserId.String, nil
+	return r.userEmail.UserLogin.String, nil
+}
+
+func (r *UserEmailPermit) UserId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("user_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.userEmail.UserId, nil
 }
 
 func (r *UserEmailPermit) VerifiedAt() (time.Time, error) {

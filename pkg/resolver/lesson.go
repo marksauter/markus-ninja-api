@@ -26,7 +26,7 @@ func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId)
+	user, err := r.Repos.User().Get(userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *lessonResolver) ID() (graphql.ID, error) {
 	id, err := r.Lesson.ID()
-	return graphql.ID(id), err
+	return graphql.ID(id.String), err
 }
 
 func (r *lessonResolver) Number() (int32, error) {
@@ -97,7 +97,7 @@ func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId)
+	study, err := r.Repos.Study().Get(studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }
 
 func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
@@ -146,5 +146,5 @@ func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	return viewer.Id.String == userId, nil
+	return viewer.Id.String == userId.String, nil
 }

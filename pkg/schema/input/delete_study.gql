@@ -1,4 +1,5 @@
 # Input type for DeleteStudy.
 input DeleteStudyInput {
+  # ID of the study.
   studyId: ID!
 }

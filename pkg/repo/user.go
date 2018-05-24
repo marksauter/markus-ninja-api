@@ -5,16 +5,30 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type UserPermit struct {
 	checkFieldPermission FieldPermissionFunc
 	user                 *data.User
+}
+
+func (r *UserPermit) Get() *data.User {
+	user := r.user
+	fields := structs.Fields(user)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
+	}
+	return user
 }
 
 func (r *UserPermit) Bio() (string, error) {
@@ -31,11 +45,11 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 	return r.user.CreatedAt.Time, nil
 }
 
-func (r *UserPermit) ID() (string, error) {
+func (r *UserPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.user.Id.String, nil
+	return &r.user.Id, nil
 }
 
 func (r *UserPermit) Login() (string, error) {

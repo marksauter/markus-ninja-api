@@ -220,10 +220,10 @@ const getUserCredentialsByEmailSQL = `
 		a.login,
 		a.password
 	FROM account a
-	INNER JOIN user_email ae ON ae.user_id = a.id 
-		AND ae.type = ANY('{"PRIMARY", "BACKUP"}')
-	INNER JOIN email e ON e.id = ae.email_id
-		AND e.value = $1
+	INNER JOIN email e ON e.value = $1
+	INNER JOIN user_email ue ON ue.email_id = e.id 
+		AND ue.type = ANY('{"PRIMARY", "BACKUP"}')
+	WHERE a.id = ue.user_id
 `
 
 func (s *UserService) GetCredentialsByEmail(
@@ -239,24 +239,24 @@ func (s *UserService) GetCredentialsByEmail(
 	)
 }
 
-func (s *UserService) Create(user *User) error {
-	mylog.Log.WithField("login", user.Login.String).Info("Create() User")
+func (s *UserService) Create(row *User) error {
+	mylog.Log.WithField("login", row.Login.String).Info("Create() User")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	var columns, values []string
 
 	id, _ := oid.New("User")
-	user.Id.Set(id)
+	row.Id.Set(id)
 	columns = append(columns, `id`)
-	values = append(values, args.Append(&user.Id))
+	values = append(values, args.Append(&row.Id))
 
-	if user.Login.Status != pgtype.Undefined {
+	if row.Login.Status != pgtype.Undefined {
 		columns = append(columns, `login`)
-		values = append(values, args.Append(&user.Login))
+		values = append(values, args.Append(&row.Login))
 	}
-	if user.Password.Status != pgtype.Undefined {
+	if row.Password.Status != pgtype.Undefined {
 		columns = append(columns, `password`)
-		values = append(values, args.Append(&user.Password))
+		values = append(values, args.Append(&row.Password))
 	}
 
 	tx, err := beginTransaction(s.db)
@@ -277,8 +277,8 @@ func (s *UserService) Create(user *User) error {
 	psName := preparedName("createUser", createUserSQL)
 
 	err = prepareQueryRow(tx, psName, createUserSQL, args...).Scan(
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		&row.CreatedAt,
+		&row.UpdatedAt,
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -297,7 +297,7 @@ func (s *UserService) Create(user *User) error {
 	}
 
 	emailSvc := NewEmailService(tx)
-	err = emailSvc.Create(&user.PrimaryEmail)
+	err = emailSvc.Create(&row.PrimaryEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create email")
 		return err
@@ -305,9 +305,9 @@ func (s *UserService) Create(user *User) error {
 
 	userEmailSvc := NewUserEmailService(tx)
 	userEmail := &UserEmail{
-		EmailId: user.PrimaryEmail.Id,
+		EmailId: row.PrimaryEmail.Id,
 		Type:    NewUserEmailType(PrimaryEmail),
-		UserId:  user.Id,
+		UserId:  row.Id,
 	}
 	err = userEmailSvc.Create(userEmail)
 	if err != nil {
@@ -342,27 +342,27 @@ func (s *UserService) Delete(id string) error {
 	return nil
 }
 
-func (s *UserService) Update(user *User) error {
+func (s *UserService) Update(row *User) error {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
-	if user.Bio.Status != pgtype.Undefined {
-		sets = append(sets, `bio`+"="+args.Append(&user.Bio))
+	if row.Bio.Status != pgtype.Undefined {
+		sets = append(sets, `bio`+"="+args.Append(&row.Bio))
 	}
-	if user.Login.Status != pgtype.Undefined {
-		sets = append(sets, `login`+"="+args.Append(&user.Login))
+	if row.Login.Status != pgtype.Undefined {
+		sets = append(sets, `login`+"="+args.Append(&row.Login))
 	}
-	if user.Name.Status != pgtype.Undefined {
-		sets = append(sets, `name`+"="+args.Append(&user.Name))
+	if row.Name.Status != pgtype.Undefined {
+		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
-	if user.Password.Status != pgtype.Undefined {
-		sets = append(sets, `password`+"="+args.Append(&user.Password))
+	if row.Password.Status != pgtype.Undefined {
+		sets = append(sets, `password`+"="+args.Append(&row.Password))
 	}
 
 	sql := `
 		UPDATE account
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + `id=` + args.Append(user.Id.String) + `
+		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
 			bio,
 			created_at,
@@ -375,12 +375,12 @@ func (s *UserService) Update(user *User) error {
 	psName := preparedName("updateUser", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&user.Bio,
-		&user.CreatedAt,
-		&user.Login,
-		&user.Name,
-		&user.Password,
-		&user.UpdatedAt,
+		&row.Bio,
+		&row.CreatedAt,
+		&row.Login,
+		&row.Name,
+		&row.Password,
+		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound

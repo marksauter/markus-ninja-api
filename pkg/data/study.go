@@ -99,6 +99,8 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info("found rows")
+
 	return rows, nil
 }
 
@@ -302,8 +304,8 @@ func (s *StudyService) Delete(id string) error {
 
 func (s *StudyService) Update(row *Study) error {
 	mylog.Log.Info("Update() Study")
-	sets := make([]string, 0, 5)
-	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+	sets := make([]string, 0, 3)
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
 	if row.AdvancedAt.Status != pgtype.Undefined {
 		sets = append(sets, `advanced_at`+"="+args.Append(&row.AdvancedAt))
@@ -313,9 +315,9 @@ func (s *StudyService) Update(row *Study) error {
 	}
 
 	sql := `
-		UPDATE studys
+		UPDATE study
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
 			advanced_at,
 			created_at,

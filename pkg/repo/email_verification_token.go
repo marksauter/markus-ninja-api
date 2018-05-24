@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -16,11 +18,23 @@ type EVTPermit struct {
 	evt                  *data.EVT
 }
 
-func (r *EVTPermit) EmailId() (string, error) {
-	if ok := r.checkFieldPermission("email_id"); !ok {
-		return "", ErrAccessDenied
+func (r *EVTPermit) Get() *data.EVT {
+	evt := r.evt
+	fields := structs.Fields(evt)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
 	}
-	return r.evt.EmailId.String, nil
+	return evt
+}
+
+func (r *EVTPermit) EmailId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("email_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.evt.EmailId, nil
 }
 
 func (r *EVTPermit) ExpiresAt() (time.Time, error) {

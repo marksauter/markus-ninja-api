@@ -105,27 +105,41 @@ func (s *UserEmailService) GetByEmail(email string) (*UserEmail, error) {
 	)
 }
 
-func (s *UserEmailService) Create(ae *UserEmail) error {
+func (s *UserEmailService) Create(row *UserEmail) error {
 	mylog.Log.Info("Create() UserEmail")
+
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	defer tx.Rollback()
+
+	email := &Email{Value: row.EmailValue}
+	emailSvc := NewEmailService(tx)
+	if err := emailSvc.Create(email); err != nil {
+		mylog.Log.WithError(err).Error("failed to create email")
+		return err
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
 
-	if ae.EmailId.Status != pgtype.Undefined {
-		columns = append(columns, `email_id`)
-		values = append(values, args.Append(&ae.EmailId))
-	}
-	if ae.Public.Status != pgtype.Undefined {
+	row.EmailId.Set(email.Id)
+	columns = append(columns, `email_id`)
+	values = append(values, args.Append(&row.EmailId))
+	if row.Public.Status != pgtype.Undefined {
 		columns = append(columns, `public`)
-		values = append(values, args.Append(&ae.Public))
+		values = append(values, args.Append(&row.Public))
 	}
-	if ae.Type.Status != pgtype.Undefined {
+	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
-		values = append(values, args.Append(&ae.Type))
+		values = append(values, args.Append(&row.Type))
 	}
-	if ae.UserId.Status != pgtype.Undefined {
+	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&ae.UserId))
+		values = append(values, args.Append(&row.UserId))
 	}
 
 	createUserEmailSQL := `
@@ -138,9 +152,9 @@ func (s *UserEmailService) Create(ae *UserEmail) error {
 
 	psName := preparedName("createUserEmail", createUserEmailSQL)
 
-	err := prepareQueryRow(s.db, psName, createUserEmailSQL, args...).Scan(
-		&ae.CreatedAt,
-		&ae.UpdatedAt,
+	err = prepareQueryRow(tx, psName, createUserEmailSQL, args...).Scan(
+		&row.CreatedAt,
+		&row.UpdatedAt,
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -155,6 +169,12 @@ func (s *UserEmailService) Create(ae *UserEmail) error {
 			}
 		}
 		mylog.Log.WithError(err).Error("error during query")
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
 		return err
 	}
 
@@ -184,24 +204,24 @@ func (s *UserEmailService) Delete(emailId string) error {
 	return nil
 }
 
-func (s *UserEmailService) Update(ae *UserEmail) error {
+func (s *UserEmailService) Update(row *UserEmail) error {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
-	if ae.Public.Status != pgtype.Undefined {
-		sets = append(sets, `public`+"="+args.Append(&ae.Public))
+	if row.Public.Status != pgtype.Undefined {
+		sets = append(sets, `public`+"="+args.Append(&row.Public))
 	}
-	if ae.Type.Status != pgtype.Undefined {
-		sets = append(sets, `type`+"="+args.Append(&ae.Type))
+	if row.Type.Status != pgtype.Undefined {
+		sets = append(sets, `type`+"="+args.Append(&row.Type))
 	}
-	if ae.VerifiedAt.Status != pgtype.Undefined {
-		sets = append(sets, `verified_at`+"="+args.Append(&ae.VerifiedAt))
+	if row.VerifiedAt.Status != pgtype.Undefined {
+		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
 	sql := `
 		UPDATE user_email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + `email_id=` + args.Append(ae.EmailId.String)
+		WHERE ` + `email_id=` + args.Append(row.EmailId.String)
 
 	psName := preparedName("updateUserEmail", sql)
 

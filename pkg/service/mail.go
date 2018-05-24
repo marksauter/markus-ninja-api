@@ -40,9 +40,10 @@ var emailVerificationMailTemplate = template.Must(
 	template.New("passwordResetMailTemplate").Parse(
 		"To: {{.To}}\r\n" +
 			"Subject: [rkus.ninja] Please verify your email address\r\n\r\n" +
-			"Hi @{{.Login}}\r\n\r\n," +
-			"Paste the following link into your browser to verify your email address: " +
-			"{{.RootURL}}/users/{{.Login}}/emails/confirm_verification/{{.Token}}",
+			"Hi @{{.Login}},\r\n\r\n" +
+			"Paste the following link into your browser to verify your email address:\r\n " +
+			"{{.RootURL}}/users/{{.Login}}/emails/{{.EmailId}}/confirm_verification/{{.Token}}\r\n\r\n" +
+			"Welcome!",
 	),
 )
 
@@ -87,7 +88,7 @@ var passwordResetMailTemplate = template.Must(
 	template.New("passwordResetMailTemplate").Parse(
 		"To: {{.To}}\r\n" +
 			"Subject: [rkus.ninja] Password reset request\r\n\r\n" +
-			"Hi @{{.Login}}\r\n\r\n," +
+			"Hi @{{.Login}},\r\n\r\n" +
 			"Your password reset code is: {{.Token}}\r\n\r\n" +
 			"If you did not request a password reset, then please ignore this message.",
 	),

@@ -17,9 +17,9 @@ func NewStudyConnectionResolver(
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id)
-		studyEdge := NewStudyEdgeResolver(cursor, studies[i], repos)
-		edges[i] = studyEdge
+		cursor := data.EncodeCursor(id.String)
+		edge := NewStudyEdgeResolver(cursor, studies[i], repos)
+		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
 	for i, e := range edges {
@@ -59,8 +59,8 @@ func (r *studyConnectionResolver) Nodes() *[]*studyResolver {
 	nodes := make([]*studyResolver, 0, n)
 	if n > 0 {
 		studies := r.studies[r.pageInfo.start : r.pageInfo.end+1]
-		for i := range nodes {
-			nodes[i] = &studyResolver{Study: studies[i], Repos: r.repos}
+		for _, s := range studies {
+			nodes = append(nodes, &studyResolver{Study: s, Repos: r.repos})
 		}
 	}
 	return &nodes

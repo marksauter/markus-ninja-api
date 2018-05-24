@@ -65,8 +65,8 @@ func Parse(id string) (*OID, error) {
 	if err != nil {
 		return nil, errInvalidOID
 	}
-	t := s[4 : 4+n]
-	short := s[4+n:]
+	t := s[3 : 3+n]
+	short := s[3+n:]
 	return &OID{Short: short, Status: pgtype.Present, Type: t, String: id}, nil
 }
 

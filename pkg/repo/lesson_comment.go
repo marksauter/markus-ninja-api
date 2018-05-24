@@ -5,71 +5,85 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LessonCommentPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	LessonComment        *data.LessonComment
+	lessonComment        *data.LessonComment
+}
+
+func (r *LessonCommentPermit) Get() *data.LessonComment {
+	lessonComment := r.lessonComment
+	fields := structs.Fields(lessonComment)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
+	}
+	return lessonComment
 }
 
 func (r *LessonCommentPermit) Body() (string, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.LessonComment.Body.String, nil
+	return r.lessonComment.Body.String, nil
 }
 
 func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.CreatedAt.Time, nil
+	return r.lessonComment.CreatedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) ID() (string, error) {
+func (r *LessonCommentPermit) ID() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.Id.String, nil
+	return &r.lessonComment.Id, nil
 }
 
-func (r *LessonCommentPermit) LessonId() (string, error) {
+func (r *LessonCommentPermit) LessonId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("lesson_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.LessonId.String, nil
+	return &r.lessonComment.LessonId, nil
 }
 
 func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.PublishedAt.Time, nil
+	return r.lessonComment.PublishedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) StudyId() (string, error) {
+func (r *LessonCommentPermit) StudyId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.StudyId.String, nil
+	return &r.lessonComment.StudyId, nil
 }
 
-func (r *LessonCommentPermit) UserId() (string, error) {
+func (r *LessonCommentPermit) UserId() (*oid.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.LessonComment.UserId.String, nil
+	return &r.lessonComment.UserId, nil
 }
 
 func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
-	return r.LessonComment.UpdatedAt.Time, nil
+	return r.lessonComment.UpdatedAt.Time, nil
 }
 
 func NewLessonCommentRepo(

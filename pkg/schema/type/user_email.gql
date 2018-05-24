@@ -4,7 +4,7 @@ type UserEmail {
   createdAt: Time!
 
   # The email associated with the user email.
-  email: Email!
+  email: String!
 
   # Identifies the type of user email.
   type: UserEmailType!
