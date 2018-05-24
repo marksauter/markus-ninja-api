@@ -21,10 +21,12 @@ type AddUserEmailInput struct {
 func (r *RootResolver) AddUserEmail(
 	ctx context.Context,
 	args struct{ Input AddUserEmailInput },
-) (*userEmailResolver, error) {
+) (*addUserEmailOutputResolver, error) {
+	resolver := &addUserEmailOutputResolver{}
+
 	viewer, ok := data.UserFromContext(ctx)
 	if !ok {
-		return nil, errors.New("viewer not found")
+		return resolver, errors.New("viewer not found")
 	}
 
 	userEmail := &data.UserEmail{}
@@ -33,10 +35,31 @@ func (r *RootResolver) AddUserEmail(
 
 	userEmailPermit, err := r.Repos.UserEmail().Create(userEmail)
 	if err != nil {
-		return nil, err
+		return resolver, err
+	}
+	resolver.UserEmail = userEmailPermit
+
+	evt := &data.EVT{}
+	evt.EmailId.Set(userEmail.EmailId)
+	evt.UserId.Set(viewer.Id)
+
+	evtPermit, err := r.Repos.EVT().Create(evt)
+	if err != nil {
+		return resolver, err
+	}
+	resolver.EVT = evtPermit
+
+	err = r.Svcs.Mail.SendEmailVerificationMail(
+		args.Input.Email,
+		viewer.Login.String,
+		userEmail.EmailId.Short,
+		evt.Token.String,
+	)
+	if err != nil {
+		return resolver, err
 	}
 
-	return &userEmailResolver{UserEmail: userEmailPermit, Repos: r.Repos}, nil
+	return resolver, nil
 }
 
 type DeleteUserEmailInput struct {
