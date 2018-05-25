@@ -39,7 +39,7 @@ func (r *UserEmailPermit) CreatedAt() (time.Time, error) {
 }
 
 func (r *UserEmailPermit) EmailValue() (string, error) {
-	if ok := r.checkFieldPermission("email_id"); !ok {
+	if ok := r.checkFieldPermission("email_value"); !ok {
 		return "", ErrAccessDenied
 	}
 	return r.userEmail.EmailValue.String, nil
@@ -59,6 +59,13 @@ func (r *UserEmailPermit) IsVerified() (bool, error) {
 	return r.userEmail.VerifiedAt.Status != pgtype.Null, nil
 }
 
+func (r *UserEmailPermit) Public() (bool, error) {
+	if ok := r.checkFieldPermission("public"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.userEmail.Public.Bool, nil
+}
+
 func (r *UserEmailPermit) Type() (string, error) {
 	if ok := r.checkFieldPermission("type"); !ok {
 		return "", ErrAccessDenied
@@ -74,7 +81,7 @@ func (r *UserEmailPermit) UpdatedAt() (time.Time, error) {
 }
 
 func (r *UserEmailPermit) UserLogin() (string, error) {
-	if ok := r.checkFieldPermission("user_id"); !ok {
+	if ok := r.checkFieldPermission("user_login"); !ok {
 		return "", ErrAccessDenied
 	}
 	return r.userEmail.UserLogin.String, nil
@@ -136,10 +143,10 @@ func (r *UserEmailRepo) CheckConnection() error {
 // Service methods
 
 func (r *UserEmailRepo) Create(userEmail *data.UserEmail) (*UserEmailPermit, error) {
-	if _, err := r.perms.Check2(perm.Create, userEmail); err != nil {
+	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if err := r.CheckConnection(); err != nil {
+	if _, err := r.perms.Check2(perm.Create, userEmail); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(userEmail); err != nil {
@@ -150,6 +157,16 @@ func (r *UserEmailRepo) Create(userEmail *data.UserEmail) (*UserEmailPermit, err
 		return nil, err
 	}
 	return &UserEmailPermit{fieldPermFn, userEmail}, nil
+}
+
+func (r *UserEmailRepo) Delete(userEmail *data.UserEmail) error {
+	if err := r.CheckConnection(); err != nil {
+		return err
+	}
+	if _, err := r.perms.Check2(perm.Delete, userEmail); err != nil {
+		return err
+	}
+	return r.svc.Delete(userEmail.EmailId.String)
 }
 
 func (r *UserEmailRepo) Get(emailId string) (*UserEmailPermit, error) {
@@ -173,6 +190,23 @@ func (r *UserEmailRepo) GetByEmail(email string) (*UserEmailPermit, error) {
 	}
 	userEmail, err := r.load.GetByEmail(email)
 	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, userEmail)
+	if err != nil {
+		return nil, err
+	}
+	return &UserEmailPermit{fieldPermFn, userEmail}, nil
+}
+
+func (r *UserEmailRepo) Update(userEmail *data.UserEmail) (*UserEmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Update, userEmail); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Update(userEmail); err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check2(perm.Read, userEmail)

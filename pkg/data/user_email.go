@@ -46,7 +46,7 @@ func (s *UserEmailService) get(name string, sql string, args ...interface{}) (*U
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get email")
+		mylog.Log.WithError(err).Error("failed to get user_email")
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ const getUserEmailByPKSQL = `
 	FROM user_email ue
 	INNER JOIN account a ON a.id = ue.user_id
 	INNER JOIN email e ON e.id = ue.email_id
-	WHERE email_id = $2
+	WHERE email_id = $1
 `
 
 func (s *UserEmailService) GetByPK(emailId string) (*UserEmail, error) {
@@ -183,7 +183,7 @@ func (s *UserEmailService) Create(row *UserEmail) error {
 
 const deleteUserEmailSQL = `
 	DELETE FROM user_email
-	WHERE email_id= $2
+	WHERE email_id = $1
 `
 
 func (s *UserEmailService) Delete(emailId string) error {
@@ -221,7 +221,8 @@ func (s *UserEmailService) Update(row *UserEmail) error {
 	sql := `
 		UPDATE user_email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + `email_id=` + args.Append(row.EmailId.String)
+		WHERE email_id = ` + args.Append(row.EmailId.String) + `
+	`
 
 	psName := preparedName("updateUserEmail", sql)
 

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"context"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -22,19 +21,6 @@ type User struct {
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-}
-
-type key string
-
-var userContextKey key = "user"
-
-func NewUserContext(ctx context.Context, u *User) context.Context {
-	return context.WithValue(ctx, userContextKey, u)
-}
-
-func UserFromContext(ctx context.Context) (*User, bool) {
-	u, ok := ctx.Value(userContextKey).(*User)
-	return u, ok
 }
 
 func NewUserService(q Queryer) *UserService {

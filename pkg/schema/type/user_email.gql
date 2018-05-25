@@ -6,6 +6,9 @@ type UserEmail {
   # The email associated with the user email.
   email: String!
 
+  # Identifies whether the email is public or not.
+  public: Boolean!
+
   # Identifies the type of user email.
   type: UserEmailType!
 

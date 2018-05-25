@@ -10,6 +10,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
@@ -27,7 +28,7 @@ type PermRepo struct {
 func (r *PermRepo) Open(ctx context.Context) error {
 	if r.load == nil {
 		var ok bool
-		r.viewer, ok = data.UserFromContext(ctx)
+		r.viewer, ok = myctx.UserFromContext(ctx)
 		if !ok {
 			return fmt.Errorf("viewer not found")
 		}

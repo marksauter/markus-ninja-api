@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
@@ -87,7 +87,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}

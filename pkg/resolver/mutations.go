@@ -3,12 +3,12 @@ package resolver
 import (
 	"context"
 	"errors"
-	"net"
 	"time"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
@@ -24,7 +24,7 @@ func (r *RootResolver) AddUserEmail(
 ) (*addUserEmailOutputResolver, error) {
 	resolver := &addUserEmailOutputResolver{}
 
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return resolver, errors.New("viewer not found")
 	}
@@ -64,13 +64,60 @@ func (r *RootResolver) AddUserEmail(
 
 type DeleteUserEmailInput struct {
 	EmailId string
-	UserId  string
+}
+
+func (r *RootResolver) DeleteUserEmail(
+	ctx context.Context,
+	args struct{ Input DeleteUserEmailInput },
+) (*graphql.ID, error) {
+	userEmailPermit, err := r.Repos.UserEmail().Get(args.Input.EmailId)
+	if err != nil {
+		return nil, err
+	}
+
+	userEmail := userEmailPermit.Get()
+
+	if err := r.Repos.UserEmail().Delete(userEmail); err != nil {
+		return nil, err
+	}
+
+	gqlID := graphql.ID(args.Input.EmailId)
+	return &gqlID, nil
 }
 
 type UpdateUserEmailInput struct {
 	EmailId string
-	Type    string
-	UserId  string
+	Public  *bool
+	Type    *string
+}
+
+func (r *RootResolver) UpdateUserEmail(
+	ctx context.Context,
+	args struct{ Input UpdateUserEmailInput },
+) (*userEmailResolver, error) {
+	userEmailPermit, err := r.Repos.UserEmail().Get(args.Input.EmailId)
+	if err != nil {
+		return nil, err
+	}
+
+	userEmail := userEmailPermit.Get()
+
+	if args.Input.Public != nil {
+		if err := userEmail.Public.Set(args.Input.Public); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_email public"}
+		}
+	}
+	if args.Input.Type != nil {
+		if err := userEmail.Type.Set(args.Input.Type); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_email type"}
+		}
+	}
+
+	userEmailPermit, err = r.Repos.UserEmail().Update(userEmail)
+	if err != nil {
+		return nil, err
+	}
+	return &userEmailResolver{UserEmail: userEmailPermit, Repos: r.Repos}, nil
 }
 
 type CreateUserInput struct {
@@ -220,7 +267,7 @@ func (r *RootResolver) CreateLesson(
 	ctx context.Context,
 	args struct{ Input CreateLessonInput },
 ) (*lessonResolver, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
@@ -261,10 +308,6 @@ func (r *RootResolver) DeleteLesson(
 	}
 
 	lesson := lessonPermit.Get()
-
-	if err := lesson.Id.Set(args.Input.LessonId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson id"}
-	}
 
 	if err := r.Repos.Lesson().Delete(lesson); err != nil {
 		return nil, err
@@ -324,7 +367,7 @@ func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
 ) (*studyResolver, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
@@ -415,7 +458,7 @@ func (r *RootResolver) RequestEmailVerification(
 	ctx context.Context,
 	args struct{ Input RequestEmailVerificationInput },
 ) (*evtResolver, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
@@ -503,7 +546,7 @@ func (r *RootResolver) RequestPasswordReset(
 		return nil, err
 	}
 
-	requestIp, ok := ctx.Value("requester_ip").(*net.IPNet)
+	requestIp, ok := myctx.RequesterIpFromContext(ctx)
 	if !ok {
 		return nil, errors.New("requester ip not found")
 	}
@@ -586,7 +629,7 @@ func (r *RootResolver) ResetPassword(
 		return false, myerr.UnexpectedError{"failed to update user"}
 	}
 
-	endIp, ok := ctx.Value("requester_ip").(*net.IPNet)
+	endIp, ok := myctx.RequesterIpFromContext(ctx)
 	if !ok {
 		return false, errors.New("requester ip not found")
 	}

@@ -23,6 +23,10 @@ func (r *userEmailResolver) Email() (string, error) {
 	return r.UserEmail.EmailValue()
 }
 
+func (r *userEmailResolver) Public() (bool, error) {
+	return r.UserEmail.Public()
+}
+
 func (r *userEmailResolver) Type() (string, error) {
 	return r.UserEmail.Type()
 }

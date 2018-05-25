@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -124,7 +124,7 @@ func (r *lessonResolver) URL(ctx context.Context) (mygql.URI, error) {
 }
 
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
@@ -137,7 +137,7 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 }
 
 func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}

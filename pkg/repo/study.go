@@ -12,6 +12,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -35,7 +36,7 @@ func (r *StudyPermit) Get() *data.Study {
 }
 
 func (r *StudyPermit) ViewerCanAdmin(ctx context.Context) error {
-	viewer, ok := data.UserFromContext(ctx)
+	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return errors.New("viewer not found")
 	}

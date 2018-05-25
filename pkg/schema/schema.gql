@@ -34,8 +34,8 @@ type Query {
 }
 type Mutation {
   addUserEmail(input: AddUserEmailInput!): AddUserEmailOutput!
-  # deleteUserEmail(input: DeleteUserEmailInput!): ID
-  # updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
+  deleteUserEmail(input: DeleteUserEmailInput!): ID
+  updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
 
   createLesson(input: CreateLessonInput!): Lesson
   deleteLesson(input: DeleteLessonInput!): ID

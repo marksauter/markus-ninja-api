@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
-	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -60,7 +60,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		ctx := data.NewUserContext(req.Context(), user)
+		ctx := myctx.NewUserContext(req.Context(), user)
 		host, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
 			response := myhttp.InternalServerErrorResponse("failed to parse requester ip")
@@ -70,7 +70,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 		if ip := net.ParseIP(host); ip != nil {
 			mask := net.CIDRMask(len(ip)*8, len(ip)*8)
 			ipNet := &net.IPNet{IP: ip, Mask: mask}
-			ctx = context.WithValue(ctx, "requester_ip", ipNet)
+			ctx = myctx.NewRequesterIpContext(ctx, ipNet)
 		} else {
 			response := myhttp.InternalServerErrorResponse("failed to parse requester ip")
 			myhttp.WriteResponseTo(rw, response)
