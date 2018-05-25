@@ -33,9 +33,9 @@ type Query {
   viewer: User!
 }
 type Mutation {
-  addUserEmail(input: AddUserEmailInput!): AddUserEmailOutput!
-  deleteUserEmail(input: DeleteUserEmailInput!): ID
-  updateUserEmail(input: UpdateUserEmailInput!): UserEmail!
+  addEmail(input: AddEmailInput!): AddEmailOutput!
+  deleteEmail(input: DeleteEmailInput!): ID
+  updateEmail(input: UpdateEmailInput!): Email!
 
   createLesson(input: CreateLessonInput!): Lesson
   deleteLesson(input: DeleteLessonInput!): ID

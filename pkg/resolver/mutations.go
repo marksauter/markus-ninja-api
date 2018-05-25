@@ -12,35 +12,36 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/passwd"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-type AddUserEmailInput struct {
+type AddEmailInput struct {
 	Email string
 }
 
-func (r *RootResolver) AddUserEmail(
+func (r *RootResolver) AddEmail(
 	ctx context.Context,
-	args struct{ Input AddUserEmailInput },
-) (*addUserEmailOutputResolver, error) {
-	resolver := &addUserEmailOutputResolver{}
+	args struct{ Input AddEmailInput },
+) (*addEmailOutputResolver, error) {
+	resolver := &addEmailOutputResolver{}
 
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return resolver, errors.New("viewer not found")
 	}
 
-	userEmail := &data.UserEmail{}
-	userEmail.EmailValue.Set(args.Input.Email)
-	userEmail.UserId.Set(viewer.Id)
+	email := &data.Email{}
+	email.Value.Set(args.Input.Email)
+	email.UserId.Set(viewer.Id)
 
-	userEmailPermit, err := r.Repos.UserEmail().Create(userEmail)
+	emailPermit, err := r.Repos.Email().Create(email)
 	if err != nil {
 		return resolver, err
 	}
-	resolver.UserEmail = userEmailPermit
+	resolver.Email = emailPermit
 
 	evt := &data.EVT{}
-	evt.EmailId.Set(userEmail.EmailId)
+	evt.EmailId.Set(email.Id)
 	evt.UserId.Set(viewer.Id)
 
 	evtPermit, err := r.Repos.EVT().Create(evt)
@@ -49,12 +50,13 @@ func (r *RootResolver) AddUserEmail(
 	}
 	resolver.EVT = evtPermit
 
-	err = r.Svcs.Mail.SendEmailVerificationMail(
-		args.Input.Email,
-		viewer.Login.String,
-		userEmail.EmailId.Short,
-		evt.Token.String,
-	)
+	sendMailInput := &service.SendEmailVerificationMailInput{
+		EmailId:   email.Id.Short,
+		To:        args.Input.Email,
+		UserLogin: viewer.Login.String,
+		Token:     evt.Token.String,
+	}
+	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 	if err != nil {
 		return resolver, err
 	}
@@ -62,22 +64,22 @@ func (r *RootResolver) AddUserEmail(
 	return resolver, nil
 }
 
-type DeleteUserEmailInput struct {
+type DeleteEmailInput struct {
 	EmailId string
 }
 
-func (r *RootResolver) DeleteUserEmail(
+func (r *RootResolver) DeleteEmail(
 	ctx context.Context,
-	args struct{ Input DeleteUserEmailInput },
+	args struct{ Input DeleteEmailInput },
 ) (*graphql.ID, error) {
-	userEmailPermit, err := r.Repos.UserEmail().Get(args.Input.EmailId)
+	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
 	if err != nil {
 		return nil, err
 	}
 
-	userEmail := userEmailPermit.Get()
+	email := emailPermit.Get()
 
-	if err := r.Repos.UserEmail().Delete(userEmail); err != nil {
+	if err := r.Repos.Email().Delete(email); err != nil {
 		return nil, err
 	}
 
@@ -85,39 +87,39 @@ func (r *RootResolver) DeleteUserEmail(
 	return &gqlID, nil
 }
 
-type UpdateUserEmailInput struct {
+type UpdateEmailInput struct {
 	EmailId string
 	Public  *bool
 	Type    *string
 }
 
-func (r *RootResolver) UpdateUserEmail(
+func (r *RootResolver) UpdateEmail(
 	ctx context.Context,
-	args struct{ Input UpdateUserEmailInput },
-) (*userEmailResolver, error) {
-	userEmailPermit, err := r.Repos.UserEmail().Get(args.Input.EmailId)
+	args struct{ Input UpdateEmailInput },
+) (*emailResolver, error) {
+	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
 	if err != nil {
 		return nil, err
 	}
 
-	userEmail := userEmailPermit.Get()
+	email := emailPermit.Get()
 
 	if args.Input.Public != nil {
-		if err := userEmail.Public.Set(args.Input.Public); err != nil {
+		if err := email.Public.Set(args.Input.Public); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user_email public"}
 		}
 	}
 	if args.Input.Type != nil {
-		if err := userEmail.Type.Set(args.Input.Type); err != nil {
+		if err := email.Type.Set(args.Input.Type); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user_email type"}
 		}
 	}
 
-	userEmailPermit, err = r.Repos.UserEmail().Update(userEmail)
+	emailPermit, err = r.Repos.Email().Update(email)
 	if err != nil {
 		return nil, err
 	}
-	return &userEmailResolver{UserEmail: userEmailPermit, Repos: r.Repos}, nil
+	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
 }
 
 type CreateUserInput struct {
@@ -169,12 +171,13 @@ func (r *RootResolver) CreateUser(
 			return uResolver, err
 		}
 
-		err = r.Svcs.Mail.SendEmailVerificationMail(
-			user.PrimaryEmail.Value.String,
-			user.Login.String,
-			user.PrimaryEmail.Id.String,
-			evt.Token.String,
-		)
+		sendMailInput := &service.SendEmailVerificationMailInput{
+			EmailId:   user.PrimaryEmail.Id.String,
+			To:        user.PrimaryEmail.Value.String,
+			UserLogin: user.Login.String,
+			Token:     evt.Token.String,
+		}
+		err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 		if err != nil {
 			return uResolver, err
 		}
@@ -230,7 +233,7 @@ func (r *RootResolver) UpdateUser(
 	user := userPermit.Get()
 
 	if args.Input.Bio != nil {
-		if err := user.Bio.Set(args.Input.Bio); err != nil {
+		if err := user.Profile.Set(args.Input.Bio); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user bio"}
 		}
 	}
@@ -463,7 +466,7 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("viewer not found")
 	}
 
-	userEmail, err := r.Repos.UserEmail().GetByEmail(
+	email, err := r.Repos.Email().GetByValue(
 		args.Input.Email,
 	)
 	if err != nil {
@@ -472,7 +475,7 @@ func (r *RootResolver) RequestEmailVerification(
 		}
 		return nil, err
 	}
-	userId, err := userEmail.UserId()
+	userId, err := email.UserId()
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +483,7 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("email already registered to another user")
 	}
 
-	isVerified, err := userEmail.IsVerified()
+	isVerified, err := email.IsVerified()
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +491,7 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("email already verified")
 	}
 
-	emailId, err := userEmail.EmailId()
+	emailId, err := email.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -508,21 +511,22 @@ func (r *RootResolver) RequestEmailVerification(
 
 	resolver := &evtResolver{EVT: evtPermit, Repos: r.Repos}
 
-	emailValue, err := userEmail.EmailValue()
+	value, err := email.Value()
 	if err != nil {
 		return nil, err
 	}
-	userLogin, err := userEmail.UserLogin()
+	userLogin, err := email.UserLogin()
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.Svcs.Mail.SendEmailVerificationMail(
-		emailValue,
-		userLogin,
-		emailId.Short,
-		evt.Token.String,
-	)
+	sendMailInput := &service.SendEmailVerificationMailInput{
+		EmailId:   emailId.Short,
+		To:        value,
+		UserLogin: userLogin,
+		Token:     evt.Token.String,
+	}
+	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 	if err != nil {
 		return resolver, err
 	}
@@ -538,7 +542,7 @@ func (r *RootResolver) RequestPasswordReset(
 	ctx context.Context,
 	args struct{ Input RequestPasswordResetInput },
 ) (*prtResolver, error) {
-	userEmail, err := r.Svcs.UserEmail.GetByEmail(args.Input.Email)
+	email, err := r.Svcs.Email.GetByValue(args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return nil, errors.New("`email` not found")
@@ -552,11 +556,11 @@ func (r *RootResolver) RequestPasswordReset(
 	}
 
 	prt := &data.PRT{}
-	if err := prt.EmailId.Set(userEmail.EmailId); err != nil {
+	if err := prt.EmailId.Set(email.Id); err != nil {
 		mylog.Log.Error(err)
 		return nil, myerr.UnexpectedError{"failed to set prt email_id"}
 	}
-	if err := prt.UserId.Set(userEmail.UserId); err != nil {
+	if err := prt.UserId.Set(email.UserId); err != nil {
 		mylog.Log.Error(err)
 		return nil, myerr.UnexpectedError{"failed to set prt user_id"}
 	}
@@ -572,11 +576,12 @@ func (r *RootResolver) RequestPasswordReset(
 
 	resolver := &prtResolver{PRT: prtPermit, Repos: r.Repos}
 
-	err = r.Svcs.Mail.SendPasswordResetMail(
-		args.Input.Email,
-		userEmail.UserLogin.String,
-		prt.Token.String,
-	)
+	sendMailInput := &service.SendPasswordResetInput{
+		To:        args.Input.Email,
+		UserLogin: email.UserLogin.String,
+		Token:     prt.Token.String,
+	}
+	err = r.Svcs.Mail.SendPasswordResetMail(sendMailInput)
 	if err != nil {
 		return resolver, err
 	}

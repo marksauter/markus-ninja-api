@@ -1,5 +1,5 @@
-# Input type for UpdateUserEmail.
-input UpdateUserEmailInput {
+# Input type for UpdateEmail.
+input UpdateEmailInput {
   # Id of the email.
   emailId: ID!
 
@@ -7,5 +7,5 @@ input UpdateUserEmailInput {
   public: Boolean
 
   # The type of the email.
-  type: UserEmailType
+  type: EmailType
 }

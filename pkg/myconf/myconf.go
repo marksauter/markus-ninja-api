@@ -9,6 +9,8 @@ import (
 type Config struct {
 	AppName string
 
+	AuthKeyId string
+
 	AWSRegion       string
 	AWSUploadBucket string
 
@@ -18,12 +20,9 @@ type Config struct {
 	DBPassword string
 	DBName     string
 
-	SMTPHost     string
-	SMTPPort     string
-	SMTPFromAddr string
-	SMTPRootURL  string
-	SMTPUser     string
-	SMTPPassword string
+	MailCharSet string
+	MailSender  string
+	MailRootURL string
 }
 
 func Load(name string) *Config {
@@ -38,6 +37,8 @@ func Load(name string) *Config {
 	return &Config{
 		AppName: config.Get("app.name").(string),
 
+		AuthKeyId: config.Get("auth.key_id").(string),
+
 		AWSRegion:       config.Get("aws.region").(string),
 		AWSUploadBucket: config.Get("aws.upload_bucket").(string),
 
@@ -47,11 +48,8 @@ func Load(name string) *Config {
 		DBPassword: config.Get("db.password").(string),
 		DBName:     config.Get("db.name").(string),
 
-		SMTPHost:     config.Get("smtp.host").(string),
-		SMTPPort:     config.Get("smtp.port").(string),
-		SMTPFromAddr: config.Get("smtp.from_address").(string),
-		SMTPRootURL:  config.Get("smtp.root_url").(string),
-		SMTPUser:     config.Get("smtp.user").(string),
-		SMTPPassword: config.Get("smtp.password").(string),
+		MailCharSet: config.Get("mail.char_set").(string),
+		MailSender:  config.Get("mail.sender").(string),
+		MailRootURL: config.Get("mail.root_url").(string),
 	}
 }

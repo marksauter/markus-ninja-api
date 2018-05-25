@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -22,6 +24,38 @@ func (r *emailResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *emailResolver) Public() (bool, error) {
+	return r.Email.Public()
+}
+
+func (r *emailResolver) Type() (string, error) {
+	return r.Email.Type()
+}
+
+func (r *emailResolver) User(ctx context.Context) (*userResolver, error) {
+	userId, err := r.Email.UserId()
+	if err != nil {
+		return nil, err
+	}
+	user, err := r.Repos.User().Get(userId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: user, Repos: r.Repos}, nil
+}
+
 func (r *emailResolver) Value() (string, error) {
 	return r.Email.Value()
+}
+
+func (r *emailResolver) VerifiedAt() (*graphql.Time, error) {
+	t, err := r.Email.VerifiedAt()
+	if err != nil {
+		return nil, err
+	}
+	if t != nil {
+		gqlTime := graphql.Time{*t}
+		return &gqlTime, err
+	}
+	return nil, nil
 }

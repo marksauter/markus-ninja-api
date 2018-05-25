@@ -35,6 +35,8 @@
     "service/kms/kmsiface",
     "service/s3",
     "service/s3/s3iface",
+    "service/ses",
+    "service/ses/sesiface",
     "service/sts"
   ]
   revision = "5a33d0a4f5d9c27e6cd10b4c156e85b46c4501d7"
@@ -77,12 +79,6 @@
   version = "v1.1"
 
 [[projects]]
-  name = "github.com/gorilla/csrf"
-  packages = ["."]
-  revision = "69581736821c33d85bbf378f42f6ad864dbd85de"
-  version = "v1.5"
-
-[[projects]]
   name = "github.com/gorilla/handlers"
   packages = ["."]
   revision = "90663712d74cb411cbef281bc1e08c19d1a76145"
@@ -93,12 +89,6 @@
   packages = ["."]
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
-
-[[projects]]
-  name = "github.com/gorilla/securecookie"
-  packages = ["."]
-  revision = "e59506cc896acb7f7bf732d4fdf5e25f7ccd8983"
-  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/graph-gophers/dataloader"
@@ -380,6 +370,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8c2b11c90fc0cc8aff8923d404b0dbc8ddd2644fcf93c8a7e7119e3b280225fd"
+  inputs-digest = "9ede24009ba49b728ec97da11bedc47f36c33e2712abcee3424a633b1284a9db"
   solver-name = "gps-cdcl"
   solver-version = 1

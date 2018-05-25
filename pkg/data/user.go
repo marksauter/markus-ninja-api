@@ -10,14 +10,13 @@ import (
 )
 
 type User struct {
-	Bio          pgtype.Text        `db:"bio" permit:"read"`
-	BackupEmail  pgtype.Varchar     `db:"backup_email"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           oid.OID            `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     pgtype.Bytea       `db:"password" permit:"create"`
 	PrimaryEmail Email              `db:"primary_email" permit:"create"`
+	Profile      pgtype.Text        `db:"profile" permit:"read"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -41,11 +40,11 @@ func (s *UserService) Count() (int64, error) {
 
 const batchGetUserSQL = `
 	SELECT
-		bio,
 		created_at,
 		id,
 		login,
 		name,
+		profile,
 		updated_at
 	FROM account
 	WHERE id = ANY($1)
@@ -65,10 +64,10 @@ func (s *UserService) BatchGet(ids []string) ([]*User, error) {
 	for i := 0; rows.Next(); i++ {
 		u := users[i]
 		rows.Scan(
-			&u.Bio,
 			&u.CreatedAt,
 			&u.Login,
 			&u.Name,
+			&u.Profile,
 			&u.UpdatedAt,
 		)
 	}
@@ -84,11 +83,11 @@ func (s *UserService) BatchGet(ids []string) ([]*User, error) {
 func (s *UserService) get(name string, sql string, arg interface{}) (*User, error) {
 	var user User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
-		&user.Bio,
 		&user.CreatedAt,
 		&user.Id,
 		&user.Login,
 		&user.Name,
+		&user.Profile,
 		&user.PublicEmail,
 		&user.UpdatedAt,
 		&user.Roles,
@@ -105,11 +104,11 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*User, erro
 
 const getUserByIdSQL = `  
 	SELECT
-		a.bio,
 		a.created_at,
 		a.id,
 		a.login,
 		a.name,
+		a.profile,
 		e.value public_email,
 		a.updated_at,
 		ARRAY(
@@ -135,11 +134,11 @@ func (s *UserService) GetById(id string) (*User, error) {
 
 const getUserByLoginSQL = `
 	SELECT
-		a.bio,
 		a.created_at,
 		a.id,
 		a.login,
 		a.name,
+		a.profile,
 		e.value public_email,
 		a.updated_at,
 		ARRAY(
@@ -282,20 +281,10 @@ func (s *UserService) Create(row *User) error {
 		return err
 	}
 
+	row.PrimaryEmail.Type = NewEmailType(PrimaryEmail)
+	row.PrimaryEmail.UserId = row.Id
 	emailSvc := NewEmailService(tx)
 	err = emailSvc.Create(&row.PrimaryEmail)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create email")
-		return err
-	}
-
-	userEmailSvc := NewUserEmailService(tx)
-	userEmail := &UserEmail{
-		EmailId: row.PrimaryEmail.Id,
-		Type:    NewUserEmailType(PrimaryEmail),
-		UserId:  row.Id,
-	}
-	err = userEmailSvc.Create(userEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user primary email")
 		return err
@@ -332,9 +321,6 @@ func (s *UserService) Update(row *User) error {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
-	if row.Bio.Status != pgtype.Undefined {
-		sets = append(sets, `bio`+"="+args.Append(&row.Bio))
-	}
 	if row.Login.Status != pgtype.Undefined {
 		sets = append(sets, `login`+"="+args.Append(&row.Login))
 	}
@@ -344,13 +330,16 @@ func (s *UserService) Update(row *User) error {
 	if row.Password.Status != pgtype.Undefined {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
 	}
+	if row.Profile.Status != pgtype.Undefined {
+		sets = append(sets, `profile`+"="+args.Append(&row.Profile))
+	}
 
 	sql := `
 		UPDATE account
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
-			bio,
+			profile,
 			created_at,
 			login,
 			name,
@@ -361,7 +350,7 @@ func (s *UserService) Update(row *User) error {
 	psName := preparedName("updateUser", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.Bio,
+		&row.Profile,
 		&row.CreatedAt,
 		&row.Login,
 		&row.Name,

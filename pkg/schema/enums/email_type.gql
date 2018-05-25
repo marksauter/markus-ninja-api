@@ -1,5 +1,5 @@
-# Possible types of user emails.
-enum UserEmailType {
+# Possible types of emails.
+enum EmailType {
   # Email used for backup account security.
   BACKUP
 

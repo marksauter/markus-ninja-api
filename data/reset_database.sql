@@ -9,10 +9,10 @@ DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
   id            VARCHAR(40) PRIMARY KEY,
   login         VARCHAR(40) NOT NULL UNIQUE,
-  password      BYTEA NOT NULL,
+  password      BYTEA       NOT NULL,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW(),
-  bio           TEXT,
+  profile       TEXT,
   name          TEXT
 );
 
@@ -25,44 +25,33 @@ CREATE TRIGGER user_updated_at_modtime
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
 
+CREATE TYPE email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
+
 DROP TABLE IF EXISTS email CASCADE;
 CREATE TABLE email(
-  id          VARCHAR(40)   PRIMARY KEY,
-  value       VARCHAR(40)   NOT NULL UNIQUE,
-  created_at  TIMESTAMPTZ   DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX email_unique_lower_value_idx
-  ON email (LOWER(value));
-
-CREATE TYPE user_email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
-
-DROP TABLE IF EXISTS user_email CASCADE;
-CREATE TABLE user_email(
-  email_id    VARCHAR(40)     PRIMARY KEY,
-  user_id     VARCHAR(40)     NOT NULL,
-  type        user_email_type DEFAULT 'EXTRA',
-  public      BOOLEAN         DEFAULT FALSE CHECK (verified_at IS NULL),
-  created_at  TIMESTAMPTZ     DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ     DEFAULT NOW(),
+  id          VARCHAR(40) PRIMARY KEY,
+  user_id     VARCHAR(40) NOT NULL,
+  value       VARCHAR(40) NOT NULL UNIQUE,
+  type        email_type  DEFAULT 'EXTRA',
+  public      BOOLEAN     DEFAULT FALSE CHECK (verified_at IS NULL),
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
-  FOREIGN KEY (email_id)
-    REFERENCES email (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX user_email_user_id_idx ON user_email (user_id);
-
-CREATE UNIQUE INDEX user_email_user_id_type_key
-  ON user_email (user_id, type)
+CREATE UNIQUE INDEX email_unique_lower_value_idx
+  ON email (LOWER(value));
+CREATE INDEX email_user_id_idx ON email (user_id);
+CREATE UNIQUE INDEX email_user_id_type_key
+  ON email (user_id, type)
   WHERE type = ANY('{"PRIMARY", "BACKUP"}');
 
-CREATE TRIGGER user_email_updated_at_modtime
+CREATE TRIGGER email_updated_at_modtime
   BEFORE UPDATE
-  ON user_email
+  ON email
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
 

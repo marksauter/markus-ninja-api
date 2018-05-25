@@ -1,8 +1,0 @@
-# Output type for AddUserEmail.
-type AddUserEmailOutput {
-  # The user email added.
-  subject: UserEmail
-
-  # The email verification token for the email.
-  token: EVT
-}

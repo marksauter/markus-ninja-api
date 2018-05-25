@@ -120,6 +120,10 @@ func (r *PermRepo) Check2(a perm.AccessLevel, node interface{}) (FieldPermission
 func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 	vid := r.viewer.Id.String
 	switch node := node.(type) {
+	case data.Email:
+		return vid == node.UserId.String
+	case *data.Email:
+		return vid == node.UserId.String
 	case data.EVT:
 		return vid == node.UserId.String
 	case *data.EVT:
@@ -144,10 +148,6 @@ func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 		return vid == node.Id.String
 	case *data.User:
 		return vid == node.Id.String
-	case data.UserEmail:
-		return vid == node.UserId.String
-	case *data.UserEmail:
-		return vid == node.UserId.String
 	default:
 		return false
 	}

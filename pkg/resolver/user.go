@@ -20,7 +20,7 @@ type userResolver struct {
 }
 
 func (r *userResolver) Bio() (string, error) {
-	return r.User.Bio()
+	return r.User.Profile()
 }
 
 func (r *userResolver) BioHTML() (mygql.HTML, error) {
@@ -39,6 +39,52 @@ func (r *userResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *userResolver) Email() (string, error) {
 	return r.User.PublicEmail()
+}
+
+func (r *userResolver) Emails(
+	ctx context.Context,
+	args struct {
+		After  *string
+		Before *string
+		First  *int32
+		Last   *int32
+	},
+) (*emailConnectionResolver, error) {
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	order, _ := ParseEmailOrder(nil)
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		order,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	emails, err := r.Repos.Email().GetByUserId(id.String, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Email().CountByUser(id.String)
+	if err != nil {
+		return nil, err
+	}
+	emailConnectionResolver, err := NewEmailConnectionResolver(
+		emails,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return emailConnectionResolver, nil
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {

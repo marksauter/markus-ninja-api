@@ -9,15 +9,15 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type userEmailTypeValue int
+type EmailTypeValue int
 
 const (
-	BackupEmail userEmailTypeValue = iota
+	BackupEmail EmailTypeValue = iota
 	ExtraEmail
 	PrimaryEmail
 )
 
-func (src userEmailTypeValue) String() string {
+func (src EmailTypeValue) String() string {
 	switch src {
 	case BackupEmail:
 		return "BACKUP"
@@ -30,88 +30,88 @@ func (src userEmailTypeValue) String() string {
 	}
 }
 
-type UserEmailType struct {
+type EmailType struct {
 	Status pgtype.Status
-	Type   userEmailTypeValue
+	Type   EmailTypeValue
 }
 
-func NewUserEmailType(v userEmailTypeValue) UserEmailType {
-	return UserEmailType{
+func NewEmailType(v EmailTypeValue) EmailType {
+	return EmailType{
 		Status: pgtype.Present,
 		Type:   v,
 	}
 }
 
-func ParseUserEmailType(s string) (UserEmailType, error) {
+func ParseEmailType(s string) (EmailType, error) {
 	switch strings.ToUpper(s) {
 	case "BACKUP":
-		return UserEmailType{
+		return EmailType{
 			Status: pgtype.Present,
 			Type:   BackupEmail,
 		}, nil
 	case "EXTRA":
-		return UserEmailType{
+		return EmailType{
 			Status: pgtype.Present,
 			Type:   ExtraEmail,
 		}, nil
 	case "PRIMARY":
-		return UserEmailType{
+		return EmailType{
 			Status: pgtype.Present,
 			Type:   PrimaryEmail,
 		}, nil
 	default:
-		var o UserEmailType
-		return o, fmt.Errorf("invalid UserEmailType: %q", s)
+		var o EmailType
+		return o, fmt.Errorf("invalid EmailType: %q", s)
 	}
 }
 
-func (src *UserEmailType) String() string {
+func (src *EmailType) String() string {
 	return src.Type.String()
 }
 
-func (dst *UserEmailType) Set(src interface{}) error {
+func (dst *EmailType) Set(src interface{}) error {
 	if src == nil {
-		*dst = UserEmailType{Status: pgtype.Null}
+		*dst = EmailType{Status: pgtype.Null}
 	}
 	switch value := src.(type) {
-	case UserEmailType:
+	case EmailType:
 		*dst = value
 		dst.Status = pgtype.Present
-	case *UserEmailType:
+	case *EmailType:
 		*dst = *value
 		dst.Status = pgtype.Present
-	case userEmailTypeValue:
+	case EmailTypeValue:
 		dst.Type = value
 		dst.Status = pgtype.Present
-	case *userEmailTypeValue:
+	case *EmailTypeValue:
 		dst.Type = *value
 		dst.Status = pgtype.Present
 	case string:
-		t, err := ParseUserEmailType(value)
+		t, err := ParseEmailType(value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case *string:
-		t, err := ParseUserEmailType(*value)
+		t, err := ParseEmailType(*value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case []byte:
-		t, err := ParseUserEmailType(string(value))
+		t, err := ParseEmailType(string(value))
 		if err != nil {
 			return err
 		}
 		*dst = t
 	default:
-		return fmt.Errorf("cannot convert %v to UserEmailType", value)
+		return fmt.Errorf("cannot convert %v to EmailType", value)
 	}
 
 	return nil
 }
 
-func (src *UserEmailType) Get() interface{} {
+func (src *EmailType) Get() interface{} {
 	switch src.Status {
 	case pgtype.Present:
 		return src
@@ -122,7 +122,7 @@ func (src *UserEmailType) Get() interface{} {
 	}
 }
 
-func (src *UserEmailType) AssignTo(dst interface{}) error {
+func (src *EmailType) AssignTo(dst interface{}) error {
 	switch src.Status {
 	case pgtype.Present:
 		switch v := dst.(type) {
@@ -145,13 +145,13 @@ func (src *UserEmailType) AssignTo(dst interface{}) error {
 	return fmt.Errorf("cannot decode %v into %T", src, dst)
 }
 
-func (dst *UserEmailType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *EmailType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	if src == nil {
-		*dst = UserEmailType{Status: pgtype.Null}
+		*dst = EmailType{Status: pgtype.Null}
 		return nil
 	}
 
-	t, err := ParseUserEmailType(string(src))
+	t, err := ParseEmailType(string(src))
 	if err != nil {
 		return err
 	}
@@ -159,13 +159,13 @@ func (dst *UserEmailType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	return nil
 }
 
-func (dst *UserEmailType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *EmailType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
 
 var errUndefined = errors.New("cannot encode status undefined")
 
-func (src *UserEmailType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *EmailType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {
 	case pgtype.Null:
 		return nil, nil
@@ -176,14 +176,14 @@ func (src *UserEmailType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, e
 	return append(buf, src.Type.String()...), nil
 }
 
-func (src *UserEmailType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *EmailType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	return src.EncodeText(ci, buf)
 }
 
 // Scan implements the database/sql Scanner interface.
-func (dst *UserEmailType) Scan(src interface{}) error {
+func (dst *EmailType) Scan(src interface{}) error {
 	if src == nil {
-		*dst = UserEmailType{Status: pgtype.Null}
+		*dst = EmailType{Status: pgtype.Null}
 		return nil
 	}
 
@@ -200,7 +200,7 @@ func (dst *UserEmailType) Scan(src interface{}) error {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-func (src *UserEmailType) Value() (driver.Value, error) {
+func (src *EmailType) Value() (driver.Value, error) {
 	switch src.Status {
 	case pgtype.Present:
 		return src.Type.String(), nil

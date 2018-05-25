@@ -31,13 +31,6 @@ func (r *UserPermit) Get() *data.User {
 	return user
 }
 
-func (r *UserPermit) Bio() (string, error) {
-	if ok := r.checkFieldPermission("bio"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.user.Bio.String, nil
-}
-
 func (r *UserPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -64,6 +57,13 @@ func (r *UserPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.user.Name.String, nil
+}
+
+func (r *UserPermit) Profile() (string, error) {
+	if ok := r.checkFieldPermission("profile"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.user.Profile.String, nil
 }
 
 func (r *UserPermit) PublicEmail() (string, error) {

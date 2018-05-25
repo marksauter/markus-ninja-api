@@ -19,7 +19,6 @@ const (
 	prtRepoKey           key = "prt"
 	studyRepoKey         key = "study"
 	userRepoKey          key = "user"
-	userEmailRepoKey     key = "user_email"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -50,7 +49,6 @@ func NewRepos(svcs *service.Services) *Repos {
 			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
-			userEmailRepoKey:     NewUserEmailRepo(permRepo, svcs.UserEmail),
 		},
 	}
 }
@@ -108,11 +106,6 @@ func (r *Repos) Study() *StudyRepo {
 
 func (r *Repos) User() *UserRepo {
 	repo, _ := r.lookup[userRepoKey].(*UserRepo)
-	return repo
-}
-
-func (r *Repos) UserEmail() *UserEmailRepo {
-	repo, _ := r.lookup[userEmailRepoKey].(*UserEmailRepo)
 	return repo
 }
 

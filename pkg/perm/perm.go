@@ -127,7 +127,6 @@ const (
 	PRTType
 	StudyType
 	UserType
-	UserEmailType
 )
 
 func (nt NodeType) String() string {
@@ -146,8 +145,6 @@ func (nt NodeType) String() string {
 		return "Study"
 	case UserType:
 		return "User"
-	case UserEmailType:
-		return "UserEmail"
 	default:
 		return "unknown"
 	}
@@ -169,8 +166,6 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return StudyType, nil
 	case "user":
 		return UserType, nil
-	case "useremail":
-		return UserEmailType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)
@@ -199,57 +194,6 @@ type Operation struct {
 	AccessLevel AccessLevel
 	NodeType    NodeType
 }
-
-var (
-	CreateEmail     = Operation{Create, EmailType}
-	DeleteEmail     = Operation{Delete, EmailType}
-	ReadEmail       = Operation{Read, EmailType}
-	UpdateEmail     = Operation{Update, EmailType}
-	ConnectEmail    = Operation{Connect, EmailType}
-	DisconnectEmail = Operation{Disconnect, EmailType}
-
-	CreateEVT     = Operation{Create, EVTType}
-	DeleteEVT     = Operation{Delete, EVTType}
-	ReadEVT       = Operation{Read, EVTType}
-	UpdateEVT     = Operation{Update, EVTType}
-	ConnectEVT    = Operation{Connect, EVTType}
-	DisconnectEVT = Operation{Disconnect, EVTType}
-
-	CreateLesson     = Operation{Create, LessonType}
-	DeleteLesson     = Operation{Delete, LessonType}
-	ReadLesson       = Operation{Read, LessonType}
-	UpdateLesson     = Operation{Update, LessonType}
-	ConnectLesson    = Operation{Connect, LessonType}
-	DisconnectLesson = Operation{Disconnect, LessonType}
-
-	CreateLessonComment     = Operation{Create, LessonCommentType}
-	DeleteLessonComment     = Operation{Delete, LessonCommentType}
-	ReadLessonComment       = Operation{Read, LessonCommentType}
-	UpdateLessonComment     = Operation{Update, LessonCommentType}
-	ConnectLessonComment    = Operation{Connect, LessonCommentType}
-	DisconnectLessonComment = Operation{Disconnect, LessonCommentType}
-
-	CreateStudy     = Operation{Create, StudyType}
-	DeleteStudy     = Operation{Delete, StudyType}
-	ReadStudy       = Operation{Read, StudyType}
-	UpdateStudy     = Operation{Update, StudyType}
-	ConnectStudy    = Operation{Connect, StudyType}
-	DisconnectStudy = Operation{Disconnect, StudyType}
-
-	CreateUser     = Operation{Create, UserType}
-	DeleteUser     = Operation{Delete, UserType}
-	ReadUser       = Operation{Read, UserType}
-	UpdateUser     = Operation{Update, UserType}
-	ConnectUser    = Operation{Connect, UserType}
-	DisconnectUser = Operation{Disconnect, UserType}
-
-	CreateUserEmail     = Operation{Create, UserEmailType}
-	DeleteUserEmail     = Operation{Delete, UserEmailType}
-	ReadUserEmail       = Operation{Read, UserEmailType}
-	UpdateUserEmail     = Operation{Update, UserEmailType}
-	ConnectUserEmail    = Operation{Connect, UserEmailType}
-	DisconnectUserEmail = Operation{Disconnect, UserEmailType}
-)
 
 func (o Operation) String() string {
 	return o.AccessLevel.String() + " " + o.NodeType.String()

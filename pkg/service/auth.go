@@ -6,34 +6,30 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 )
 
+type AuthServiceConfig struct {
+	KeyId string
+}
+
+func NewAuthService(svc kmsiface.KMSAPI, conf *AuthServiceConfig) *AuthService {
+	return &AuthService{
+		conf: conf,
+		svc:  svc,
+	}
+}
+
 type AuthService struct {
-	keyId string
-	svc   kmsiface.KMSAPI
-}
-
-func NewAuthService() *AuthService {
-	return &AuthService{
-		keyId: "alias/markus-ninja-api-key-alias",
-		svc:   myaws.NewKMS(),
-	}
-}
-
-func NewMockAuthService() *AuthService {
-	return &AuthService{
-		keyId: "alias/markus-ninja-api-key-alias",
-		svc:   myaws.NewMockKMS(),
-	}
+	conf *AuthServiceConfig
+	svc  kmsiface.KMSAPI
 }
 
 func (s *AuthService) SignJWT(p *myjwt.Payload) (*myjwt.JWT, error) {
 	jwt := myjwt.JWT{Payload: *p}
 
 	params := &kms.EncryptInput{
-		KeyId:     aws.String(s.keyId),
+		KeyId:     aws.String(s.conf.KeyId),
 		Plaintext: []byte(jwt.GetPlainText()),
 	}
 

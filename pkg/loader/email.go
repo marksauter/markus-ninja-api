@@ -11,15 +11,17 @@ import (
 
 func NewEmailLoader(svc *data.EmailService) *EmailLoader {
 	return &EmailLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetEmailFn(svc.GetByPK)),
+		svc:             svc,
+		batchGet:        createLoader(newBatchGetEmailFn(svc.GetByPK)),
+		batchGetByValue: createLoader(newBatchGetEmailFn(svc.GetByValue)),
 	}
 }
 
 type EmailLoader struct {
 	svc *data.EmailService
 
-	batchGet *dataloader.Loader
+	batchGet        *dataloader.Loader
+	batchGetByValue *dataloader.Loader
 }
 
 func (r *EmailLoader) Clear(id string) {
@@ -41,6 +43,24 @@ func (r *EmailLoader) Get(id string) (*data.Email, error) {
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+
+	r.batchGetByValue.Prime(ctx, dataloader.StringKey(email.Value.String), email)
+
+	return email, nil
+}
+
+func (r *EmailLoader) GetByValue(value string) (*data.Email, error) {
+	ctx := context.Background()
+	emailData, err := r.batchGetByValue.Load(ctx, dataloader.StringKey(value))()
+	if err != nil {
+		return nil, err
+	}
+	email, ok := emailData.(*data.Email)
+	if !ok {
+		return nil, fmt.Errorf("wrong type")
+	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
 
 	return email, nil
 }

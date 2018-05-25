@@ -12,6 +12,21 @@ type User implements Node, UniformResourceLocatable {
   # The user's public profile email.
   email: String!
 
+  # Returns a list of the user's emails.
+  emails(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+  ): EmailConnection!
+
   id: ID!
 
   # Whether or not this user is a site administrator.

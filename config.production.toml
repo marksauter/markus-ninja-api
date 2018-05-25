@@ -1,6 +1,9 @@
 [app]
 name = "api.rkus.ninja"
 
+[auth]
+key_id = "alias/markus-ninja-api-key-alias"
+
 [aws]
 region = "us-east-1"
 upload_bucket = "markus-ninja-production-user-asset-us-east-1"
@@ -12,10 +15,7 @@ name = "markusninja"
 user = "markus"
 password = "fender917"
 
-[smtp]
-host = "email-smtp.us-east-1.amazonaws.com"
-port = "587"
-from_address = "noreply@rkus.ninja"
+[mail]
+char_set = "UTF-8"
+sender = "noreply@rkus.ninja"
 root_url = "api.rkus.ninja"
-user = "AKIAJAKGPARBNEWK7RTA"
-password = "AgqJhceQBXmjsDxBOPsctSpRO8kWk2HCGPsBLNvnjmL0"

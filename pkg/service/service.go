@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 )
 
@@ -17,30 +18,28 @@ type Services struct {
 	Role          *data.RoleService
 	Study         *data.StudyService
 	User          *data.UserService
-	UserEmail     *data.UserEmailService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) *Services {
+	authConfig := &AuthServiceConfig{
+		KeyId: conf.AuthKeyId,
+	}
 	mailConfig := &MailServiceConfig{
-		Host:        conf.SMTPHost,
-		Port:        conf.SMTPPort,
-		User:        conf.SMTPUser,
-		Password:    conf.SMTPPassword,
-		FromAddress: conf.SMTPFromAddr,
-		RootURL:     conf.SMTPRootURL,
+		CharSet: conf.MailCharSet,
+		Sender:  conf.MailSender,
+		RootURL: conf.MailRootURL,
 	}
 	return &Services{
-		Auth:          NewAuthService(),
+		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
 		EVT:           data.NewEVTService(db),
 		Email:         data.NewEmailService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
-		Mail:          NewMailService(mailConfig),
+		Mail:          NewMailService(myaws.NewSES(), mailConfig),
 		Perm:          data.NewPermService(db),
 		PRT:           data.NewPRTService(db),
 		Role:          data.NewRoleService(db),
 		Study:         data.NewStudyService(db),
 		User:          data.NewUserService(db),
-		UserEmail:     data.NewUserEmailService(db),
 	}
 }

@@ -1,0 +1,8 @@
+# Output type for AddEmail.
+type AddEmailOutput {
+  # The email added.
+  subject: Email
+
+  # The email verification token for the email.
+  token: EVT
+}

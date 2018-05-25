@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -44,6 +45,48 @@ func (r *EmailPermit) ID() (*oid.OID, error) {
 	return &r.email.Id, nil
 }
 
+func (r *EmailPermit) IsVerified() (bool, error) {
+	if ok := r.checkFieldPermission("verified_at"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.email.VerifiedAt.Status != pgtype.Null, nil
+}
+
+func (r *EmailPermit) Public() (bool, error) {
+	if ok := r.checkFieldPermission("public"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.email.Public.Bool, nil
+}
+
+func (r *EmailPermit) Type() (string, error) {
+	if ok := r.checkFieldPermission("type"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.email.Type.String(), nil
+}
+
+func (r *EmailPermit) UpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.email.UpdatedAt.Time, nil
+}
+
+func (r *EmailPermit) UserLogin() (string, error) {
+	if ok := r.checkFieldPermission("user_login"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.email.UserLogin.String, nil
+}
+
+func (r *EmailPermit) UserId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("user_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.email.UserId, nil
+}
+
 func (r *EmailPermit) Value() (string, error) {
 	if ok := r.checkFieldPermission("value"); !ok {
 		return "", ErrAccessDenied
@@ -51,7 +94,20 @@ func (r *EmailPermit) Value() (string, error) {
 	return r.email.Value.String, nil
 }
 
-func NewEmailRepo(perms *PermRepo, svc *data.EmailService) *EmailRepo {
+func (r *EmailPermit) VerifiedAt() (*time.Time, error) {
+	if ok := r.checkFieldPermission("verified_at"); !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.email.VerifiedAt.Status == pgtype.Null {
+		return nil, nil
+	}
+	return &r.email.VerifiedAt.Time, nil
+}
+
+func NewEmailRepo(
+	perms *PermRepo,
+	svc *data.EmailService,
+) *EmailRepo {
 	return &EmailRepo{
 		perms: perms,
 		svc:   svc,
@@ -81,13 +137,17 @@ func (r *EmailRepo) Close() {
 
 func (r *EmailRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("email connection closed")
+		mylog.Log.Error("user_email connection closed")
 		return ErrConnClosed
 	}
 	return nil
 }
 
 // Service methods
+
+func (r *EmailRepo) CountByUser(userId string) (int32, error) {
+	return r.svc.CountByUser(userId)
+}
 
 func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -106,12 +166,75 @@ func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
+func (r *EmailRepo) Delete(email *data.Email) error {
+	if err := r.CheckConnection(); err != nil {
+		return err
+	}
+	if _, err := r.perms.Check2(perm.Delete, email); err != nil {
+		return err
+	}
+	return r.svc.Delete(email.Id.String)
+}
+
 func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	email, err := r.load.Get(id)
 	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	if err != nil {
+		return nil, err
+	}
+	return &EmailPermit{fieldPermFn, email}, nil
+}
+
+func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	email, err := r.load.GetByValue(value)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	if err != nil {
+		return nil, err
+	}
+	return &EmailPermit{fieldPermFn, email}, nil
+}
+
+func (r *EmailRepo) GetByUserId(userId string, po *data.PageOptions) ([]*EmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	emails, err := r.svc.GetByUserId(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	emailPermits := make([]*EmailPermit, len(emails))
+	if len(emails) > 0 {
+		fieldPermFn, err := r.perms.Check2(perm.Read, emails[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range emails {
+			emailPermits[i] = &EmailPermit{fieldPermFn, l}
+		}
+	}
+	return emailPermits, nil
+}
+
+func (r *EmailRepo) Update(email *data.Email) (*EmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check2(perm.Update, email); err != nil {
+		return nil, err
+	}
+	if err := r.svc.Update(email); err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check2(perm.Read, email)

@@ -121,13 +121,13 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
+		new(data.Email),
 		new(data.EVT),
 		new(data.Lesson),
 		new(data.LessonComment),
 		new(data.PRT),
 		new(data.Study),
 		new(data.User),
-		new(data.UserEmail),
 	}
 
 	for _, model := range modelTypes {
@@ -166,36 +166,6 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"n": adminPermissionsCount,
 	}).Infof("role permissions created for ADMIN")
-
-	selfPermissionsSQL := `
-		SELECT
-			r.id role_id,
-			p.id permission_id
-		FROM
-			role r
-		INNER JOIN permission p ON p.type = 'User'
-		WHERE r.name = 'SELF'
-	`
-	rows, err = db.Query(selfPermissionsSQL)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("Unexpected: no permissions found")
-		}
-		return err
-	}
-	selfPermissionsCount, err := db.CopyFrom(
-		pgx.Identifier{"role_permission"},
-		[]string{"role_id", "permission_id"},
-		rows,
-	)
-	if pgErr, ok := err.(pgx.PgError); ok {
-		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
-			return err
-		}
-	}
-	mylog.Log.WithFields(logrus.Fields{
-		"n": selfPermissionsCount,
-	}).Infof("role permissions created for SELF")
 
 	userPermissionsSQL := `
 		SELECT

@@ -1,0 +1,5 @@
+# Input type for DeleteEmail.
+input DeleteEmailInput {
+  # Id of the email.
+  emailId: ID!
+}
