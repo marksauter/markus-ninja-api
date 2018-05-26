@@ -56,7 +56,7 @@ func (r *lessonResolver) BodyText() (string, error) {
 	return util.MarkdownToText(body), nil
 }
 
-func (r *studyResolver) Comments(
+func (r *lessonResolver) Comments(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -66,7 +66,7 @@ func (r *studyResolver) Comments(
 		OrderBy *LessonCommentOrderArg
 	},
 ) (*lessonCommentConnectionResolver, error) {
-	id, err := r.Study.ID()
+	id, err := r.Lesson.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +86,11 @@ func (r *studyResolver) Comments(
 		return nil, err
 	}
 
-	lessonComments, err := r.Repos.LessonComment().GetByStudyId(id.String, pageOptions)
+	lessonComments, err := r.Repos.LessonComment().GetByLessonId(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.LessonComment().CountByStudy(id.String)
+	count, err := r.Repos.LessonComment().CountByLesson(id.String)
 	if err != nil {
 		return nil, err
 	}

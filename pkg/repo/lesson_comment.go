@@ -131,6 +131,10 @@ func (r *LessonCommentRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
+func (r *LessonCommentRepo) CountByLesson(lessonId string) (int32, error) {
+	return r.svc.CountByLesson(lessonId)
+}
+
 func (r *LessonCommentRepo) CountByStudy(studyId string) (int32, error) {
 	return r.svc.CountByStudy(studyId)
 }
