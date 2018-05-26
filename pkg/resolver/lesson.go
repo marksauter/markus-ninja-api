@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -53,6 +54,56 @@ func (r *lessonResolver) BodyText() (string, error) {
 		return "", err
 	}
 	return util.MarkdownToText(body), nil
+}
+
+func (r *studyResolver) Comments(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *LessonCommentOrderArg
+	},
+) (*lessonCommentConnectionResolver, error) {
+	id, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentOrder, err := ParseLessonCommentOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		lessonCommentOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComments, err := r.Repos.LessonComment().GetByStudyId(id.String, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.LessonComment().CountByStudy(id.String)
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
+		lessonComments,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return lessonCommentConnectionResolver, nil
 }
 
 func (r *lessonResolver) CreatedAt() (graphql.Time, error) {

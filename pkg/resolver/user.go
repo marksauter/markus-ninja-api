@@ -55,7 +55,7 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 
-	order, _ := ParseEmailOrder(nil)
+	order := NewEmailOrder(data.ASC, EmailType)
 	pageOptions, err := data.NewPageOptions(
 		args.After,
 		args.Before,

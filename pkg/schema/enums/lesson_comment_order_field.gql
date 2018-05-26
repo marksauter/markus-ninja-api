@@ -1,0 +1,8 @@
+# Properties by which lesson comment connections can be ordered.
+enum LessonCommentOrderField {
+  # Order lesson comments by creation time.
+  CREATED_AT
+
+  # Order lesson comments by update time.
+  UPDATED_AT
+}

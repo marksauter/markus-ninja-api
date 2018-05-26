@@ -11,12 +11,15 @@ type EmailOrderField int
 
 const (
 	EmailCreatedAt EmailOrderField = iota
+	EmailType
 )
 
 func ParseEmailOrderField(s string) (EmailOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
 		return EmailCreatedAt, nil
+	case "TYPE":
+		return EmailType, nil
 	default:
 		var f EmailOrderField
 		return f, fmt.Errorf("invalid EmailOrderField: %q", s)
@@ -27,6 +30,8 @@ func (f EmailOrderField) String() string {
 	switch f {
 	case EmailCreatedAt:
 		return "created_at"
+	case EmailType:
+		return "type"
 	default:
 		return "unknown"
 	}
@@ -35,6 +40,13 @@ func (f EmailOrderField) String() string {
 type EmailOrder struct {
 	direction data.OrderDirection
 	field     EmailOrderField
+}
+
+func NewEmailOrder(d data.OrderDirection, f EmailOrderField) *EmailOrder {
+	return &EmailOrder{
+		direction: d,
+		field:     f,
+	}
 }
 
 func (o *EmailOrder) Direction() data.OrderDirection {

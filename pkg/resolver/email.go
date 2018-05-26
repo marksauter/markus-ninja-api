@@ -24,6 +24,10 @@ func (r *emailResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *emailResolver) IsVerified() (bool, error) {
+	return r.IsVerified()
+}
+
 func (r *emailResolver) Public() (bool, error) {
 	return r.Email.Public()
 }

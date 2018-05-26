@@ -11,7 +11,6 @@ type LessonCommentOrderField int
 
 const (
 	LessonCommentCreatedAt LessonCommentOrderField = iota
-	LessonCommentNumber
 	LessonCommentUpdatedAt
 )
 
@@ -19,8 +18,6 @@ func ParseLessonCommentOrderField(s string) (LessonCommentOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
 		return LessonCommentCreatedAt, nil
-	case "NUMBER":
-		return LessonCommentNumber, nil
 	case "UPDATED_AT":
 		return LessonCommentUpdatedAt, nil
 	default:
@@ -33,8 +30,6 @@ func (f LessonCommentOrderField) String() string {
 	switch f {
 	case LessonCommentCreatedAt:
 		return "created_at"
-	case LessonCommentNumber:
-		return "number"
 	case LessonCommentUpdatedAt:
 		return "updated_at"
 	default:
@@ -64,7 +59,7 @@ func ParseLessonCommentOrder(arg *LessonCommentOrderArg) (*LessonCommentOrder, e
 	if arg == nil {
 		arg = &LessonCommentOrderArg{
 			Direction: "ASC",
-			Field:     "NUMBER",
+			Field:     "CREATED_AT",
 		}
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

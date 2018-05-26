@@ -3,6 +3,9 @@ type Email implements Node {
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # Is the email verified?
+  isVerified: Boolean!
+
   # Identifies whether the email is public or not.
   public: Boolean!
 

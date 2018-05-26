@@ -15,6 +15,24 @@ type Lesson implements Node, UniformResourceLocatable, Updateable {
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # Returns a list of comments for the current lesson.
+  comments(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for comments returned from the connection.
+    orderBy: LessonCommentOrder
+  ): LessonCommentConnection!
+
   id: ID!
 
   # Identifies the lesson number.

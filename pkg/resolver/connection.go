@@ -1,17 +1,9 @@
 package resolver
 
-type Connection interface {
-	Edges() *[]*edgeResolver
-	Nodes() *[]*nodeResolver
-	PageInfo() *pageInfoResolver
-	TotalCount() int32
+func connectionEdges(edges []interface{}, start, end int) []interface{} {
+	if len(edges) > 0 {
+		es := edges[start : end+1]
+		return es
+	}
+	return edges
 }
-
-type connectionResolver struct {
-	Connection
-}
-
-// func (r *connectionResolver) ToLessonConnection() (*lessonConnectionResolver, bool) {
-//   resolver, ok := r.Connection.(*lessonConnectionResolver)
-//   return resolver, ok
-// }

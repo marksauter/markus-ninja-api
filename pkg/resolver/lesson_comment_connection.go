@@ -47,15 +47,21 @@ type lessonCommentConnectionResolver struct {
 }
 
 func (r *lessonCommentConnectionResolver) Edges() *[]*lessonCommentEdgeResolver {
-	edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
-	return &edges
+	if len(r.edges) > 0 {
+		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
+		return &edges
+	}
+	return &r.edges
 }
 
 func (r *lessonCommentConnectionResolver) Nodes() *[]*lessonCommentResolver {
-	lessonComments := r.lessonComments[r.pageInfo.start : r.pageInfo.end+1]
-	nodes := make([]*lessonCommentResolver, len(lessonComments))
-	for i := range nodes {
-		nodes[i] = &lessonCommentResolver{LessonComment: lessonComments[i], Repos: r.repos}
+	n := len(r.lessonComments)
+	nodes := make([]*lessonCommentResolver, 0, n)
+	if n > 0 {
+		lessonComments := r.lessonComments[r.pageInfo.start : r.pageInfo.end+1]
+		for _, l := range lessonComments {
+			nodes = append(nodes, &lessonCommentResolver{LessonComment: l, Repos: r.repos})
+		}
 	}
 	return &nodes
 }
