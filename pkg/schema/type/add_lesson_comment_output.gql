@@ -1,0 +1,8 @@
+# Output type for AddLessonComment.
+type AddLessonCommentOutput {
+  # The edge from the subject's comment connection.
+  commentEdge: LessonCommentEdge!
+
+  # The lesson comment added.
+  subject: LessonComment!
+}
