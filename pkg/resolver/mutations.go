@@ -64,6 +64,47 @@ func (r *RootResolver) AddEmail(
 	return resolver, nil
 }
 
+type AddLessonCommentInput struct {
+	Body     string
+	LessonId string
+}
+
+func (r *RootResolver) AddLessonComment(
+	ctx context.Context,
+	args struct{ Input AddLessonCommentInput },
+) (*addLessonCommentOutputResolver, error) {
+	resolver := &addLessonCommentOutputResolver{}
+
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return resolver, errors.New("viewer not found")
+	}
+
+	lesson, err := r.Repos.Lesson().Get(args.Input.LessonId)
+	if err != nil {
+		return resolver, err
+	}
+	studyId, err := lesson.ID()
+	if err != nil {
+		return resolver, err
+	}
+	mylog.Log.Debug(studyId.String)
+
+	lessonComment := &data.LessonComment{}
+	lessonComment.Body.Set(args.Input.Body)
+	lessonComment.LessonId.Set(args.Input.LessonId)
+	lessonComment.StudyId.Set(studyId)
+	lessonComment.UserId.Set(viewer.Id)
+
+	lessonCommentPermit, err := r.Repos.LessonComment().Create(lessonComment)
+	if err != nil {
+		return resolver, err
+	}
+	resolver.LessonComment = lessonCommentPermit
+
+	return resolver, nil
+}
+
 type DeleteEmailInput struct {
 	EmailId string
 }

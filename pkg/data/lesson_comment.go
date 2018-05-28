@@ -339,6 +339,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 	var columns, values []string
 
 	id, _ := oid.New("LessonComment")
+	mylog.Log.Debug("len ", len(id.String))
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

@@ -13,13 +13,11 @@ func NewEmailConnectionResolver(
 ) (*emailConnectionResolver, error) {
 	edges := make([]*emailEdgeResolver, len(emails))
 	for i := range edges {
-		id, err := emails[i].ID()
+		edge, err := NewEmailEdgeResolver(emails[i], repos)
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id.String)
-		emailEdge := NewEmailEdgeResolver(cursor, emails[i], repos)
-		edges[i] = emailEdge
+		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
 	for i, e := range edges {

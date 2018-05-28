@@ -13,13 +13,11 @@ func NewLessonCommentConnectionResolver(
 ) (*lessonCommentConnectionResolver, error) {
 	edges := make([]*lessonCommentEdgeResolver, len(lessonComments))
 	for i := range edges {
-		id, err := lessonComments[i].ID()
+		edge, err := NewLessonCommentEdgeResolver(lessonComments[i], repos)
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id.String)
-		lessonCommentEdge := NewLessonCommentEdgeResolver(cursor, lessonComments[i], repos)
-		edges[i] = lessonCommentEdge
+		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
 	for i, e := range edges {

@@ -1,8 +1,11 @@
 # Output type for AddEmail.
 type AddEmailOutput {
-  # The email added.
-  subject: Email
+  # The edge from the user's email connection.
+  emailEdge: EmailEdge!
 
   # The email verification token for the email.
   token: EVT
+
+  # The user for which the email was added.
+  user: User!
 }

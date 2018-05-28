@@ -7,7 +7,7 @@ $$ language 'plpgsql';
 
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
-  id            VARCHAR(40) PRIMARY KEY,
+  id            VARCHAR(100) PRIMARY KEY,
   login         VARCHAR(40) NOT NULL UNIQUE,
   password      BYTEA       NOT NULL,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -29,8 +29,8 @@ CREATE TYPE email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
 
 DROP TABLE IF EXISTS email CASCADE;
 CREATE TABLE email(
-  id          VARCHAR(40) PRIMARY KEY,
-  user_id     VARCHAR(40) NOT NULL,
+  id          VARCHAR(100) PRIMARY KEY,
+  user_id     VARCHAR(100) NOT NULL,
   value       VARCHAR(40) NOT NULL UNIQUE,
   type        email_type  DEFAULT 'EXTRA',
   public      BOOLEAN     DEFAULT FALSE CHECK (verified_at IS NULL),
@@ -57,7 +57,7 @@ CREATE TRIGGER email_updated_at_modtime
 
 DROP TABLE IF EXISTS role CASCADE;
 CREATE TABLE role(
-  id          VARCHAR(40) PRIMARY KEY,
+  id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40) NOT NULL UNIQUE,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
@@ -69,8 +69,8 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS user_role CASCADE;
 CREATE TABLE user_role(
-  user_id     VARCHAR(40),
-  role_id     VARCHAR(40),
+  user_id     VARCHAR(100),
+  role_id     VARCHAR(100),
   granted_at  TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (user_id, role_id),
   FOREIGN KEY (user_id)
@@ -90,7 +90,7 @@ CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment'
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
-  id            VARCHAR(40)   PRIMARY KEY,
+  id            VARCHAR(100)   PRIMARY KEY,
   access_level  access_level  NOT NULL,
   audience      audience      NOT NULL,
   type          node_type     NOT NULL,
@@ -112,8 +112,8 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role_permission CASCADE;
 CREATE TABLE role_permission(
-  role_id       VARCHAR(40),
-  permission_id VARCHAR(40),
+  role_id       VARCHAR(100),
+  permission_id VARCHAR(100),
   granted_at    TIMESTAMPTZ   DEFAULT NOW(),
   PRIMARY KEY (role_id, permission_id),
   FOREIGN KEY (role_id)
@@ -126,9 +126,9 @@ CREATE TABLE role_permission(
 
 DROP TABLE IF EXISTS email_verification_token CASCADE;
 CREATE TABLE email_verification_token(
-  email_id      VARCHAR(40),
+  email_id      VARCHAR(100),
   token         VARCHAR(40),
-  user_id       VARCHAR(40)   NOT NULL,
+  user_id       VARCHAR(100)   NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
   verified_at   TIMESTAMPTZ,
@@ -145,9 +145,9 @@ CREATE INDEX email_verification_token_user_id_idx ON email_verification_token (u
 
 DROP TABLE IF EXISTS password_reset_token CASCADE;
 CREATE TABLE password_reset_token(
-  user_id       VARCHAR(40),
+  user_id       VARCHAR(100),
   token         VARCHAR(40),
-  email_id      VARCHAR(40)   NOT NULL,
+  email_id      VARCHAR(100)   NOT NULL,
   request_ip    INET          NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
@@ -164,8 +164,8 @@ CREATE TABLE password_reset_token(
 
 DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
-  id            VARCHAR(40)   PRIMARY KEY,
-  user_id       VARCHAR(40)   NOT NULL,
+  id            VARCHAR(100)   PRIMARY KEY,
+  user_id       VARCHAR(100)   NOT NULL,
   name          TEXT          NOT NULL CHECK (name !~' '),
   created_at    TIMESTAMPTZ   DEFAULT NOW(),
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
@@ -253,9 +253,9 @@ $BODY$ LANGUAGE PLPGSQL;
 
 DROP TABLE IF EXISTS lesson CASCADE;
 CREATE TABLE lesson(
-  id              VARCHAR(40) PRIMARY KEY,
-  study_id        VARCHAR(40) NOT NULL,    
-  user_id         VARCHAR(40) NOT NULL,
+  id              VARCHAR(100) PRIMARY KEY,
+  study_id        VARCHAR(100) NOT NULL,    
+  user_id         VARCHAR(100) NOT NULL,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW(),
   published_at    TIMESTAMPTZ,
@@ -309,10 +309,10 @@ CREATE TRIGGER lesson_updated_at_modtime
 
 DROP TABLE IF EXISTS lesson_comment CASCADE;
 CREATE TABLE lesson_comment(
-  id              VARCHAR(40) PRIMARY KEY,
-  lesson_id       VARCHAR(40) NOT NULL,
-  study_id        VARCHAR(40) NOT NULL,
-  user_id         VARCHAR(40) NOT NULL,
+  id              VARCHAR(100) PRIMARY KEY,
+  lesson_id       VARCHAR(100) NOT NULL,
+  study_id        VARCHAR(100) NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
   created_at      TIMESTAMPTZ   DEFAULT NOW(),
   updated_at      TIMESTAMPTZ   DEFAULT NOW(),
   published_at    TIMESTAMPTZ,
@@ -341,7 +341,7 @@ CREATE TRIGGER lesson_comment_updated_at_modtime
 
 DROP TABLE IF EXISTS label CASCADE;
 CREATE TABLE label(
-  id          VARCHAR(40) PRIMARY KEY,
+  id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40) NOT NULL UNIQUE,
   created_at  TIMESTAMPTZ   DEFAULT NOW(),
   updated_at  TIMESTAMPTZ   DEFAULT NOW()

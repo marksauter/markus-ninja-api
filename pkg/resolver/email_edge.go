@@ -1,17 +1,24 @@
 package resolver
 
-import "github.com/marksauter/markus-ninja-api/pkg/repo"
+import (
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
+)
 
 func NewEmailEdgeResolver(
-	cursor string,
 	node *repo.EmailPermit,
 	repos *repo.Repos,
-) *emailEdgeResolver {
+) (*emailEdgeResolver, error) {
+	id, err := node.ID()
+	if err != nil {
+		return nil, err
+	}
+	cursor := data.EncodeCursor(id.String)
 	return &emailEdgeResolver{
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
-	}
+	}, nil
 }
 
 type emailEdgeResolver struct {
