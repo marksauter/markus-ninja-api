@@ -1,5 +1,8 @@
 # Represents a study.
 type Study implements Node, UniformResourceLocatable {
+  # Identifies when the study was advanced at.
+  advancedAt: Time
+
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
@@ -35,6 +38,20 @@ type Study implements Node, UniformResourceLocatable {
     orderBy: LessonOrder
   ): LessonConnection!
 
+  lessonComments(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+  ): LessonCommentConnection!
+
   # How many lessons there are in this study.
   lessonCount: Int!
 
@@ -46,9 +63,6 @@ type Study implements Node, UniformResourceLocatable {
 
   # The owner of the study.
   owner: User!
-
-  # Identifies when the study was published at.
-  publishedAt: Time!
 
   # The HTTP path for this study.
   resourcePath: URI!

@@ -73,29 +73,6 @@
         this.handleClickSignup = this.handleClickSignup.bind(this);
       }
 
-      componentDidMount() {
-        return fetch("/token", {
-          method: "POST",
-        }).then(function (response) {
-          return response.text();
-        }).then(function (responseBody) {
-          try {
-            return JSON.parse(responseBody);
-          } catch (error) {
-            return responseBody;
-          }
-        }).then((data) => {
-          if (data.error) {
-            this.setState({
-              error: data.error_description,
-            });
-            return;
-          }
-          window.sessionStorage.setItem("access_token", data.access_token);
-          return;
-        });
-      }
-
       handleClickLogin(e) {
         e.preventDefault();
 
@@ -260,8 +237,8 @@
         return fetch("/signup", {
           method: "POST",
           headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + accessToken,
+            "Accept": "application/json",
+            "Authorization": "Bearer " + accessToken,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({

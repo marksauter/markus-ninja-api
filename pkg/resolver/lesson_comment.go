@@ -93,11 +93,7 @@ func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, er
 	if err != nil {
 		return uri, err
 	}
-	lessonId, err := r.LessonComment.ID()
-	if err != nil {
-		return uri, err
-	}
-	lesson, err := r.Repos.Lesson().Get(lessonId.String)
+	lesson, err := r.Lesson()
 	if err != nil {
 		return uri, err
 	}
@@ -109,7 +105,12 @@ func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, er
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/lesson/%s#%s", studyResourcePath, lessonNumber, createdAt.Unix()))
+	uri = mygql.URI(fmt.Sprintf(
+		"%s/lesson/%d#lesson-comment%d",
+		studyResourcePath,
+		lessonNumber,
+		createdAt.Unix(),
+	))
 	return uri, nil
 }
 

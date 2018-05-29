@@ -86,6 +86,13 @@ type lessonOrderResolver struct {
 	LessonOrder
 }
 
+func NewLessonOrder(d data.OrderDirection, f LessonOrderField) *LessonOrder {
+	return &LessonOrder{
+		direction: d,
+		field:     f,
+	}
+}
+
 func (r *lessonOrderResolver) Direction() string {
 	return r.LessonOrder.Direction().String()
 }

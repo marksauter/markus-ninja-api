@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/iancoleman/strcase"
@@ -49,32 +48,7 @@ func (r *PermRepo) ClearAll() {
 	r.load.ClearAll()
 }
 
-func (r *PermRepo) Check(o perm.Operation) (FieldPermissionFunc, error) {
-	var checkField FieldPermissionFunc
-	if r.load == nil {
-		mylog.Log.Error("permission connection closed")
-		return checkField, ErrConnClosed
-	}
-	queryPerm, err := r.load.Get(o)
-	if err != nil {
-		if err == data.ErrNotFound {
-			return checkField, ErrAccessDenied
-		} else {
-			return checkField, err
-		}
-	}
-	checkField = func(field string) bool {
-		for _, f := range queryPerm.Fields {
-			if f == strings.ToLower(field) {
-				return true
-			}
-		}
-		return false
-	}
-	return checkField, nil
-}
-
-func (r *PermRepo) Check2(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
+func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
 	var checkField FieldPermissionFunc
 	if r.load == nil {
 		mylog.Log.Error("permission connection closed")

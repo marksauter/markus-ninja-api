@@ -117,13 +117,13 @@ func (r *EVTRepo) Create(evt *data.EVT) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, evt); err != nil {
+	if _, err := r.perms.Check(perm.Create, evt); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(evt); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, evt)
+	fieldPermFn, err := r.perms.Check(perm.Read, evt)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (r *EVTRepo) Get(emailId, token string) (*EVTPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, evt)
+	fieldPermFn, err := r.perms.Check(perm.Read, evt)
 	if err != nil {
 		return nil, err
 	}

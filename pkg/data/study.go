@@ -284,14 +284,13 @@ func (s *StudyService) Create(row *Study) error {
 	return nil
 }
 
+const deleteStudySQL = `
+	DELETE FROM study
+	WHERE id = $1
+`
+
 func (s *StudyService) Delete(id string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
-
-	sql := `
-		DELETE FROM study
-		WHERE ` + `id=` + args.Append(id)
-
-	commandTag, err := prepareExec(s.db, "deleteStudy", sql, args...)
+	commandTag, err := prepareExec(s.db, "deleteStudy", deleteStudySQL, id)
 	if err != nil {
 		return err
 	}

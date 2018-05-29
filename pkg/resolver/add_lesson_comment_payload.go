@@ -4,18 +4,18 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type AddLessonCommentOutput = addLessonCommentOutputResolver
+type AddLessonCommentPayload = addLessonCommentPayloadResolver
 
-type addLessonCommentOutputResolver struct {
+type addLessonCommentPayloadResolver struct {
 	LessonComment *repo.LessonCommentPermit
 	Repos         *repo.Repos
 }
 
-func (r *addLessonCommentOutputResolver) CommentEdge() (*lessonCommentEdgeResolver, error) {
+func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResolver, error) {
 	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos)
 }
 
-func (r *addLessonCommentOutputResolver) Lesson() (*lessonResolver, error) {
+func (r *addLessonCommentPayloadResolver) Lesson() (*lessonResolver, error) {
 	id, err := r.LessonComment.ID()
 	if err != nil {
 		return nil, err

@@ -1,5 +1,5 @@
-# Output type for AddEmail.
-type AddEmailOutput {
+# Return type for AddEmail.
+type AddEmailPayload {
   # The edge from the user's email connection.
   emailEdge: EmailEdge!
 

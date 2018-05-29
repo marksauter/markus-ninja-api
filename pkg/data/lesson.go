@@ -3,6 +3,7 @@ package data
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -331,6 +332,13 @@ func (s *LessonService) Create(row *Lesson) error {
 		values = append(values, args.Append(&row.UserId))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	defer tx.Rollback()
+
 	sql := `
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
@@ -341,7 +349,7 @@ func (s *LessonService) Create(row *Lesson) error {
 
 	psName := preparedName("createLesson", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
+	err = prepareQueryRow(tx, psName, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.UpdatedAt,
 	)
@@ -357,6 +365,24 @@ func (s *LessonService) Create(row *Lesson) error {
 				return err
 			}
 		}
+		return err
+	}
+
+	study := &Study{}
+	study.Id.Set(row.StudyId)
+	err = study.AdvancedAt.Set(time.Now())
+	if err != nil {
+		return err
+	}
+	studySvc := NewStudyService(tx)
+	err = studySvc.Update(study)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
 		return err
 	}
 

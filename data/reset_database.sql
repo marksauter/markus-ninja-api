@@ -86,7 +86,7 @@ CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Upd
 DROP TYPE IF EXISTS audience CASCADE;
 CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
 DROP TYPE IF EXISTS node_type CASCADE;
-CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'PRT', 'Study', 'User', 'UserEmail');
+CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'PRT', 'Study', 'User');
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(

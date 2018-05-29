@@ -145,7 +145,7 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, lesson); err != nil {
+	if _, err := r.perms.Check(perm.Create, lesson); err != nil {
 		return nil, err
 	}
 	body, err := util.CompressString(lesson.Body.String)
@@ -158,7 +158,7 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 	if err := r.svc.Create(lesson); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*Lesson
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +211,7 @@ func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*Less
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +230,7 @@ func (r *LessonRepo) GetByStudyNumber(studyId string, number int32) (*LessonPerm
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (r *LessonRepo) Delete(lesson *data.Lesson) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check2(perm.Delete, lesson); err != nil {
+	if _, err := r.perms.Check(perm.Delete, lesson); err != nil {
 		return err
 	}
 	return r.svc.Delete(lesson.Id.String)
@@ -251,7 +251,7 @@ func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Update, lesson); err != nil {
+	if _, err := r.perms.Check(perm.Update, lesson); err != nil {
 		return nil, err
 	}
 	body, err := util.CompressString(lesson.Body.String)
@@ -264,7 +264,7 @@ func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
 	if err := r.svc.Update(lesson); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
 	if err != nil {
 		return nil, err
 	}

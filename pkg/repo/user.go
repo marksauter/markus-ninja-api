@@ -126,13 +126,13 @@ func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, user); err != nil {
+	if _, err := r.perms.Check(perm.Create, user); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(user); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(perm.Read, user)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(perm.Read, user)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(perm.Read, user)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (r *UserRepo) Delete(user *data.User) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check2(perm.Delete, user); err != nil {
+	if _, err := r.perms.Check(perm.Delete, user); err != nil {
 		return err
 	}
 	return r.svc.Delete(user.Id.String)
@@ -184,13 +184,13 @@ func (r *UserRepo) Update(user *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Update, user); err != nil {
+	if _, err := r.perms.Check(perm.Update, user); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Update(user); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(perm.Read, user)
 	if err != nil {
 		return nil, err
 	}

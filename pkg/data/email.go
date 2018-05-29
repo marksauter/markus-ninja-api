@@ -126,14 +126,12 @@ const getEmailByPKSQL = `
 		e.verified_at
 	FROM email e
 	INNER JOIN account a ON a.id = e.user_id
-	WHERE id = $1
+	WHERE e.id = $1
 `
 
-func (s *EmailService) GetByPK(emailId string) (*Email, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"id": emailId,
-	}).Info("GetByPK(id) Email")
-	return s.get("getEmailByPK", getEmailByPKSQL, emailId)
+func (s *EmailService) GetByPK(id string) (*Email, error) {
+	mylog.Log.WithField("id", id).Info("GetByPK(id) Email")
+	return s.get("getEmailByPK", getEmailByPKSQL, id)
 }
 
 const getEmailByValueSQL = `
@@ -149,7 +147,7 @@ const getEmailByValueSQL = `
 		e.verified_at
 	FROM email e
 	INNER JOIN account a ON a.id = e.user_id
-	WHERE id = e.id
+	WHERE e.value = $1
 `
 
 func (s *EmailService) GetByValue(email string) (*Email, error) {
@@ -292,12 +290,12 @@ const deleteEmailSQL = `
 	WHERE id = $1
 `
 
-func (s *EmailService) Delete(emailId string) error {
+func (s *EmailService) Delete(id string) error {
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteEmail",
 		deleteEmailSQL,
-		emailId,
+		id,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to delete email")

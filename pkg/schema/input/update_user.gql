@@ -3,9 +3,6 @@ input UpdateUserInput {
   # The user's public profile bio.
   bio: String
 
-  # The user's public profile email.
-  email: String
-
   # The username used to login.
   login: String
 

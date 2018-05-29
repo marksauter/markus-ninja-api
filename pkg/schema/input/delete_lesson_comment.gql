@@ -1,0 +1,5 @@
+# Input type for DeleteLessonComment.
+input DeleteLessonCommentInput {
+  # ID of the lesson comment.
+  lessonCommentId: ID!
+}

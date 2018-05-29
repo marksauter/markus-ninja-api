@@ -11,14 +11,14 @@ import (
 )
 
 type LessonComment struct {
-	Body        pgtype.Text        `db:"body"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at"`
-	Id          oid.OID            `db:"id"`
-	LessonId    oid.OID            `db:"lesson_id"`
-	PublishedAt pgtype.Timestamptz `db:"published_at"`
-	StudyId     oid.OID            `db:"study_id"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at"`
-	UserId      oid.OID            `db:"user_id"`
+	Body        pgtype.Text        `db:"body" permit:"read"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id          oid.OID            `db:"id" permit:"read"`
+	LessonId    oid.OID            `db:"lesson_id" permit:"read"`
+	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
+	StudyId     oid.OID            `db:"study_id" permit:"read"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId      oid.OID            `db:"user_id" permit:"read"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {
@@ -397,14 +397,18 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 	return nil
 }
 
+const deleteLessonCommentSQL = `
+	DELETE FROM lesson_comment
+	WHERE id = $1
+`
+
 func (s *LessonCommentService) Delete(id string) error {
-	args := pgx.QueryArgs(make([]interface{}, 0, 1))
-
-	sql := `
-		DELETE FROM lesson_comment
-		WHERE ` + `id=` + args.Append(id)
-
-	commandTag, err := prepareExec(s.db, "deleteLessonComment", sql, args...)
+	commandTag, err := prepareExec(
+		s.db,
+		"deleteLessonComment",
+		deleteLessonCommentSQL,
+		id,
+	)
 	if err != nil {
 		return err
 	}

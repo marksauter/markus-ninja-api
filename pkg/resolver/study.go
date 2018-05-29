@@ -19,6 +19,17 @@ type studyResolver struct {
 	Repos *repo.Repos
 }
 
+func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
+	t, err := r.Study.AdvancedAt()
+	if err != nil {
+		return nil, err
+	}
+	if t != nil {
+		return &graphql.Time{*t}, nil
+	}
+	return nil, nil
+}
+
 func (r *studyResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Study.CreatedAt()
 	return graphql.Time{t}, err
@@ -107,6 +118,52 @@ func (r *studyResolver) Lessons(
 	return lessonConnectionResolver, nil
 }
 
+func (r *studyResolver) LessonComments(
+	ctx context.Context,
+	args struct {
+		After  *string
+		Before *string
+		First  *int32
+		Last   *int32
+	},
+) (*lessonCommentConnectionResolver, error) {
+	id, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentOrder := NewLessonCommentOrder(data.DESC, LessonCommentCreatedAt)
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		lessonCommentOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComments, err := r.Repos.LessonComment().GetByStudyId(id.String, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.LessonComment().CountByStudy(id.String)
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
+		lessonComments,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return lessonCommentConnectionResolver, nil
+}
+
 func (r *studyResolver) LessonCount() (int32, error) {
 	id, err := r.Study.ID()
 	if err != nil {
@@ -146,11 +203,6 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 		return nil, err
 	}
 	return &userResolver{User: user, Repos: r.Repos}, nil
-}
-
-func (r *studyResolver) PublishedAt() (graphql.Time, error) {
-	t, err := r.Study.PublishedAt()
-	return graphql.Time{t}, err
 }
 
 func (r *studyResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {

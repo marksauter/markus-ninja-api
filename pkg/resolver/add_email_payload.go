@@ -4,23 +4,23 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type AddEmailOutput = addEmailOutputResolver
+type AddEmailPayload = addEmailPayloadResolver
 
-type addEmailOutputResolver struct {
+type addEmailPayloadResolver struct {
 	EVT   *repo.EVTPermit
 	Email *repo.EmailPermit
 	Repos *repo.Repos
 }
 
-func (r *addEmailOutputResolver) EmailEdge() (*emailEdgeResolver, error) {
+func (r *addEmailPayloadResolver) EmailEdge() (*emailEdgeResolver, error) {
 	return NewEmailEdgeResolver(r.Email, r.Repos)
 }
 
-func (r *addEmailOutputResolver) Token() *evtResolver {
+func (r *addEmailPayloadResolver) Token() *evtResolver {
 	return &evtResolver{EVT: r.EVT, Repos: r.Repos}
 }
 
-func (r *addEmailOutputResolver) User() (*userResolver, error) {
+func (r *addEmailPayloadResolver) User() (*userResolver, error) {
 	userId, err := r.Email.UserId()
 	if err != nil {
 		return nil, err

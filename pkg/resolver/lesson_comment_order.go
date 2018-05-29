@@ -81,6 +81,16 @@ type lessonCommentOrderResolver struct {
 	LessonCommentOrder
 }
 
+func NewLessonCommentOrder(
+	d data.OrderDirection,
+	f LessonCommentOrderField,
+) *LessonCommentOrder {
+	return &LessonCommentOrder{
+		direction: d,
+		field:     f,
+	}
+}
+
 func (r *lessonCommentOrderResolver) Direction() string {
 	return r.LessonCommentOrder.Direction().String()
 }

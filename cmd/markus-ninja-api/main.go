@@ -73,7 +73,6 @@ func main() {
 	r.Handle("/", route.Index())
 	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs, repos))
 	r.Handle("/graphiql", route.GraphiQL())
-	r.Handle("/permissions", route.Permissions())
 	r.Handle("/signup", route.Signup(svcs))
 	r.Handle("/token", route.Token(svcs))
 	r.Handle("/upload", route.Upload())

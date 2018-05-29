@@ -153,13 +153,13 @@ func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, email); err != nil {
+	if _, err := r.perms.Check(perm.Create, email); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(email); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r *EmailRepo) Delete(email *data.Email) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check2(perm.Delete, email); err != nil {
+	if _, err := r.perms.Check(perm.Delete, email); err != nil {
 		return err
 	}
 	return r.svc.Delete(email.Id.String)
@@ -184,7 +184,7 @@ func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (r *EmailRepo) GetByUserId(userId string, po *data.PageOptions) ([]*EmailPe
 	}
 	emailPermits := make([]*EmailPermit, len(emails))
 	if len(emails) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, emails[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, emails[0])
 		if err != nil {
 			return nil, err
 		}
@@ -231,13 +231,13 @@ func (r *EmailRepo) Update(email *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Update, email); err != nil {
+	if _, err := r.perms.Check(perm.Update, email); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Update(email); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(perm.Read, email)
 	if err != nil {
 		return nil, err
 	}

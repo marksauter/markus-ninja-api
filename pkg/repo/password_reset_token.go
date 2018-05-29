@@ -117,13 +117,13 @@ func (r *PRTRepo) Create(prt *data.PRT) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, prt); err != nil {
+	if _, err := r.perms.Check(perm.Create, prt); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(prt); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, prt)
+	fieldPermFn, err := r.perms.Check(perm.Read, prt)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (r *PRTRepo) Get(userId, token string) (*PRTPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, prt)
+	fieldPermFn, err := r.perms.Check(perm.Read, prt)
 	if err != nil {
 		return nil, err
 	}

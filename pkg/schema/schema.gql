@@ -33,24 +33,44 @@ type Query {
   viewer: User!
 }
 type Mutation {
-  addEmail(input: AddEmailInput!): AddEmailOutput!
-  addLessonComment(input: AddLessonCommentInput!): AddLessonCommentOutput!
-  deleteEmail(input: DeleteEmailInput!): ID
-  updateEmail(input: UpdateEmailInput!): Email!
+  # Adds an email to the viewer's account.
+  addEmail(input: AddEmailInput!): AddEmailPayload
+  # Adds a comment to a lesson.
+  addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
 
+  # Creates a new lesson.
   createLesson(input: CreateLessonInput!): Lesson
-  deleteLesson(input: DeleteLessonInput!): ID
-  updateLesson(input: UpdateLessonInput!): Lesson!
-
+  # Creates a new study.
   createStudy(input: CreateStudyInput!): Study
-  deleteStudy(input: DeleteStudyInput!): ID
-  updateStudy(input: UpdateStudyInput!): Study!
-
+  # Creates a new user.
   createUser(input: CreateUserInput!): User
-  deleteUser(input: DeleteUserInput!): ID
-  updateUser(input: UpdateUserInput!): User!
 
+  # Deletes an email from the viewer's account.
+  deleteEmail(input: DeleteEmailInput!): DeleteEmailPayload
+  # Deletes a lesson from a study.
+  deleteLesson(input: DeleteLessonInput!): DeleteLessonPayload
+  # Deletes a comment from a lesson.
+  deleteLessonComment(input: DeleteLessonCommentInput!): DeleteLessonCommentPayload
+  # Deletes a study.
+  deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
+  # Deletes a user.
+  deleteUser(input: DeleteUserInput!): ID
+
+  # Requests an email verification mail to be sent.
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
+  # Requests a password reset mail to be sent.
   requestPasswordReset(input: RequestPasswordResetInput!): PRT!
+  # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # Updates an email's type or whether it's public or not.
+  updateEmail(input: UpdateEmailInput!): Email!
+  # Updates the body, number, or title of a lesson.
+  updateLesson(input: UpdateLessonInput!): Lesson!
+  # Updates the body of a lesson comment.
+  updateLessonComment(input: UpdateLessonCommentInput!): LessonComment!
+  # Updates the description of a study.
+  updateStudy(input: UpdateStudyInput!): Study!
+  # Updates the bio, login, or name of a user.
+  updateUser(input: UpdateUserInput!): User!
 }

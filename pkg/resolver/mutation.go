@@ -22,12 +22,10 @@ type AddEmailInput struct {
 func (r *RootResolver) AddEmail(
 	ctx context.Context,
 	args struct{ Input AddEmailInput },
-) (*addEmailOutputResolver, error) {
-	resolver := &addEmailOutputResolver{}
-
+) (*addEmailPayloadResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
-		return resolver, errors.New("viewer not found")
+		return nil, errors.New("viewer not found")
 	}
 
 	email := &data.Email{}
@@ -36,9 +34,8 @@ func (r *RootResolver) AddEmail(
 
 	emailPermit, err := r.Repos.Email().Create(email)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
-	resolver.Email = emailPermit
 
 	evt := &data.EVT{}
 	evt.EmailId.Set(email.Id)
@@ -46,9 +43,8 @@ func (r *RootResolver) AddEmail(
 
 	evtPermit, err := r.Repos.EVT().Create(evt)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
-	resolver.EVT = evtPermit
 
 	sendMailInput := &service.SendEmailVerificationMailInput{
 		EmailId:   email.Id.Short,
@@ -58,10 +54,14 @@ func (r *RootResolver) AddEmail(
 	}
 	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
 
-	return resolver, nil
+	return &addEmailPayloadResolver{
+		Email: emailPermit,
+		EVT:   evtPermit,
+		Repos: r.Repos,
+	}, nil
 }
 
 type AddLessonCommentInput struct {
@@ -72,23 +72,20 @@ type AddLessonCommentInput struct {
 func (r *RootResolver) AddLessonComment(
 	ctx context.Context,
 	args struct{ Input AddLessonCommentInput },
-) (*addLessonCommentOutputResolver, error) {
-	resolver := &addLessonCommentOutputResolver{}
-
+) (*addLessonCommentPayloadResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
-		return resolver, errors.New("viewer not found")
+		return nil, errors.New("viewer not found")
 	}
 
 	lesson, err := r.Repos.Lesson().Get(args.Input.LessonId)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
-	studyId, err := lesson.ID()
+	studyId, err := lesson.StudyId()
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
-	mylog.Log.Debug(studyId.String)
 
 	lessonComment := &data.LessonComment{}
 	lessonComment.Body.Set(args.Input.Body)
@@ -98,69 +95,83 @@ func (r *RootResolver) AddLessonComment(
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Create(lessonComment)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
-	resolver.LessonComment = lessonCommentPermit
 
-	return resolver, nil
+	return &addLessonCommentPayloadResolver{
+		LessonComment: lessonCommentPermit,
+		Repos:         r.Repos,
+	}, nil
 }
 
-type DeleteEmailInput struct {
-	EmailId string
+type CreateLessonInput struct {
+	Body    *string
+	StudyId string
+	Title   string
 }
 
-func (r *RootResolver) DeleteEmail(
+func (r *RootResolver) CreateLesson(
 	ctx context.Context,
-	args struct{ Input DeleteEmailInput },
-) (*graphql.ID, error) {
-	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	args struct{ Input CreateLessonInput },
+) (*lessonResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	lesson := &data.Lesson{}
+	if err := lesson.Body.Set(args.Input.Body); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson body"}
+	}
+	if err := lesson.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson study_id"}
+	}
+	if err := lesson.Title.Set(args.Input.Title); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson title"}
+	}
+	if err := lesson.UserId.Set(viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
+	}
+
+	lessonPermit, err := r.Repos.Lesson().Create(lesson)
 	if err != nil {
 		return nil, err
 	}
 
-	email := emailPermit.Get()
-
-	if err := r.Repos.Email().Delete(email); err != nil {
-		return nil, err
-	}
-
-	gqlID := graphql.ID(args.Input.EmailId)
-	return &gqlID, nil
+	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
 }
 
-type UpdateEmailInput struct {
-	EmailId string
-	Public  *bool
-	Type    *string
+type CreateStudyInput struct {
+	Description *string
+	Name        string
 }
 
-func (r *RootResolver) UpdateEmail(
+func (r *RootResolver) CreateStudy(
 	ctx context.Context,
-	args struct{ Input UpdateEmailInput },
-) (*emailResolver, error) {
-	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	args struct{ Input CreateStudyInput },
+) (*studyResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	study := &data.Study{}
+	if err := study.Description.Set(args.Input.Description); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set study description"}
+	}
+	if err := study.Name.Set(args.Input.Name); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set study name"}
+	}
+	if err := study.UserId.Set(viewer.Id.String); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set study user_id"}
+	}
+
+	studyPermit, err := r.Repos.Study().Create(study)
 	if err != nil {
 		return nil, err
 	}
 
-	email := emailPermit.Get()
-
-	if args.Input.Public != nil {
-		if err := email.Public.Set(args.Input.Public); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user_email public"}
-		}
-	}
-	if args.Input.Type != nil {
-		if err := email.Type.Set(args.Input.Type); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user_email type"}
-		}
-	}
-
-	emailPermit, err = r.Repos.Email().Update(email)
-	if err != nil {
-		return nil, err
-	}
-	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
+	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
 }
 
 type CreateUserInput struct {
@@ -227,6 +238,110 @@ func (r *RootResolver) CreateUser(
 	return uResolver, nil
 }
 
+type DeleteEmailInput struct {
+	EmailId string
+}
+
+func (r *RootResolver) DeleteEmail(
+	ctx context.Context,
+	args struct{ Input DeleteEmailInput },
+) (*deleteEmailPayloadResolver, error) {
+	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	if err != nil {
+		return nil, err
+	}
+
+	email := emailPermit.Get()
+
+	if err := r.Repos.Email().Delete(email); err != nil {
+		return nil, err
+	}
+
+	return &deleteEmailPayloadResolver{
+		EmailId: &email.Id,
+		UserId:  &email.UserId,
+		Repos:   r.Repos,
+	}, nil
+}
+
+type DeleteLessonInput struct {
+	LessonId string
+}
+
+func (r *RootResolver) DeleteLesson(
+	ctx context.Context,
+	args struct{ Input DeleteLessonInput },
+) (*deleteLessonPayloadResolver, error) {
+	lessonPermit, err := r.Repos.Lesson().Get(args.Input.LessonId)
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := lessonPermit.Get()
+
+	if err := r.Repos.Lesson().Delete(lesson); err != nil {
+		return nil, err
+	}
+
+	return &deleteLessonPayloadResolver{
+		LessonId: &lesson.Id,
+		StudyId:  &lesson.StudyId,
+		Repos:    r.Repos,
+	}, nil
+}
+
+type DeleteLessonCommentInput struct {
+	LessonCommentId string
+}
+
+func (r *RootResolver) DeleteLessonComment(
+	ctx context.Context,
+	args struct{ Input DeleteLessonCommentInput },
+) (*deleteLessonCommentPayloadResolver, error) {
+	lessonCommentPermit, err := r.Repos.LessonComment().Get(args.Input.LessonCommentId)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComment := lessonCommentPermit.Get()
+
+	if err := r.Repos.LessonComment().Delete(lessonComment); err != nil {
+		return nil, err
+	}
+
+	return &deleteLessonCommentPayloadResolver{
+		LessonCommentId: &lessonComment.Id,
+		LessonId:        &lessonComment.LessonId,
+		Repos:           r.Repos,
+	}, nil
+}
+
+type DeleteStudyInput struct {
+	StudyId string
+}
+
+func (r *RootResolver) DeleteStudy(
+	ctx context.Context,
+	args struct{ Input DeleteStudyInput },
+) (*deleteStudyPayloadResolver, error) {
+	studyPermit, err := r.Repos.Study().Get(args.Input.StudyId)
+	if err != nil {
+		return nil, err
+	}
+
+	study := studyPermit.Get()
+
+	if err := r.Repos.Study().Delete(study); err != nil {
+		return nil, err
+	}
+
+	return &deleteStudyPayloadResolver{
+		OwnerId: &study.UserId,
+		StudyId: &study.Id,
+		Repos:   r.Repos,
+	}, nil
+}
+
 type DeleteUserInput struct {
 	UserId string
 }
@@ -254,244 +369,10 @@ func (r *RootResolver) DeleteUser(
 	return &gqlID, nil
 }
 
-type UpdateUserInput struct {
-	Bio    *string
-	Email  *string
-	Login  *string
-	Name   *string
-	UserId string
-}
-
-func (r *RootResolver) UpdateUser(
-	ctx context.Context,
-	args struct{ Input UpdateUserInput },
-) (*userResolver, error) {
-	userPermit, err := r.Repos.User().Get(args.Input.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	user := userPermit.Get()
-
-	if args.Input.Bio != nil {
-		if err := user.Profile.Set(args.Input.Bio); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user bio"}
-		}
-	}
-	if args.Input.Email != nil {
-		if err := user.PublicEmail.Set(args.Input.Email); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user public_email"}
-		}
-	}
-	if args.Input.Login != nil {
-		if err := user.Login.Set(args.Input.Login); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user login"}
-		}
-	}
-	if args.Input.Name != nil {
-		if err := user.Name.Set(args.Input.Name); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user name"}
-		}
-	}
-
-	userPermit, err = r.Repos.User().Update(user)
-	if err != nil {
-		return nil, err
-	}
-	return &userResolver{User: userPermit, Repos: r.Repos}, nil
-}
-
-type CreateLessonInput struct {
-	Body    *string
-	StudyId string
-	Title   string
-}
-
-func (r *RootResolver) CreateLesson(
-	ctx context.Context,
-	args struct{ Input CreateLessonInput },
-) (*lessonResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-
-	lesson := &data.Lesson{}
-	if err := lesson.Body.Set(args.Input.Body); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson body"}
-	}
-	if err := lesson.StudyId.Set(args.Input.StudyId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson study_id"}
-	}
-	if err := lesson.Title.Set(args.Input.Title); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson title"}
-	}
-	if err := lesson.UserId.Set(viewer.Id); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
-	}
-
-	lessonPermit, err := r.Repos.Lesson().Create(lesson)
-	if err != nil {
-		return nil, err
-	}
-
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
-}
-
-type DeleteLessonInput struct {
-	LessonId string
-}
-
-func (r *RootResolver) DeleteLesson(
-	ctx context.Context,
-	args struct{ Input DeleteLessonInput },
-) (*graphql.ID, error) {
-	lessonPermit, err := r.Repos.Lesson().Get(args.Input.LessonId)
-	if err != nil {
-		return nil, err
-	}
-
-	lesson := lessonPermit.Get()
-
-	if err := r.Repos.Lesson().Delete(lesson); err != nil {
-		return nil, err
-	}
-
-	gqlID := graphql.ID(args.Input.LessonId)
-	return &gqlID, nil
-}
-
-type UpdateLessonInput struct {
-	Body     *string
-	LessonId string
-	Number   *int32
-	Title    *string
-}
-
-func (r *RootResolver) UpdateLesson(
-	ctx context.Context,
-	args struct{ Input UpdateLessonInput },
-) (*lessonResolver, error) {
-	lessonPermit, err := r.Repos.Lesson().Get(args.Input.LessonId)
-	if err != nil {
-		return nil, err
-	}
-
-	lesson := lessonPermit.Get()
-
-	if args.Input.Body != nil {
-		if err := lesson.Body.Set(args.Input.Body); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson body"}
-		}
-	}
-	if args.Input.Number != nil {
-		if err := lesson.Number.Set(args.Input.Number); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson number"}
-		}
-	}
-	if args.Input.Title != nil {
-		if err := lesson.Title.Set(args.Input.Title); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson title"}
-		}
-	}
-
-	lessonPermit, err = r.Repos.Lesson().Update(lesson)
-	if err != nil {
-		return nil, err
-	}
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
-}
-
-type CreateStudyInput struct {
-	Description *string
-	Name        string
-}
-
-func (r *RootResolver) CreateStudy(
-	ctx context.Context,
-	args struct{ Input CreateStudyInput },
-) (*studyResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-
-	study := &data.Study{}
-	if err := study.Description.Set(args.Input.Description); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study description"}
-	}
-	if err := study.Name.Set(args.Input.Name); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study name"}
-	}
-	if err := study.UserId.Set(viewer.Id.String); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study user_id"}
-	}
-
-	studyPermit, err := r.Repos.Study().Create(study)
-	if err != nil {
-		return nil, err
-	}
-
-	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
-}
-
-type DeleteStudyInput struct {
-	StudyId string
-}
-
-func (r *RootResolver) DeleteStudy(
-	ctx context.Context,
-	args struct{ Input DeleteStudyInput },
-) (*graphql.ID, error) {
-	studyPermit, err := r.Repos.Study().Get(args.Input.StudyId)
-	if err != nil {
-		return nil, err
-	}
-
-	study := studyPermit.Get()
-
-	if err := study.Id.Set(args.Input.StudyId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study id"}
-	}
-
-	if err := r.Repos.Study().Delete(study); err != nil {
-		return nil, err
-	}
-
-	gqlID := graphql.ID(args.Input.StudyId)
-	return &gqlID, nil
-}
-
-type UpdateStudyInput struct {
-	Description *string
-	StudyId     string
-}
-
-func (r *RootResolver) UpdateStudy(
-	ctx context.Context,
-	args struct{ Input UpdateStudyInput },
-) (*studyResolver, error) {
-	studyPermit, err := r.Repos.Study().Get(args.Input.StudyId)
-	if err != nil {
-		return nil, err
-	}
-
-	study := studyPermit.Get()
-
-	if args.Input.Description != nil {
-		if err := study.Description.Set(args.Input.Description); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set study description"}
-		}
-	}
-	if err := study.Id.Set(args.Input.StudyId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study id"}
-	}
-
-	studyPermit, err = r.Repos.Study().Update(study)
-	if err != nil {
-		return nil, err
-	}
-	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
+type UpdateEmailInput struct {
+	EmailId string
+	Public  *bool
+	Type    *string
 }
 
 type RequestEmailVerificationInput struct {
@@ -507,9 +388,7 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, errors.New("viewer not found")
 	}
 
-	email, err := r.Repos.Email().GetByValue(
-		args.Input.Email,
-	)
+	email, err := r.Repos.Email().GetByValue(args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return nil, errors.New("`email` not found")
@@ -550,8 +429,6 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, err
 	}
 
-	resolver := &evtResolver{EVT: evtPermit, Repos: r.Repos}
-
 	value, err := email.Value()
 	if err != nil {
 		return nil, err
@@ -569,10 +446,10 @@ func (r *RootResolver) RequestEmailVerification(
 	}
 	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 	if err != nil {
-		return resolver, err
+		return nil, err
 	}
 
-	return resolver, nil
+	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
 }
 
 type RequestPasswordResetInput struct {
@@ -692,4 +569,179 @@ func (r *RootResolver) ResetPassword(
 	}
 
 	return true, nil
+}
+
+func (r *RootResolver) UpdateEmail(
+	ctx context.Context,
+	args struct{ Input UpdateEmailInput },
+) (*emailResolver, error) {
+	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	if err != nil {
+		return nil, err
+	}
+
+	email := emailPermit.Get()
+
+	if args.Input.Public != nil {
+		if err := email.Public.Set(args.Input.Public); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_email public"}
+		}
+	}
+	if args.Input.Type != nil {
+		if err := email.Type.Set(args.Input.Type); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_email type"}
+		}
+	}
+
+	emailPermit, err = r.Repos.Email().Update(email)
+	if err != nil {
+		return nil, err
+	}
+	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
+}
+
+type UpdateLessonInput struct {
+	Body     *string
+	LessonId string
+	Number   *int32
+	Title    *string
+}
+
+func (r *RootResolver) UpdateLesson(
+	ctx context.Context,
+	args struct{ Input UpdateLessonInput },
+) (*lessonResolver, error) {
+	lessonPermit, err := r.Repos.Lesson().Get(args.Input.LessonId)
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := lessonPermit.Get()
+
+	if args.Input.Body != nil {
+		if err := lesson.Body.Set(args.Input.Body); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set lesson body"}
+		}
+	}
+	if args.Input.Number != nil {
+		if err := lesson.Number.Set(args.Input.Number); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set lesson number"}
+		}
+	}
+	if args.Input.Title != nil {
+		if err := lesson.Title.Set(args.Input.Title); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set lesson title"}
+		}
+	}
+
+	lessonPermit, err = r.Repos.Lesson().Update(lesson)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+}
+
+type UpdateLessonCommentInput struct {
+	Body            *string
+	LessonCommentId string
+}
+
+func (r *RootResolver) UpdateLessonComment(
+	ctx context.Context,
+	args struct{ Input UpdateLessonCommentInput },
+) (*lessonCommentResolver, error) {
+	lessonCommentPermit, err := r.Repos.LessonComment().Get(args.Input.LessonCommentId)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComment := lessonCommentPermit.Get()
+
+	if args.Input.Body != nil {
+		if err := lessonComment.Body.Set(args.Input.Body); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set lessonComment body"}
+		}
+	}
+
+	lessonCommentPermit, err = r.Repos.LessonComment().Update(lessonComment)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonCommentResolver{
+		LessonComment: lessonCommentPermit,
+		Repos:         r.Repos,
+	}, nil
+}
+
+type UpdateStudyInput struct {
+	Description *string
+	StudyId     string
+}
+
+func (r *RootResolver) UpdateStudy(
+	ctx context.Context,
+	args struct{ Input UpdateStudyInput },
+) (*studyResolver, error) {
+	studyPermit, err := r.Repos.Study().Get(args.Input.StudyId)
+	if err != nil {
+		return nil, err
+	}
+
+	study := studyPermit.Get()
+
+	if args.Input.Description != nil {
+		if err := study.Description.Set(args.Input.Description); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set study description"}
+		}
+	}
+	if err := study.Id.Set(args.Input.StudyId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set study id"}
+	}
+
+	studyPermit, err = r.Repos.Study().Update(study)
+	if err != nil {
+		return nil, err
+	}
+	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
+}
+
+type UpdateUserInput struct {
+	Bio    *string
+	Login  *string
+	Name   *string
+	UserId string
+}
+
+func (r *RootResolver) UpdateUser(
+	ctx context.Context,
+	args struct{ Input UpdateUserInput },
+) (*userResolver, error) {
+	userPermit, err := r.Repos.User().Get(args.Input.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	user := userPermit.Get()
+
+	if args.Input.Bio != nil {
+		if err := user.Profile.Set(args.Input.Bio); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user bio"}
+		}
+	}
+	if args.Input.Login != nil {
+		if err := user.Login.Set(args.Input.Login); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user login"}
+		}
+	}
+	if args.Input.Name != nil {
+		if err := user.Name.Set(args.Input.Name); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user name"}
+		}
+	}
+
+	userPermit, err = r.Repos.User().Update(user)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: userPermit, Repos: r.Repos}, nil
 }

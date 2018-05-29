@@ -143,13 +143,13 @@ func (r *LessonCommentRepo) Create(lessonComment *data.LessonComment) (*LessonCo
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, lessonComment); err != nil {
+	if _, err := r.perms.Check(perm.Create, lessonComment); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(lessonComment); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions)
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +202,7 @@ func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) (
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func (r *LessonCommentRepo) GetByUserId(userId string, po *data.PageOptions) ([]
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -238,7 +238,7 @@ func (r *LessonCommentRepo) Delete(lessonComment *data.LessonComment) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check2(perm.Delete, lessonComment); err != nil {
+	if _, err := r.perms.Check(perm.Delete, lessonComment); err != nil {
 		return err
 	}
 	return r.svc.Delete(lessonComment.Id.String)
@@ -248,13 +248,13 @@ func (r *LessonCommentRepo) Update(lessonComment *data.LessonComment) (*LessonCo
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Update, lessonComment); err != nil {
+	if _, err := r.perms.Check(perm.Update, lessonComment); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Update(lessonComment); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
 	if err != nil {
 		return nil, err
 	}

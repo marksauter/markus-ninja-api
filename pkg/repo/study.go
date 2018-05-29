@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/iancoleman/strcase"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -59,6 +60,16 @@ func (r *StudyPermit) PreCheckPermissions() error {
 	return nil
 }
 
+func (r *StudyPermit) AdvancedAt() (*time.Time, error) {
+	if ok := r.checkFieldPermission("advanced_at"); !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.study.AdvancedAt.Status == pgtype.Null {
+		return nil, nil
+	}
+	return &r.study.AdvancedAt.Time, nil
+}
+
 func (r *StudyPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -85,13 +96,6 @@ func (r *StudyPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.study.Name.String, nil
-}
-
-func (r *StudyPermit) PublishedAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("published_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.study.AdvancedAt.Time, nil
 }
 
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
@@ -154,7 +158,7 @@ func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Create, study); err != nil {
+	if _, err := r.perms.Check(perm.Create, study); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(study.Name.String)
@@ -165,7 +169,7 @@ func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
 	if err := r.svc.Create(study); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +184,7 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +201,7 @@ func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPe
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check2(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +220,7 @@ func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +235,7 @@ func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPerm
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +246,7 @@ func (r *StudyRepo) Delete(study *data.Study) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check2(perm.Delete, study); err != nil {
+	if _, err := r.perms.Check(perm.Delete, study); err != nil {
 		return err
 	}
 	return r.svc.Delete(study.Id.String)
@@ -252,13 +256,13 @@ func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check2(perm.Update, study); err != nil {
+	if _, err := r.perms.Check(perm.Update, study); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Update(study); err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check2(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(perm.Read, study)
 	if err != nil {
 		return nil, err
 	}
