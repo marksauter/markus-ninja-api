@@ -149,6 +149,10 @@ func (r *EmailRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
+func (r *EmailRepo) CountVerifiedByUser(userId *oid.OID) (int32, error) {
+	return r.svc.CountVerifiedByUser(userId)
+}
+
 func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -206,11 +210,15 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
-func (r *EmailRepo) GetByUserId(userId string, po *data.PageOptions) ([]*EmailPermit, error) {
+func (r *EmailRepo) GetByUserId(
+	userId *oid.OID,
+	po *data.PageOptions,
+	opts ...data.EmailFilterOption,
+) ([]*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	emails, err := r.svc.GetByUserId(userId, po)
+	emails, err := r.svc.GetByUserId(userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}

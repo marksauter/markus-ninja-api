@@ -1,0 +1,8 @@
+# Input type for MoveLesson.
+input MoveLessonInput {
+  # The ID of the lesson.
+  lessonId: ID!
+
+  # Place the lesson at this numbered position (must be greater than 0). Pass null to place it at the front.
+  number: Int
+}

@@ -33,10 +33,12 @@ CREATE TABLE email(
   user_id     VARCHAR(100) NOT NULL,
   value       VARCHAR(40) NOT NULL UNIQUE,
   type        email_type  DEFAULT 'EXTRA',
-  public      BOOLEAN     DEFAULT FALSE CHECK (verified_at IS NULL),
+  public      BOOLEAN     DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
+  CONSTRAINT check_verified_before_public
+    CHECK ((public AND verified_at IS NOT NULL) OR NOT public),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE

@@ -6,9 +6,6 @@ input UpdateLessonInput {
   # ID of the lesson.
   lessonId: ID!
 
-  # Identifies the lesson number.
-  number: Int
-
   # The title of the lesson.
   title: String
 }

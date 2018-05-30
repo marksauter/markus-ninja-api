@@ -56,6 +56,9 @@ type Mutation {
   # Deletes a user.
   deleteUser(input: DeleteUserInput!): ID
 
+  # Moves a lesson to a new numbered position within a study.
+  moveLesson(input: MoveLessonInput!): LessonEdge!
+
   # Requests an email verification mail to be sent.
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
   # Requests a password reset mail to be sent.
@@ -63,14 +66,14 @@ type Mutation {
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
 
-  # Updates an email's type or whether it's public or not.
+  # Updates an email's type and/or whether it's public or not.
   updateEmail(input: UpdateEmailInput!): Email!
-  # Updates the body, number, or title of a lesson.
+  # Updates the body and/or title of a lesson.
   updateLesson(input: UpdateLessonInput!): Lesson!
   # Updates the body of a lesson comment.
   updateLessonComment(input: UpdateLessonCommentInput!): LessonComment!
   # Updates the description of a study.
   updateStudy(input: UpdateStudyInput!): Study!
-  # Updates the bio, login, or name of a user.
+  # Updates the bio, login, and/or name of a user.
   updateUser(input: UpdateUserInput!): User!
 }

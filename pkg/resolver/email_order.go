@@ -64,10 +64,10 @@ type EmailOrderArg struct {
 
 func ParseEmailOrder(arg *EmailOrderArg) (*EmailOrder, error) {
 	if arg == nil {
-		arg = &EmailOrderArg{
-			Direction: "ASC",
-			Field:     "CREATED_AT",
-		}
+		return &EmailOrder{
+			direction: data.ASC,
+			field:     EmailCreatedAt,
+		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
 	if err != nil {

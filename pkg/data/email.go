@@ -34,6 +34,7 @@ type EmailService struct {
 const countEmailSQL = `SELECT COUNT(*) FROM email`
 
 func (s *EmailService) Count() (int64, error) {
+	mylog.Log.Info("Count() Email")
 	var n int64
 	err := prepareQueryRow(s.db, "countEmail", countEmailSQL).Scan(&n)
 	return n, err
@@ -42,12 +43,30 @@ func (s *EmailService) Count() (int64, error) {
 const countEmailByUserSQL = `SELECT COUNT(*) FROM email WHERE user_id = $1`
 
 func (s *EmailService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id) Email")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countEmailByUser",
 		countEmailByUserSQL,
+		userId,
+	).Scan(&n)
+	return n, err
+}
+
+const countEmailVerifiedByUserSQL = `
+	SELECT COUNT(*)
+	FROM email
+	WHERE user_id = $1 AND verified_at IS NOT NULL
+`
+
+func (s *EmailService) CountVerifiedByUser(userId *oid.OID) (int32, error) {
+	mylog.Log.WithField("user_id", userId.String).Info("CountVerifiedByUser(user_id) Email")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countEmailVerifiedByUser",
+		countEmailVerifiedByUserSQL,
 		userId,
 	).Scan(&n)
 	return n, err
@@ -161,33 +180,64 @@ func (s *EmailService) GetByValue(email string) (*Email, error) {
 	)
 }
 
-func (s *EmailService) GetByUserId(userId string, po *PageOptions) ([]*Email, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) Email")
+type EmailFilterOption int
+
+const (
+	EmailIsVerified EmailFilterOption = iota
+)
+
+func (src EmailFilterOption) String() string {
+	switch src {
+	case EmailIsVerified:
+		return "verified_at IS NOT NULL"
+	default:
+		return "unknown email filter option"
+	}
+}
+
+func (s *EmailService) GetByUserId(
+	userId *oid.OID,
+	po *PageOptions,
+	opts ...EmailFilterOption,
+) ([]*Email, error) {
+	mylog.Log.WithField("user_id", userId.String).Info("GetByUserId(userId) Email")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN email e2 ON e2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND e1.`+po.Order.Field()+` >= e2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN email e3 ON e3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND e1.`+po.Order.Field()+` <= e3.`+po.Order.Field())
+	direction := ASC
+	field := "created_at"
+	limit := int32(0)
+	if po != nil {
+		field = po.Order.Field()
+
+		if po.After != nil {
+			joins = append(joins, `INNER JOIN email e2 ON e2.id = `+args.Append(po.After.Value()))
+			whereAnds = append(whereAnds, `AND e1.`+field+` >= e2.`+field)
+		}
+		if po.Before != nil {
+			joins = append(joins, `INNER JOIN email e3 ON e3.id = `+args.Append(po.Before.Value()))
+			whereAnds = append(whereAnds, `AND e1.`+field+` <= e3.`+field)
+		}
+
+		// If the query is asking for the last elements in a list, then we need two
+		// queries to get the items more efficiently and in the right order.
+		// First, we query the reverse direction of that requested, so that only
+		// the items needed are returned.
+		// Then, we reorder the items to the originally requested direction.
+		direction = po.Order.Direction()
+		if po.Last != 0 {
+			direction = !po.Order.Direction()
+		}
+		limit = po.First + po.Last + 1
+		if (po.After != nil && po.First > 0) ||
+			(po.Before != nil && po.Last > 0) {
+			limit = limit + int32(1)
+		}
 	}
 
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
+	for _, o := range opts {
+		mylog.Log.Debug("found options")
+		whereAnds = append(whereAnds, `AND e1.`+o.String())
 	}
 
 	sql := `
@@ -206,17 +256,22 @@ func (s *EmailService) GetByUserId(userId string, po *PageOptions) ([]*Email, er
 		INNER JOIN account a ON a.id = e1.user_id
 		WHERE e1.user_id = ` + args.Append(userId) + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY e1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
+		ORDER BY e1.` + field + ` ` + direction.String()
+	if limit > 0 {
+		sql = sql + `
+			LIMIT ` + args.Append(limit)
+	}
 
-	if po.Last != 0 {
+	if po != nil && po.Last != 0 {
 		sql = fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
+			field,
+			direction,
 		)
 	}
+
+	mylog.Log.Debug(sql)
 
 	psName := preparedName("getEmailsByUserId", sql)
 
@@ -291,6 +346,8 @@ const deleteEmailSQL = `
 `
 
 func (s *EmailService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("Delete(id) Email")
+
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteEmail",
@@ -309,6 +366,8 @@ func (s *EmailService) Delete(id string) error {
 }
 
 func (s *EmailService) Update(row *Email) error {
+	mylog.Log.Info("Update() Email")
+
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 

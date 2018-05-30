@@ -1,17 +1,24 @@
 package resolver
 
-import "github.com/marksauter/markus-ninja-api/pkg/repo"
+import (
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
+)
 
 func NewLessonEdgeResolver(
-	cursor string,
 	node *repo.LessonPermit,
 	repos *repo.Repos,
-) *lessonEdgeResolver {
+) (*lessonEdgeResolver, error) {
+	id, err := node.ID()
+	if err != nil {
+		return nil, err
+	}
+	cursor := data.EncodeCursor(id.String)
 	return &lessonEdgeResolver{
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
-	}
+	}, nil
 }
 
 type lessonEdgeResolver struct {

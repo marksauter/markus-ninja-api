@@ -67,10 +67,10 @@ type StudyOrderArg struct {
 
 func ParseStudyOrder(arg *StudyOrderArg) (*StudyOrder, error) {
 	if arg == nil {
-		arg = &StudyOrderArg{
-			Direction: "ASC",
-			Field:     "UPDATED_AT",
-		}
+		return &StudyOrder{
+			direction: data.DESC,
+			field:     StudyAdvancedAt,
+		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
 	if err != nil {

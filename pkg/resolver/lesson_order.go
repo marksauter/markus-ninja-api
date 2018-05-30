@@ -62,10 +62,10 @@ type LessonOrderArg struct {
 
 func ParseLessonOrder(arg *LessonOrderArg) (*LessonOrder, error) {
 	if arg == nil {
-		arg = &LessonOrderArg{
-			Direction: "ASC",
-			Field:     "NUMBER",
-		}
+		return &LessonOrder{
+			direction: data.ASC,
+			field:     LessonNumber,
+		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
 	if err != nil {

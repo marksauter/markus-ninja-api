@@ -57,10 +57,10 @@ type LessonCommentOrderArg struct {
 
 func ParseLessonCommentOrder(arg *LessonCommentOrderArg) (*LessonCommentOrder, error) {
 	if arg == nil {
-		arg = &LessonCommentOrderArg{
-			Direction: "ASC",
-			Field:     "CREATED_AT",
-		}
+		return &LessonCommentOrder{
+			direction: data.ASC,
+			field:     LessonCommentCreatedAt,
+		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
 	if err != nil {

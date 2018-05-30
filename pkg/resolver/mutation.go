@@ -46,22 +46,22 @@ func (r *RootResolver) AddEmail(
 		return nil, err
 	}
 
+	resolver := &addEmailPayloadResolver{
+		Email: emailPermit,
+		EVT:   evtPermit,
+		Repos: r.Repos,
+	}
 	sendMailInput := &service.SendEmailVerificationMailInput{
 		EmailId:   email.Id.Short,
 		To:        args.Input.Email,
 		UserLogin: viewer.Login.String,
 		Token:     evt.Token.String,
 	}
-	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
-	if err != nil {
-		return nil, err
+	if err := r.Svcs.Mail.SendEmailVerificationMail(sendMailInput); err != nil {
+		return resolver, err
 	}
 
-	return &addEmailPayloadResolver{
-		Email: emailPermit,
-		EVT:   evtPermit,
-		Repos: r.Repos,
-	}, nil
+	return resolver, nil
 }
 
 type AddLessonCommentInput struct {
@@ -253,8 +253,38 @@ func (r *RootResolver) DeleteEmail(
 
 	email := emailPermit.Get()
 
+	n, err := r.Repos.Email().CountVerifiedByUser(&email.UserId)
+	if err != nil {
+		return nil, err
+	}
+	if n < 2 {
+		return nil, errors.New("cannot delete your only verified email")
+	}
+
 	if err := r.Repos.Email().Delete(email); err != nil {
 		return nil, err
+	}
+
+	if email.Type.Type == data.PrimaryEmail {
+		var newPrimaryEmail *data.Email
+		emails, err := r.Repos.Email().GetByUserId(&email.UserId, nil, data.EmailIsVerified)
+		if err != nil {
+			return nil, err
+		}
+		n := len(emails)
+		for i, email := range emails {
+			e := email.Get()
+			if e.Type.Type == data.BackupEmail {
+				newPrimaryEmail = e
+			}
+			if newPrimaryEmail == nil && i == n-1 {
+				newPrimaryEmail = e
+			}
+		}
+		newPrimaryEmail.Type.Set(data.PrimaryEmail)
+		if _, err := r.Repos.Email().Update(newPrimaryEmail); err != nil {
+			return nil, err
+		}
 	}
 
 	return &deleteEmailPayloadResolver{
@@ -369,10 +399,44 @@ func (r *RootResolver) DeleteUser(
 	return &gqlID, nil
 }
 
-type UpdateEmailInput struct {
-	EmailId string
-	Public  *bool
-	Type    *string
+type MoveLessonInput struct {
+	LessonId string
+	Number   *int32
+}
+
+func (r *RootResolver) MoveLesson(
+	ctx context.Context,
+	args struct{ Input MoveLessonInput },
+) (*lessonEdgeResolver, error) {
+	number := int32(1)
+	if args.Input.Number != nil {
+		if *args.Input.Number < 1 {
+			return nil, errors.New("`number` must be greater than 0")
+		}
+		number = *args.Input.Number
+	}
+
+	lessonPermit, err := r.Repos.Lesson().Get(args.Input.LessonId)
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := lessonPermit.Get()
+	if err := lesson.Number.Set(number); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson number"}
+	}
+
+	lessonPermit, err = r.Repos.Lesson().Update(lesson)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver, err := NewLessonEdgeResolver(lessonPermit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+
+	return resolver, nil
 }
 
 type RequestEmailVerificationInput struct {
@@ -571,6 +635,12 @@ func (r *RootResolver) ResetPassword(
 	return true, nil
 }
 
+type UpdateEmailInput struct {
+	EmailId string
+	Public  *bool
+	Type    *string
+}
+
 func (r *RootResolver) UpdateEmail(
 	ctx context.Context,
 	args struct{ Input UpdateEmailInput },
@@ -578,6 +648,14 @@ func (r *RootResolver) UpdateEmail(
 	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
 	if err != nil {
 		return nil, err
+	}
+
+	ok, err := emailPermit.IsVerified()
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("cannot update unverified email")
 	}
 
 	email := emailPermit.Get()
@@ -603,7 +681,6 @@ func (r *RootResolver) UpdateEmail(
 type UpdateLessonInput struct {
 	Body     *string
 	LessonId string
-	Number   *int32
 	Title    *string
 }
 
@@ -621,11 +698,6 @@ func (r *RootResolver) UpdateLesson(
 	if args.Input.Body != nil {
 		if err := lesson.Body.Set(args.Input.Body); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set lesson body"}
-		}
-	}
-	if args.Input.Number != nil {
-		if err := lesson.Number.Set(args.Input.Number); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson number"}
 		}
 	}
 	if args.Input.Title != nil {

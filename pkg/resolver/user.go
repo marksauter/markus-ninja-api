@@ -67,7 +67,7 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 
-	emails, err := r.Repos.Email().GetByUserId(id.String, pageOptions)
+	emails, err := r.Repos.Email().GetByUserId(id, pageOptions)
 	if err != nil {
 		return nil, err
 	}

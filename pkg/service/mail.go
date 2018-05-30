@@ -42,7 +42,7 @@ type SendEmailVerificationMailInput struct {
 func (s *MailService) SendEmailVerificationMail(
 	input *SendEmailVerificationMailInput,
 ) error {
-	link := s.conf.RootURL + "/users/" + "input.UserLogin" + "/emails/" +
+	link := s.conf.RootURL + "/users/" + input.UserLogin + "/emails/" +
 		input.EmailId + "/confirm_verification/" + input.Token
 	htmlBody := "<p>Hi <strong>@" + input.UserLogin + "</strong>!</p>" +
 		"<p>Please verify your email address (" + input.To + "). This will let you start creating.</p>" +
