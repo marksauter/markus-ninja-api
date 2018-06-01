@@ -1,9 +1,7 @@
 package service
 
 import (
-	"context"
 	"crypto/sha1"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -12,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	minio "github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
-	"github.com/sirupsen/logrus"
 )
 
 type StorageService struct {
@@ -49,6 +45,7 @@ func (s *StorageService) Get(
 	userId *oid.OID,
 	key string,
 ) (*minio.Object, error) {
+	mylog.Log.WithField("key", key).Info("StorageService.Get()")
 	objectName := fmt.Sprintf(
 		"%s/%s/%s/%s",
 		key[:2],
@@ -59,7 +56,7 @@ func (s *StorageService) Get(
 	contentType := mime.TypeByExtension(filepath.Ext(objectName))
 	objectPath := strings.Join([]string{contentType, userId.Short, objectName}, "/")
 
-	mylog.Log.Debug(objectPath)
+	mylog.Log.Info("found object")
 
 	return s.svc.GetObject(
 		s.bucket,
@@ -69,15 +66,11 @@ func (s *StorageService) Get(
 }
 
 func (s *StorageService) Upload(
-	ctx context.Context,
+	userId *oid.OID,
 	file multipart.File,
 	header *multipart.FileHeader,
-) (string, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return "", errors.New("viewer not found")
-	}
-
+) (key string, err error) {
+	mylog.Log.WithField("name", header.Filename).Info("StorageService.Upload()")
 	// Hash of the file contents to be used as the s3 object 'key'.
 	hash := sha1.New()
 	io.Copy(hash, file)
@@ -95,7 +88,7 @@ func (s *StorageService) Upload(
 	)
 	objectPath := strings.Join([]string{
 		contentType,
-		viewer.Id.Short,
+		userId.Short,
 		objectName,
 	}, "/")
 
@@ -108,13 +101,11 @@ func (s *StorageService) Upload(
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to put object")
-		return "", err
+		return
 	}
 
-	mylog.Log.WithFields(logrus.Fields{
-		"filename": header.Filename,
-		"size":     n,
-	}).Info("Successfully uploaded file")
+	mylog.Log.WithField("size", n).Info("Successfully uploaded file")
 
-	return hashHex, nil
+	key = hashHex + ext
+	return
 }

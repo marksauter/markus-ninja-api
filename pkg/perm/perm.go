@@ -127,6 +127,7 @@ const (
 	PRTType
 	StudyType
 	UserType
+	UserAssetType
 )
 
 func (nt NodeType) String() string {
@@ -145,6 +146,8 @@ func (nt NodeType) String() string {
 		return "Study"
 	case UserType:
 		return "User"
+	case UserAssetType:
+		return "UserAsset"
 	default:
 		return "unknown"
 	}
@@ -166,6 +169,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return StudyType, nil
 	case "user":
 		return UserType, nil
+	case "userasset":
+		return UserAssetType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)

@@ -19,6 +19,7 @@ type Services struct {
 	Storage       *StorageService
 	Study         *data.StudyService
 	User          *data.UserService
+	UserAsset     *data.UserAssetService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
@@ -47,5 +48,6 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),
 		User:          data.NewUserService(db),
+		UserAsset:     data.NewUserAssetService(db),
 	}, nil
 }

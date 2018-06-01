@@ -22,7 +22,7 @@ type lessonResolver struct {
 	Repos  *repo.Repos
 }
 
-func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
+func (r *lessonResolver) Author() (*userResolver, error) {
 	userId, err := r.Lesson.UserId()
 	if err != nil {
 		return nil, err
@@ -125,13 +125,13 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
+func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	study, err := r.Study(ctx)
+	study, err := r.Study()
 	if err != nil {
 		return uri, err
 	}
-	studyResourcePath, err := study.ResourcePath(ctx)
+	studyResourcePath, err := study.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
@@ -143,7 +143,7 @@ func (r *lessonResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
+func (r *lessonResolver) Study() (*studyResolver, error) {
 	studyId, err := r.Lesson.StudyId()
 	if err != nil {
 		return nil, err
@@ -164,9 +164,9 @@ func (r *lessonResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) URL(ctx context.Context) (mygql.URI, error) {
+func (r *lessonResolver) URL() (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
+	resourcePath, err := r.ResourcePath()
 	if err != nil {
 		return uri, err
 	}

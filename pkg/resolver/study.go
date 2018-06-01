@@ -30,6 +30,21 @@ func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 	return nil, nil
 }
 
+func (r *studyResolver) Asset(
+	ctx context.Context,
+	args struct{ Name string },
+) (*userAssetResolver, error) {
+	id, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	userAsset, err := r.Repos.UserAsset().GetByStudyIdAndName(id.String, args.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+}
+
 func (r *studyResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Study.CreatedAt()
 	return graphql.Time{t}, err
@@ -177,12 +192,12 @@ func (r *studyResolver) Name() (string, error) {
 	return r.Study.Name()
 }
 
-func (r *studyResolver) NameWithOwner(ctx context.Context) (string, error) {
+func (r *studyResolver) NameWithOwner() (string, error) {
 	name, err := r.Name()
 	if err != nil {
 		return "", err
 	}
-	owner, err := r.Owner(ctx)
+	owner, err := r.Owner()
 	if err != nil {
 		return "", err
 	}
@@ -193,7 +208,7 @@ func (r *studyResolver) NameWithOwner(ctx context.Context) (string, error) {
 	return fmt.Sprintf("%s/%s", ownerLogin, name), nil
 }
 
-func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
+func (r *studyResolver) Owner() (*userResolver, error) {
 	userId, err := r.Study.UserId()
 	if err != nil {
 		return nil, err
@@ -205,9 +220,9 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
-func (r *studyResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
+func (r *studyResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	nameWithOwner, err := r.NameWithOwner(ctx)
+	nameWithOwner, err := r.NameWithOwner()
 	if err != nil {
 		return uri, err
 	}
@@ -220,9 +235,9 @@ func (r *studyResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *studyResolver) URL(ctx context.Context) (mygql.URI, error) {
+func (r *studyResolver) URL() (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
+	resourcePath, err := r.ResourcePath()
 	if err != nil {
 		return uri, err
 	}

@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -12,10 +11,10 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type UserAssetPermit struct {
@@ -82,6 +81,13 @@ func (r *UserAssetPermit) Name() (string, error) {
 	return r.userAsset.Name.String, nil
 }
 
+func (r *UserAssetPermit) OriginalName() (string, error) {
+	if ok := r.checkFieldPermission("original_name"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.OriginalName.String, nil
+}
+
 func (r *UserAssetPermit) PublishedAt() (*time.Time, error) {
 	if ok := r.checkFieldPermission("verified_at"); !ok {
 		return nil, ErrAccessDenied
@@ -90,6 +96,21 @@ func (r *UserAssetPermit) PublishedAt() (*time.Time, error) {
 		return nil, nil
 	}
 	return &r.userAsset.PublishedAt.Time, nil
+}
+
+func (r *UserAssetPermit) Size() (int64, error) {
+	if ok := r.checkFieldPermission("size"); !ok {
+		var i int64
+		return i, ErrAccessDenied
+	}
+	return r.userAsset.Size.Int, nil
+}
+
+func (r *UserAssetPermit) StudyId() (*oid.OID, error) {
+	if ok := r.checkFieldPermission("id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.userAsset.StudyId, nil
 }
 
 func (r *UserAssetPermit) UpdatedAt() (time.Time, error) {
@@ -109,10 +130,12 @@ func (r *UserAssetPermit) UserId() (*oid.OID, error) {
 func NewUserAssetRepo(
 	perms *PermRepo,
 	svc *data.UserAssetService,
+	store *service.StorageService,
 ) *UserAssetRepo {
 	return &UserAssetRepo{
 		perms: perms,
 		svc:   svc,
+		store: store,
 	}
 }
 
@@ -120,6 +143,7 @@ type UserAssetRepo struct {
 	load  *loader.UserAssetLoader
 	perms *PermRepo
 	svc   *data.UserAssetService
+	store *service.StorageService
 }
 
 func (r *UserAssetRepo) Open(ctx context.Context) error {
@@ -151,14 +175,15 @@ func (r *UserAssetRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
+func (r *UserAssetRepo) CountByStudy(userId string) (int32, error) {
+	return r.svc.CountByStudy(userId)
+}
+
 func (r *UserAssetRepo) Create(userAsset *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	if _, err := r.perms.Check(perm.Create, userAsset); err != nil {
-		return nil, err
-	}
-	if err := r.Svcs.Storage.Upload(); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(userAsset); err != nil {
@@ -186,6 +211,21 @@ func (r *UserAssetRepo) Get(id string) (*UserAssetPermit, error) {
 		return nil, err
 	}
 	userAsset, err := r.load.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	if err != nil {
+		return nil, err
+	}
+	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+}
+
+func (r *UserAssetRepo) GetByStudyIdAndName(studyId, name string) (*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userAsset, err := r.load.GetByStudyIdAndName(studyId, name)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +279,8 @@ func (r *UserAssetRepo) Update(userAsset *data.UserAsset) (*UserAssetPermit, err
 }
 
 func (r *UserAssetRepo) Upload(
-	ctx context.Context,
+	userId *oid.OID,
+	studyId *oid.OID,
 	file multipart.File,
 	header *multipart.FileHeader,
 ) (*UserAssetPermit, error) {
@@ -247,42 +288,40 @@ func (r *UserAssetRepo) Upload(
 		return nil, err
 	}
 
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
+	userAsset := &data.UserAsset{}
+	if _, err := r.perms.Check(perm.Create, userAsset); err != nil {
+		return nil, err
+	}
+
+	key, err := r.store.Upload(userId, file, header)
+	if err != nil {
+		return nil, err
 	}
 
 	contentType := header.Header.Get("Content-Type")
-
-	userAsset := &data.UserAsset{}
 	if err := userAsset.ContentType.Set(contentType); err != nil {
+		return nil, err
+	}
+	if err := userAsset.Key.Set(key); err != nil {
 		return nil, err
 	}
 	if err := userAsset.Name.Set(header.Filename); err != nil {
 		return nil, err
 	}
+	if err := userAsset.OriginalName.Set(header.Filename); err != nil {
+		return nil, err
+	}
 	if err := userAsset.Size.Set(header.Size); err != nil {
 		return nil, err
 	}
-	if err := userAsset.UserId.Set(viewer.Id); err != nil {
+	if err := userAsset.UserId.Set(userId); err != nil {
+		return nil, err
+	}
+	if err := userAsset.StudyId.Set(studyId); err != nil {
 		return nil, err
 	}
 
-	if _, err := r.perms.Check(perm.Create, userAsset); err != nil {
-		return nil, err
-	}
-
-	if err := r.Svcs.Storage.Upload(); err != nil {
-		return nil, err
-	}
-	if err := r.svc.Create(userAsset); err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
-	if err != nil {
-		return nil, err
-	}
-	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+	return r.Create(userAsset)
 }
 
 // Middleware

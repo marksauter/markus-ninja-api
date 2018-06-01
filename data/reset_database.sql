@@ -88,7 +88,17 @@ CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Upd
 DROP TYPE IF EXISTS audience CASCADE;
 CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
 DROP TYPE IF EXISTS node_type CASCADE;
-CREATE TYPE node_type AS ENUM('Email', 'EVT', 'Label', 'Lesson', 'LessonComment', 'PRT', 'Study', 'User');
+CREATE TYPE node_type AS ENUM(
+  'Email',
+  'EVT',
+  'Label',
+  'Lesson',
+  'LessonComment',
+  'PRT',
+  'Study',
+  'User',
+  'UserAsset'
+);
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
@@ -381,13 +391,21 @@ CREATE TRIGGER asset_updated_at_modtime
 DROP TABLE IF EXISTS user_asset CASCADE;
 CREATE TABLE user_asset(
   user_id      VARCHAR(100),
+  study_id     VARCHAR(100),
   asset_id     VARCHAR(100),
+  name         TEXT         NOT NULL,
   published_at TIMESTAMPTZ,
-  PRIMARY KEY (user_id, asset_id),
+  PRIMARY KEY (user_id, study_id, asset_id),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (asset_id)
     REFERENCES asset (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX user_asset_unique_study_id_name_idx
+  ON user_asset (study_id, LOWER(name));

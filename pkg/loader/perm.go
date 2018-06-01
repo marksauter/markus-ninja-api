@@ -15,7 +15,38 @@ func NewQueryPermLoader(svc *data.PermService, viewerRoles ...string) *QueryPerm
 		viewerRoles: viewerRoles,
 		svc:         svc,
 	}
-	loader.batchGet = createLoader(loader.batchGetFunc)
+	loader.batchGet = createLoader(
+		func(
+			ctx context.Context,
+			keys dataloader.Keys,
+		) []*dataloader.Result {
+			var (
+				n       = len(keys)
+				results = make([]*dataloader.Result, n)
+				wg      sync.WaitGroup
+			)
+
+			wg.Add(n)
+
+			for i, key := range keys {
+				go func(i int, key dataloader.Key) {
+					defer wg.Done()
+					ks := splitCompositeKey(key)
+					operation, err := perm.ParseOperation(ks[0])
+					if err != nil {
+						results[i] = &dataloader.Result{Data: nil, Error: err}
+						return
+					}
+					queryPerm, err := svc.GetQueryPermission(operation, ks[1:]...)
+					results[i] = &dataloader.Result{Data: queryPerm, Error: err}
+				}(i, key)
+			}
+
+			wg.Wait()
+
+			return results
+		},
+	)
 	return loader
 }
 
@@ -35,34 +66,16 @@ func (l *QueryPermLoader) ClearAll() {
 	l.batchGet.ClearAll()
 }
 
-func (l *QueryPermLoader) AddRoles(roles ...data.Role) *QueryPermLoader {
-	for _, r := range roles {
-		l.viewerRoles = append(l.viewerRoles, r.String())
-	}
-	return l
-}
-
-func (l *QueryPermLoader) RemoveRoles(roles ...data.Role) *QueryPermLoader {
-	viewerRoles := make([]string, 0, len(l.viewerRoles))
-	for _, vr := range l.viewerRoles {
-		remove := false
-		for _, r := range roles {
-			if vr == r.String() {
-				remove = true
-			}
-		}
-		if !remove {
-			viewerRoles = append(viewerRoles, vr)
-		}
-		remove = false
-	}
-	l.viewerRoles = viewerRoles
-	return l
-}
-
-func (l *QueryPermLoader) Get(o perm.Operation) (*perm.QueryPermission, error) {
+func (l *QueryPermLoader) Get(o perm.Operation, roles []data.Role) (*perm.QueryPermission, error) {
 	ctx := context.Background()
-	permData, err := l.batchGet.Load(ctx, dataloader.StringKey(o.String()))()
+	roleStrs := make([]string, len(roles))
+	for i, r := range roles {
+		roleStrs[i] = r.String()
+	}
+	viewerRoles := append(l.viewerRoles, roleStrs...)
+	keyParts := append([]string{o.String()}, viewerRoles...)
+	compositeKey := newCompositeKey(keyParts...)
+	permData, err := l.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}

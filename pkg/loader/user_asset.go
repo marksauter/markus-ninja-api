@@ -11,15 +11,17 @@ import (
 
 func NewUserAssetLoader(svc *data.UserAssetService) *UserAssetLoader {
 	return &UserAssetLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetUserAssetFn(svc.GetByPK)),
+		svc:                      svc,
+		batchGet:                 createLoader(newBatchGetUserAssetBy1Fn(svc.GetByPK)),
+		batchGetByStudyIdAndName: createLoader(newBatchGetUserAssetBy2Fn(svc.GetByStudyIdAndName)),
 	}
 }
 
 type UserAssetLoader struct {
 	svc *data.UserAssetService
 
-	batchGet *dataloader.Loader
+	batchGet                 *dataloader.Loader
+	batchGetByStudyIdAndName *dataloader.Loader
 }
 
 func (r *UserAssetLoader) Clear(id string) {
@@ -42,10 +44,30 @@ func (r *UserAssetLoader) Get(id string) (*data.UserAsset, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
+	compositeKey := newCompositeKey(userAsset.StudyId.String, userAsset.Name.String)
+	r.batchGetByStudyIdAndName.Prime(ctx, compositeKey, userAsset)
+
 	return userAsset, nil
 }
 
-func newBatchGetUserAssetFn(
+func (r *UserAssetLoader) GetByStudyIdAndName(studyId, name string) (*data.UserAsset, error) {
+	ctx := context.Background()
+	compositeKey := newCompositeKey(studyId, name)
+	userAssetData, err := r.batchGetByStudyIdAndName.Load(ctx, compositeKey)()
+	if err != nil {
+		return nil, err
+	}
+	userAsset, ok := userAssetData.(*data.UserAsset)
+	if !ok {
+		return nil, fmt.Errorf("wrong type")
+	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
+
+	return userAsset, nil
+}
+
+func newBatchGetUserAssetBy1Fn(
 	getter func(string) (*data.UserAsset, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
@@ -61,6 +83,33 @@ func newBatchGetUserAssetFn(
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
 				userAsset, err := getter(key.String())
+				results[i] = &dataloader.Result{Data: userAsset, Error: err}
+			}(i, key)
+		}
+
+		wg.Wait()
+
+		return results
+	}
+}
+
+func newBatchGetUserAssetBy2Fn(
+	getter func(string, string) (*data.UserAsset, error),
+) dataloader.BatchFunc {
+	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+		var (
+			n       = len(keys)
+			results = make([]*dataloader.Result, n)
+			wg      sync.WaitGroup
+		)
+
+		wg.Add(n)
+
+		for i, key := range keys {
+			go func(i int, key dataloader.Key) {
+				defer wg.Done()
+				ks := splitCompositeKey(key)
+				userAsset, err := getter(ks[0], ks[1])
 				results[i] = &dataloader.Result{Data: userAsset, Error: err}
 			}(i, key)
 		}

@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/oid"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -18,6 +20,7 @@ func UploadAssets(svcs *service.Services, repos *repo.Repos) http.Handler {
 	uploadAssetsHandler := UploadAssetsHandler{Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,
+		repos.UserAsset().Use,
 	).Then(uploadAssetsHandler)
 }
 
@@ -43,7 +46,23 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	userAssetPermit, err := h.Repos.UserAsset().Upload(req.Context(), file, header)
+	viewer, ok := myctx.UserFromContext(req.Context())
+	if !ok {
+		mylog.Log.WithError(err).Error("failed to get user from context")
+		response := myhttp.AccessDeniedErrorResponse()
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	studyId := req.FormValue("study_id")
+	sid, err := oid.Parse(studyId)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to parse study_id")
+		response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	userAssetPermit, err := h.Repos.UserAsset().Upload(&viewer.Id, sid, file, header)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to upload file")
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -54,14 +73,14 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	href, err := userAssetPermit.Href()
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get user asset href")
-		response := myhttp.AccessDeniedErrorResponse(err.Error())
+		response := myhttp.AccessDeniedErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 	assetId, err := userAssetPermit.ID()
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get user asset id")
-		response := myhttp.AccessDeniedErrorResponse(err.Error())
+		response := myhttp.AccessDeniedErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
@@ -69,9 +88,9 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	asset := Asset{
 		ContentType: contentType,
 		Href:        href,
-		id:          assetId.Short,
-		name:        header.Filename,
-		size:        header.Size,
+		Id:          assetId.Short,
+		Name:        header.Filename,
+		Size:        header.Size,
 	}
 
 	response := &UploadAssetsSuccessResponse{Asset: asset}
@@ -82,7 +101,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 type Asset struct {
 	ContentType string `json:"content_type,omitempty"`
 	Href        string `json:"href,omitempty"`
-	id          string `json:"id,omitempty"`
+	Id          string `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Size        int64  `json:"size,omitempty"`
 }

@@ -231,7 +231,7 @@ func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPerm
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.GetByUserLoginAndName(owner, name)
+	study, err := r.load.GetByUserLoginAndName(owner, name)
 	if err != nil {
 		return nil, err
 	}

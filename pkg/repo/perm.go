@@ -40,6 +40,14 @@ func (r *PermRepo) Close() {
 	r.load = nil
 }
 
+func (r *PermRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("permission connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
 func (r *PermRepo) Clear(o perm.Operation) {
 	r.load.Clear(o)
 }
@@ -50,20 +58,22 @@ func (r *PermRepo) ClearAll() {
 
 func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
 	var checkField FieldPermissionFunc
-	if r.load == nil {
-		mylog.Log.Error("permission connection closed")
-		return checkField, ErrConnClosed
-	}
-	if ok := r.viewerCanAdmin(node); ok {
-		r.load.AddRoles(data.OwnerRole)
-		defer r.load.RemoveRoles(data.OwnerRole)
+	if err := r.CheckConnection(); err != nil {
+		return checkField, err
 	}
 	nt, err := perm.ParseNodeType(structs.Name(node))
 	if err != nil {
 		return checkField, err
 	}
 	o := perm.Operation{a, nt}
-	queryPerm, err := r.load.Get(o)
+
+	additionalRoles := []data.Role{}
+	if a != perm.Create {
+		if ok := r.viewerCanAdmin(node); ok {
+			additionalRoles = append(additionalRoles, data.OwnerRole)
+		}
+	}
+	queryPerm, err := r.load.Get(o, additionalRoles)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return checkField, ErrAccessDenied
@@ -122,6 +132,10 @@ func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 		return vid == node.Id.String
 	case *data.User:
 		return vid == node.Id.String
+	case data.UserAsset:
+		return vid == node.UserId.String
+	case *data.UserAsset:
+		return vid == node.UserId.String
 	default:
 		return false
 	}

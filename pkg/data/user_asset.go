@@ -11,15 +11,17 @@ import (
 )
 
 type UserAsset struct {
-	ContentType pgtype.Text        `db:"content_type" permit:"read"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          oid.OID            `db:"id" permit:"read"`
-	Key         pgtype.Text        `db:"key" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"read"`
-	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
-	Size        pgtype.Int8        `db:"size" permit:"read"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      oid.OID            `db:"user_id" permit:"read"`
+	ContentType  pgtype.Text        `db:"content_type" permit:"read"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id           oid.OID            `db:"id" permit:"read"`
+	Key          pgtype.Text        `db:"key" permit:"read"`
+	Name         pgtype.Text        `db:"name" permit:"read"`
+	OriginalName pgtype.Text        `db:"original_name" permit:"read"`
+	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
+	Size         pgtype.Int8        `db:"size" permit:"read"`
+	StudyId      oid.OID            `db:"study_id" permit:"read"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId       oid.OID            `db:"user_id" permit:"read"`
 }
 
 func NewUserAssetService(db Queryer) *UserAssetService {
@@ -36,6 +38,25 @@ func (s *UserAssetService) Count() (int32, error) {
 	mylog.Log.Info("Count() UserAsset")
 	var n int32
 	err := prepareQueryRow(s.db, "countAsset", countAssetSQL).Scan(&n)
+	return n, err
+}
+
+const countAssetByStudySQL = `
+	SELECT COUNT(*)
+	FROM asset a
+	INNER JOIN user_asset ua ON ua.study_id = $1 
+	WHERE a.id = ua.asset_id
+`
+
+func (s *UserAssetService) CountByStudy(studyId string) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountByStudy(study_id) UserAsset")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countAssetByStudy",
+		countAssetByStudySQL,
+		studyId,
+	).Scan(&n)
 	return n, err
 }
 
@@ -66,8 +87,10 @@ func (s *UserAssetService) get(name string, sql string, args ...interface{}) (*U
 		&row.Id,
 		&row.Key,
 		&row.Name,
+		&row.OriginalName,
 		&row.PublishedAt,
 		&row.Size,
+		&row.StudyId,
 		&row.UpdatedAt,
 		&row.UserId,
 	)
@@ -97,8 +120,10 @@ func (s *UserAssetService) getMany(name string, sql string, args ...interface{})
 			&row.Id,
 			&row.Key,
 			&row.Name,
+			&row.OriginalName,
 			&row.PublishedAt,
 			&row.Size,
+			&row.StudyId,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -119,9 +144,11 @@ const getAssetByPKSQL = `
 		a.created_at,
 		a.id,
 		a.key,
-		a.name,
+		ua.name,
+		a.name original_name,
 		ua.published_at,
 		a.size,
+		ua.study_id,
 		a.updated_at,
 		ua.user_id
 	FROM asset a
@@ -132,6 +159,29 @@ const getAssetByPKSQL = `
 func (s *UserAssetService) GetByPK(id string) (*UserAsset, error) {
 	mylog.Log.WithField("id", id).Info("GetByPK(id) UserAsset")
 	return s.get("getAssetByPK", getAssetByPKSQL, id)
+}
+
+const getAssetByStudyIdAndNameSQL = `
+	SELECT
+		a.content_type,
+		a.created_at,
+		a.id,
+		a.key,
+		ua.name,
+		a.name original_name,
+		ua.published_at,
+		a.size,
+		ua.study_id,
+		a.updated_at,
+		ua.user_id
+	FROM asset a
+	INNER JOIN user_asset ua ON ua.study_id = $1 AND ua.name = $2 
+	WHERE a.id = ua.asset_id
+`
+
+func (s *UserAssetService) GetByStudyIdAndName(studyId, name string) (*UserAsset, error) {
+	mylog.Log.WithField("name", name).Info("GetByStudyIdAndName(id) UserAsset")
+	return s.get("getAssetByStudyIdAndName", getAssetByStudyIdAndNameSQL, studyId, name)
 }
 
 type UserAssetFilterOption int
@@ -197,8 +247,11 @@ func (s *UserAssetService) GetByUserId(
 			a1.created_at,
 			a1.id,
 			a1.key,
-			a1.name,
-			a1.published_at,
+			ua.name,
+			a1.name original_name,
+			ua.published_at,
+			a1.size,
+			ua.study_id,
 			a1.updated_at,
 			ua.user_id
 		FROM asset a1
@@ -226,6 +279,11 @@ func (s *UserAssetService) GetByUserId(
 	return s.getMany(psName, sql, args...)
 }
 
+const createUserAssetSQL = `
+	INSERT INTO user_asset(user_id, study_id, asset_id, name)
+	VALUES($1, $2, $3, $4)
+`
+
 func (s *UserAssetService) Create(row *UserAsset) error {
 	mylog.Log.Info("Create() UserAsset")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
@@ -245,18 +303,21 @@ func (s *UserAssetService) Create(row *UserAsset) error {
 		columns = append(columns, "key")
 		values = append(values, args.Append(&row.Key))
 	}
-	if row.Name.Status != pgtype.Undefined {
+	if row.OriginalName.Status != pgtype.Undefined {
 		columns = append(columns, "name")
-		values = append(values, args.Append(&row.Name))
+		values = append(values, args.Append(&row.OriginalName))
 	}
 	if row.Size.Status != pgtype.Undefined {
 		columns = append(columns, "size")
 		values = append(values, args.Append(&row.Size))
 	}
-	if row.UserId.Status != pgtype.Undefined {
-		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
 	}
+	defer tx.Rollback()
 
 	sql := `
 		INSERT INTO asset(` + strings.Join(columns, ",") + `)
@@ -268,7 +329,7 @@ func (s *UserAssetService) Create(row *UserAsset) error {
 
 	psName := preparedName("createAsset", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
+	err = prepareQueryRow(tx, psName, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.UpdatedAt,
 	)
@@ -284,6 +345,28 @@ func (s *UserAssetService) Create(row *UserAsset) error {
 				return err
 			}
 		}
+		return err
+	}
+
+	commandTag, err := prepareExec(
+		tx,
+		"createUserAsset",
+		createUserAssetSQL,
+		&row.UserId,
+		&row.StudyId,
+		&row.Id,
+		&row.Name,
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return ErrNotFound
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
 		return err
 	}
 
@@ -330,8 +413,7 @@ func (s *UserAssetService) Update(row *UserAsset) error {
 			key,
 			name,
 			size,
-			updated_at,
-			user_id
+			updated_at
 	`
 
 	psName := preparedName("updateAsset", sql)
@@ -340,7 +422,7 @@ func (s *UserAssetService) Update(row *UserAsset) error {
 		&row.ContentType,
 		&row.CreatedAt,
 		&row.Key,
-		&row.Name,
+		&row.OriginalName,
 		&row.Size,
 		&row.UpdatedAt,
 		&row.UserId,

@@ -44,6 +44,7 @@
         this.state = {
           error: null,
           file: null,
+          studyId: null,
         };
 
         this.handleChange = this.handleChange.bind(this);
@@ -55,6 +56,7 @@
         const accessToken = window.sessionStorage.getItem("access_token");
         const formData = new FormData();
 
+        formData.append("study_id", this.state.studyId); 
         formData.append("file", this.state.file);
 
         return fetch("/upload/assets", {
@@ -85,8 +87,9 @@
       }
 
       handleChange(e) {
+        const value = e.target.name === "file" ? e.target.files[0] : e.target.value;
         this.setState({
-          file: e.target.files[0],
+          [e.target.name]: value,
         });
       }
 
@@ -108,6 +111,22 @@
               name: "file",
               type: "file",
               value: this.state.file,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "UploadForm__field"
+          },
+            React.createElement("label", {
+              className: "UploadForm__label",
+              htmlFor: "UploadForm__studyId"
+            }, "Study Id"),
+            React.createElement("input", {
+              className: "UploadForm__input",
+              id: "UploadForm__studyId",
+              name: "studyId",
+              type: "text",
+              value: this.state.studyId,
               onChange: this.handleChange
             })
           ),

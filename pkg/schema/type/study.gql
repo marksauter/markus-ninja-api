@@ -3,6 +3,11 @@ type Study implements Node, UniformResourceLocatable {
   # Identifies when the study was advanced at.
   advancedAt: Time
 
+  # Returns a single asset from the current study by name.
+  asset(
+    name: String!
+  ): UserAsset
+
   # Identifies the date and time when the object was created.
   createdAt: Time!
 

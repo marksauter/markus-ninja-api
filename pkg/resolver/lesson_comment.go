@@ -19,7 +19,7 @@ type lessonCommentResolver struct {
 	Repos         *repo.Repos
 }
 
-func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
+func (r *lessonCommentResolver) Author() (*userResolver, error) {
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return nil, err
@@ -83,13 +83,13 @@ func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
 	return &graphql.Time{t}, nil
 }
 
-func (r *lessonCommentResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
+func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
 	study, err := r.Study()
 	if err != nil {
 		return uri, err
 	}
-	studyResourcePath, err := study.ResourcePath(ctx)
+	studyResourcePath, err := study.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
@@ -131,9 +131,9 @@ func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonCommentResolver) URL(ctx context.Context) (mygql.URI, error) {
+func (r *lessonCommentResolver) URL() (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
+	resourcePath, err := r.ResourcePath()
 	if err != nil {
 		return uri, err
 	}

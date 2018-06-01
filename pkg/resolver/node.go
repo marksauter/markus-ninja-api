@@ -36,3 +36,8 @@ func (r *nodeResolver) ToUser() (*userResolver, bool) {
 	resolver, ok := r.Node.(*userResolver)
 	return resolver, ok
 }
+
+func (r *nodeResolver) ToUserAsset() (*userAssetResolver, bool) {
+	resolver, ok := r.Node.(*userAssetResolver)
+	return resolver, ok
+}
