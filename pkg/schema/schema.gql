@@ -3,6 +3,13 @@ schema {
   mutation: Mutation
 }
 type Query {
+  # Lookup a given asset by the owner, study name, and asset name.
+  asset(
+    name: String!
+    owner: String!
+    study: String!
+  ): UserAsset
+
   # Lookup node by ID.
   node(
     # The ID of the node.

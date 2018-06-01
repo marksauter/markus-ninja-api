@@ -244,15 +244,23 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 			return err
 		}
 	}
-	if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
-		if dfErr, ok := err.(data.DataFieldError); ok {
-			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
+	markusIsAdmin := false
+	for _, r := range markus.Roles {
+		if r == data.AdminRole.String() {
+			markusIsAdmin = true
+		}
+	}
+	if !markusIsAdmin {
+		if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
+			if dfErr, ok := err.(data.DataFieldError); ok {
+				if dfErr.Code != data.DuplicateField {
+					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
+					return err
+				}
+				mylog.Log.Info("markus is already an admin")
+			} else {
 				return err
 			}
-			mylog.Log.Info("markus is already an admin")
-		} else {
-			return err
 		}
 	}
 

@@ -45,6 +45,56 @@ func (r *studyResolver) Asset(
 	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
 }
 
+func (r *studyResolver) Assets(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *UserAssetOrderArg
+	},
+) (*userAssetConnectionResolver, error) {
+	id, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		userAssetOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	userAssets, err := r.Repos.UserAsset().GetByStudyId(id, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.UserAsset().CountByStudy(id.String)
+	if err != nil {
+		return nil, err
+	}
+	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
+		userAssets,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return userAssetConnectionResolver, nil
+}
+
 func (r *studyResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Study.CreatedAt()
 	return graphql.Time{t}, err

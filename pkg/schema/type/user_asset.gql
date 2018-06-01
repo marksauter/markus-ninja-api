@@ -38,3 +38,27 @@ type UserAsset implements Node, UniformResourceLocatable {
   # The HTTP URL for this asset.
   url: URI!
 }
+
+# An edge type for UserAsset.
+type UserAssetEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: UserAsset
+}
+
+# A connection type for UserAsset.
+type UserAssetConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [UserAssetEdge]
+
+  # A list of nodes.
+  nodes: [UserAsset]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

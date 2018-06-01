@@ -1,0 +1,8 @@
+# Ways in which assets can be ordered upon return.
+input UserAssetOrder {
+  # The direction in which to order assets by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order assets by.
+  field: UserAssetOrderField!
+}

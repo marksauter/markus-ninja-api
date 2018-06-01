@@ -19,6 +19,56 @@ type userResolver struct {
 	Repos *repo.Repos
 }
 
+func (r *userResolver) Assets(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *UserAssetOrderArg
+	},
+) (*userAssetConnectionResolver, error) {
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		userAssetOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	userAssets, err := r.Repos.UserAsset().GetByUserId(id, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.UserAsset().CountByUser(id.String)
+	if err != nil {
+		return nil, err
+	}
+	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
+		userAssets,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return userAssetConnectionResolver, nil
+}
+
 func (r *userResolver) Bio() (string, error) {
 	return r.User.Profile()
 }

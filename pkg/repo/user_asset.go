@@ -236,6 +236,46 @@ func (r *UserAssetRepo) GetByStudyIdAndName(studyId, name string) (*UserAssetPer
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
+func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string) (*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userAsset, err := r.load.GetByUserStudyAndName(userLogin, studyName, name)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	if err != nil {
+		return nil, err
+	}
+	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+}
+
+func (r *UserAssetRepo) GetByStudyId(
+	studyId *oid.OID,
+	po *data.PageOptions,
+	opts ...data.UserAssetFilterOption,
+) ([]*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userAssets, err := r.svc.GetByStudyId(studyId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
+	if len(userAssets) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, userAssets[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range userAssets {
+			userAssetPermits[i] = &UserAssetPermit{fieldPermFn, l}
+		}
+	}
+	return userAssetPermits, nil
+}
+
 func (r *UserAssetRepo) GetByUserId(
 	userId *oid.OID,
 	po *data.PageOptions,

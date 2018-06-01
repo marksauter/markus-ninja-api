@@ -1,5 +1,23 @@
 # Represents a user.
 type User implements Node, UniformResourceLocatable {
+  # Returns a list of assets that the user owns.
+  assets(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for assets returned from the connection.
+    orderBy: UserAssetOrder
+  ): UserAssetConnection!
+
   # The user's public profile bio.
   bio: String!
 

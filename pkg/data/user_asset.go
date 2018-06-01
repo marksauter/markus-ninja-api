@@ -180,8 +180,45 @@ const getAssetByStudyIdAndNameSQL = `
 `
 
 func (s *UserAssetService) GetByStudyIdAndName(studyId, name string) (*UserAsset, error) {
-	mylog.Log.WithField("name", name).Info("GetByStudyIdAndName(id) UserAsset")
+	mylog.Log.WithField("name", name).Info("GetByStudyIdAndName(name) UserAsset")
 	return s.get("getAssetByStudyIdAndName", getAssetByStudyIdAndNameSQL, studyId, name)
+}
+
+const getAssetByUserStudyAndNameSQL = `
+	SELECT
+		a.content_type,
+		a.created_at,
+		a.id,
+		a.key,
+		ua.name,
+		a.name original_name,
+		ua.published_at,
+		a.size,
+		ua.study_id,
+		a.updated_at,
+		ua.user_id
+	FROM asset a
+	INNER JOIN account u ON u.login = $1
+	INNER JOIN study s ON s.user_id = u.id AND s.name = $2
+	INNER JOIN user_asset ua ON ua.user_id = u.id AND ua.study_id = s.id AND ua.name = $3 
+	WHERE a.id = ua.asset_id
+`
+
+func (s *UserAssetService) GetByUserStudyAndName(
+	userLogin,
+	studyName,
+	name string,
+) (*UserAsset, error) {
+	mylog.Log.WithField(
+		"name", name,
+	).Info("GetByUserStudyAndName(name) UserAsset")
+	return s.get(
+		"getAssetByUserStudyAndName",
+		getAssetByUserStudyAndNameSQL,
+		userLogin,
+		studyName,
+		name,
+	)
 }
 
 type UserAssetFilterOption int
@@ -199,12 +236,92 @@ func (src UserAssetFilterOption) String() string {
 	}
 }
 
+func (s *UserAssetService) GetByStudyId(
+	studyId *oid.OID,
+	po *PageOptions,
+	opts ...UserAssetFilterOption,
+) ([]*UserAsset, error) {
+	mylog.Log.WithField("user_id", studyId.String).Info("GetByStudyId(studyId) UserAsset")
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+
+	var joins, whereAnds []string
+	direction := DESC
+	field := "created_at"
+	limit := int32(0)
+	if po != nil {
+		if po.After != nil {
+			joins = append(joins, `INNER JOIN asset a2 ON a2.id = `+args.Append(po.After.Value()))
+			whereAnds = append(whereAnds, `AND a1.`+po.Order.Field()+` >= a2.`+po.Order.Field())
+		}
+		if po.Before != nil {
+			joins = append(joins, `INNER JOIN asset a3 ON a3.id = `+args.Append(po.Before.Value()))
+			whereAnds = append(whereAnds, `AND a1.`+po.Order.Field()+` <= a3.`+po.Order.Field())
+		}
+
+		// If the query is asking for the last elements in a list, then we need two
+		// queries to get the items more efficiently and in the right order.
+		// First, we query the reverse direction of that requested, so that only
+		// the items needed are returned.
+		// Then, we reorder the items to the originally requested direction.
+		direction = po.Order.Direction()
+		if po.Last != 0 {
+			direction = !po.Order.Direction()
+		}
+		limit = po.First + po.Last + 1
+		if (po.After != nil && po.First > 0) ||
+			(po.Before != nil && po.Last > 0) {
+			limit = limit + int32(1)
+		}
+	}
+
+	for _, o := range opts {
+		whereAnds = append(whereAnds, `AND a1.`+o.String())
+	}
+
+	sql := `
+		SELECT
+			a1.content_type,
+			a1.created_at,
+			a1.id,
+			a1.key,
+			ua.name,
+			a1.name original_name,
+			ua.published_at,
+			a1.size,
+			ua.study_id,
+			a1.updated_at,
+			ua.user_id
+		FROM asset a1
+		INNER JOIN user_asset ua ON ua.study_id = ` + args.Append(studyId) +
+		strings.Join(joins, " ") + `
+		WHERE a1.id = ua.asset_id
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY a1.` + po.Order.Field() + ` ` + direction.String() + `
+	`
+	if limit > 0 {
+		sql = sql + `LIMIT ` + args.Append(limit)
+	}
+
+	if po != nil && po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			field,
+			direction,
+		)
+	}
+
+	psName := preparedName("getAssetsByUserId", sql)
+
+	return s.getMany(psName, sql, args...)
+}
+
 func (s *UserAssetService) GetByUserId(
 	userId *oid.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) UserAsset")
+	mylog.Log.WithField("user_id", userId.String).Info("GetByUserId(userId) UserAsset")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var joins, whereAnds []string

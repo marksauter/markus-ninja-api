@@ -8,6 +8,25 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/oid"
 )
 
+func (r *RootResolver) Asset(
+	ctx context.Context,
+	args struct {
+		Owner string
+		Study string
+		Name  string
+	},
+) (*userAssetResolver, error) {
+	userAsset, err := r.Repos.UserAsset().GetByUserStudyAndName(
+		args.Owner,
+		args.Study,
+		args.Name,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+}
+
 func (r *RootResolver) Node(
 	ctx context.Context,
 	args struct{ Id string },
