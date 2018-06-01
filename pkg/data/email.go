@@ -191,7 +191,7 @@ func (src EmailFilterOption) String() string {
 	case EmailIsVerified:
 		return "verified_at IS NOT NULL"
 	default:
-		return "unknown email filter option"
+		return ""
 	}
 }
 
@@ -236,7 +236,6 @@ func (s *EmailService) GetByUserId(
 	}
 
 	for _, o := range opts {
-		mylog.Log.Debug("found options")
 		whereAnds = append(whereAnds, `AND e1.`+o.String())
 	}
 
@@ -270,8 +269,6 @@ func (s *EmailService) GetByUserId(
 			direction,
 		)
 	}
-
-	mylog.Log.Debug(sql)
 
 	psName := preparedName("getEmailsByUserId", sql)
 

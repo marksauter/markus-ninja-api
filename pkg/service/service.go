@@ -16,11 +16,12 @@ type Services struct {
 	Perm          *data.PermService
 	PRT           *data.PRTService
 	Role          *data.RoleService
+	Storage       *StorageService
 	Study         *data.StudyService
 	User          *data.UserService
 }
 
-func NewServices(conf *myconf.Config, db data.Queryer) *Services {
+func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 	authConfig := &AuthServiceConfig{
 		KeyId: conf.AuthKeyId,
 	}
@@ -28,6 +29,10 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 		CharSet: conf.MailCharSet,
 		Sender:  conf.MailSender,
 		RootURL: conf.MailRootURL,
+	}
+	storageSvc, err := NewStorageService()
+	if err != nil {
+		return nil, err
 	}
 	return &Services{
 		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
@@ -39,7 +44,8 @@ func NewServices(conf *myconf.Config, db data.Queryer) *Services {
 		Perm:          data.NewPermService(db),
 		PRT:           data.NewPRTService(db),
 		Role:          data.NewRoleService(db),
+		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),
 		User:          data.NewUserService(db),
-	}
+	}, nil
 }

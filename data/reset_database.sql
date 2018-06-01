@@ -357,3 +357,37 @@ CREATE TRIGGER label_updated_at_modtime
   ON label
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS asset CASCADE;
+CREATE TABLE asset(
+  id           VARCHAR(100) PRIMARY KEY,
+  key          TEXT         NOT NULL,
+  name         TEXT         NOT NULL,
+  size         BIGINT       NOT NULL,
+  content_type TEXT         NOT NULL,
+  created_at   TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ  DEFAULT NOW()
+);
+
+CREATE INDEX asset_content_type_idx ON asset (content_type);
+CREATE INDEX asset_created_at_idx ON asset (created_at);
+
+CREATE TRIGGER asset_updated_at_modtime
+  BEFORE UPDATE
+  ON asset
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS user_asset CASCADE;
+CREATE TABLE user_asset(
+  user_id      VARCHAR(100),
+  asset_id     VARCHAR(100),
+  published_at TIMESTAMPTZ,
+  PRIMARY KEY (user_id, asset_id),
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (asset_id)
+    REFERENCES asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);

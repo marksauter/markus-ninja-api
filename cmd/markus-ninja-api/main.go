@@ -53,7 +53,10 @@ func main() {
 	}
 	defer db.Close()
 
-	svcs := service.NewServices(conf, db)
+	svcs, err := service.NewServices(conf, db)
+	if err != nil {
+		panic(err)
+	}
 
 	if err = initDB(svcs, db); err != nil {
 		mylog.Log.WithField("error", err).Fatal("error initializing database")
@@ -76,9 +79,12 @@ func main() {
 	r.Handle("/signup", route.Signup(svcs))
 	r.Handle("/token", route.Token(svcs))
 	r.Handle("/upload", route.Upload())
-	r.Handle("/upload/assets", route.UploadAssets())
-	r.Handle("/users/{login}/emails/{id}/confirm_verification/{token}",
+	r.Handle("/upload/assets", route.UploadAssets(svcs, repos))
+	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
 		route.ConfirmVerification(svcs),
+	)
+	r.Handle("/user/assets/{user_id}/{key}",
+		route.UserAssets(svcs),
 	)
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
@@ -127,6 +133,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		new(data.PRT),
 		new(data.Study),
 		new(data.User),
+		new(data.UserAsset),
 	}
 
 	for _, model := range modelTypes {
