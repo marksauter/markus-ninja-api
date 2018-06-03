@@ -1,4 +1,4 @@
-package oid
+package mytype
 
 import (
 	"database/sql/driver"
@@ -23,7 +23,7 @@ type OID struct {
 	Type string
 }
 
-func New(objType string) (*OID, error) {
+func NewOID(objType string) (*OID, error) {
 	if objType == "" {
 		return nil, errors.New("invalid OID: `objType` must not be empty")
 	}
@@ -38,7 +38,7 @@ func New(objType string) (*OID, error) {
 	return &OID{Short: id.String(), Status: pgtype.Present, Type: objType, String: s}, nil
 }
 
-func NewFromShort(objType, short string) (*OID, error) {
+func NewOIDFromShort(objType, short string) (*OID, error) {
 	if objType == "" {
 		return nil, errors.New("invalid OID: `objType` must not be empty")
 	}
@@ -54,7 +54,7 @@ func NewFromShort(objType, short string) (*OID, error) {
 
 var errInvalidOID = errors.New("invalid OID")
 
-func Parse(id string) (*OID, error) {
+func ParseOID(id string) (*OID, error) {
 	v, err := base64.StdEncoding.DecodeString(id)
 	if err != nil {
 		return nil, errInvalidOID
@@ -79,28 +79,34 @@ func (dst *OID) Set(src interface{}) error {
 	switch value := src.(type) {
 	case OID:
 		*dst = value
-		dst.Status = pgtype.Present
 	case *OID:
 		*dst = *value
-		dst.Status = pgtype.Present
 	case string:
-		oid, err := Parse(value)
+		oid, err := ParseOID(value)
 		if err != nil {
 			return err
 		}
 		*dst = *oid
 	case *string:
-		oid, err := Parse(*value)
-		if err != nil {
-			return err
+		if value == nil {
+			*dst = OID{Status: pgtype.Null}
+		} else {
+			oid, err := ParseOID(*value)
+			if err != nil {
+				return err
+			}
+			*dst = *oid
 		}
-		*dst = *oid
 	case []byte:
-		oid, err := Parse(string(value))
-		if err != nil {
-			return err
+		if value == nil {
+			*dst = OID{Status: pgtype.Null}
+		} else {
+			oid, err := ParseOID(string(value))
+			if err != nil {
+				return err
+			}
+			*dst = *oid
 		}
-		*dst = *oid
 	default:
 		return fmt.Errorf("cannot convert %v to OID", value)
 	}
@@ -111,7 +117,7 @@ func (dst *OID) Set(src interface{}) error {
 func (dst *OID) Get() interface{} {
 	switch dst.Status {
 	case pgtype.Present:
-		return dst
+		return dst.String
 	case pgtype.Null:
 		return nil
 	default:
@@ -148,7 +154,7 @@ func (dst *OID) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 		return nil
 	}
 
-	oid, err := Parse(string(src))
+	oid, err := ParseOID(string(src))
 	if err != nil {
 		return err
 	}
@@ -159,8 +165,6 @@ func (dst *OID) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 func (dst *OID) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
-
-var errUndefined = errors.New("cannot encode status undefined")
 
 func (src *OID) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {

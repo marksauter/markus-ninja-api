@@ -6,17 +6,17 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type EVT struct {
-	EmailId    oid.OID            `db:"email_id"`
+	EmailId    mytype.OID         `db:"email_id"`
 	ExpiresAt  pgtype.Timestamptz `db:"expires_at"`
 	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
 	Token      pgtype.Varchar     `db:"token"`
-	UserId     oid.OID            `db:"user_id"`
+	UserId     mytype.OID         `db:"user_id"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
 }
 

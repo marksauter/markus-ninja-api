@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/sirupsen/logrus"
 )
@@ -63,7 +63,7 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	field := pgtype.Text{}
 	for _, al := range accessLevelsWithFields {
 		for _, f := range fields {
-			id, _ := oid.New("Perm")
+			id, _ := mytype.NewOID("Perm")
 			field.Set(strcase.ToSnake(f))
 			permissions[i] = []interface{}{
 				id,
@@ -77,7 +77,7 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 	}
 	field.Set(nil)
 	for _, al := range accessLevelsWithoutFields {
-		id, _ := oid.New("Perm")
+		id, _ := mytype.NewOID("Perm")
 		permissions[i] = []interface{}{
 			id,
 			al,

@@ -10,7 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -38,7 +38,7 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 	return r.user.CreatedAt.Time, nil
 }
 
-func (r *UserPermit) ID() (*oid.OID, error) {
+func (r *UserPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}

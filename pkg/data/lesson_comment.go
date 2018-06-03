@@ -7,18 +7,18 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 type LessonComment struct {
-	Body        pgtype.Text        `db:"body" permit:"read"`
+	Body        mytype.Body        `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          oid.OID            `db:"id" permit:"read"`
-	LessonId    oid.OID            `db:"lesson_id" permit:"read"`
+	Id          mytype.OID         `db:"id" permit:"read"`
+	LessonId    mytype.OID         `db:"lesson_id" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId     oid.OID            `db:"study_id" permit:"read"`
+	StudyId     mytype.OID         `db:"study_id" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      oid.OID            `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {
@@ -338,8 +338,7 @@ func (s *LessonCommentService) Create(row *LessonComment) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("LessonComment")
-	mylog.Log.Debug("len ", len(id.String))
+	id, _ := mytype.NewOID("LessonComment")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -29,7 +29,7 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	routeVars := mux.Vars(req)
 
 	userId := routeVars["user_id"]
-	uid, err := oid.NewFromShort("User", userId)
+	uid, err := mytype.NewOIDFromShort("User", userId)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create new oid")
 		response := myhttp.InternalServerErrorResponse(err.Error())

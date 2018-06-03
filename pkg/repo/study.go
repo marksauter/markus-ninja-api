@@ -15,7 +15,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -84,7 +84,7 @@ func (r *StudyPermit) Description() (string, error) {
 	return r.study.Description.String, nil
 }
 
-func (r *StudyPermit) ID() (*oid.OID, error) {
+func (r *StudyPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -105,7 +105,7 @@ func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	return r.study.UpdatedAt.Time, nil
 }
 
-func (r *StudyPermit) UserId() (*oid.OID, error) {
+func (r *StudyPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}

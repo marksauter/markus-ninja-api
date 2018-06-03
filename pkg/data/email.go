@@ -7,17 +7,17 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/sirupsen/logrus"
 )
 
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at"`
-	Id         oid.OID            `db:"id"`
+	Id         mytype.OID         `db:"id"`
 	Public     pgtype.Bool        `db:"public"`
 	Type       EmailType          `db:"type"`
 	UserLogin  pgtype.Varchar     `db:"user"`
-	UserId     oid.OID            `db:"user_id"`
+	UserId     mytype.OID         `db:"user_id"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	Value      pgtype.Varchar     `db:"value"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
@@ -60,7 +60,7 @@ const countEmailVerifiedByUserSQL = `
 	WHERE user_id = $1 AND verified_at IS NOT NULL
 `
 
-func (s *EmailService) CountVerifiedByUser(userId *oid.OID) (int32, error) {
+func (s *EmailService) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
 	mylog.Log.WithField("user_id", userId.String).Info("CountVerifiedByUser(user_id) Email")
 	var n int32
 	err := prepareQueryRow(
@@ -196,7 +196,7 @@ func (src EmailFilterOption) String() string {
 }
 
 func (s *EmailService) GetByUserId(
-	userId *oid.OID,
+	userId *mytype.OID,
 	po *PageOptions,
 	opts ...EmailFilterOption,
 ) ([]*Email, error) {
@@ -282,7 +282,7 @@ func (s *EmailService) Create(row *Email) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("Email")
+	id, _ := mytype.NewOID("Email")
 	row.Id.Set(id)
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&row.Id))

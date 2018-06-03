@@ -26,8 +26,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
-	"github.com/marksauter/markus-ninja-api/pkg/passwd"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/resolver"
 	"github.com/marksauter/markus-ninja-api/pkg/schema"
@@ -203,12 +202,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		"n": userPermissionsCount,
 	}).Infof("role permissions created for USER")
 
-	guestId, _ := oid.New("User")
-	guestPassword, _ := passwd.New("guest")
+	guestId, _ := mytype.NewOID("User")
 	guest := &data.User{}
-	guest.Id.Set(guestId.String)
+	guest.Id.Set(guestId)
 	guest.Login.Set("guest")
-	guest.Password.Set(guestPassword.Hash())
+	guest.Password.Set("guest")
 	guest.PrimaryEmail.Value.Set("guest@rkus.ninja")
 	if err := svcs.User.Create(guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
@@ -222,12 +220,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 
-	markusId, _ := oid.New("User")
-	markusPassword, _ := passwd.New("fender917")
+	markusId, _ := mytype.NewOID("User")
 	markus := &data.User{}
-	markus.Id.Set(markusId.String)
+	markus.Id.Set(markusId)
 	markus.Login.Set("markus")
-	markus.Password.Set(markusPassword.Hash())
+	markus.Password.Set("fender917")
 	markus.PrimaryEmail.Value.Set("m@rkus.ninja")
 	if err := svcs.User.Create(markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {

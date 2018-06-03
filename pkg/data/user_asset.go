@@ -7,21 +7,21 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 type UserAsset struct {
 	ContentType  pgtype.Text        `db:"content_type" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           oid.OID            `db:"id" permit:"read"`
+	Id           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	OriginalName pgtype.Text        `db:"original_name" permit:"read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"read"`
-	StudyId      oid.OID            `db:"study_id" permit:"read"`
+	StudyId      mytype.OID         `db:"study_id" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId       oid.OID            `db:"user_id" permit:"read"`
+	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewUserAssetService(db Queryer) *UserAssetService {
@@ -237,7 +237,7 @@ func (src UserAssetFilterOption) String() string {
 }
 
 func (s *UserAssetService) GetByStudyId(
-	studyId *oid.OID,
+	studyId *mytype.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
@@ -317,7 +317,7 @@ func (s *UserAssetService) GetByStudyId(
 }
 
 func (s *UserAssetService) GetByUserId(
-	userId *oid.OID,
+	userId *mytype.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
@@ -407,7 +407,7 @@ func (s *UserAssetService) Create(row *UserAsset) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("UserAsset")
+	id, _ := mytype.NewOID("UserAsset")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

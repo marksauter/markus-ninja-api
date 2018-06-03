@@ -11,7 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/passwd"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -186,21 +186,17 @@ func (r *RootResolver) CreateUser(
 ) (*userResolver, error) {
 	user := &data.User{}
 
-	password, err := passwd.New(args.Input.Password)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create password")
+	if err := user.Password.Set(args.Input.Password); err != nil {
+		mylog.Log.WithError(err).Error("failed to set password")
 		return nil, err
 	}
-	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
+	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
 		mylog.Log.WithError(err).Error("password failed strength check")
 		return nil, err
 	}
 
 	if err := user.Login.Set(args.Input.Login); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user login"}
-	}
-	if err := user.Password.Set(password.Hash()); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user password"}
 	}
 	if err := user.PrimaryEmail.Value.Set(args.Input.Email); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
@@ -599,17 +595,13 @@ func (r *RootResolver) ResetPassword(
 		return false, errors.New("token has already ended")
 	}
 
-	password, err := passwd.New(args.Input.Password)
-	if err != nil {
+	if err = user.Password.Set(args.Input.Password); err != nil {
+		mylog.Log.WithError(err).Error("failed to set password")
 		return false, err
 	}
-	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
+	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
+		mylog.Log.WithError(err).Error("password failed strength check")
 		return false, err
-	}
-
-	err = user.Password.Set(password.Hash())
-	if err != nil {
-		return false, myerr.UnexpectedError{"failed to set user password"}
 	}
 
 	if err := r.Svcs.User.Update(user); err != nil {

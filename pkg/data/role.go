@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/sirupsen/logrus"
 )
 
@@ -62,7 +62,7 @@ var createRoleSQL = `
 
 func (s *RoleService) Create(name string) (*RoleModel, error) {
 	mylog.Log.WithField("name", name).Info("Create(name) Role")
-	id, _ := oid.New("Role")
+	id, _ := mytype.NewOID("Role")
 	row := s.db.QueryRow(createRoleSQL, id, name)
 	role := new(RoleModel)
 	err := row.Scan(

@@ -12,7 +12,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -60,7 +60,7 @@ func (r *UserAssetPermit) Href() (string, error) {
 	), nil
 }
 
-func (r *UserAssetPermit) ID() (*oid.OID, error) {
+func (r *UserAssetPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -106,7 +106,7 @@ func (r *UserAssetPermit) Size() (int64, error) {
 	return r.userAsset.Size.Int, nil
 }
 
-func (r *UserAssetPermit) StudyId() (*oid.OID, error) {
+func (r *UserAssetPermit) StudyId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -120,7 +120,7 @@ func (r *UserAssetPermit) UpdatedAt() (time.Time, error) {
 	return r.userAsset.UpdatedAt.Time, nil
 }
 
-func (r *UserAssetPermit) UserId() (*oid.OID, error) {
+func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -252,7 +252,7 @@ func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string)
 }
 
 func (r *UserAssetRepo) GetByStudyId(
-	studyId *oid.OID,
+	studyId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
 ) ([]*UserAssetPermit, error) {
@@ -277,7 +277,7 @@ func (r *UserAssetRepo) GetByStudyId(
 }
 
 func (r *UserAssetRepo) GetByUserId(
-	userId *oid.OID,
+	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
 ) ([]*UserAssetPermit, error) {
@@ -319,8 +319,8 @@ func (r *UserAssetRepo) Update(userAsset *data.UserAsset) (*UserAssetPermit, err
 }
 
 func (r *UserAssetRepo) Upload(
-	userId *oid.OID,
-	studyId *oid.OID,
+	userId *mytype.OID,
+	studyId *mytype.OID,
 	file multipart.File,
 	header *multipart.FileHeader,
 ) (*UserAssetPermit, error) {

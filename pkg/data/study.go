@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,10 +15,10 @@ type Study struct {
 	AdvancedAt  pgtype.Timestamptz `db:"advanced_at" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"read"`
-	Id          oid.OID            `db:"id" permit:"read"`
+	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      oid.OID            `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewStudyService(db Queryer) *StudyService {
@@ -230,7 +230,7 @@ func (s *StudyService) Create(row *Study) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("Study")
+	id, _ := mytype.NewOID("Study")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

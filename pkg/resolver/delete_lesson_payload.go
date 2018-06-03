@@ -2,15 +2,15 @@ package resolver
 
 import (
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type DeleteLessonPayload = deleteLessonPayloadResolver
 
 type deleteLessonPayloadResolver struct {
-	LessonId *oid.OID
-	StudyId  *oid.OID
+	LessonId *mytype.OID
+	StudyId  *mytype.OID
 	Repos    *repo.Repos
 }
 

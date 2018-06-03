@@ -1,15 +1,15 @@
-package oid_test
+package mytype_test
 
 import (
 	"testing"
 
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-var testOID, _ = oid.New("Test")
+var testOID, _ = mytype.NewOID("Test")
 
-func TestNewFromShort(t *testing.T) {
-	id, err := oid.NewFromShort("Test", testOID.Short)
+func TestNewOIDFromShort(t *testing.T) {
+	id, err := mytype.NewOIDFromShort("Test", testOID.Short)
 	if err != nil {
 		t.Errorf(
 			"TestNewFromShort(%s): unexpected err: %s",
@@ -29,8 +29,8 @@ func TestNewFromShort(t *testing.T) {
 	}
 }
 
-func TestParse(t *testing.T) {
-	id, err := oid.Parse(testOID.String)
+func TestParseOID(t *testing.T) {
+	id, err := mytype.ParseOID(testOID.String)
 	if err != nil {
 		t.Errorf(
 			"TestParse(%s): unexpected err: %s",

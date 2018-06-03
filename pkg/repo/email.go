@@ -10,7 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -38,7 +38,7 @@ func (r *EmailPermit) CreatedAt() (time.Time, error) {
 	return r.email.CreatedAt.Time, nil
 }
 
-func (r *EmailPermit) ID() (*oid.OID, error) {
+func (r *EmailPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -80,7 +80,7 @@ func (r *EmailPermit) UserLogin() (string, error) {
 	return r.email.UserLogin.String, nil
 }
 
-func (r *EmailPermit) UserId() (*oid.OID, error) {
+func (r *EmailPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -149,7 +149,7 @@ func (r *EmailRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
-func (r *EmailRepo) CountVerifiedByUser(userId *oid.OID) (int32, error) {
+func (r *EmailRepo) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
 	return r.svc.CountVerifiedByUser(userId)
 }
 
@@ -211,7 +211,7 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 }
 
 func (r *EmailRepo) GetByUserId(
-	userId *oid.OID,
+	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.EmailFilterOption,
 ) ([]*EmailPermit, error) {

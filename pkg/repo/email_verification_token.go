@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -30,7 +30,7 @@ func (r *EVTPermit) Get() *data.EVT {
 	return evt
 }
 
-func (r *EVTPermit) EmailId() (*oid.OID, error) {
+func (r *EVTPermit) EmailId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return nil, ErrAccessDenied
 	}

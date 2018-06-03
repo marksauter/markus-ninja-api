@@ -6,15 +6,15 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 type User struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           oid.OID            `db:"id" permit:"read"`
+	Id           mytype.OID         `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
-	Password     pgtype.Bytea       `db:"password" permit:"create"`
+	Password     mytype.Password    `db:"password" permit:"create"`
 	PrimaryEmail Email              `db:"primary_email" permit:"create"`
 	Profile      pgtype.Text        `db:"profile" permit:"read"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
@@ -121,9 +121,8 @@ const getUserByIdSQL = `
 				r.id = ur.role_id
 		) roles
 	FROM account a
-	LEFT JOIN user_email ae ON ae.user_id = a.id
-		AND ae.public = TRUE
-	LEFT JOIN email e ON e.id = ae.email_id
+	LEFT JOIN email e ON e.user_id = a.id
+		AND e.public = TRUE
 	WHERE a.id = $1
 `
 
@@ -151,9 +150,8 @@ const getUserByLoginSQL = `
 				r.id = ur.role_id
 		) roles
 	FROM account a
-	LEFT JOIN user_email ae ON ae.user_id = a.id
-		AND ae.public = TRUE
-	LEFT JOIN email e ON e.id = ae.email_id
+	LEFT JOIN email e ON e.user_id = a.id
+		AND e.public = TRUE
 	WHERE a.login = $1
 `
 
@@ -206,9 +204,8 @@ const getUserCredentialsByEmailSQL = `
 		a.password
 	FROM account a
 	INNER JOIN email e ON e.value = $1
-	INNER JOIN user_email ue ON ue.email_id = e.id 
-		AND ue.type = ANY('{"PRIMARY", "BACKUP"}')
-	WHERE a.id = ue.user_id
+		AND e.type = ANY('{"PRIMARY", "BACKUP"}')
+	WHERE a.id = e.user_id
 `
 
 func (s *UserService) GetCredentialsByEmail(
@@ -230,7 +227,7 @@ func (s *UserService) Create(row *User) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("User")
+	id, _ := mytype.NewOID("User")
 	row.Id.Set(id)
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&row.Id))
@@ -342,7 +339,6 @@ func (s *UserService) Update(row *User) error {
 			created_at,
 			login,
 			name,
-			password,
 			updated_at
 	`
 
@@ -353,7 +349,6 @@ func (s *UserService) Update(row *User) error {
 		&row.CreatedAt,
 		&row.Login,
 		&row.Name,
-		&row.Password,
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {

@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -44,14 +44,14 @@ func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {
 	return r.lessonComment.CreatedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) ID() (*oid.OID, error) {
+func (r *LessonCommentPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.lessonComment.Id, nil
 }
 
-func (r *LessonCommentPermit) LessonId() (*oid.OID, error) {
+func (r *LessonCommentPermit) LessonId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("lesson_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -65,14 +65,14 @@ func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
 	return r.lessonComment.PublishedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) StudyId() (*oid.OID, error) {
+func (r *LessonCommentPermit) StudyId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.lessonComment.StudyId, nil
 }
 
-func (r *LessonCommentPermit) UserId() (*oid.OID, error) {
+func (r *LessonCommentPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}

@@ -9,9 +9,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LessonPermit struct {
@@ -35,7 +34,7 @@ func (r *LessonPermit) Body() (string, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
 		return "", ErrAccessDenied
 	}
-	return util.DecompressString(r.lesson.Body.String)
+	return r.lesson.Body.String, nil
 }
 
 func (r *LessonPermit) CreatedAt() (time.Time, error) {
@@ -45,7 +44,7 @@ func (r *LessonPermit) CreatedAt() (time.Time, error) {
 	return r.lesson.CreatedAt.Time, nil
 }
 
-func (r *LessonPermit) ID() (*oid.OID, error) {
+func (r *LessonPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -67,7 +66,7 @@ func (r *LessonPermit) PublishedAt() (time.Time, error) {
 	return r.lesson.PublishedAt.Time, nil
 }
 
-func (r *LessonPermit) StudyId() (*oid.OID, error) {
+func (r *LessonPermit) StudyId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -88,7 +87,7 @@ func (r *LessonPermit) UpdatedAt() (time.Time, error) {
 	return r.lesson.UpdatedAt.Time, nil
 }
 
-func (r *LessonPermit) UserId() (*oid.OID, error) {
+func (r *LessonPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -146,13 +145,6 @@ func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
 		return nil, err
 	}
 	if _, err := r.perms.Check(perm.Create, lesson); err != nil {
-		return nil, err
-	}
-	body, err := util.CompressString(lesson.Body.String)
-	if err != nil {
-		return nil, err
-	}
-	if err := lesson.Body.Set(body); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Create(lesson); err != nil {
@@ -252,13 +244,6 @@ func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
 		return nil, err
 	}
 	if _, err := r.perms.Check(perm.Update, lesson); err != nil {
-		return nil, err
-	}
-	body, err := util.CompressString(lesson.Body.String)
-	if err != nil {
-		return nil, err
-	}
-	if err := lesson.Body.Set(body); err != nil {
 		return nil, err
 	}
 	if err := r.svc.Update(lesson); err != nil {

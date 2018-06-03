@@ -7,7 +7,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
-	"github.com/marksauter/markus-ninja-api/pkg/passwd"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -92,23 +92,21 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	password, err := passwd.New(registration.Password)
-	if err != nil {
+	user := &data.User{}
+	user.Login.Set(registration.Username)
+	user.PrimaryEmail.Value.Set(registration.Email)
+
+	if err := user.Password.Set(registration.Password); err != nil {
 		response := myhttp.InvalidPasswordResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	if err := password.CheckStrength(passwd.VeryWeak); err != nil {
+	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
 		response := myhttp.PasswordStrengthErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-
-	user := &data.User{}
-	user.Login.Set(registration.Username)
-	user.Password.Set(password.Hash())
-	user.PrimaryEmail.Value.Set(registration.Email)
 
 	err = h.Svcs.User.Create(user)
 	if err != nil {

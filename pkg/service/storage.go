@@ -11,7 +11,7 @@ import (
 
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	minio "github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
 )
@@ -42,7 +42,7 @@ func NewStorageService() (*StorageService, error) {
 }
 
 func (s *StorageService) Get(
-	userId *oid.OID,
+	userId *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
 	mylog.Log.WithField("key", key).Info("StorageService.Get()")
@@ -66,7 +66,7 @@ func (s *StorageService) Get(
 }
 
 func (s *StorageService) Upload(
-	userId *oid.OID,
+	userId *mytype.OID,
 	file multipart.File,
 	header *multipart.FileHeader,
 ) (key string, err error) {

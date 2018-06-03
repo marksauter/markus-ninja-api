@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -54,7 +54,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	emailId, err := oid.NewFromShort("Email", routeVars["id"])
+	emailId, err := mytype.NewOIDFromShort("Email", routeVars["id"])
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

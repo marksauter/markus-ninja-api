@@ -2,15 +2,15 @@ package resolver
 
 import (
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type DeleteEmailPayload = deleteEmailPayloadResolver
 
 type deleteEmailPayloadResolver struct {
-	EmailId *oid.OID
-	UserId  *oid.OID
+	EmailId *mytype.OID
+	UserId  *mytype.OID
 	Repos   *repo.Repos
 }
 

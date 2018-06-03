@@ -7,19 +7,19 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type PRT struct {
-	EmailId   oid.OID            `db:"email_id" permit:"create"`
+	EmailId   mytype.OID         `db:"email_id" permit:"create"`
 	EndedAt   pgtype.Timestamptz `db:"ended_at"`
 	EndIP     pgtype.Inet        `db:"end_ip"`
 	ExpiresAt pgtype.Timestamptz `db:"expires_at" permit:"read"`
 	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"read"`
 	RequestIP pgtype.Inet        `db:"request_ip" permit:"create"`
-	UserId    oid.OID            `db:"user_id" permit:"create"`
+	UserId    mytype.OID         `db:"user_id" permit:"create"`
 	Token     pgtype.Varchar     `db:"token"`
 }
 

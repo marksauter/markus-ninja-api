@@ -8,20 +8,20 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/sirupsen/logrus"
 )
 
 type Lesson struct {
-	Body        pgtype.Text        `db:"body" permit:"read"`
+	Body        mytype.Body        `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          oid.OID            `db:"id" permit:"read"`
+	Id          mytype.OID         `db:"id" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId     oid.OID            `db:"study_id" permit:"read"`
+	StudyId     mytype.OID         `db:"study_id" permit:"read"`
 	Title       pgtype.Text        `db:"title" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      oid.OID            `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewLessonService(db Queryer) *LessonService {
@@ -302,7 +302,7 @@ func (s *LessonService) Create(row *Lesson) error {
 
 	var columns, values []string
 
-	id, _ := oid.New("Lesson")
+	id, _ := mytype.NewOID("Lesson")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))

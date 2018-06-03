@@ -9,7 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -30,7 +30,7 @@ func (r *PRTPermit) Get() *data.PRT {
 	return prt
 }
 
-func (r *PRTPermit) EmailId() (*oid.OID, error) {
+func (r *PRTPermit) EmailId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return nil, ErrAccessDenied
 	}
@@ -58,7 +58,7 @@ func (r *PRTPermit) Token() (string, error) {
 	return r.prt.Token.String, nil
 }
 
-func (r *PRTPermit) UserId() (*oid.OID, error) {
+func (r *PRTPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}

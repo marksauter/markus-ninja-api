@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 func (r *RootResolver) Asset(
@@ -31,7 +31,7 @@ func (r *RootResolver) Node(
 	ctx context.Context,
 	args struct{ Id string },
 ) (*nodeResolver, error) {
-	parsedId, err := oid.Parse(args.Id)
+	parsedId, err := mytype.ParseOID(args.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 }) ([]*nodeResolver, error) {
 	nodes := make([]*nodeResolver, len(args.Ids))
 	for i, id := range args.Ids {
-		parsedId, err := oid.Parse(id)
+		parsedId, err := mytype.ParseOID(id)
 		if err != nil {
 			return nil, err
 		}

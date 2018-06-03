@@ -7,7 +7,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/oid"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -54,7 +54,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 	studyId := req.FormValue("study_id")
-	sid, err := oid.Parse(studyId)
+	sid, err := mytype.ParseOID(studyId)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to parse study_id")
 		response := myhttp.InvalidRequestErrorResponse("invalid study_id")

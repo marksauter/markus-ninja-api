@@ -9,7 +9,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/passwd"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
@@ -74,14 +73,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	password, err := passwd.New(creds.Password)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to make new password")
-		response := myhttp.InvalidCredentialsErrorResponse()
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-	if err = password.CompareToHash(user.Password.Bytes); err != nil {
+	if err = user.Password.CompareToPassword(creds.Password); err != nil {
 		mylog.Log.WithError(err).Error("passwords do not match")
 		response := myhttp.InvalidCredentialsErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
@@ -102,6 +94,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		ExpiresIn:   jwt.Payload.Exp,
 	}
 	myhttp.WriteResponseTo(rw, &response)
+	return
 }
 
 type TokenSuccessResponse struct {
