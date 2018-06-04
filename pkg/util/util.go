@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/writeas/go-strip-markdown"
@@ -70,4 +71,8 @@ func DecompressString(s string) (string, error) {
 	}
 	bs, err := ioutil.ReadAll(r)
 	return string(bs), err
+}
+
+func SplitIntoWords(s string) []string {
+	return strings.Split(s, " ")
 }

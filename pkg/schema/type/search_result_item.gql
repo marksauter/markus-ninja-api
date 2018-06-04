@@ -1,0 +1,35 @@
+# The result of a search.
+union SearchResultItem = Lesson | Study | User
+
+# An edge in a search result item connection.
+type SearchResultItemEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: SearchResultItem
+
+  # Text matches on the result found.
+  textMatches: [TextMatch]
+}
+
+# A list of results that matched against a search query.
+type SearchResultItemConnection {
+  # A list of edges.
+  edges: [SearchResultItemEdge]
+
+  # The number of lessons that matched the search query.
+  lessonCount: Int!
+
+  # A list of nodes.
+  nodes: [SearchResultItem]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies that matched the search query.
+  studyCount: Int!
+
+  # The number of users that matched the search query.
+  userCount: Int!
+}

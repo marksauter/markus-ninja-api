@@ -22,6 +22,26 @@ type Query {
     ids: [ID!]!
   ): [Node]!
 
+  search(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # The search string to look for.
+    query: String!
+
+    # The types of search items to search within.
+    type: SearchType!
+  ): SearchResultItemConnection!
+
   # Lookup a given study by the owner and study name.
   study(
     # The name of the study.

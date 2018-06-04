@@ -4,40 +4,40 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
-type Node interface {
+type node interface {
 	ID() (graphql.ID, error)
 }
 
 type nodeResolver struct {
-	Node
+	node
 }
 
 func (r *nodeResolver) ToEmail() (*emailResolver, bool) {
-	resolver, ok := r.Node.(*emailResolver)
+	resolver, ok := r.node.(*emailResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
-	resolver, ok := r.Node.(*lessonResolver)
+	resolver, ok := r.node.(*lessonResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
-	resolver, ok := r.Node.(*lessonCommentResolver)
+	resolver, ok := r.node.(*lessonCommentResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
-	resolver, ok := r.Node.(*studyResolver)
+	resolver, ok := r.node.(*studyResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToUser() (*userResolver, bool) {
-	resolver, ok := r.Node.(*userResolver)
+	resolver, ok := r.node.(*userResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToUserAsset() (*userAssetResolver, bool) {
-	resolver, ok := r.Node.(*userAssetResolver)
+	resolver, ok := r.node.(*userAssetResolver)
 	return resolver, ok
 }

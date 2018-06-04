@@ -170,7 +170,7 @@ func (r *userResolver) Lessons(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *LessonOrderArg
+		OrderBy *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -256,7 +256,7 @@ func (r *userResolver) Studies(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *StudyOrderArg
+		OrderBy *OrderArg
 	},
 ) (*studyConnectionResolver, error) {
 	id, err := r.User.ID()

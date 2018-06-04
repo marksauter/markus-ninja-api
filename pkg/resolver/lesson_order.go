@@ -55,12 +55,7 @@ func (o *LessonOrder) Field() string {
 	return o.field.String()
 }
 
-type LessonOrderArg struct {
-	Direction string
-	Field     string
-}
-
-func ParseLessonOrder(arg *LessonOrderArg) (*LessonOrder, error) {
+func ParseLessonOrder(arg *OrderArg) (*LessonOrder, error) {
 	if arg == nil {
 		return &LessonOrder{
 			direction: data.ASC,

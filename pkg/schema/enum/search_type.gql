@@ -1,0 +1,11 @@
+# Represents the individual results of a search.
+enum SearchType {
+  # Returns results matching lessons in studies.
+  LESSON
+
+  # Returns results matching studies.
+  STUDY
+
+  # Returns results matching users on rkus.ninja.
+  USER
+}

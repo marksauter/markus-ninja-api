@@ -7,13 +7,13 @@ $$ language 'plpgsql';
 
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
+  created_at    TIMESTAMPTZ  DEFAULT NOW(),
   id            VARCHAR(100) PRIMARY KEY,
-  login         VARCHAR(40) NOT NULL UNIQUE,
-  password      BYTEA       NOT NULL,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW(),
+  login         VARCHAR(40)  NOT NULL UNIQUE,
+  name          TEXT,
+  password      BYTEA        NOT NULL,
   profile       TEXT,
-  name          TEXT
+  updated_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX user_unique_login_idx
@@ -194,8 +194,8 @@ CREATE INDEX study_updated_at_idx ON study (updated_at);
 CREATE INDEX study_advanced_at_idx ON study (advanced_at);
 
 CREATE TRIGGER study_updated_at_modtime
-BEFORE UPDATE ON study
-FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+  BEFORE UPDATE ON study
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 CREATE OR REPLACE FUNCTION inc_study_lesson_number()
   RETURNS trigger AS

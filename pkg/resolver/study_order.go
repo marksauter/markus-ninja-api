@@ -60,12 +60,7 @@ func (o *StudyOrder) Field() string {
 	return o.field.String()
 }
 
-type StudyOrderArg struct {
-	Direction string
-	Field     string
-}
-
-func ParseStudyOrder(arg *StudyOrderArg) (*StudyOrder, error) {
+func ParseStudyOrder(arg *OrderArg) (*StudyOrder, error) {
 	if arg == nil {
 		return &StudyOrder{
 			direction: data.DESC,

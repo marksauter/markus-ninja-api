@@ -140,7 +140,7 @@ func (r *studyResolver) Lessons(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *LessonOrderArg
+		OrderBy *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	id, err := r.Study.ID()

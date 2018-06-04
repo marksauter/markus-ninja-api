@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -82,6 +83,106 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 	return nodes, nil
 }
 
+func (r *RootResolver) Search(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+		Query   string
+		Type    string
+	},
+) (*searchResultItemConnectionResolver, error) {
+	searchType, err := ParseSearchType(args.Type)
+	if err != nil {
+		return nil, err
+	}
+	searchOrder, err := ParseSearchOrder(searchType, args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		searchOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonCount, err := r.Repos.Lesson().CountByMatch(args.Query)
+	if err != nil {
+		return nil, err
+	}
+	studyCount, err := r.Repos.Study().CountByMatch(args.Query)
+	if err != nil {
+		return nil, err
+	}
+	userCount, err := r.Repos.User().CountByMatch(args.Query)
+	if err != nil {
+		return nil, err
+	}
+
+	var resolver *searchResultItemConnectionResolver
+	switch searchType {
+	case SearchTypeLesson:
+		lessons, err := r.Repos.Lesson().Search(args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		resolver, err = NewSearchResultItemConnectionResolver(
+			r.Repos,
+			lessons,
+			pageOptions,
+			lessonCount,
+			studyCount,
+			userCount,
+		)
+		if err != nil {
+			return nil, err
+		}
+	case SearchTypeStudy:
+		studies, err := r.Repos.Study().Search(args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		resolver, err = NewSearchResultItemConnectionResolver(
+			r.Repos,
+			studies,
+			pageOptions,
+			lessonCount,
+			studyCount,
+			userCount,
+		)
+		if err != nil {
+			return nil, err
+		}
+	case SearchTypeUser:
+		users, err := r.Repos.User().Search(args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		resolver, err = NewSearchResultItemConnectionResolver(
+			r.Repos,
+			users,
+			pageOptions,
+			lessonCount,
+			studyCount,
+			userCount,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return resolver, nil
+}
+
 func (r *RootResolver) Study(
 	ctx context.Context,
 	args struct {
@@ -95,6 +196,7 @@ func (r *RootResolver) Study(
 	}
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
+
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {

@@ -13,10 +13,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-var clientURL = "http://localhost:3000"
-
-type Lesson = lessonResolver
-
 type lessonResolver struct {
 	Lesson *repo.LessonPermit
 	Repos  *repo.Repos

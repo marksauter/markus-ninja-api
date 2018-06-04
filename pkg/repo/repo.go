@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -28,6 +29,10 @@ var ErrAccessDenied = errors.New("access denied")
 type FieldPermissionFunc = func(field string) bool
 
 var AdminPermissionFunc = func(field string) bool { return true }
+
+type Permit interface {
+	ID() (*mytype.OID, error)
+}
 
 type Repo interface {
 	Open(context.Context) error

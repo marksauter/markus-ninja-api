@@ -1,0 +1,41 @@
+package resolver
+
+import (
+	"fmt"
+	"strings"
+)
+
+type SearchType int
+
+const (
+	SearchTypeLesson SearchType = iota
+	SearchTypeStudy
+	SearchTypeUser
+)
+
+func ParseSearchType(s string) (SearchType, error) {
+	switch strings.ToUpper(s) {
+	case "LESSON":
+		return SearchTypeLesson, nil
+	case "STUDY":
+		return SearchTypeStudy, nil
+	case "USER":
+		return SearchTypeUser, nil
+	default:
+		var f SearchType
+		return f, fmt.Errorf("invalid SearchType: %q", s)
+	}
+}
+
+func (f SearchType) String() string {
+	switch f {
+	case SearchTypeLesson:
+		return "lesson"
+	case SearchTypeStudy:
+		return "study"
+	case SearchTypeUser:
+		return "user"
+	default:
+		return "unknown"
+	}
+}
