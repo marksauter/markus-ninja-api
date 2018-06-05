@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/camelcase"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/writeas/go-strip-markdown"
 	blackfriday "gopkg.in/russross/blackfriday.v2"
@@ -73,6 +74,11 @@ func DecompressString(s string) (string, error) {
 	return string(bs), err
 }
 
-func SplitIntoWords(s string) []string {
-	return strings.Split(s, " ")
+func Split(s string, f func(rune) bool) []string {
+	firstSplit := strings.FieldsFunc(s, f)
+	secondSplit := []string{}
+	for _, ss := range firstSplit {
+		secondSplit = append(secondSplit, camelcase.Split(ss)...)
+	}
+	return secondSplit
 }

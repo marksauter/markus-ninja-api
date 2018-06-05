@@ -3,14 +3,19 @@ package util_test
 import (
 	"reflect"
 	"testing"
+	"unicode"
 
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-var splitIntoWordsTests = []struct {
+var splitTests = []struct {
 	s        string
 	expected []string
 }{
+	{
+		"foo",
+		[]string{"foo"},
+	},
 	{
 		"foo bar baz qux",
 		[]string{"foo", "bar", "baz", "qux"},
@@ -33,20 +38,34 @@ var splitIntoWordsTests = []struct {
 	},
 	{
 		"FooBARBazQUX",
-		[]string{"Foo", "BARB", "az", "QUX"},
+		[]string{"Foo", "BAR", "Baz", "QUX"},
 	},
 	{
 		"foo bar_bazQux",
 		[]string{"foo", "bar", "baz", "Qux"},
 	},
+	{
+		"foo  bar--baz__qux",
+		[]string{"foo", "bar", "baz", "qux"},
+	},
+	{
+		"foo123bar456baz789qux",
+		[]string{"foo", "123", "bar", "456", "baz", "789", "qux"},
+	},
 }
 
-func TestSplitIntoWords(t *testing.T) {
-	for _, tt := range splitIntoWordsTests {
-		actual := util.SplitIntoWords(tt.s)
+func testDelimiter(r rune) bool {
+	return unicode.IsSpace(r) ||
+		r == '-' ||
+		r == '_'
+}
+
+func TestSplit(t *testing.T) {
+	for _, tt := range splitTests {
+		actual := util.Split(tt.s, testDelimiter)
 		if !reflect.DeepEqual(actual, tt.expected) {
 			t.Errorf(
-				"TestSplitIntoWords(%s): expected %v, actual %v",
+				"TestSplit(%s): expected %v, actual %v",
 				tt.s,
 				tt.expected,
 				actual,

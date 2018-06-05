@@ -1,3 +1,12 @@
+CREATE OR REPLACE FUNCTION commuted_ilike(TEXT,TEXT) RETURNS BOOL AS $$
+SELECT $2 ILIKE $1;
+$$ language 'sql';
+
+CREATE OPERATOR ~!@# (
+  PROCEDURE=commuted_ilike(TEXT, TEXT),
+  LEFTARG=TEXT, RIGHTARG=TEXT
+);
+
 CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -179,6 +188,7 @@ CREATE TABLE study(
   id            VARCHAR(100)   PRIMARY KEY,
   user_id       VARCHAR(100)   NOT NULL,
   name          TEXT          NOT NULL CHECK (name !~' '),
+  name_tokens   TEXT,
   created_at    TIMESTAMPTZ   DEFAULT NOW(),
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
   advanced_at   TIMESTAMPTZ,
