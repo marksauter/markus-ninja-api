@@ -29,47 +29,66 @@ type LessonCommentService struct {
 	db Queryer
 }
 
-const countLessonCommentSQL = `SELECT COUNT(*)::INT FROM lesson_comment`
+const countLessonCommentByLessonSQL = `
+	SELECT COUNT(*)
+	FROM lesson_comment
+	WHERE user_id = $1 AND study_id = $2 AND lesson_id = $3
+`
 
-func (s *LessonCommentService) Count() (int32, error) {
-	mylog.Log.Info("Count()")
-	var n int32
-	err := prepareQueryRow(s.db, "countLessonComment", countLessonCommentSQL).Scan(&n)
-	return n, err
-}
-
-const countLessonCommentByLessonSQL = `SELECT COUNT(*) FROM lesson_comment WHERE lesson_id = $1`
-
-func (s *LessonCommentService) CountByLesson(lessonId string) (int32, error) {
-	mylog.Log.WithField("lesson_id", lessonId).Info("CountByLesson(lesson_id)")
+func (s *LessonCommentService) CountByLesson(
+	userId,
+	studyId,
+	lessonId string,
+) (int32, error) {
+	mylog.Log.WithField(
+		"lesson_id", lessonId,
+	).Info("LessonComment.CountByLesson(user_id, study_id, lesson_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countLessonCommentByLesson",
 		countLessonCommentByLessonSQL,
+		userId,
+		studyId,
 		lessonId,
 	).Scan(&n)
 	return n, err
 }
 
-const countLessonCommentByStudySQL = `SELECT COUNT(*) FROM lesson_comment WHERE study_id = $1`
+const countLessonCommentByStudySQL = `
+	SELECT COUNT(*)
+	FROM lesson_comment
+	WHERE user_id = $1 AND study_id = $2
+`
 
-func (s *LessonCommentService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountByStudy(study_id)")
+func (s *LessonCommentService) CountByStudy(
+	userId,
+	studyId string,
+) (int32, error) {
+	mylog.Log.WithField(
+		"study_id", studyId,
+	).Info("LessonComment.CountByStudy(user_id, study_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countLessonCommentByStudy",
 		countLessonCommentByStudySQL,
+		userId,
 		studyId,
 	).Scan(&n)
 	return n, err
 }
 
-const countLessonCommentByUserSQL = `SELECT COUNT(*) FROM lesson_comment WHERE user_id = $1`
+const countLessonCommentByUserSQL = `
+	SELECT COUNT(*)
+	FROM lesson_comment
+	WHERE user_id = $1
+`
 
 func (s *LessonCommentService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	mylog.Log.WithField(
+		"user_id", userId,
+	).Info("LessonComment.CountByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
@@ -100,6 +119,68 @@ func (s *LessonCommentService) get(name string, sql string, args ...interface{})
 	}
 
 	return &row, nil
+}
+
+func (s *LessonCommentService) getConnection(
+	name string,
+	whereSQL string,
+	args pgx.QueryArgs,
+	po *PageOptions,
+) ([]*LessonComment, error) {
+	var joins, whereAnds []string
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN account c2 ON c2.id = `+args.Append(po.After.Value()))
+		whereAnds = append(whereAnds, `AND c1.`+po.Order.Field()+` >= c2.`+po.Order.Field())
+	}
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN account c3 ON c3.id = `+args.Append(po.Before.Value()))
+		whereAnds = append(whereAnds, `AND c1.`+po.Order.Field()+` <= c3.`+po.Order.Field())
+	}
+
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
+	}
+
+	sql := `
+		SELECT
+			c1.body,
+			c1.created_at,
+			c1.id,
+			c1.lesson_id,
+			c1.published_at,
+			c1.study_id,
+			c1.updated_at,
+			c1.user_id
+		FROM lesson_comment c1
+		` + strings.Join(joins, " ") + `
+		WHERE ` + whereSQL + `
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY c1.` + po.Order.Field() + ` ` + direction.String() + `
+		LIMIT ` + args.Append(limit)
+
+	if po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			po.Order.Field(),
+			po.Order.Direction().String(),
+		)
+	}
+
+	psName := preparedName(name, sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *LessonCommentService) getMany(name string, sql string, args ...interface{}) ([]*LessonComment, error) {
@@ -133,7 +214,7 @@ func (s *LessonCommentService) getMany(name string, sql string, args ...interfac
 	return rows, nil
 }
 
-const getLessonCommentByPKSQL = `
+const getLessonCommentByIdSQL = `
 	SELECT
 		body,
 		created_at,
@@ -147,193 +228,60 @@ const getLessonCommentByPKSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonCommentService) GetByPK(id string) (*LessonComment, error) {
-	mylog.Log.WithField("id", id).Info("GetByPK(id) LessonComment")
-	return s.get("getLessonCommentByPK", getLessonCommentByPKSQL, id)
+func (s *LessonCommentService) Get(id string) (*LessonComment, error) {
+	mylog.Log.WithField("id", id).Info("LessonComment.Get(id)")
+	return s.get("getLessonCommentById", getLessonCommentByIdSQL, id)
 }
 
-func (s *LessonCommentService) GetByLessonId(lessonId string, po *PageOptions) ([]*LessonComment, error) {
-	mylog.Log.WithField("lesson_id", lessonId).Info("GetByLessonId(lessonId) LessonComment")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+func (s *LessonCommentService) GetByLesson(
+	userId,
+	studyId,
+	lessonId string,
+	po *PageOptions,
+) ([]*LessonComment, error) {
+	mylog.Log.WithField(
+		"lesson_id", lessonId,
+	).Info("LessonComment.GetByLesson(lesson_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `
+		li.user_id = ` + args.Append(userId) + ` AND
+		l1.study_id = ` + args.Append(studyId) + ` AND
+		l1.lesson_id = ` + args.Append(lessonId)
 
-	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.lesson_id,
-			l1.published_at,
-			l1.study_id,
-			l1.updated_at,
-			l1.lesson_id
-		FROM lesson_comment l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE l1.lesson_id = ` + args.Append(lessonId) + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
-		)
-	}
-
-	psName := preparedName("getLessonCommentsByLessonId", sql)
-
-	return s.getMany(psName, sql, args...)
+	return s.getConnection("getLessonCommentsByLesson", whereSQL, args, po)
 }
 
-func (s *LessonCommentService) GetByUserId(userId string, po *PageOptions) ([]*LessonComment, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) LessonComment")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+func (s *LessonCommentService) GetByStudy(
+	userId,
+	studyId string,
+	po *PageOptions,
+) ([]*LessonComment, error) {
+	mylog.Log.WithField(
+		"study_id", studyId,
+	).Info("LessonComment.GetByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `
+		li.user_id = ` + args.Append(userId) + ` AND
+		l1.study_id = ` + args.Append(studyId)
 
-	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.lesson_id,
-			l1.published_at,
-			l1.study_id,
-			l1.updated_at,
-			l1.user_id
-		FROM lesson_comment l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE l1.user_id = ` + args.Append(userId) + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
-		)
-	}
-
-	psName := preparedName("getLessonCommentsByUserId", sql)
-
-	return s.getMany(psName, sql, args...)
+	return s.getConnection("getLessonCommentsByStudy", whereSQL, args, po)
 }
 
-func (s *LessonCommentService) GetByStudyId(studyId string, po *PageOptions) ([]*LessonComment, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) LessonComment")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+func (s *LessonCommentService) GetByUser(
+	userId string,
+	po *PageOptions,
+) ([]*LessonComment, error) {
+	mylog.Log.WithField(
+		"user_id", userId,
+	).Info("LessonComment.GetByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `li.user_id = ` + args.Append(userId)
 
-	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson_comment l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.lesson_id,
-			l1.published_at,
-			l1.study_id,
-			l1.updated_at,
-			l1.user_id
-		FROM lesson_comment l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE l1.study_id = ` + args.Append(studyId) + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
-		)
-	}
-
-	psName := preparedName("getLessonCommentsByStudyId", sql)
-
-	return s.getMany(psName, sql, args...)
+	return s.getConnection("getLessonCommentsByUser", whereSQL, args, po)
 }
 
 func (s *LessonCommentService) Create(row *LessonComment) error {
-	mylog.Log.Info("Create() LessonComment")
+	mylog.Log.Info("LessonComment.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -402,6 +350,7 @@ const deleteLessonCommentSQL = `
 `
 
 func (s *LessonCommentService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("LessonComment.Delete(id)")
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteLessonComment",
@@ -419,7 +368,7 @@ func (s *LessonCommentService) Delete(id string) error {
 }
 
 func (s *LessonCommentService) Update(row *LessonComment) error {
-	mylog.Log.Info("Update() LessonComment")
+	mylog.Log.WithField("id", row.Id.String).Info("LessonComment.Update(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -436,7 +385,7 @@ func (s *LessonCommentService) Update(row *LessonComment) error {
 	sql := `
 		UPDATE lesson_comments
 		SET ` + strings.Join(sets, ",") + `
-		WHERE ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
 			body,
 			created_at,

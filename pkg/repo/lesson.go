@@ -132,12 +132,16 @@ func (r *LessonRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *LessonRepo) CountBySearch(query string) (int32, error) {
+	return r.svc.CountBySearch(query)
 }
 
-func (r *LessonRepo) CountByStudy(studyId string) (int32, error) {
-	return r.svc.CountByStudy(studyId)
+func (r *LessonRepo) CountByStudy(userId, studyId string) (int32, error) {
+	return r.svc.CountByStudy(userId, studyId)
+}
+
+func (r *LessonRepo) CountByUser(userId string) (int32, error) {
+	return r.svc.CountByUser(userId)
 }
 
 func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
@@ -172,11 +176,15 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
-func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonPermit, error) {
+func (r *LessonRepo) GetByStudy(
+	userId,
+	studyId string,
+	po *data.PageOptions,
+) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessons, err := r.svc.GetByUserId(userId, po)
+	lessons, err := r.svc.GetByStudy(userId, studyId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -193,11 +201,14 @@ func (r *LessonRepo) GetByUserId(userId string, po *data.PageOptions) ([]*Lesson
 	return lessonPermits, nil
 }
 
-func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonPermit, error) {
+func (r *LessonRepo) GetByUser(
+	userId string,
+	po *data.PageOptions,
+) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessons, err := r.svc.GetByStudyId(studyId, po)
+	lessons, err := r.svc.GetByUser(userId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -214,11 +225,15 @@ func (r *LessonRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*Less
 	return lessonPermits, nil
 }
 
-func (r *LessonRepo) GetByStudyNumber(studyId string, number int32) (*LessonPermit, error) {
+func (r *LessonRepo) GetByNumber(
+	userId,
+	studyId string,
+	number int32,
+) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lesson, err := r.svc.GetByStudyNumber(studyId, number)
+	lesson, err := r.svc.GetByNumber(userId, studyId, number)
 	if err != nil {
 		return nil, err
 	}
@@ -237,6 +252,27 @@ func (r *LessonRepo) Delete(lesson *data.Lesson) error {
 		return err
 	}
 	return r.svc.Delete(lesson.Id.String)
+}
+
+func (r *LessonRepo) Search(query string, po *data.PageOptions) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	lessons, err := r.svc.Search(query, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	if len(lessons) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessons {
+			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+		}
+	}
+	return lessonPermits, nil
 }
 
 func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {

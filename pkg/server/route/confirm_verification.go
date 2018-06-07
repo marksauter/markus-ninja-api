@@ -61,7 +61,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 	token := routeVars["token"]
-	evt, err := h.Svcs.EVT.GetByPK(emailId.String, token)
+	evt, err := h.Svcs.EVT.Get(emailId.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -109,7 +109,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	email, err := h.Svcs.Email.GetByPK(evt.EmailId.String)
+	email, err := h.Svcs.Email.Get(evt.EmailId.String)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		return

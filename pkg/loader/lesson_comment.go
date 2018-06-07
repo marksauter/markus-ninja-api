@@ -12,7 +12,7 @@ import (
 func NewLessonCommentLoader(svc *data.LessonCommentService) *LessonCommentLoader {
 	return &LessonCommentLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetLessonCommentFn(svc.GetByPK)),
+		batchGet: createLoader(newBatchGetLessonCommentFn(svc.Get)),
 	}
 }
 

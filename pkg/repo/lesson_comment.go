@@ -127,16 +127,16 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *LessonCommentRepo) CountByLesson(userId, studyId, lessonId string) (int32, error) {
+	return r.svc.CountByLesson(userId, studyId, lessonId)
+}
+
+func (r *LessonCommentRepo) CountByStudy(userId, studyId string) (int32, error) {
+	return r.svc.CountByStudy(userId, studyId)
+}
+
 func (r *LessonCommentRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
-}
-
-func (r *LessonCommentRepo) CountByLesson(lessonId string) (int32, error) {
-	return r.svc.CountByLesson(lessonId)
-}
-
-func (r *LessonCommentRepo) CountByStudy(studyId string) (int32, error) {
-	return r.svc.CountByStudy(studyId)
 }
 
 func (r *LessonCommentRepo) Create(lessonComment *data.LessonComment) (*LessonCommentPermit, error) {
@@ -171,11 +171,16 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
-func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) GetByLesson(
+	userId,
+	studyId,
+	lessonId string,
+	po *data.PageOptions,
+) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByLessonId(lessonId, po)
+	lessonComments, err := r.svc.GetByLesson(userId, studyId, lessonId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -192,11 +197,15 @@ func (r *LessonCommentRepo) GetByLessonId(lessonId string, po *data.PageOptions)
 	return lessonCommentPermits, nil
 }
 
-func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) GetByStudy(
+	userId,
+	studyId string,
+	po *data.PageOptions,
+) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByStudyId(studyId, po)
+	lessonComments, err := r.svc.GetByStudy(userId, studyId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -213,11 +222,11 @@ func (r *LessonCommentRepo) GetByStudyId(studyId string, po *data.PageOptions) (
 	return lessonCommentPermits, nil
 }
 
-func (r *LessonCommentRepo) GetByUserId(userId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) GetByUser(userId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByUserId(userId, po)
+	lessonComments, err := r.svc.GetByUser(userId, po)
 	if err != nil {
 		return nil, err
 	}

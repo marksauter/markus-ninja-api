@@ -12,7 +12,7 @@ import (
 func NewLessonLoader(svc *data.LessonService) *LessonLoader {
 	return &LessonLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetLessonFn(svc.GetByPK)),
+		batchGet: createLoader(newBatchGetLessonFn(svc.Get)),
 	}
 }
 

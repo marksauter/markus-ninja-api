@@ -53,7 +53,7 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		user, err := a.Svcs.User.GetById(payload.Sub)
+		user, err := a.Svcs.User.Get(payload.Sub)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)

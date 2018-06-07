@@ -51,7 +51,7 @@ func (s *EVTService) get(
 	return &row, nil
 }
 
-const getEVTByPKSQL = `
+const getEVTByIdSQL = `
 	SELECT
 		email_id,
 		expires_at,
@@ -63,23 +63,24 @@ const getEVTByPKSQL = `
 	WHERE email_id = $1 AND token = $2
 `
 
-func (s *EVTService) GetByPK(
+func (s *EVTService) Get(
 	emailId,
 	token string,
 ) (*EVT, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"email_id": emailId,
 		"token":    token,
-	}).Info("GetByPK(token) EVT")
+	}).Info("EVT.Get(email_id, token)")
 	return s.get(
-		"getEVTByPK",
-		getEVTByPKSQL,
+		"getEVTById",
+		getEVTByIdSQL,
 		emailId,
 		token,
 	)
 }
 
 func (s *EVTService) Create(row *EVT) error {
+	mylog.Log.Info("EVT.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -129,6 +130,10 @@ func (s *EVTService) Create(row *EVT) error {
 func (s *EVTService) Update(
 	row *EVT,
 ) error {
+	mylog.Log.WithFields(logrus.Fields{
+		"email_id": row.EmailId.String,
+		"token":    row.Token.String,
+	}).Info("EVT.Update(email_id, token)")
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -143,8 +148,8 @@ func (s *EVTService) Update(
 	sql := `
 		UPDATE email_verification_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE ` + `"token"=` + args.Append(row.Token.String) + `
-	`
+		WHERE email_id = ` + args.Append(&row.EmailId) + `
+			AND token = ` + args.Append(&row.Token)
 
 	psName := preparedName("updateEVT", sql)
 
@@ -165,6 +170,10 @@ const deleteEVTSQL = `
 `
 
 func (s *EVTService) Delete(emailId, token string) error {
+	mylog.Log.WithFields(logrus.Fields{
+		"email_id": emailId,
+		"token":    token,
+	}).Info("EVT.Delete(email_id, token)")
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteEVT",

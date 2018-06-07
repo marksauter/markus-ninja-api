@@ -10,16 +10,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Role int
+type RoleType int
 
 const (
-	AdminRole Role = iota
+	AdminRole RoleType = iota
 	MemberRole
 	OwnerRole
 	UserRole
 )
 
-func (r Role) String() string {
+func (r RoleType) String() string {
 	switch r {
 	case AdminRole:
 		return "ADMIN"
@@ -34,7 +34,7 @@ func (r Role) String() string {
 	}
 }
 
-type RoleModel struct {
+type Role struct {
 	Id        string    `db:"id"`
 	Name      string    `db:"name"`
 	CreatedAt time.Time `db:"created_at"`
@@ -54,21 +54,21 @@ var createRoleSQL = `
 	VALUES ($1, $2)
 	ON CONFLICT ON CONSTRAINT role_name_key DO NOTHING
 	RETURNING
+		created_at,
 		id,
 		name,
-		created_at,
 		updated_at
 `
 
-func (s *RoleService) Create(name string) (*RoleModel, error) {
-	mylog.Log.WithField("name", name).Info("Create(name) Role")
+func (s *RoleService) Create(name string) (*Role, error) {
+	mylog.Log.WithField("name", name).Info("Role.Create(name)")
 	id, _ := mytype.NewOID("Role")
 	row := s.db.QueryRow(createRoleSQL, id, name)
-	role := new(RoleModel)
+	role := new(Role)
 	err := row.Scan(
+		&role.CreatedAt,
 		&role.Id,
 		&role.Name,
-		&role.CreatedAt,
 		&role.UpdatedAt,
 	)
 	if err != nil {
@@ -90,41 +90,49 @@ func (s *RoleService) Create(name string) (*RoleModel, error) {
 	return role, nil
 }
 
-func (s *RoleService) GetByUserId(userId string) ([]RoleModel, error) {
-	roles := make([]RoleModel, 0)
+func (s *RoleService) getMany(name string, sql string, args ...interface{}) ([]*Role, error) {
+	var rows []*Role
 
-	roleSQL := `
-		SELECT
-			id,
-			name,
-			created_at,
-		FROM
-			role
-		INNER JOIN user_role ar ON role.id = ar.role_id
-		WHERE ar.user_id = $1
-	`
-	rows, err := s.db.Query(roleSQL, userId)
+	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithField("error", err).Error("error during query")
-		return nil, err
-	}
-	defer rows.Close()
-	for i := 0; rows.Next(); i++ {
-		r := roles[i]
-		err := rows.Scan(&r.Id, &r.Name, &r.CreatedAt)
-		if err != nil {
-			mylog.Log.WithField("error", err).Error("error during scan")
-			return nil, err
-		}
-	}
-
-	if err = rows.Err(); err != nil {
-		mylog.Log.WithField("error", err).Error("error during rows processing")
 		return nil, err
 	}
 
-	mylog.Log.Debug("roles found")
-	return roles, nil
+	for dbRows.Next() {
+		var row Role
+		dbRows.Scan(
+			&row.CreatedAt,
+			&row.Id,
+			&row.Name,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get roles")
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+const getRolesByUserSQL = `
+	SELECT
+		created_at,
+		id,
+		name
+	FROM
+		role r
+	INNER JOIN user_role ur ON ur.role_id = r.id
+	WHERE ur.user_id = $1
+`
+
+func (s *RoleService) GetByUser(userId string) ([]*Role, error) {
+	mylog.Log.WithField(
+		"user_id", userId,
+	).Info("Role.GetByUser(user_id)")
+	return s.getMany("getRolesByUser", getRolesByUserSQL, userId)
 }
 
 const grantUserRolesSQL = `
@@ -136,7 +144,7 @@ const grantUserRolesSQL = `
 	ON CONFLICT ON CONSTRAINT user_role_pkey DO NOTHING
 `
 
-func (s *RoleService) GrantUser(userId string, roles ...Role) error {
+func (s *RoleService) GrantUser(userId string, roles ...RoleType) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"roles":   roles,

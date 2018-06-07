@@ -210,7 +210,7 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
-func (r *EmailRepo) GetByUserId(
+func (r *EmailRepo) GetByUser(
 	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.EmailFilterOption,
@@ -218,7 +218,7 @@ func (r *EmailRepo) GetByUserId(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	emails, err := r.svc.GetByUserId(userId, po, opts...)
+	emails, err := r.svc.GetByUser(userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}

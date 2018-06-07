@@ -49,7 +49,7 @@ func (r *userResolver) Assets(
 		return nil, err
 	}
 
-	userAssets, err := r.Repos.UserAsset().GetByUserId(id, pageOptions)
+	userAssets, err := r.Repos.UserAsset().GetByUser(id, pageOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 
-	emails, err := r.Repos.Email().GetByUserId(id, pageOptions)
+	emails, err := r.Repos.Email().GetByUser(id, pageOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (r *userResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByUserId(id.String, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByUser(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (r *userResolver) Study(
 		return nil, err
 	}
 
-	study, err := r.Repos.Study().GetByUserIdAndName(userId.String, args.Name)
+	study, err := r.Repos.Study().GetByName(userId.String, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByUserId(id.String, pageOptions)
+	studies, err := r.Repos.Study().GetByUser(id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ import (
 func NewUserLoader(svc *data.UserService) *UserLoader {
 	return &UserLoader{
 		svc:             svc,
-		batchGet:        createLoader(newBatchGetUserFn(svc.GetById)),
+		batchGet:        createLoader(newBatchGetUserFn(svc.Get)),
 		batchGetByLogin: createLoader(newBatchGetUserFn(svc.GetByLogin)),
 	}
 }

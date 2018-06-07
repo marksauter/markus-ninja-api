@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,6 +18,7 @@ type Study struct {
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
+	NameTokens  pgtype.TextArray   `db:"name_tokens"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
@@ -29,24 +31,39 @@ type StudyService struct {
 	db Queryer
 }
 
-const countStudySQL = `SELECT COUNT(*) FROM study`
-
-func (s *StudyService) Count() (int64, error) {
-	var n int64
-	err := prepareQueryRow(s.db, "countStudy", countStudySQL).Scan(&n)
-	return n, err
-}
-
-const countStudyByUserSQL = `SELECT COUNT(*) FROM study WHERE user_id = $1`
+const countStudyByUserSQL = `
+	SELECT COUNT(*)
+	FROM study
+	WHERE user_id = $1
+`
 
 func (s *StudyService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("Study.CountByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countStudyByUser",
 		countStudyByUserSQL,
 		userId,
+	).Scan(&n)
+	return n, err
+}
+
+const countStudyBySearchSQL = `
+	SELECT COUNT(*)
+	FROM study
+	WHERE name_tokens @@ to_tsquery('simple', $1)
+`
+
+func (s *StudyService) CountBySearch(query string) (int32, error) {
+	mylog.Log.WithField("query", query).Info("Study.CountBySearch(query)")
+	var n int32
+	queryStr := query + ":*"
+	err := prepareQueryRow(
+		s.db,
+		"countStudyBySearch",
+		countStudyBySearchSQL,
+		queryStr,
 	).Scan(&n)
 	return n, err
 }
@@ -72,60 +89,14 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 	return &row, nil
 }
 
-func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
-	var rows []*Study
+const numConnArgs = 3
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row Study
-		dbRows.Scan(
-			&row.AdvancedAt,
-			&row.CreatedAt,
-			&row.Description,
-			&row.Id,
-			&row.Name,
-			&row.UpdatedAt,
-			&row.UserId,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("found rows")
-
-	return rows, nil
-}
-
-const getStudyByPKSQL = `
-	SELECT
-		advanced_at,
-		created_at,
-		description,
-		id,
-		name,
-		updated_at,
-		user_id
-	FROM study
-	WHERE id = $1
-`
-
-func (s *StudyService) GetByPK(id string) (*Study, error) {
-	mylog.Log.WithField("id", id).Info("GetByPK(id) Study")
-	return s.get("getStudyByPK", getStudyByPKSQL, id)
-}
-
-func (s *StudyService) GetByUserId(userId string, po *PageOptions) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) Study")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
-
+func (s *StudyService) getConnection(
+	name string,
+	whereSQL string,
+	args pgx.QueryArgs,
+	po *PageOptions,
+) ([]*Study, error) {
 	var joins, whereAnds []string
 	if po.After != nil {
 		joins = append(joins, `INNER JOIN study s2 ON s2.id = `+args.Append(po.After.Value()))
@@ -162,7 +133,7 @@ func (s *StudyService) GetByUserId(userId string, po *PageOptions) ([]*Study, er
 			s1.user_id
 		FROM study s1 ` +
 		strings.Join(joins, " ") + `
-		WHERE s1.user_id = ` + args.Append(userId) + `
+		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
 		ORDER BY s1.` + po.Order.Field() + ` ` + direction.String() + `
 		LIMIT ` + args.Append(limit)
@@ -176,12 +147,73 @@ func (s *StudyService) GetByUserId(userId string, po *PageOptions) ([]*Study, er
 		)
 	}
 
-	psName := preparedName("getStudysByUserId", sql)
+	psName := preparedName(name, sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-const getStudyByUserIdAndNameSQL = `
+func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
+	var rows []*Study
+
+	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Study
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.Name,
+			&row.UpdatedAt,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("found rows")
+
+	return rows, nil
+}
+
+const getStudyByIdSQL = `
+	SELECT
+		advanced_at,
+		created_at,
+		description,
+		id,
+		name,
+		updated_at,
+		user_id
+	FROM study
+	WHERE id = $1
+`
+
+func (s *StudyService) Get(id string) (*Study, error) {
+	mylog.Log.WithField("id", id).Info("Study.Get(id)")
+	return s.get("getStudyById", getStudyByIdSQL, id)
+}
+
+func (s *StudyService) GetByUser(
+	userId string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `s1.user_id = ` + args.Append(userId)
+
+	return s.getConnection("getStudiesByUserId", whereSQL, args, po)
+}
+
+const getStudyByNameSQL = `
 	SELECT
 		s.advanced_at,
 		s.created_at,
@@ -191,18 +223,18 @@ const getStudyByUserIdAndNameSQL = `
 		s.updated_at,
 		s.user_id
 	FROM study s
-	WHERE s.user_id = $1 AND s.name = $2
+	WHERE s.user_id = $1 AND LOWER(s.name) = LOWER($2)
 `
 
-func (s *StudyService) GetByUserIdAndName(userId, name string) (*Study, error) {
+func (s *StudyService) GetByName(userId, name string) (*Study, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"userId": userId,
-		"name":   name,
-	}).Info("GetByUserIdAndName(owner, name) Study")
-	return s.get("getStudyByUserIdAndName", getStudyByUserIdAndNameSQL, userId, name)
+		"user_id": userId,
+		"name":    name,
+	}).Info("Study.GetByName(user_id, name)")
+	return s.get("getStudyByName", getStudyByNameSQL, userId, name)
 }
 
-const getStudyByUserLoginAndNameSQL = `
+const getStudyByUserAndNameSQL = `
 	SELECT
 		s.advanced_at,
 		s.created_at,
@@ -213,19 +245,19 @@ const getStudyByUserLoginAndNameSQL = `
 		s.user_id
 	FROM study s
 	INNER JOIN account a ON a.login = $1
-	WHERE s.name = $2 AND s.user_id = a.id
+	WHERE s.user_id = a.id AND LOWER(s.name) = LOWER($2)  
 `
 
-func (s *StudyService) GetByUserLoginAndName(owner, name string) (*Study, error) {
+func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"owner": owner,
 		"name":  name,
-	}).Info("GetByUserLoginAndName(owner, name) Study")
-	return s.get("getStudyByUserLoginAndName", getStudyByUserLoginAndNameSQL, owner, name)
+	}).Info("Study.GetByUserAndName(owner, name)")
+	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
 }
 
 func (s *StudyService) Create(row *Study) error {
-	mylog.Log.Info("Create() Study")
+	mylog.Log.Info("Study.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -246,6 +278,10 @@ func (s *StudyService) Create(row *Study) error {
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
+		nameArray := &pgtype.TextArray{}
+		nameArray.Set(util.Split(row.Name.String, studyDelimeter))
+		columns = append(columns, "name_array")
+		values = append(values, args.Append(nameArray))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -290,6 +326,7 @@ const deleteStudySQL = `
 `
 
 func (s *StudyService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("Study.Delete(id)")
 	commandTag, err := prepareExec(s.db, "deleteStudy", deleteStudySQL, id)
 	if err != nil {
 		return err
@@ -301,16 +338,30 @@ func (s *StudyService) Delete(id string) error {
 	return nil
 }
 
+func (s *StudyService) Search(query string, po *PageOptions) ([]*Study, error) {
+	mylog.Log.WithField("query", query).Info("Study.Search(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `s1.name_tokens @@ to_tsquery('simple', ` + args.Append(query+":*") + `)`
+
+	return s.getConnection("searchStudiesByName", whereSQL, args, po)
+}
+
 func (s *StudyService) Update(row *Study) error {
-	mylog.Log.Info("Update() Study")
+	mylog.Log.WithField("id", row.Id.String).Info("Study.Update(id)")
 	sets := make([]string, 0, 3)
-	args := pgx.QueryArgs(make([]interface{}, 0, 3))
+	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	if row.AdvancedAt.Status != pgtype.Undefined {
 		sets = append(sets, `advanced_at`+"="+args.Append(&row.AdvancedAt))
 	}
 	if row.Description.Status != pgtype.Undefined {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
+	}
+	if row.Name.Status != pgtype.Undefined {
+		sets = append(sets, `name`+"="+args.Append(&row.Name))
+		nameArray := &pgtype.TextArray{}
+		nameArray.Set(util.Split(row.Name.String, studyDelimeter))
+		sets = append(sets, `name_array`+"="+args.Append(nameArray))
 	}
 
 	sql := `
@@ -356,4 +407,8 @@ func (s *StudyService) Update(row *Study) error {
 	}
 
 	return nil
+}
+
+func studyDelimeter(r rune) bool {
+	return r == '-' || r == '_'
 }

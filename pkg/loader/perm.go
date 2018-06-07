@@ -66,7 +66,7 @@ func (l *QueryPermLoader) ClearAll() {
 	l.batchGet.ClearAll()
 }
 
-func (l *QueryPermLoader) Get(o perm.Operation, roles []data.Role) (*perm.QueryPermission, error) {
+func (l *QueryPermLoader) Get(o perm.Operation, roles []data.RoleType) (*perm.QueryPermission, error) {
 	ctx := context.Background()
 	roleStrs := make([]string, len(roles))
 	for i, r := range roles {

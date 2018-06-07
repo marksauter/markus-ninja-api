@@ -1,8 +1,5 @@
 # Represents a user.
 type UserAsset implements Node, UniformResourceLocatable {
-  # The content type of this asset.
-  contentType: String!
-
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
@@ -31,6 +28,12 @@ type UserAsset implements Node, UniformResourceLocatable {
 
   # The study associated with this asset.
   study: Study!
+
+  # The subtype of this asset.
+  subtype: String!
+
+  # The type of this asset.
+  type: String!
 
   # Identifies the date and time when the object was last updated.
   updatedAt: Time!

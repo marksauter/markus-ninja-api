@@ -12,7 +12,7 @@ import (
 func NewEmailLoader(svc *data.EmailService) *EmailLoader {
 	return &EmailLoader{
 		svc:             svc,
-		batchGet:        createLoader(newBatchGetEmailFn(svc.GetByPK)),
+		batchGet:        createLoader(newBatchGetEmailFn(svc.Get)),
 		batchGetByValue: createLoader(newBatchGetEmailFn(svc.GetByValue)),
 	}
 }

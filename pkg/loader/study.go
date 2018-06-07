@@ -11,17 +11,17 @@ import (
 
 func NewStudyLoader(svc *data.StudyService) *StudyLoader {
 	return &StudyLoader{
-		svc:                        svc,
-		batchGet:                   createLoader(newBatchGetStudyBy1Fn(svc.GetByPK)),
-		batchGetByUserLoginAndName: createLoader(newBatchGetStudyBy2Fn(svc.GetByUserLoginAndName)),
+		svc:                   svc,
+		batchGet:              createLoader(newBatchGetStudyBy1Fn(svc.Get)),
+		batchGetByUserAndName: createLoader(newBatchGetStudyBy2Fn(svc.GetByUserAndName)),
 	}
 }
 
 type StudyLoader struct {
 	svc *data.StudyService
 
-	batchGet                   *dataloader.Loader
-	batchGetByUserLoginAndName *dataloader.Loader
+	batchGet              *dataloader.Loader
+	batchGetByUserAndName *dataloader.Loader
 }
 
 func (r *StudyLoader) Clear(id string) {
@@ -47,10 +47,10 @@ func (r *StudyLoader) Get(id string) (*data.Study, error) {
 	return study, nil
 }
 
-func (r *StudyLoader) GetByUserLoginAndName(login, name string) (*data.Study, error) {
+func (r *StudyLoader) GetByUserAndName(login, name string) (*data.Study, error) {
 	ctx := context.Background()
 	compositeKey := newCompositeKey(login, name)
-	studyData, err := r.batchGetByUserLoginAndName.Load(ctx, compositeKey)()
+	studyData, err := r.batchGetByUserAndName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}

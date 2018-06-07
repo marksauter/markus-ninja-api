@@ -110,7 +110,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}()
 
-	roles := []data.Role{
+	roles := []data.RoleType{
 		data.AdminRole,
 		data.MemberRole,
 		data.OwnerRole,

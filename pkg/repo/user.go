@@ -122,6 +122,10 @@ func (r *UserRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *UserRepo) CountBySearch(query string) (int32, error) {
+	return r.svc.CountBySearch(query)
+}
+
 func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -178,6 +182,27 @@ func (r *UserRepo) Delete(user *data.User) error {
 		return err
 	}
 	return r.svc.Delete(user.Id.String)
+}
+
+func (r *UserRepo) Search(query string, po *data.PageOptions) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.Search(query, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
 }
 
 func (r *UserRepo) Update(user *data.User) (*UserPermit, error) {

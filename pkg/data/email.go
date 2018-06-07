@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/sirupsen/logrus"
 )
 
 type Email struct {
@@ -31,16 +30,26 @@ type EmailService struct {
 	db Queryer
 }
 
-const countEmailSQL = `SELECT COUNT(*) FROM email`
+type EmailFilterOption int
 
-func (s *EmailService) Count() (int64, error) {
-	mylog.Log.Info("Count() Email")
-	var n int64
-	err := prepareQueryRow(s.db, "countEmail", countEmailSQL).Scan(&n)
-	return n, err
+const (
+	EmailIsVerified EmailFilterOption = iota
+)
+
+func (src EmailFilterOption) String() string {
+	switch src {
+	case EmailIsVerified:
+		return "verified_at IS NOT NULL"
+	default:
+		return ""
+	}
 }
 
-const countEmailByUserSQL = `SELECT COUNT(*) FROM email WHERE user_id = $1`
+const countEmailByUserSQL = `
+	SELECT COUNT(*)
+	FROM email
+	WHERE user_id = $1
+`
 
 func (s *EmailService) CountByUser(userId string) (int32, error) {
 	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id) Email")
@@ -61,7 +70,9 @@ const countEmailVerifiedByUserSQL = `
 `
 
 func (s *EmailService) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
-	mylog.Log.WithField("user_id", userId.String).Info("CountVerifiedByUser(user_id) Email")
+	mylog.Log.WithField(
+		"user_id", userId.String,
+	).Info("CountVerifiedByUser(user_id) Email")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
@@ -95,114 +106,13 @@ func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email
 	return &row, nil
 }
 
-func (s *EmailService) getMany(
+func (s *EmailService) getConnection(
 	name string,
-	sql string,
-	args ...interface{},
-) ([]*Email, error) {
-	var rows []*Email
-
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row Email
-		dbRows.Scan(
-			&row.CreatedAt,
-			&row.Id,
-			&row.Public,
-			&row.Type,
-			&row.UserLogin,
-			&row.UserId,
-			&row.UpdatedAt,
-			&row.Value,
-			&row.VerifiedAt,
-		)
-		rows = append(rows, &row)
-	}
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get emails")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("found rows")
-
-	return rows, nil
-}
-
-const getEmailByPKSQL = `
-	SELECT
-		e.created_at,
-		e.id,
-		e.public,
-		e.type,
-		a.login user_login,
-		e.user_id,
-		e.updated_at,
-		e.value,
-		e.verified_at
-	FROM email e
-	INNER JOIN account a ON a.id = e.user_id
-	WHERE e.id = $1
-`
-
-func (s *EmailService) GetByPK(id string) (*Email, error) {
-	mylog.Log.WithField("id", id).Info("GetByPK(id) Email")
-	return s.get("getEmailByPK", getEmailByPKSQL, id)
-}
-
-const getEmailByValueSQL = `
-	SELECT
-		e.created_at,
-		e.id,
-		e.public,
-		e.type,
-		a.login user_login,
-		e.user_id,
-		e.updated_at,
-		e.value,
-		e.verified_at
-	FROM email e
-	INNER JOIN account a ON a.id = e.user_id
-	WHERE e.value = $1
-`
-
-func (s *EmailService) GetByValue(email string) (*Email, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"email": email,
-	}).Info("GetByValue(email) Email")
-	return s.get(
-		"getEmailByValue",
-		getEmailByValueSQL,
-		email,
-	)
-}
-
-type EmailFilterOption int
-
-const (
-	EmailIsVerified EmailFilterOption = iota
-)
-
-func (src EmailFilterOption) String() string {
-	switch src {
-	case EmailIsVerified:
-		return "verified_at IS NOT NULL"
-	default:
-		return ""
-	}
-}
-
-func (s *EmailService) GetByUserId(
-	userId *mytype.OID,
+	whereSQL string,
+	args pgx.QueryArgs,
 	po *PageOptions,
 	opts ...EmailFilterOption,
 ) ([]*Email, error) {
-	mylog.Log.WithField("user_id", userId.String).Info("GetByUserId(userId) Email")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
-
 	var joins, whereAnds []string
 	direction := ASC
 	field := "created_at"
@@ -253,7 +163,7 @@ func (s *EmailService) GetByUserId(
 		FROM email e1 ` +
 		strings.Join(joins, " ") + `
 		INNER JOIN account a ON a.id = e1.user_id
-		WHERE e1.user_id = ` + args.Append(userId) + `
+		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
 		ORDER BY e1.` + field + ` ` + direction.String()
 	if limit > 0 {
@@ -270,9 +180,108 @@ func (s *EmailService) GetByUserId(
 		)
 	}
 
-	psName := preparedName("getEmailsByUserId", sql)
+	psName := preparedName(name, sql)
 
 	return s.getMany(psName, sql, args...)
+}
+
+func (s *EmailService) getMany(
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Email, error) {
+	var rows []*Email
+
+	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Email
+		dbRows.Scan(
+			&row.CreatedAt,
+			&row.Id,
+			&row.Public,
+			&row.Type,
+			&row.UserLogin,
+			&row.UserId,
+			&row.UpdatedAt,
+			&row.Value,
+			&row.VerifiedAt,
+		)
+		rows = append(rows, &row)
+	}
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get emails")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("found rows")
+
+	return rows, nil
+}
+
+const getEmailByIdSQL = `
+	SELECT
+		e.created_at,
+		e.id,
+		e.public,
+		e.type,
+		a.login user_login,
+		e.user_id,
+		e.updated_at,
+		e.value,
+		e.verified_at
+	FROM email e
+	INNER JOIN account a ON a.id = e.user_id
+	WHERE e.id = $1
+`
+
+func (s *EmailService) Get(id string) (*Email, error) {
+	mylog.Log.WithField("id", id).Info("Email.Get(id)")
+	return s.get("getEmailById", getEmailByIdSQL, id)
+}
+
+const getEmailByValueSQL = `
+	SELECT
+		e.created_at,
+		e.id,
+		e.public,
+		e.type,
+		a.login user_login,
+		e.user_id,
+		e.updated_at,
+		e.value,
+		e.verified_at
+	FROM email e
+	INNER JOIN account a ON a.id = e.user_id
+	WHERE LOWER(e.value) = LOWER($1)
+`
+
+func (s *EmailService) GetByValue(email string) (*Email, error) {
+	mylog.Log.WithField(
+		"email", email,
+	).Info("Email.GetByValue(email)")
+	return s.get(
+		"getEmailByValue",
+		getEmailByValueSQL,
+		email,
+	)
+}
+
+func (s *EmailService) GetByUser(
+	userId *mytype.OID,
+	po *PageOptions,
+	opts ...EmailFilterOption,
+) ([]*Email, error) {
+	mylog.Log.WithField(
+		"user_id", userId.String,
+	).Info("Email.GetByUser(userId)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `e1.user_id = ` + args.Append(userId)
+
+	return s.getConnection("getEmailByUser", whereSQL, args, po, opts...)
 }
 
 func (s *EmailService) Create(row *Email) error {

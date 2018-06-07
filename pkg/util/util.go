@@ -77,8 +77,11 @@ func DecompressString(s string) (string, error) {
 func Split(s string, f func(rune) bool) []string {
 	firstSplit := strings.FieldsFunc(s, f)
 	secondSplit := []string{}
-	for _, ss := range firstSplit {
-		secondSplit = append(secondSplit, camelcase.Split(ss)...)
+	for _, v := range firstSplit {
+		secondSplit = append(secondSplit, camelcase.Split(v)...)
+	}
+	for i, v := range secondSplit {
+		secondSplit[i] = strings.ToLower(v)
 	}
 	return secondSplit
 }

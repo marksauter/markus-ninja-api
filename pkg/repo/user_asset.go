@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -32,13 +33,6 @@ func (r *UserAssetPermit) Get() *data.UserAsset {
 		}
 	}
 	return userAsset
-}
-
-func (r *UserAssetPermit) ContentType() (string, error) {
-	if ok := r.checkFieldPermission("content_type"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.userAsset.ContentType.String, nil
 }
 
 func (r *UserAssetPermit) CreatedAt() (time.Time, error) {
@@ -113,6 +107,20 @@ func (r *UserAssetPermit) StudyId() (*mytype.OID, error) {
 	return &r.userAsset.StudyId, nil
 }
 
+func (r *UserAssetPermit) Subtype() (string, error) {
+	if ok := r.checkFieldPermission("subtype"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.Subtype.String, nil
+}
+
+func (r *UserAssetPermit) Type() (string, error) {
+	if ok := r.checkFieldPermission("type"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.Type.String, nil
+}
+
 func (r *UserAssetPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -175,8 +183,8 @@ func (r *UserAssetRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
-func (r *UserAssetRepo) CountByStudy(userId string) (int32, error) {
-	return r.svc.CountByStudy(userId)
+func (r *UserAssetRepo) CountByStudy(userId, studyId string) (int32, error) {
+	return r.svc.CountByStudy(userId, studyId)
 }
 
 func (r *UserAssetRepo) Create(userAsset *data.UserAsset) (*UserAssetPermit, error) {
@@ -221,11 +229,11 @@ func (r *UserAssetRepo) Get(id string) (*UserAssetPermit, error) {
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
-func (r *UserAssetRepo) GetByStudyIdAndName(studyId, name string) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) GetByName(userId, studyId, name string) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.GetByStudyIdAndName(studyId, name)
+	userAsset, err := r.load.GetByName(userId, studyId, name)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +259,8 @@ func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string)
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
-func (r *UserAssetRepo) GetByStudyId(
+func (r *UserAssetRepo) GetByStudy(
+	userId *mytype.OID,
 	studyId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
@@ -259,7 +268,7 @@ func (r *UserAssetRepo) GetByStudyId(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAssets, err := r.svc.GetByStudyId(studyId, po, opts...)
+	userAssets, err := r.svc.GetByStudy(userId, studyId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +285,7 @@ func (r *UserAssetRepo) GetByStudyId(
 	return userAssetPermits, nil
 }
 
-func (r *UserAssetRepo) GetByUserId(
+func (r *UserAssetRepo) GetByUser(
 	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
@@ -284,7 +293,7 @@ func (r *UserAssetRepo) GetByUserId(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAssets, err := r.svc.GetByUserId(userId, po, opts...)
+	userAssets, err := r.svc.GetByUser(userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -339,9 +348,7 @@ func (r *UserAssetRepo) Upload(
 	}
 
 	contentType := header.Header.Get("Content-Type")
-	if err := userAsset.ContentType.Set(contentType); err != nil {
-		return nil, err
-	}
+	types := strings.SplitN(contentType, "/", 2)
 	if err := userAsset.Key.Set(key); err != nil {
 		return nil, err
 	}
@@ -354,10 +361,16 @@ func (r *UserAssetRepo) Upload(
 	if err := userAsset.Size.Set(header.Size); err != nil {
 		return nil, err
 	}
-	if err := userAsset.UserId.Set(userId); err != nil {
+	if err := userAsset.StudyId.Set(studyId); err != nil {
 		return nil, err
 	}
-	if err := userAsset.StudyId.Set(studyId); err != nil {
+	if err := userAsset.Subtype.Set(types[1]); err != nil {
+		return nil, err
+	}
+	if err := userAsset.Type.Set(types[0]); err != nil {
+		return nil, err
+	}
+	if err := userAsset.UserId.Set(userId); err != nil {
 		return nil, err
 	}
 

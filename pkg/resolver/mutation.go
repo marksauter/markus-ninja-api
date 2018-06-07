@@ -263,7 +263,11 @@ func (r *RootResolver) DeleteEmail(
 
 	if email.Type.Type == data.PrimaryEmail {
 		var newPrimaryEmail *data.Email
-		emails, err := r.Repos.Email().GetByUserId(&email.UserId, nil, data.EmailIsVerified)
+		emails, err := r.Repos.Email().GetByUser(
+			&email.UserId,
+			nil,
+			data.EmailIsVerified,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -582,7 +586,7 @@ func (r *RootResolver) ResetPassword(
 		return false, err
 	}
 
-	prt, err := r.Svcs.PRT.GetByPK(user.Id.String, args.Input.Token)
+	prt, err := r.Svcs.PRT.Get(user.Id.String, args.Input.Token)
 	if err != nil {
 		return false, err
 	}

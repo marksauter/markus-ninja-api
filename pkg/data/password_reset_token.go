@@ -31,34 +31,9 @@ type PRTService struct {
 	db Queryer
 }
 
-const getPRTByPKSQL = `
-	SELECT
-		email_id,
-		ended_at,
-		end_ip,
-		expires_at,
-		issued_at,
-		request_ip,
-		user_id,
-		token
-	FROM password_reset_token
-	WHERE user_id = $1 AND token = $2
-`
-
-func (s *PRTService) GetByPK(userId, token string) (*PRT, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userId,
-		"token":   token,
-	}).Info("GetByPK(user_id, token) PRT")
-
+func (s *PRTService) get(name string, sql string, args ...interface{}) (*PRT, error) {
 	var row PRT
-	err := prepareQueryRow(
-		s.db,
-		"getPRTByPK",
-		getPRTByPKSQL,
-		userId,
-		token,
-	).Scan(
+	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.EmailId,
 		&row.EndedAt,
 		&row.EndIP,
@@ -77,8 +52,35 @@ func (s *PRTService) GetByPK(userId, token string) (*PRT, error) {
 	return &row, nil
 }
 
+const getPRTByIdSQL = `
+	SELECT
+		email_id,
+		ended_at,
+		end_ip,
+		expires_at,
+		issued_at,
+		request_ip,
+		user_id,
+		token
+	FROM password_reset_token
+	WHERE user_id = $1 AND token = $2
+`
+
+func (s *PRTService) Get(userId, token string) (*PRT, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": userId,
+		"token":   token,
+	}).Info("PRT.Get(user_id, token)")
+	return s.get(
+		"getPRTById",
+		getPRTByIdSQL,
+		userId,
+		token,
+	)
+}
+
 func (s *PRTService) Create(row *PRT) error {
-	mylog.Log.Info("Create() PRT")
+	mylog.Log.Info("PRT.Create()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 	var columns, values []string
@@ -127,7 +129,7 @@ func (s *PRTService) Create(row *PRT) error {
 			expires_at
   `
 
-	psName := preparedName("insertPRT", sql)
+	psName := preparedName("createPRT", sql)
 
 	return prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.IssuedAt,
@@ -136,7 +138,10 @@ func (s *PRTService) Create(row *PRT) error {
 }
 
 func (s *PRTService) Update(row *PRT) error {
-	mylog.Log.Info("Update() PRT")
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": row.UserId.String,
+		"token":   row.Token.String,
+	}).Info("PRT.Update(user_id, token)")
 
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
@@ -203,7 +208,10 @@ const deletePRTSQL = `
 `
 
 func (s *PRTService) Delete(userId, token string) error {
-	mylog.Log.Info("Delete() PRT")
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id": userId,
+		"token":   token,
+	}).Info("PRT.Delete(user_id, token)")
 
 	commandTag, err := prepareExec(s.db, "deletePRT", deletePRTSQL, userId, token)
 	if err != nil {

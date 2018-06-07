@@ -18,10 +18,6 @@ type userAssetResolver struct {
 	Repos     *repo.Repos
 }
 
-func (r *userAssetResolver) ContentType() (string, error) {
-	return r.UserAsset.ContentType()
-}
-
 func (r *userAssetResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.UserAsset.CreatedAt()
 	return graphql.Time{t}, err
@@ -106,6 +102,14 @@ func (r *userAssetResolver) Study() (*studyResolver, error) {
 		return nil, err
 	}
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
+
+func (r *userAssetResolver) Subtype() (string, error) {
+	return r.UserAsset.Subtype()
+}
+
+func (r *userAssetResolver) Type() (string, error) {
+	return r.UserAsset.Type()
 }
 
 func (r *userAssetResolver) UpdatedAt() (graphql.Time, error) {

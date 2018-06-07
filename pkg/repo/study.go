@@ -150,6 +150,10 @@ func (r *StudyRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *StudyRepo) CountBySearch(query string) (int32, error) {
+	return r.svc.CountBySearch(query)
+}
+
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
@@ -191,11 +195,11 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByUserId(userId, po)
+	studies, err := r.svc.GetByUser(userId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -212,11 +216,11 @@ func (r *StudyRepo) GetByUserId(userId string, po *data.PageOptions) ([]*StudyPe
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByName(userId, name string) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.GetByUserIdAndName(userId, name)
+	study, err := r.svc.GetByName(userId, name)
 	if err != nil {
 		return nil, err
 	}
@@ -227,11 +231,11 @@ func (r *StudyRepo) GetByUserIdAndName(userId, name string) (*StudyPermit, error
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByUserLoginAndName(owner string, name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.load.GetByUserLoginAndName(owner, name)
+	study, err := r.load.GetByUserAndName(owner, name)
 	if err != nil {
 		return nil, err
 	}
@@ -250,6 +254,27 @@ func (r *StudyRepo) Delete(study *data.Study) error {
 		return err
 	}
 	return r.svc.Delete(study.Id.String)
+}
+
+func (r *StudyRepo) Search(query string, po *data.PageOptions) ([]*StudyPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	studies, err := r.svc.Search(query, po)
+	if err != nil {
+		return nil, err
+	}
+	studyPermits := make([]*StudyPermit, len(studies))
+	if len(studies) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range studies {
+			studyPermits[i] = &StudyPermit{fieldPermFn, l}
+		}
+	}
+	return studyPermits, nil
 }
 
 func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {

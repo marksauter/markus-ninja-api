@@ -12,8 +12,8 @@ import (
 func NewUserAssetLoader(svc *data.UserAssetService) *UserAssetLoader {
 	return &UserAssetLoader{
 		svc:                        svc,
-		batchGet:                   createLoader(newBatchGetUserAssetBy1Fn(svc.GetByPK)),
-		batchGetByStudyIdAndName:   createLoader(newBatchGetUserAssetBy2Fn(svc.GetByStudyIdAndName)),
+		batchGet:                   createLoader(newBatchGetUserAssetBy1Fn(svc.Get)),
+		batchGetByName:             createLoader(newBatchGetUserAssetBy3Fn(svc.GetByName)),
 		batchGetByUserStudyAndName: createLoader(newBatchGetUserAssetBy3Fn(svc.GetByUserStudyAndName)),
 	}
 }
@@ -22,7 +22,7 @@ type UserAssetLoader struct {
 	svc *data.UserAssetService
 
 	batchGet                   *dataloader.Loader
-	batchGetByStudyIdAndName   *dataloader.Loader
+	batchGetByName             *dataloader.Loader
 	batchGetByUserStudyAndName *dataloader.Loader
 }
 
@@ -46,16 +46,20 @@ func (r *UserAssetLoader) Get(id string) (*data.UserAsset, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(userAsset.StudyId.String, userAsset.Name.String)
-	r.batchGetByStudyIdAndName.Prime(ctx, compositeKey, userAsset)
+	compositeKey := newCompositeKey(
+		userAsset.UserId.String,
+		userAsset.StudyId.String,
+		userAsset.Name.String,
+	)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }
 
-func (r *UserAssetLoader) GetByStudyIdAndName(studyId, name string) (*data.UserAsset, error) {
+func (r *UserAssetLoader) GetByName(userId, studyId, name string) (*data.UserAsset, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(studyId, name)
-	userAssetData, err := r.batchGetByStudyIdAndName.Load(ctx, compositeKey)()
+	compositeKey := newCompositeKey(userId, studyId, name)
+	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +86,12 @@ func (r *UserAssetLoader) GetByUserStudyAndName(userLogin, studyName, name strin
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
-	compositeKey = newCompositeKey(userAsset.StudyId.String, userAsset.Name.String)
-	r.batchGetByStudyIdAndName.Prime(ctx, compositeKey, userAsset)
+	compositeKey = newCompositeKey(
+		userAsset.UserId.String,
+		userAsset.StudyId.String,
+		userAsset.Name.String,
+	)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }

@@ -34,11 +34,19 @@ func (r *studyResolver) Asset(
 	ctx context.Context,
 	args struct{ Name string },
 ) (*userAssetResolver, error) {
-	id, err := r.Study.ID()
+	userId, err := r.Study.UserId()
 	if err != nil {
 		return nil, err
 	}
-	userAsset, err := r.Repos.UserAsset().GetByStudyIdAndName(id.String, args.Name)
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	userAsset, err := r.Repos.UserAsset().GetByName(
+		userId.String,
+		studyId.String,
+		args.Name,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -55,10 +63,6 @@ func (r *studyResolver) Assets(
 		OrderBy *UserAssetOrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
-	id, err := r.Study.ID()
-	if err != nil {
-		return nil, err
-	}
 	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
@@ -75,11 +79,26 @@ func (r *studyResolver) Assets(
 		return nil, err
 	}
 
-	userAssets, err := r.Repos.UserAsset().GetByStudyId(id, pageOptions)
+	userId, err := r.Study.UserId()
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.UserAsset().CountByStudy(id.String)
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	userAssets, err := r.Repos.UserAsset().GetByStudy(
+		userId,
+		studyId,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.UserAsset().CountByStudy(
+		userId.String,
+		studyId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -122,11 +141,19 @@ func (r *studyResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	id, err := r.Study.ID()
+	userId, err := r.Study.UserId()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().GetByStudyNumber(id.String, args.Number)
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	lesson, err := r.Repos.Lesson().GetByNumber(
+		userId.String,
+		studyId.String,
+		args.Number,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +170,11 @@ func (r *studyResolver) Lessons(
 		OrderBy *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	id, err := r.Study.ID()
+	userId, err := r.Study.UserId()
+	if err != nil {
+		return nil, err
+	}
+	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -163,11 +194,18 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByStudyId(id.String, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByStudy(
+		userId.String,
+		studyId.String,
+		pageOptions,
+	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByStudy(id.String)
+	count, err := r.Repos.Lesson().CountByStudy(
+		userId.String,
+		studyId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +230,11 @@ func (r *studyResolver) LessonComments(
 		Last   *int32
 	},
 ) (*lessonCommentConnectionResolver, error) {
-	id, err := r.Study.ID()
+	userId, err := r.Study.UserId()
+	if err != nil {
+		return nil, err
+	}
+	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -209,11 +251,18 @@ func (r *studyResolver) LessonComments(
 		return nil, err
 	}
 
-	lessonComments, err := r.Repos.LessonComment().GetByStudyId(id.String, pageOptions)
+	lessonComments, err := r.Repos.LessonComment().GetByStudy(
+		userId.String,
+		studyId.String,
+		pageOptions,
+	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.LessonComment().CountByStudy(id.String)
+	count, err := r.Repos.LessonComment().CountByStudy(
+		userId.String,
+		studyId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -230,12 +279,20 @@ func (r *studyResolver) LessonComments(
 }
 
 func (r *studyResolver) LessonCount() (int32, error) {
-	id, err := r.Study.ID()
+	userId, err := r.Study.UserId()
 	if err != nil {
 		var count int32
 		return count, err
 	}
-	return r.Repos.Lesson().CountByStudy(id.String)
+	studyId, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.Lesson().CountByStudy(
+		userId.String,
+		studyId.String,
+	)
 }
 
 func (r *studyResolver) Name() (string, error) {

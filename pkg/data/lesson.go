@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,39 +33,60 @@ type LessonService struct {
 	db Queryer
 }
 
-const countLessonSQL = `SELECT COUNT(*)::INT FROM lesson`
+const countLessonBySearchSQL = `
+	SELECT COUNT(*)
+	FROM lesson
+	WHERE title_tokens @@ to_tsquery('simple', $1)
+`
 
-func (s *LessonService) Count() (int32, error) {
-	mylog.Log.Info("Count()")
+func (s *LessonService) CountBySearch(query string) (int32, error) {
+	mylog.Log.WithField("query", query).Info("Lesson.CountBySearch(query)")
 	var n int32
-	err := prepareQueryRow(s.db, "countLesson", countLessonSQL).Scan(&n)
+	queryStr := query + ":*"
+	err := prepareQueryRow(
+		s.db,
+		"countLessonBySearch",
+		countLessonBySearchSQL,
+		queryStr,
+	).Scan(&n)
 	return n, err
 }
 
-const countLessonByUserSQL = `SELECT COUNT(*) FROM lesson WHERE user_id = $1`
+const countLessonByStudySQL = `
+	SELECT COUNT(*)
+	FROM lesson
+	WHERE user_id = $1 AND study_id = $2
+`
+
+func (s *LessonService) CountByStudy(userId, studyId string) (int32, error) {
+	mylog.Log.WithField(
+		"study_id", studyId,
+	).Info("Lesson.CountByStudy(study_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countLessonByStudy",
+		countLessonByStudySQL,
+		userId,
+		studyId,
+	).Scan(&n)
+	return n, err
+}
+
+const countLessonByUserSQL = `
+	SELECT COUNT(*)
+	FROM lesson
+	WHERE user_id = $1
+`
 
 func (s *LessonService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countLessonByUser",
 		countLessonByUserSQL,
 		userId,
-	).Scan(&n)
-	return n, err
-}
-
-const countLessonByStudySQL = `SELECT COUNT(*) FROM lesson WHERE study_id = $1`
-
-func (s *LessonService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountByStudy(study_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countLessonByStudy",
-		countLessonByStudySQL,
-		studyId,
 	).Scan(&n)
 	return n, err
 }
@@ -90,6 +112,69 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 	}
 
 	return &row, nil
+}
+
+func (s *LessonService) getConnection(
+	name string,
+	whereSQL string,
+	args pgx.QueryArgs,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	var joins, whereAnds []string
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
+	}
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
+		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
+	}
+
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
+	}
+
+	sql := `
+		SELECT
+			l1.body,
+			l1.created_at,
+			l1.id,
+			l1.number,
+			l1.published_at,
+			l1.study_id,
+			l1.title,
+			l1.updated_at,
+			l1.user_id
+		FROM lesson l1 ` +
+		strings.Join(joins, " ") + `
+		WHERE ` + whereSQL + `
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
+		LIMIT ` + args.Append(limit)
+
+	if po.Last != 0 {
+		sql = fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			sql,
+			po.Order.Field(),
+			po.Order.Direction().String(),
+		)
+	}
+
+	psName := preparedName(name, sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([]*Lesson, error) {
@@ -124,7 +209,7 @@ func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([
 	return rows, nil
 }
 
-const getLessonByPKSQL = `
+const getLessonByIdSQL = `
 	SELECT
 		body,
 		created_at,
@@ -139,134 +224,32 @@ const getLessonByPKSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonService) GetByPK(id string) (*Lesson, error) {
-	mylog.Log.WithField("id", id).Info("GetByPK(id) Lesson")
-	return s.get("getLessonByPK", getLessonByPKSQL, id)
+func (s *LessonService) Get(id string) (*Lesson, error) {
+	mylog.Log.WithField("id", id).Info("Lesson.Get(id)")
+	return s.get("getLessonById", getLessonByIdSQL, id)
 }
 
-func (s *LessonService) GetByUserId(userId string, po *PageOptions) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetByUserId(userId) Lesson")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
+	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `l1.user_id = ` + args.Append(userId)
 
-	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.number,
-			l1.published_at,
-			l1.study_id,
-			l1.title,
-			l1.updated_at,
-			l1.user_id
-		FROM lesson l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE l1.user_id = ` + args.Append(userId) + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
-		)
-	}
-
-	psName := preparedName("getLessonsByUserId", sql)
-
-	return s.getMany(psName, sql, args...)
+	return s.getConnection("getLessonsByUser", whereSQL, args, po)
 }
 
-func (s *LessonService) GetByStudyId(studyId string, po *PageOptions) ([]*Lesson, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetByStudyId(studyId) Lesson")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*Lesson, error) {
+	mylog.Log.WithField(
+		"study_id", studyId,
+	).Info("Lesson.GetByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `
+		li.user_id = ` + args.Append(userId) + ` AND
+		l1.study_id = ` + args.Append(studyId)
 
-	var joins, whereAnds []string
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.number,
-			l1.published_at,
-			l1.study_id,
-			l1.title,
-			l1.updated_at,
-			l1.user_id
-		FROM lesson l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE l1.study_id = ` + args.Append(studyId) + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
-		)
-	}
-
-	psName := preparedName("getLessonsByStudyId", sql)
-
-	return s.getMany(psName, sql, args...)
+	return s.getConnection("getLessonsByStudy", whereSQL, args, po)
 }
 
-const getLessonByStudyNumberSQL = `
+const getLessonByNumberSQL = `
 	SELECT
 		body,
 		created_at,
@@ -278,27 +261,26 @@ const getLessonByStudyNumberSQL = `
 		updated_at,
 		user_id
 	FROM lesson
-	WHERE study_id = $1 AND number = $2
+	WHERE user_id = $1 AND study_id = $2 AND number = $3
 `
 
-func (s *LessonService) GetByStudyNumber(studyId string, number int32) (*Lesson, error) {
-	mylog.Log.WithFields(
-		logrus.Fields{
-			"study_id": studyId,
-			"number":   number,
-		},
-	).Info("GetByStudyNumber(studyId, number) Lesson")
+func (s *LessonService) GetByNumber(userId, studyId string, number int32) (*Lesson, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"number":   number,
+	}).Info("Lesson.GetByNumber(studyId, number)")
 	return s.get(
-		"getLessonByStudyNumber",
-		getLessonByStudyNumberSQL,
+		"getLessonByNumber",
+		getLessonByNumberSQL,
+		userId,
 		studyId,
 		number,
 	)
 }
 
 func (s *LessonService) Create(row *Lesson) error {
-	mylog.Log.Info("Create() Lesson")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+	mylog.Log.Info("Lesson.Create()")
+	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
 	var columns, values []string
 
@@ -326,6 +308,10 @@ func (s *LessonService) Create(row *Lesson) error {
 	if row.Title.Status != pgtype.Undefined {
 		columns = append(columns, "title")
 		values = append(values, args.Append(&row.Title))
+		titleArray := &pgtype.TextArray{}
+		titleArray.Set(util.Split(row.Title.String, lessonDelimeter))
+		columns = append(columns, "title_array")
+		values = append(values, args.Append(titleArray))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -395,6 +381,7 @@ const deleteLessonSQl = `
 `
 
 func (s *LessonService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("Lesson.Delete(id)")
 	commandTag, err := prepareExec(s.db, "deleteLesson", deleteLessonSQl, id)
 	if err != nil {
 		return err
@@ -406,10 +393,18 @@ func (s *LessonService) Delete(id string) error {
 	return nil
 }
 
+func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error) {
+	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	whereSQL := `l1.title_tokens @@ to_tsquery('simple', ` + args.Append(query+":*") + `)`
+
+	return s.getConnection("searchLessonsByTitle", whereSQL, args, po)
+}
+
 func (s *LessonService) Update(row *Lesson) error {
-	mylog.Log.Info("Update() Lesson")
+	mylog.Log.WithField("id", row.Id.String).Info("Lesson.Update(id)")
 	sets := make([]string, 0, 5)
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
 	if row.Body.Status != pgtype.Undefined {
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
@@ -425,6 +420,9 @@ func (s *LessonService) Update(row *Lesson) error {
 	}
 	if row.Title.Status != pgtype.Undefined {
 		sets = append(sets, `title`+"="+args.Append(&row.Title))
+		titleArray := &pgtype.TextArray{}
+		titleArray.Set(util.Split(row.Title.String, lessonDelimeter))
+		sets = append(sets, `title_array`+"="+args.Append(titleArray))
 	}
 
 	sql := `
@@ -472,4 +470,8 @@ func (s *LessonService) Update(row *Lesson) error {
 	}
 
 	return nil
+}
+
+func lessonDelimeter(r rune) bool {
+	return r == ' ' || r == '-' || r == '_'
 }

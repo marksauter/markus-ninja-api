@@ -28,7 +28,7 @@ func NewPRTLoader(
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
 						ks := splitCompositeKey(key)
-						prt, err := svc.GetByPK(ks[0], ks[1])
+						prt, err := svc.Get(ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: prt, Error: err}
 					}(i, key)
 				}

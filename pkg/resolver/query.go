@@ -7,6 +7,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func (r *RootResolver) Asset(
@@ -115,72 +116,58 @@ func (r *RootResolver) Search(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByMatch(args.Query)
+	lessonCount, err := r.Repos.Lesson().CountBySearch(args.Query)
 	if err != nil {
 		return nil, err
 	}
-	studyCount, err := r.Repos.Study().CountByMatch(args.Query)
+	studyCount, err := r.Repos.Study().CountBySearch(args.Query)
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountByMatch(args.Query)
+	userCount, err := r.Repos.User().CountBySearch(args.Query)
 	if err != nil {
 		return nil, err
 	}
+	permits := []repo.Permit{}
 
-	var resolver *searchResultItemConnectionResolver
 	switch searchType {
 	case SearchTypeLesson:
 		lessons, err := r.Repos.Lesson().Search(args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		resolver, err = NewSearchResultItemConnectionResolver(
-			r.Repos,
-			lessons,
-			pageOptions,
-			lessonCount,
-			studyCount,
-			userCount,
-		)
-		if err != nil {
-			return nil, err
+		permits = make([]repo.Permit, len(lessons))
+		for i, l := range lessons {
+			permits[i] = l
 		}
 	case SearchTypeStudy:
 		studies, err := r.Repos.Study().Search(args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		resolver, err = NewSearchResultItemConnectionResolver(
-			r.Repos,
-			studies,
-			pageOptions,
-			lessonCount,
-			studyCount,
-			userCount,
-		)
-		if err != nil {
-			return nil, err
+		permits = make([]repo.Permit, len(studies))
+		for i, l := range studies {
+			permits[i] = l
 		}
 	case SearchTypeUser:
 		users, err := r.Repos.User().Search(args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		resolver, err = NewSearchResultItemConnectionResolver(
-			r.Repos,
-			users,
-			pageOptions,
-			lessonCount,
-			studyCount,
-			userCount,
-		)
-		if err != nil {
-			return nil, err
+		permits = make([]repo.Permit, len(users))
+		for i, l := range users {
+			permits[i] = l
 		}
 	}
 
-	return resolver, nil
+	return NewSearchResultItemConnectionResolver(
+		r.Repos,
+		permits,
+		pageOptions,
+		lessonCount,
+		studyCount,
+		userCount,
+	)
 }
 
 func (r *RootResolver) Study(
@@ -190,7 +177,7 @@ func (r *RootResolver) Study(
 		Owner string
 	},
 ) (*studyResolver, error) {
-	study, err := r.Repos.Study().GetByUserLoginAndName(args.Owner, args.Name)
+	study, err := r.Repos.Study().GetByUserAndName(args.Owner, args.Name)
 	if err != nil {
 		return nil, err
 	}

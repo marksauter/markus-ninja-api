@@ -62,7 +62,15 @@ func (r *lessonResolver) Comments(
 		OrderBy *LessonCommentOrderArg
 	},
 ) (*lessonCommentConnectionResolver, error) {
-	id, err := r.Lesson.ID()
+	userId, err := r.Lesson.UserId()
+	if err != nil {
+		return nil, err
+	}
+	studyId, err := r.Lesson.StudyId()
+	if err != nil {
+		return nil, err
+	}
+	lessonId, err := r.Lesson.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +90,20 @@ func (r *lessonResolver) Comments(
 		return nil, err
 	}
 
-	lessonComments, err := r.Repos.LessonComment().GetByLessonId(id.String, pageOptions)
+	lessonComments, err := r.Repos.LessonComment().GetByLesson(
+		userId.String,
+		studyId.String,
+		lessonId.String,
+		pageOptions,
+	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.LessonComment().CountByLesson(id.String)
+	count, err := r.Repos.LessonComment().CountByLesson(
+		userId.String,
+		studyId.String,
+		lessonId.String,
+	)
 	if err != nil {
 		return nil, err
 	}

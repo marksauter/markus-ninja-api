@@ -28,7 +28,7 @@ func NewEVTLoader(
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
 						ks := splitCompositeKey(key)
-						evt, err := svc.GetByPK(ks[0], ks[1])
+						evt, err := svc.Get(ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: evt, Error: err}
 					}(i, key)
 				}
