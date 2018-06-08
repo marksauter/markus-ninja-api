@@ -127,14 +127,18 @@ func (s *LessonCommentService) getConnection(
 	args pgx.QueryArgs,
 	po *PageOptions,
 ) ([]*LessonComment, error) {
+	if po == nil {
+		return nil, ErrEmptyPageOptions
+	}
 	var joins, whereAnds []string
+	field := po.Order.Field()
 	if po.After != nil {
 		joins = append(joins, `INNER JOIN account c2 ON c2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND c1.`+po.Order.Field()+` >= c2.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND c1.`+field+` >= c2.`+field)
 	}
 	if po.Before != nil {
 		joins = append(joins, `INNER JOIN account c3 ON c3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND c1.`+po.Order.Field()+` <= c3.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND c1.`+field+` <= c3.`+field)
 	}
 
 	// If the query is asking for the last elements in a list, then we need two
@@ -166,15 +170,15 @@ func (s *LessonCommentService) getConnection(
 		` + strings.Join(joins, " ") + `
 		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY c1.` + po.Order.Field() + ` ` + direction.String() + `
+		ORDER BY c1.` + field + ` ` + direction.String() + `
 		LIMIT ` + args.Append(limit)
 
 	if po.Last != 0 {
 		sql = fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
+			field,
+			direction,
 		)
 	}
 

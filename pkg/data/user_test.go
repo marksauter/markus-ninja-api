@@ -27,7 +27,7 @@ func TestDataUsersLifeCycle(t *testing.T) {
 	}
 	userId := input.Id.String
 
-	user, err := userSvc.GetByLogin(input.Login.String)
+	user, err := userSvc.GetCredentialsByLogin(input.Login.String)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,39 +35,25 @@ func TestDataUsersLifeCycle(t *testing.T) {
 		t.Errorf("Expected %v, got %v", userId, user.Id)
 	}
 	if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
-		t.Errorf("Expected %v, got %v", input.Password, user.Password)
+		t.Errorf("Expected %v, got %v", input.Password.Bytes, user.Password.Bytes)
 	}
-	if user.PrimaryEmail != input.PrimaryEmail {
-		t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
-	}
+	// if user.PrimaryEmail.Value.String != input.PrimaryEmail.Value.String {
+	//   t.Errorf("Expected %v, got %v", input.PrimaryEmail.Value.String, user.PrimaryEmail.Value.String)
+	// }
 
-	// user, err = userSvc.GetByPrimaryEmail(input.PrimaryEmail.String)
-	// if err != nil {
-	//   t.Fatal(err)
-	// }
-	// if user.Id.String != userId {
-	//   t.Errorf("Expected %v, got %v", userId, user.Id)
-	// }
-	// if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
-	//   t.Errorf("Expected %v, got %v", input.Password, user.Password)
-	// }
+	user, err = userSvc.Get(input.Id.String)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.Id.String != userId {
+		t.Errorf("Expected %v, got %v", userId, user.Id)
+	}
+	if user.Login.String != input.Login.String {
+		t.Errorf("Expected %v, got %v", input.Login.String, user.Login.String)
+	}
 	// if user.PrimaryEmail != input.PrimaryEmail {
-	//   t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
+	//   t.Errorf("Expected %v, got %v", input.PrimaryEmail.Value.String, user.PrimaryEmail.Value.String)
 	// }
-
-	user, err = userSvc.GetById(input.Id.String)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if user.Id.String != userId {
-		t.Errorf("Expected %v, got %v", userId, user.Id)
-	}
-	if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
-		t.Errorf("Expected %v, got %v", input.Password, user.Password)
-	}
-	if user.PrimaryEmail != input.PrimaryEmail {
-		t.Errorf("Expected %v, got %v", input.PrimaryEmail, user.PrimaryEmail)
-	}
 }
 
 func TestDataCreateUserHandlesLoginUniqueness(t *testing.T) {
@@ -82,7 +68,7 @@ func TestDataCreateUserHandlesLoginUniqueness(t *testing.T) {
 
 	user = newUser()
 	actual := userSvc.Create(user)
-	expected := data.DuplicateFieldError("login")
+	expected := data.DuplicateFieldError("unique_login")
 	if actual != expected {
 		t.Fatalf("Expected %v, got %v", expected, actual)
 	}
@@ -119,7 +105,7 @@ func BenchmarkDataGetUser(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := userSvc.GetById(user.Id.String)
+		_, err := userSvc.Get(user.Id.String)
 		if err != nil {
 			b.Fatal(err)
 		}

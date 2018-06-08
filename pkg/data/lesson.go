@@ -42,12 +42,11 @@ const countLessonBySearchSQL = `
 func (s *LessonService) CountBySearch(query string) (int32, error) {
 	mylog.Log.WithField("query", query).Info("Lesson.CountBySearch(query)")
 	var n int32
-	queryStr := query + ":*"
 	err := prepareQueryRow(
 		s.db,
 		"countLessonBySearch",
 		countLessonBySearchSQL,
-		queryStr,
+		ToTsQuery(query),
 	).Scan(&n)
 	return n, err
 }
@@ -120,14 +119,18 @@ func (s *LessonService) getConnection(
 	args pgx.QueryArgs,
 	po *PageOptions,
 ) ([]*Lesson, error) {
+	if po == nil {
+		return nil, ErrEmptyPageOptions
+	}
 	var joins, whereAnds []string
+	field := po.Order.Field()
 	if po.After != nil {
 		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` >= l2.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND l1.`+field+` >= l2.`+field)
 	}
 	if po.Before != nil {
 		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+po.Order.Field()+` <= l3.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND l1.`+field+` <= l3.`+field)
 	}
 
 	// If the query is asking for the last elements in a list, then we need two
@@ -160,15 +163,15 @@ func (s *LessonService) getConnection(
 		strings.Join(joins, " ") + `
 		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + po.Order.Field() + ` ` + direction.String() + `
+		ORDER BY l1.` + field + ` ` + direction.String() + `
 		LIMIT ` + args.Append(limit)
 
 	if po.Last != 0 {
 		sql = fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
+			field,
+			direction,
 		)
 	}
 
@@ -396,7 +399,8 @@ func (s *LessonService) Delete(id string) error {
 func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `l1.title_tokens @@ to_tsquery('simple', ` + args.Append(query+":*") + `)`
+	whereSQL := `l1.title_tokens @@ to_tsquery('simple', ` +
+		args.Append(ToTsQuery(query)) + `)`
 
 	return s.getConnection("searchLessonsByTitle", whereSQL, args, po)
 }

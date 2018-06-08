@@ -122,34 +122,39 @@ func (s *UserAssetService) getConnection(
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
+	if po == nil {
+		return nil, ErrEmptyPageOptions
+	}
 	var joins, whereAnds []string
-	direction := DESC
-	field := "created_at"
-	limit := int32(0)
-	if po != nil {
-		if po.After != nil {
-			joins = append(joins, `INNER JOIN user_asset ua2 ON ua2.id = `+args.Append(po.After.Value()))
-			whereAnds = append(whereAnds, `AND ua1.`+po.Order.Field()+` >= ua2.`+po.Order.Field())
-		}
-		if po.Before != nil {
-			joins = append(joins, `INNER JOIN user_asset ua3 ON ua3.id = `+args.Append(po.Before.Value()))
-			whereAnds = append(whereAnds, `AND ua1.`+po.Order.Field()+` <= ua3.`+po.Order.Field())
-		}
+	field := po.Order.Field()
+	if po.After != nil {
+		joins = append(joins, `
+			INNER JOIN user_asset ua2 ON ua2.id = `+
+			args.Append(po.After.Value()),
+		)
+		whereAnds = append(whereAnds, `AND ua1.`+field+` >= ua2.`+field)
+	}
+	if po.Before != nil {
+		joins = append(joins, `
+			INNER JOIN user_asset ua3 ON ua3.id = `+
+			args.Append(po.Before.Value()),
+		)
+		whereAnds = append(whereAnds, `AND ua1.`+field+` <= ua3.`+field)
+	}
 
-		// If the query is asking for the last elements in a list, then we need two
-		// queries to get the items more efficiently and in the right order.
-		// First, we query the reverse direction of that requested, so that only
-		// the items needed are returned.
-		// Then, we reorder the items to the originally requested direction.
-		direction = po.Order.Direction()
-		if po.Last != 0 {
-			direction = !po.Order.Direction()
-		}
-		limit = po.First + po.Last + 1
-		if (po.After != nil && po.First > 0) ||
-			(po.Before != nil && po.Last > 0) {
-			limit = limit + int32(1)
-		}
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
 	}
 
 	for _, o := range opts {
@@ -173,7 +178,7 @@ func (s *UserAssetService) getConnection(
 		strings.Join(joins, " ") + `
 		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY ua1.` + po.Order.Field() + ` ` + direction.String() + `
+		ORDER BY ua1.` + field + ` ` + direction.String() + `
 		LIMIT ` + args.Append(limit)
 
 	if po != nil && po.Last != 0 {

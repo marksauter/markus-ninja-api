@@ -1,9 +1,11 @@
 package data
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"html/template"
 	"io"
 	"strings"
 
@@ -115,6 +117,8 @@ type Order interface {
 	Field() string
 }
 
+var ErrEmptyPageOptions = errors.New("`po` (*PageOptions) must not be nil")
+
 type PageOptions struct {
 	After  *Cursor
 	Before *Cursor
@@ -154,7 +158,82 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 	return pageOptions, nil
 }
 
+// If the query is asking for the last elements in a list, then we need two
+// queries to get the items more efficiently and in the right order.
+// First, we query the reverse direction of that requested, so that only
+// the items needed are returned.
+func (p *PageOptions) QueryDirection() string {
+	direction := p.Order.Direction()
+	if p.Last != 0 {
+		direction = !p.Order.Direction()
+	}
+	return direction.String()
+}
+
+// Then, we can reorder the items to the originally requested direction.
+func (p *PageOptions) ReorderQuery(query string) string {
+	if p.Last != 0 {
+		return fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			query,
+			p.Order.Field(),
+			p.Order.Direction(),
+		)
+	}
+	return query
+}
+
 func (p *PageOptions) Limit() int32 {
-	// Assuming one of these is 0, so the sum will be the non-zero field
-	return p.First + p.Last
+	// Assuming one of these is 0, so the sum will be the non-zero field + 1
+	limit := p.First + p.Last + 1
+	if (p.After != nil && p.First > 0) ||
+		(p.Before != nil && p.Last > 0) {
+		limit = limit + int32(1)
+	}
+	return limit
+}
+
+type SQLTemplateArgs struct {
+	Select string
+	From   string
+	As     string
+	Joins  string
+	Where  string
+}
+
+func (p *PageOptions) SQL(tmplArgs *SQLTemplateArgs, queryArgs *pgx.QueryArgs) (string, error) {
+	var joins, whereAnds []string
+	field := p.Order.Field()
+	if p.After != nil {
+		joins = append(joins, `INNER JOIN {{.From}} {{.As}}2 ON {{.As}}2.id = `+
+			queryArgs.Append(p.After.Value()),
+		)
+		whereAnds = append(whereAnds, `AND {{.As}}.`+field+` >= {{.As}}2.`+field)
+	}
+	if p.Before != nil {
+		joins = append(joins, `INNER JOIN {{.From}} {{.As}}3 ON {{.As}}3.id = `+
+			queryArgs.Append(p.Before.Value()),
+		)
+		whereAnds = append(whereAnds, `AND {{.As}}.`+field+` <= {{.As}}3.`+field)
+	}
+	tmpl := template.Must(
+		template.New("connection").Parse(`
+			SELECT 
+			` + tmplArgs.Select + `
+			FROM ` + tmplArgs.From +
+			strings.Join(joins, " ") +
+			tmplArgs.Joins + `
+			WHERE (` + tmplArgs.Where + `)
+			` + strings.Join(whereAnds, " ") + `
+			ORDER BY {{.As}}.` + field + ` ` + p.QueryDirection() + `
+			LIMIT ` + queryArgs.Append(p.Limit()),
+		),
+	)
+
+	var bs bytes.Buffer
+	err := tmpl.Execute(&bs, tmplArgs)
+	if err != nil {
+		return "", err
+	}
+	return p.ReorderQuery(bs.String()), nil
 }

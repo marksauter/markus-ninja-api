@@ -58,12 +58,11 @@ const countStudyBySearchSQL = `
 func (s *StudyService) CountBySearch(query string) (int32, error) {
 	mylog.Log.WithField("query", query).Info("Study.CountBySearch(query)")
 	var n int32
-	queryStr := query + ":*"
 	err := prepareQueryRow(
 		s.db,
 		"countStudyBySearch",
 		countStudyBySearchSQL,
-		queryStr,
+		ToTsQuery(query),
 	).Scan(&n)
 	return n, err
 }
@@ -97,14 +96,18 @@ func (s *StudyService) getConnection(
 	args pgx.QueryArgs,
 	po *PageOptions,
 ) ([]*Study, error) {
+	if po == nil {
+		return nil, ErrEmptyPageOptions
+	}
 	var joins, whereAnds []string
+	field := po.Order.Field()
 	if po.After != nil {
 		joins = append(joins, `INNER JOIN study s2 ON s2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND s1.`+po.Order.Field()+` >= s2.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND s1.`+field+` >= s2.`+field)
 	}
 	if po.Before != nil {
 		joins = append(joins, `INNER JOIN study s3 ON s3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND s1.`+po.Order.Field()+` <= s3.`+po.Order.Field())
+		whereAnds = append(whereAnds, `AND s1.`+field+` <= s3.`+field)
 	}
 
 	// If the query is asking for the last elements in a list, then we need two
@@ -135,15 +138,15 @@ func (s *StudyService) getConnection(
 		strings.Join(joins, " ") + `
 		WHERE ` + whereSQL + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY s1.` + po.Order.Field() + ` ` + direction.String() + `
+		ORDER BY s1.` + field + ` ` + direction.String() + `
 		LIMIT ` + args.Append(limit)
 
-	if po.Last != 0 {
+	if po != nil && po.Last != 0 {
 		sql = fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			sql,
-			po.Order.Field(),
-			po.Order.Direction().String(),
+			field,
+			direction,
 		)
 	}
 
@@ -341,7 +344,8 @@ func (s *StudyService) Delete(id string) error {
 func (s *StudyService) Search(query string, po *PageOptions) ([]*Study, error) {
 	mylog.Log.WithField("query", query).Info("Study.Search(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `s1.name_tokens @@ to_tsquery('simple', ` + args.Append(query+":*") + `)`
+	whereSQL := `s1.name_tokens @@ to_tsquery('simple', ` +
+		args.Append(ToTsQuery(query)) + `)`
 
 	return s.getConnection("searchStudiesByName", whereSQL, args, po)
 }

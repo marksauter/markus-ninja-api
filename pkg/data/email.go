@@ -113,36 +113,34 @@ func (s *EmailService) getConnection(
 	po *PageOptions,
 	opts ...EmailFilterOption,
 ) ([]*Email, error) {
+	if po == nil {
+		return nil, ErrEmptyPageOptions
+	}
 	var joins, whereAnds []string
-	direction := ASC
-	field := "created_at"
-	limit := int32(0)
-	if po != nil {
-		field = po.Order.Field()
 
-		if po.After != nil {
-			joins = append(joins, `INNER JOIN email e2 ON e2.id = `+args.Append(po.After.Value()))
-			whereAnds = append(whereAnds, `AND e1.`+field+` >= e2.`+field)
-		}
-		if po.Before != nil {
-			joins = append(joins, `INNER JOIN email e3 ON e3.id = `+args.Append(po.Before.Value()))
-			whereAnds = append(whereAnds, `AND e1.`+field+` <= e3.`+field)
-		}
+	field := po.Order.Field()
+	if po.After != nil {
+		joins = append(joins, `INNER JOIN email e2 ON e2.id = `+args.Append(po.After.Value()))
+		whereAnds = append(whereAnds, `AND e1.`+field+` >= e2.`+field)
+	}
+	if po.Before != nil {
+		joins = append(joins, `INNER JOIN email e3 ON e3.id = `+args.Append(po.Before.Value()))
+		whereAnds = append(whereAnds, `AND e1.`+field+` <= e3.`+field)
+	}
 
-		// If the query is asking for the last elements in a list, then we need two
-		// queries to get the items more efficiently and in the right order.
-		// First, we query the reverse direction of that requested, so that only
-		// the items needed are returned.
-		// Then, we reorder the items to the originally requested direction.
-		direction = po.Order.Direction()
-		if po.Last != 0 {
-			direction = !po.Order.Direction()
-		}
-		limit = po.First + po.Last + 1
-		if (po.After != nil && po.First > 0) ||
-			(po.Before != nil && po.Last > 0) {
-			limit = limit + int32(1)
-		}
+	// If the query is asking for the last elements in a list, then we need two
+	// queries to get the items more efficiently and in the right order.
+	// First, we query the reverse direction of that requested, so that only
+	// the items needed are returned.
+	// Then, we reorder the items to the originally requested direction.
+	direction := po.Order.Direction()
+	if po.Last != 0 {
+		direction = !po.Order.Direction()
+	}
+	limit := po.First + po.Last + 1
+	if (po.After != nil && po.First > 0) ||
+		(po.Before != nil && po.Last > 0) {
+		limit = limit + int32(1)
 	}
 
 	for _, o := range opts {
@@ -171,7 +169,7 @@ func (s *EmailService) getConnection(
 			LIMIT ` + args.Append(limit)
 	}
 
-	if po != nil && po.Last != 0 {
+	if po.Last != 0 {
 		sql = fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			sql,

@@ -1,13 +1,16 @@
 package resolver
 
-type textMatchHighlightResolver struct{}
+type textMatchHighlightResolver struct {
+	Begin int32
+	End   int32
+}
 
 func (r *textMatchHighlightResolver) BeginIndice() int32 {
-	return 0
+	return r.Begin
 }
 
 func (r *textMatchHighlightResolver) EndIndice() int32 {
-	return 0
+	return r.End
 }
 
 func (r *textMatchHighlightResolver) Text() string {

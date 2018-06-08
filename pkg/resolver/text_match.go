@@ -1,6 +1,7 @@
 package resolver
 
-type textMatchResolver struct{}
+type textMatchResolver struct {
+}
 
 func (r *textMatchResolver) Fragment() string {
 	return ""

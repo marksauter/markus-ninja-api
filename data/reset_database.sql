@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
 CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -5,24 +7,19 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION insert_name_tokens() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION account_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.name_array IS NOT NULL THEN
-    NEW.name_tokens = array_to_tsvector(New.name_array);
-    NEW.name_array = NULL;
+  IF TG_OP = 'INSERT' THEN
+    NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
+      setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
+      setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
   END IF;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE OR REPLACE FUNCTION update_name_tokens() RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.name != OLD.name THEN
-    IF NEW.name_array IS NULL THEN
-      RAISE EXCEPTION '`name_array` must not be null';
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.login <> OLD.login OR NEW.name <> OLD.name OR NEW.profile <> OLD.profile THEN
+      NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
+        setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
+        setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
     END IF;
-    NEW.name_tokens = array_to_tsvector(New.name_array);
-    NEW.name_array = NULL;
   END IF;
   RETURN NEW;
 END;
@@ -34,26 +31,20 @@ CREATE TABLE account(
   id            VARCHAR(100) PRIMARY KEY,
   login         VARCHAR(40)  NOT NULL,
   name          TEXT,
-  name_array    TEXT []      CHECK(name_array IS NULL),
-  name_tokens   TSVECTOR,
   password      BYTEA        NOT NULL,
   profile       TEXT,
+  search_vector TSVECTOR,
   updated_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX account_unique_login_idx
   ON account (LOWER(login));
+CREATE INDEX account_search_vector_idx
+  ON account USING GIN (search_vector);
 
-CREATE INDEX account_login_text_pattern_ops_idx
-  ON account(LOWER(login) text_pattern_ops);
-
-CREATE TRIGGER account_insert_name_tokens
-  BEFORE INSERT ON account
-  FOR EACH ROW EXECUTE PROCEDURE insert_name_tokens();
-
-CREATE TRIGGER account_update_name_tokens
-  BEFORE UPDATE ON account
-  FOR EACH ROW EXECUTE PROCEDURE update_name_tokens();
+CREATE TRIGGER update_account_search_vector
+  BEFORE INSERT OR UPDATE ON account
+  FOR EACH ROW EXECUTE PROCEDURE account_search_vector_update();
 
 CREATE TRIGGER account_updated_at_modtime
   BEFORE UPDATE ON account
@@ -211,6 +202,23 @@ CREATE TABLE password_reset_token(
     ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
+CREATE OR REPLACE FUNCTION study_search_vector_update() RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.search_vector = setweight(to_tsvector('simple', New.name), 'A') ||
+      setweight(to_tsvector('simple', coalesce(New.description, '')), 'B')
+  END IF;
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.login <> OLD.login OR NEW.name <> OLD.name OR NEW.profile <> OLD.profile THEN
+      NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
+        setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
+        setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
   advanced_at   TIMESTAMPTZ,
@@ -218,8 +226,7 @@ CREATE TABLE study(
   description   TEXT,
   id            VARCHAR(100)  PRIMARY KEY,
   name          TEXT          NOT NULL CHECK (name !~ ' '),
-  name_array    TEXT []       CHECK(name_array IS NULL),
-  name_tokens   TSVECTOR      NOT NULL,
+  search_vector TSVECTOR      NOT NULL,
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
   user_id       VARCHAR(100)  NOT NULL,
   FOREIGN KEY (user_id)
@@ -233,14 +240,12 @@ CREATE INDEX study_user_id_advanced_at_idx
   ON study (user_id, advanced_at);
 CREATE INDEX study_user_id_updated_at_idx
   ON study (user_id, updated_at);
+CREATE INDEX study_search_vector_idx
+  ON study USING GIN (search_vector);
 
-CREATE TRIGGER study_insert_name_tokens
-  BEFORE INSERT ON study
-  FOR EACH ROW EXECUTE PROCEDURE insert_name_tokens();
-
-CREATE TRIGGER study_update_name_tokens
-  BEFORE UPDATE ON study
-  FOR EACH ROW EXECUTE PROCEDURE update_name_tokens();
+CREATE TRIGGER update_study_search_vector
+  BEFORE INSERT OR UPDATE ON study
+  FOR EACH ROW EXECUTE PROCEDURE study_search_vector_update();
 
 CREATE TRIGGER study_updated_at_modtime
   BEFORE UPDATE ON study
@@ -312,25 +317,15 @@ BEGIN
 END;
 $BODY$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION insert_title_tokens() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION lesson_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.title_array IS NULL THEN
-    RAISE EXCEPTION '`title_array` must not be null';
+  IF TG_OP = 'INSERT' THEN
+    NEW.search_vector = to_tsvector('simple', COALESCE(New.title, '')) 
   END IF;
-  NEW.title_tokens = array_to_tsvector(New.title_array);
-  NEW.title_array = NULL;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE OR REPLACE FUNCTION update_title_tokens() RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.title != OLD.title THEN
-    IF NEW.title_array IS NULL THEN
-      RAISE EXCEPTION '`title_array` must not be null';
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.name <> OLD.name THEN
+      NEW.search_vector = to_tsvector('simple', COALESCE(New.title, '')) 
     END IF;
-    NEW.title_tokens = array_to_tsvector(New.title_array);
-    NEW.title_array = NULL;
   END IF;
   RETURN NEW;
 END;
@@ -344,9 +339,8 @@ CREATE TABLE lesson(
   number          INT          CHECK(number > 0),
   published_at    TIMESTAMPTZ,
   study_id        VARCHAR(100) NOT NULL,    
+  search_vector   TSVECTOR     NOT NULL,
   title           TEXT         NOT NULL,
-  title_array     TEXT []      CHECK(title_array IS NULL),
-  title_tokens    TSVECTOR     NOT NULL,
   updated_at      TIMESTAMPTZ  DEFAULT NOW(),
   user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (study_id)
@@ -363,14 +357,12 @@ CREATE INDEX lesson_user_id_study_id_published_at_idx
   ON lesson (user_id, study_id, published_at DESC NULLS LAST);
 CREATE INDEX lesson_user_id_study_id_updated_at_idx
   ON lesson (user_id, study_id, updated_at);
+CREATE INDEX lesson_search_vector_idx
+  ON lesson USING GIN (search_vector);
 
-CREATE TRIGGER insert_lesson_title_tokens
-  BEFORE INSERT ON lesson
-  FOR EACH ROW EXECUTE PROCEDURE insert_title_tokens(); 
-
-CREATE TRIGGER update_lesson_title_tokens
-  BEFORE UPDATE ON lesson
-  FOR EACH ROW EXECUTE PROCEDURE update_title_tokens(); 
+CREATE TRIGGER update_lesson_search_vector
+  BEFORE INSERT OR UPDATE ON lesson
+  FOR EACH ROW EXECUTE PROCEDURE lesson_search_vector_update(); 
 
 CREATE TRIGGER insert_lesson_number
   BEFORE INSERT ON lesson
@@ -440,16 +432,29 @@ CREATE TRIGGER label_updated_at_modtime
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
 
+CREATE OR REPLACE FUNCTION user_asset_search_vector_update() RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.search_vector = to_tsvector('simple', COALESCE(New.name, '')) 
+  END IF;
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.name <> OLD.name THEN
+      NEW.search_vector = to_tsvector('simple', COALESCE(New.name, '')) 
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 DROP TABLE IF EXISTS user_asset CASCADE;
 CREATE TABLE user_asset(
   created_at    TIMESTAMPTZ  DEFAULT NOW(),
   id            VARCHAR(100) PRIMARY KEY,
   key           TEXT         NOT NULL,
   name          TEXT         NOT NULL,
-  name_array    TEXT []      CHECK(name_array IS NULL),
-  name_tokens   TSVECTOR     NOT NULL,
   original_name TEXT         NOT NULL, 
   published_at  TIMESTAMPTZ,
+  search_vector TSVECTOR     NOT NULL,
   size          BIGINT       NOT NULL,
   study_id      VARCHAR(100) NOT NULL,
   subtype       TEXT         NOT NULL,
