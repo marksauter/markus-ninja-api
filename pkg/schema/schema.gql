@@ -35,6 +35,9 @@ type Query {
     # Returns the last n elements form the list.
     last: Int
 
+    # Ordering options for items returned from the connection.
+    orderBy: SearchOrder
+
     # The search string to look for.
     query: String!
 

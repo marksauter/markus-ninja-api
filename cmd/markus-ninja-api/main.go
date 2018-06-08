@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
@@ -69,6 +70,8 @@ func main() {
 			Svcs:  svcs,
 		},
 	)
+
+	go startRefreshMV(svcs)
 
 	r := mux.NewRouter()
 
@@ -263,4 +266,13 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 
 	mylog.Log.Info("database initialized")
 	return nil
+}
+
+func startRefreshMV(svcs *service.Services) {
+	for {
+		time.Sleep(time.Minute)
+		go svcs.User.RefreshSearchIndex()
+		time.Sleep(time.Minute)
+		go svcs.Study.RefreshSearchIndex()
+	}
 }

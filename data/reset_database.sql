@@ -7,24 +7,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION account_search_vector_update() RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
-      setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
-      setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
-  END IF;
-  IF TG_OP = 'UPDATE' THEN
-    IF NEW.login <> OLD.login OR NEW.name <> OLD.name OR NEW.profile <> OLD.profile THEN
-      NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
-        setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
-        setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
   created_at    TIMESTAMPTZ  DEFAULT NOW(),
@@ -33,18 +15,11 @@ CREATE TABLE account(
   name          TEXT,
   password      BYTEA        NOT NULL,
   profile       TEXT,
-  search_vector TSVECTOR,
   updated_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX account_unique_login_idx
   ON account (LOWER(login));
-CREATE INDEX account_search_vector_idx
-  ON account USING GIN (search_vector);
-
-CREATE TRIGGER update_account_search_vector
-  BEFORE INSERT OR UPDATE ON account
-  FOR EACH ROW EXECUTE PROCEDURE account_search_vector_update();
 
 CREATE TRIGGER account_updated_at_modtime
   BEFORE UPDATE ON account
@@ -74,15 +49,16 @@ CREATE UNIQUE INDEX email_unique_value_idx
 CREATE INDEX email_value_text_pattern_ops_idx
   ON email(LOWER(value) text_pattern_ops);
 CREATE INDEX email_user_id_idx ON email (user_id);
-CREATE UNIQUE INDEX email_user_id_type_key
+CREATE UNIQUE INDEX email_user_id_type_idx
   ON email (user_id, type)
   WHERE type = ANY('{"PRIMARY", "BACKUP"}');
+CREATE UNIQUE INDEX email_user_id_public_unique_idx
+  ON email (user_id, public)
+  WHERE public = TRUE;
 
 CREATE TRIGGER email_updated_at_modtime
-  BEFORE UPDATE
-  ON email
-  FOR EACH ROW
-  EXECUTE PROCEDURE update_updated_at_column();
+  BEFORE UPDATE ON email
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role CASCADE;
 CREATE TABLE role(
@@ -93,8 +69,8 @@ CREATE TABLE role(
 );
 
 CREATE TRIGGER role_updated_at_modtime
-BEFORE UPDATE ON role
-FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+  BEFORE UPDATE ON role
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS user_role CASCADE;
 CREATE TABLE user_role(
@@ -166,10 +142,10 @@ CREATE TABLE role_permission(
 DROP TABLE IF EXISTS email_verification_token CASCADE;
 CREATE TABLE email_verification_token(
   email_id      VARCHAR(100),
-  token         VARCHAR(40),
-  user_id       VARCHAR(100)   NOT NULL,
-  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
   expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
+  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
+  token         VARCHAR(40),
+  user_id       VARCHAR(100)  NOT NULL,
   verified_at   TIMESTAMPTZ,
   PRIMARY KEY (email_id, token),
   FOREIGN KEY (email_id)
@@ -185,14 +161,14 @@ CREATE INDEX email_verification_token_user_id_idx
 
 DROP TABLE IF EXISTS password_reset_token CASCADE;
 CREATE TABLE password_reset_token(
-  user_id       VARCHAR(100),
-  token         VARCHAR(40),
-  email_id      VARCHAR(100)   NOT NULL,
-  request_ip    INET          NOT NULL,
+  email_id      VARCHAR(100)  NOT NULL,
   issued_at     TIMESTAMPTZ   DEFAULT NOW(),
-  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
   end_ip        INET,
   ended_at      TIMESTAMPTZ,
+  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
+  request_ip    INET          NOT NULL,
+  token         VARCHAR(40),
+  user_id       VARCHAR(100),
   PRIMARY KEY (user_id, token),
   FOREIGN KEY (user_id)
     REFERENCES account (id)
@@ -202,23 +178,6 @@ CREATE TABLE password_reset_token(
     ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE OR REPLACE FUNCTION study_search_vector_update() RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    NEW.search_vector = setweight(to_tsvector('simple', New.name), 'A') ||
-      setweight(to_tsvector('simple', coalesce(New.description, '')), 'B')
-  END IF;
-  IF TG_OP = 'UPDATE' THEN
-    IF NEW.login <> OLD.login OR NEW.name <> OLD.name OR NEW.profile <> OLD.profile THEN
-      NEW.search_vector = setweight(to_tsvector('simple', New.login), 'A') ||
-        setweight(to_tsvector('simple', coalesce(New.name, '')), 'B') || 
-        setweight(to_tsvector('simple', coalesce(New.profile, '')), 'C')
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
 DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
   advanced_at   TIMESTAMPTZ,
@@ -226,7 +185,7 @@ CREATE TABLE study(
   description   TEXT,
   id            VARCHAR(100)  PRIMARY KEY,
   name          TEXT          NOT NULL CHECK (name !~ ' '),
-  search_vector TSVECTOR      NOT NULL,
+  name_tokens   TEXT          NOT NULL,
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
   user_id       VARCHAR(100)  NOT NULL,
   FOREIGN KEY (user_id)
@@ -240,16 +199,6 @@ CREATE INDEX study_user_id_advanced_at_idx
   ON study (user_id, advanced_at);
 CREATE INDEX study_user_id_updated_at_idx
   ON study (user_id, updated_at);
-CREATE INDEX study_search_vector_idx
-  ON study USING GIN (search_vector);
-
-CREATE TRIGGER update_study_search_vector
-  BEFORE INSERT OR UPDATE ON study
-  FOR EACH ROW EXECUTE PROCEDURE study_search_vector_update();
-
-CREATE TRIGGER study_updated_at_modtime
-  BEFORE UPDATE ON study
-  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 CREATE OR REPLACE FUNCTION inc_study_lesson_number()
   RETURNS trigger AS
@@ -317,20 +266,6 @@ BEGIN
 END;
 $BODY$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION lesson_search_vector_update() RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    NEW.search_vector = to_tsvector('simple', COALESCE(New.title, '')) 
-  END IF;
-  IF TG_OP = 'UPDATE' THEN
-    IF NEW.name <> OLD.name THEN
-      NEW.search_vector = to_tsvector('simple', COALESCE(New.title, '')) 
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
 DROP TABLE IF EXISTS lesson CASCADE;
 CREATE TABLE lesson(
   created_at      TIMESTAMPTZ  DEFAULT NOW(),
@@ -339,8 +274,8 @@ CREATE TABLE lesson(
   number          INT          CHECK(number > 0),
   published_at    TIMESTAMPTZ,
   study_id        VARCHAR(100) NOT NULL,    
-  search_vector   TSVECTOR     NOT NULL,
   title           TEXT         NOT NULL,
+  title_tokens    TEXT         NOT NULL,
   updated_at      TIMESTAMPTZ  DEFAULT NOW(),
   user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (study_id)
@@ -357,8 +292,6 @@ CREATE INDEX lesson_user_id_study_id_published_at_idx
   ON lesson (user_id, study_id, published_at DESC NULLS LAST);
 CREATE INDEX lesson_user_id_study_id_updated_at_idx
   ON lesson (user_id, study_id, updated_at);
-CREATE INDEX lesson_search_vector_idx
-  ON lesson USING GIN (search_vector);
 
 CREATE TRIGGER update_lesson_search_vector
   BEFORE INSERT OR UPDATE ON lesson
@@ -417,10 +350,13 @@ CREATE TRIGGER lesson_comment_updated_at_modtime
 
 DROP TABLE IF EXISTS label CASCADE;
 CREATE TABLE label(
-  created_at  TIMESTAMPTZ   DEFAULT NOW(),
+  color       TEXT         NOT NULL,
+  created_at  TIMESTAMPTZ  DEFAULT NOW(),
+  is_default  BOOLEAN      DEFAULT FALSE,
+  description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
-  name        VARCHAR(40) NOT NULL UNIQUE,
-  updated_at  TIMESTAMPTZ   DEFAULT NOW()
+  name        VARCHAR(40)  NOT NULL,
+  updated_at  TIMESTAMPTZ  DEFAULT NOW()
 ); 
 
 CREATE UNIQUE INDEX label_unique_name_idx
@@ -432,19 +368,49 @@ CREATE TRIGGER label_updated_at_modtime
   FOR EACH ROW
   EXECUTE PROCEDURE update_updated_at_column();
 
-CREATE OR REPLACE FUNCTION user_asset_search_vector_update() RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    NEW.search_vector = to_tsvector('simple', COALESCE(New.name, '')) 
-  END IF;
-  IF TG_OP = 'UPDATE' THEN
-    IF NEW.name <> OLD.name THEN
-      NEW.search_vector = to_tsvector('simple', COALESCE(New.name, '')) 
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
+DROP TABLE IF EXISTS lesson_label CASCADE;
+CREATE TABLE lesson_label(
+  created_at TIMESTAMPTZ  DEFAULT NOW(),
+  label_id   VARCHAR(100),
+  lesson_id  VARCHAR(100),
+  study_id   VARCHAR(100),
+  PRIMARY KEY (study_id, lesson_id, label_id),
+  FOREIGN KEY (label_id)
+    REFERENCES label (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS topic CASCADE;
+CREATE TABLE topic(
+  created_at  TIMESTAMPTZ  DEFAULT NOW(),
+  description TEXT,
+  id          VARCHAR(100) PRIMARY KEY,
+  name        VARCHAR(40)  NOT NULL,
+  name_tokens TEXT         NOT NULL
+);
+
+CREATE UNIQUE INDEX topic_unique_name_idx
+  ON topic (LOWER(name));
+
+DROP TABLE IF EXISTS study_topic CASCADE;
+CREATE TABLE study_topic(
+  created_at TIMESTAMPTZ  DEFAULT NOW(),
+  study_id   VARCHAR(100),
+  topic_id   VARCHAR(100),
+  PRIMARY KEY (study_id, topic_id),
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (topic_id)
+    REFERENCES topic (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
 
 DROP TABLE IF EXISTS user_asset CASCADE;
 CREATE TABLE user_asset(
@@ -452,9 +418,9 @@ CREATE TABLE user_asset(
   id            VARCHAR(100) PRIMARY KEY,
   key           TEXT         NOT NULL,
   name          TEXT         NOT NULL,
+  name_tokens   TEXT         NOT NULL,
   original_name TEXT         NOT NULL, 
   published_at  TIMESTAMPTZ,
-  search_vector TSVECTOR     NOT NULL,
   size          BIGINT       NOT NULL,
   study_id      VARCHAR(100) NOT NULL,
   subtype       TEXT         NOT NULL,
@@ -487,3 +453,197 @@ CREATE TRIGGER user_asset_update_name_tokens
 CREATE TRIGGER user_asset_updated_at_modtime
   BEFORE UPDATE ON user_asset
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+
+
+CREATE VIEW user_master AS
+SELECT
+  account.created_at,
+  account.id,
+  account.login,
+  account.name,
+  account.profile,
+  email.value public_email,
+  account.updated_at
+FROM account
+LEFT JOIN email ON email.user_id = account.id
+  AND email.public = TRUE;
+
+CREATE VIEW user_credentials AS
+SELECT
+  account.id,
+  account.login,
+  account.password,
+  ARRAY(
+    SELECT role.name
+    FROM role
+    LEFT JOIN user_role ON user_role.user_id = account.id
+    WHERE role.id = user_role.role_id
+  ) roles
+FROM account;
+
+CREATE MATERIALIZED VIEW user_search_index AS
+SELECT
+  *,
+  setweight(to_tsvector('simple', login), 'A') ||
+  setweight(to_tsvector('simple', coalesce(name, '')), 'A') ||
+  setweight(to_tsvector('simple', coalesce(profile, '')), 'B') ||
+  setweight(to_tsvector('simple', coalesce(public_email, '')), 'B') as document
+FROM user_master;
+
+CREATE UNIQUE INDEX user_search_index_id_unique_idx
+  ON user_search_index (id);
+
+CREATE INDEX user_search_index_fts_idx
+  ON user_search_index USING gin(document);
+
+CREATE VIEW study_master AS
+SELECT
+  study.advanced_at,
+  study.created_at,
+  study.description,
+  study.id,
+  study.name,
+  study.updated_at,
+  study.user_id,
+  account.login user_login
+FROM study
+JOIN account ON account.id = study.user_id;
+
+CREATE MATERIALIZED VIEW study_search_index AS
+SELECT
+  study.advanced_at,
+  study.created_at,
+  study.description,
+  study.id,
+  study.name,
+  study.updated_at,
+  study.user_id,
+  account.login user_login,
+  setweight(to_tsvector('english', study.name_tokens), 'A') ||
+  setweight(to_tsvector('english', coalesce(study.description, '')), 'B') ||
+  setweight(to_tsvector('simple', account.login), 'C') ||
+  setweight(to_tsvector('english', coalesce(string_agg(topic.name, ' '))), 'A') as document
+FROM study
+JOIN account ON account.id = study.user_id
+JOIN study_topic ON study_topic.study_id = study.id
+JOIN topic ON topic.id = study_topic.topic_id
+GROUP BY study.id, account.id;
+
+CREATE UNIQUE INDEX study_search_index_id_unique_idx
+  ON study_search_index (id);
+
+CREATE INDEX study_search_index_fts_idx
+  ON study_search_index USING gin(document);
+
+CREATE VIEW lesson_master AS
+SELECT
+  lesson.body,
+  lesson.created_at,
+  lesson.id,
+  lesson.number,
+  lesson.published_at,
+  lesson.study_id,
+  study.name study_name,
+  lesson.title,
+  lesson.updated_at,
+  account.login user_login,
+FROM lesson
+JOIN study ON study.id = lesson.study_id
+JOIN account ON account.id = lesson.user_id;
+
+CREATE MATERIALIZED VIEW lesson_search_index AS
+SELECT
+  lesson.body,
+  lesson.created_at,
+  lesson.id,
+  lesson.number,
+  lesson.published_at,
+  lesson.study_id,
+  study.name study_name,
+  lesson.title,
+  lesson.updated_at,
+  account.login user_login,
+  setweight(to_tsvector('english', lesson.title_tokens), 'A') ||
+  setweight(to_tsvector('english', coalesce(lesson.body, '')), 'B') ||
+  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
+  setweight(to_tsvector('simple', account.login), 'C') ||
+  setweight(to_tsvector('english', coalesce(string_agg(label.name, ' '))), 'A') as document
+FROM lesson
+JOIN study ON study.id = lesson.study_id
+JOIN account ON account.id = lesson.user_id
+JOIN lesson_label ON lesson_label.lesson_id = lesson.id
+JOIN label ON label.id = lesson_label.label_id
+GROUP BY lesson.id, study.id, account.id;
+
+CREATE UNIQUE INDEX lesson_search_index_id_unique_idx
+  ON lesson_search_index (id);
+
+CREATE INDEX lesson_search_index_fts_idx
+  ON lesson_search_index USING gin(document);
+
+CREATE VIEW topic_master AS
+SELECT
+  description,
+  id,
+  name
+FROM topic;
+
+CREATE MATERIALIZED VIEW topic_search_index AS
+SELECT
+  description,
+  id,
+  name,
+  setweight(to_tsvector('simple', name_tokens), 'A') ||
+  setweight(to_tsvector('simple', description), 'B') as document
+FROM topic;
+
+CREATE UNIQUE INDEX topic_search_index_id_unique_idx
+  ON topic_search_index (id);
+
+CREATE INDEX topic_search_index_fts_idx
+  ON topic_search_index USING gin(document);
+
+CREATE VIEW user_asset_master AS
+SELECT
+  user_asset.created_at,
+  user_asset.id,
+  user_asset.key,
+  user_asset.name,
+  user_asset.published_at,
+  user_asset.size,
+  study.name study_name,
+  user_asset.subtype,
+  user_asset.type,
+  account.login user_login,
+FROM user_asset
+JOIN study ON study.id = user_asset.study_id
+JOIN account ON account.id = user_asset.user_id;
+
+CREATE MATERIALIZED VIEW user_asset_search_index AS
+SELECT
+  user_asset.created_at,
+  user_asset.id,
+  user_asset.key,
+  user_asset.name,
+  user_asset.published_at,
+  user_asset.size,
+  study.name study_name,
+  user_asset.subtype,
+  user_asset.type,
+  account.login user_login,
+  setweight(to_tsvector('simple', user_asset.name_tokens), 'A') ||
+  setweight(to_tsvector('english', user_asset.type), 'A') ||
+  setweight(to_tsvector('simple', user_asset.subtype), 'C') ||
+  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
+  setweight(to_tsvector('simple', account.login), 'C') AS document
+FROM user_asset
+JOIN study ON study.id = user_asset.study_id
+JOIN account ON account.id = user_asset.user_id
+GROUP BY user_asset.id, study.id, account.id;
+
+CREATE UNIQUE INDEX user_asset_search_index_id_unique_idx
+  ON user_asset_search_index (id);
+
+CREATE INDEX user_asset_search_index_fts_idx
+  ON user_asset_search_index USING gin(document);

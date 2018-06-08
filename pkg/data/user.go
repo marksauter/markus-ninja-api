@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -20,8 +19,6 @@ type User struct {
 	PrimaryEmail Email              `db:"primary_email" permit:"create"`
 	Profile      pgtype.Text        `db:"profile" permit:"read"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
-	SearchRank   pgtype.Float4      `db:"search_rank"`
-	SearchTokens pgtype.TextArray   `db:"search_tokens"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
@@ -36,8 +33,8 @@ type UserService struct {
 
 const countUserBySearchSQL = `
 	SELECT COUNT(*)
-	FROM account
-	WHERE search_tokens @@ to_tsquery('simple', $1)
+	FROM user_search_index
+	WHERE document @@ to_tsquery('english', $1)
 `
 
 func (s *UserService) CountBySearch(query string) (int32, error) {
@@ -59,8 +56,9 @@ const batchGetUserSQL = `
 		login,
 		name,
 		profile,
+		public_email,
 		updated_at
-	FROM account
+	FROM user_master
 	WHERE id = ANY($1)
 `
 
@@ -83,7 +81,6 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*User, erro
 		&row.Profile,
 		&row.PublicEmail,
 		&row.UpdatedAt,
-		&row.Roles,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -93,73 +90,6 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*User, erro
 	}
 
 	return &row, nil
-}
-
-func (s *UserService) getConnection(
-	name string,
-	whereSQL string,
-	args pgx.QueryArgs,
-	po *PageOptions,
-) ([]*User, error) {
-	if po == nil {
-		return nil, ErrEmptyPageOptions
-	}
-	var joins, whereAnds []string
-	field := po.Order.Field()
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN account u2 ON u2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND u1.`+field+` >= u2.`+field)
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN account u3 ON u3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND u1.`+field+` <= u3.`+field)
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			u1.created_at,
-			u1.id,
-			u1.login,
-			u1.name,
-			u1.profile,
-			e.value public_email,
-			u1.updated_at
-		FROM account u1 ` +
-		strings.Join(joins, " ") + `
-		LEFT JOIN email e ON e.user_id = u1.id
-			AND e.public = TRUE
-		WHERE ` + whereSQL + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY u1.` + field + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po != nil && po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			field,
-			po.Order.Direction(),
-		)
-	}
-
-	psName := preparedName(name, sql)
-
-	return s.getMany(psName, sql, args...)
 }
 
 func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*User, error) {
@@ -194,26 +124,15 @@ func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*
 
 const getUserByIdSQL = `  
 	SELECT
-		a.created_at,
-		a.id,
-		a.login,
-		a.name,
-		a.profile,
-		e.value public_email,
-		a.updated_at,
-		ARRAY(
-			SELECT
-				r.name
-			FROM
-				role r
-			INNER JOIN user_role ur ON ur.user_id = a.id
-			WHERE
-				r.id = ur.role_id
-		) roles
-	FROM account a
-	LEFT JOIN email e ON e.user_id = a.id
-		AND e.public = TRUE
-	WHERE a.id = $1
+		created_at,
+		id,
+		login,
+		name,
+		profile,
+		public_email,
+		updated_at
+	FROM user_master
+	WHERE id = $1
 `
 
 func (s *UserService) Get(id string) (*User, error) {
@@ -223,26 +142,15 @@ func (s *UserService) Get(id string) (*User, error) {
 
 const getUserByLoginSQL = `
 	SELECT
-		a.created_at,
-		a.id,
-		a.login,
-		a.name,
-		a.profile,
-		e.value public_email,
-		a.updated_at,
-		ARRAY(
-			SELECT
-				r.name
-			FROM
-				role r
-			INNER JOIN user_role ur ON ur.user_id = a.id
-			WHERE
-				r.id = ur.role_id
-		) roles
-	FROM account a
-	LEFT JOIN email e ON e.user_id = a.id
-		AND e.public = TRUE
-	WHERE LOWER(a.login) = LOWER($1)
+		created_at,
+		id,
+		login,
+		name,
+		profile,
+		public_email,
+		updated_at
+	FROM user_master
+	WHERE LOWER(login) = LOWER($1)
 `
 
 func (s *UserService) GetByLogin(login string) (*User, error) {
@@ -260,6 +168,7 @@ func (s *UserService) getCredentials(
 		&row.Id,
 		&row.Login,
 		&row.Password,
+		&row.Roles,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -271,12 +180,30 @@ func (s *UserService) getCredentials(
 	return &row, nil
 }
 
+const getUserCredentialsSQL = `  
+	SELECT
+		id,
+		login,
+		password,
+		roles
+	FROM user_credentials
+	WHERE id = $1
+`
+
+func (s *UserService) GetCredentials(
+	id string,
+) (*User, error) {
+	mylog.Log.WithField("id", id).Info("User.GetCredentials(id)")
+	return s.getCredentials("getUserCredentials", getUserCredentialsSQL, id)
+}
+
 const getUserCredentialsByLoginSQL = `  
 	SELECT
 		id,
 		login,
-		password
-	FROM account
+		password,
+		roles
+	FROM user_credentials
 	WHERE LOWER(login) = LOWER($1)
 `
 
@@ -289,13 +216,14 @@ func (s *UserService) GetCredentialsByLogin(
 
 const getUserCredentialsByEmailSQL = `
 	SELECT
-		a.id,
-		a.login,
-		a.password
-	FROM account a
+		u.id,
+		u.login,
+		u.password,
+		u.roles
+	FROM user_credentials u
 	INNER JOIN email e ON LOWER(e.value) = LOWER($1)
 		AND e.type = ANY('{"PRIMARY", "BACKUP"}')
-	WHERE a.id = e.user_id
+	WHERE u.id = e.user_id
 `
 
 func (s *UserService) GetCredentialsByEmail(
@@ -325,10 +253,10 @@ func (s *UserService) Create(row *User) error {
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
-		searchArray := &pgtype.TextArray{}
-		searchArray.Set(util.Split(row.Name.String, userDelimeter))
-		columns = append(columns, "search_array")
-		values = append(values, args.Append(searchArray))
+		nameTokens := &pgtype.TextArray{}
+		nameTokens.Set(util.Split(row.Name.String, userDelimeter))
+		columns = append(columns, "name_tokens")
+		values = append(values, args.Append(nameTokens))
 	}
 	if row.Login.Status != pgtype.Undefined {
 		columns = append(columns, `login`)
@@ -412,65 +340,41 @@ func (s *UserService) Delete(id string) error {
 	return nil
 }
 
-func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
-	mylog.Log.WithField("query", query).Info("User.Search(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	tsQuery := ToTsQuery(query)
-	tmplArgs := &SQLTemplateArgs{
-		Select: `
-			{{.As}}.created_at,
-			{{.As}}.id,
-			{{.As}}.login,
-			{{.As}}.name,
-			{{.As}}.profile,
-			e.value public_email,
-			ts_rank(a.search_tokens, query, 8) search_rank,
-			{{.As}}.updated_at
-		`,
-		From: `to_tsquery('simple', ` + args.Append(tsQuery) + `) query, account {{.As}}`,
-		As:   "a",
-		Joins: `
-			LEFT JOIN email e ON e.user_id = {{.As}}.id
-				AND e.public = TRUE
-		`,
-		Where: `{{.As}}.search_tokens @@ query`,
-	}
-	sql, err := po.SQL(tmplArgs, &args)
+const refreshUserSearchIndexSQL = `
+	REFRESH MATERIALIZED VIEW CONCURRENTLY user_search_index
+`
+
+func (s *UserService) RefreshSearchIndex() error {
+	mylog.Log.Info("User.RefreshSearchIndex()")
+	_, err := prepareExec(
+		s.db,
+		"refreshUserSearchIndex",
+		refreshUserSearchIndexSQL,
+	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var rows []*User
+	return nil
+}
+
+func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
+	mylog.Log.WithField("query", query).Info("User.Search(query)")
+	selects := []string{
+		"created_at",
+		"id",
+		"login",
+		"name",
+		"profile",
+		"public_email",
+		"updated_at",
+	}
+	from := "user_search_index"
+	sql, args := po.SearchSQL(selects, from, query)
 
 	psName := preparedName("searchUsersByName", sql)
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row User
-		dbRows.Scan(
-			&row.CreatedAt,
-			&row.Id,
-			&row.Login,
-			&row.Name,
-			&row.Profile,
-			&row.PublicEmail,
-			&row.SearchRank,
-			&row.UpdatedAt,
-		)
-		mylog.Log.Debug(row.SearchRank.Float)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
-		return nil, err
-	}
-
-	return rows, nil
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *UserService) Update(row *User) error {
@@ -484,9 +388,9 @@ func (s *UserService) Update(row *User) error {
 	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
-		searchArray := &pgtype.TextArray{}
-		searchArray.Set(util.Split(row.Name.String, userDelimeter))
-		sets = append(sets, `search_array`+"="+args.Append(searchArray))
+		nameTokens := &pgtype.TextArray{}
+		nameTokens.Set(util.Split(row.Name.String, userDelimeter))
+		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 	if row.Password.Status != pgtype.Undefined {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
@@ -500,20 +404,20 @@ func (s *UserService) Update(row *User) error {
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
 		RETURNING
-			profile,
 			created_at,
 			login,
 			name,
+			profile,
 			updated_at
 	`
 
 	psName := preparedName("updateUser", sql)
 
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.Profile,
 		&row.CreatedAt,
 		&row.Login,
 		&row.Name,
+		&row.Profile,
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {

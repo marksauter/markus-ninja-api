@@ -20,9 +20,11 @@ type Lesson struct {
 	Number      pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
 	StudyId     mytype.OID         `db:"study_id" permit:"read"`
+	StudyName   pgtype.Text        `db:"study_name"`
 	Title       pgtype.Text        `db:"title" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserLogin   pgtype.Text        `db:"user_login"`
 }
 
 func NewLessonService(db Queryer) *LessonService {

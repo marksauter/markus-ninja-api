@@ -18,9 +18,9 @@ type Study struct {
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
-	NameTokens  pgtype.TextArray   `db:"name_tokens"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserLogin   pgtype.Text        `db:"user_login"`
 }
 
 func NewStudyService(db Queryer) *StudyService {
@@ -51,8 +51,8 @@ func (s *StudyService) CountByUser(userId string) (int32, error) {
 
 const countStudyBySearchSQL = `
 	SELECT COUNT(*)
-	FROM study
-	WHERE name_tokens @@ to_tsquery('simple', $1)
+	FROM study_search_index
+	WHERE document @@ to_tsquery('english', $1)
 `
 
 func (s *StudyService) CountBySearch(query string) (int32, error) {
@@ -77,6 +77,7 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 		&row.Name,
 		&row.UpdatedAt,
 		&row.UserId,
+		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -173,6 +174,7 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 			&row.Name,
 			&row.UpdatedAt,
 			&row.UserId,
+			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -195,8 +197,9 @@ const getStudyByIdSQL = `
 		id,
 		name,
 		updated_at,
-		user_id
-	FROM study
+		user_id,
+		user_login
+	FROM study_master
 	WHERE id = $1
 `
 
@@ -218,15 +221,16 @@ func (s *StudyService) GetByUser(
 
 const getStudyByNameSQL = `
 	SELECT
-		s.advanced_at,
-		s.created_at,
-		s.description,
-		s.id,
-		s.name,
-		s.updated_at,
-		s.user_id
-	FROM study s
-	WHERE s.user_id = $1 AND LOWER(s.name) = LOWER($2)
+		advanced_at,
+		created_at,
+		description,
+		id,
+		name,
+		updated_at,
+		user_id,
+		user_login
+	FROM study_master
+	WHERE user_id = $1 AND LOWER(name) = LOWER($2)
 `
 
 func (s *StudyService) GetByName(userId, name string) (*Study, error) {
@@ -245,7 +249,8 @@ const getStudyByUserAndNameSQL = `
 		s.id,
 		s.name,
 		s.updated_at,
-		s.user_id
+		s.user_id,
+		a.login user_login
 	FROM study s
 	INNER JOIN account a ON a.login = $1
 	WHERE s.user_id = a.id AND LOWER(s.name) = LOWER($2)  
@@ -281,10 +286,10 @@ func (s *StudyService) Create(row *Study) error {
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
-		nameArray := &pgtype.TextArray{}
-		nameArray.Set(util.Split(row.Name.String, studyDelimeter))
-		columns = append(columns, "name_array")
-		values = append(values, args.Append(nameArray))
+		nameTokens := &pgtype.TextArray{}
+		nameTokens.Set(util.Split(row.Name.String, studyDelimeter))
+		columns = append(columns, "name_tokens")
+		values = append(values, args.Append(nameTokens))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -341,13 +346,42 @@ func (s *StudyService) Delete(id string) error {
 	return nil
 }
 
+const refreshStudySearchIndexSQL = `
+	REFRESH MATERIALIZED VIEW CONCURRENTLY study_search_index
+`
+
+func (s *StudyService) RefreshSearchIndex() error {
+	mylog.Log.Info("Study.RefreshSearchIndex()")
+	_, err := prepareExec(
+		s.db,
+		"refreshStudySearchIndex",
+		refreshStudySearchIndexSQL,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *StudyService) Search(query string, po *PageOptions) ([]*Study, error) {
 	mylog.Log.WithField("query", query).Info("Study.Search(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `s1.name_tokens @@ to_tsquery('simple', ` +
-		args.Append(ToTsQuery(query)) + `)`
+	selects := []string{
+		"advanced_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "study_search_index"
+	sql, args := po.SearchSQL(selects, from, query)
 
-	return s.getConnection("searchStudiesByName", whereSQL, args, po)
+	psName := preparedName("searchStudiesByName", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *StudyService) Update(row *Study) error {
@@ -363,9 +397,9 @@ func (s *StudyService) Update(row *Study) error {
 	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
-		nameArray := &pgtype.TextArray{}
-		nameArray.Set(util.Split(row.Name.String, studyDelimeter))
-		sets = append(sets, `name_array`+"="+args.Append(nameArray))
+		nameTokens := &pgtype.TextArray{}
+		nameTokens.Set(util.Split(row.Name.String, studyDelimeter))
+		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
 	sql := `

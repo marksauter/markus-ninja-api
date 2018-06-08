@@ -1,11 +1,9 @@
 package data
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"hash/fnv"
-	"html/template"
 	"io"
 	"strings"
 
@@ -193,47 +191,99 @@ func (p *PageOptions) Limit() int32 {
 	return limit
 }
 
-type SQLTemplateArgs struct {
-	Select string
-	From   string
-	As     string
-	Joins  string
-	Where  string
-}
-
-func (p *PageOptions) SQL(tmplArgs *SQLTemplateArgs, queryArgs *pgx.QueryArgs) (string, error) {
+func (p *PageOptions) SQL(selects []string, from, where string) (string, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 	var joins, whereAnds []string
 	field := p.Order.Field()
 	if p.After != nil {
-		joins = append(joins, `INNER JOIN {{.From}} {{.As}}2 ON {{.As}}2.id = `+
-			queryArgs.Append(p.After.Value()),
-		)
-		whereAnds = append(whereAnds, `AND {{.As}}.`+field+` >= {{.As}}2.`+field)
+		joins = append(joins, fmt.Sprintf(
+			"INNER JOIN %s %s2 ON %s2.id = "+args.Append(p.After.Value()),
+			from,
+		))
+		whereAnds = append(whereAnds, fmt.Sprintf(
+			"AND %s.%s >= %s2.%s",
+			from,
+			field,
+			from,
+			field,
+		))
 	}
 	if p.Before != nil {
-		joins = append(joins, `INNER JOIN {{.From}} {{.As}}3 ON {{.As}}3.id = `+
-			queryArgs.Append(p.Before.Value()),
-		)
-		whereAnds = append(whereAnds, `AND {{.As}}.`+field+` <= {{.As}}3.`+field)
+		joins = append(joins, fmt.Sprintf(
+			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
+			from,
+		))
+		whereAnds = append(whereAnds, fmt.Sprintf(
+			"AND %s.%s >= %s3.%s",
+			from,
+			field,
+			from,
+			field,
+		))
 	}
-	tmpl := template.Must(
-		template.New("connection").Parse(`
-			SELECT 
-			` + tmplArgs.Select + `
-			FROM ` + tmplArgs.From +
-			strings.Join(joins, " ") +
-			tmplArgs.Joins + `
-			WHERE (` + tmplArgs.Where + `)
-			` + strings.Join(whereAnds, " ") + `
-			ORDER BY {{.As}}.` + field + ` ` + p.QueryDirection() + `
-			LIMIT ` + queryArgs.Append(p.Limit()),
-		),
-	)
 
-	var bs bytes.Buffer
-	err := tmpl.Execute(&bs, tmplArgs)
-	if err != nil {
-		return "", err
+	orderBy := from + "." + field
+	sql := `
+		SELECT 
+		` + strings.Join(selects, ",") + `
+		FROM ` + from + `
+		` + strings.Join(joins, " ") + `
+		WHERE ` + where + `
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY ` + orderBy + ` ` + p.QueryDirection() + `
+		LIMIT ` + args.Append(p.Limit())
+
+	return p.ReorderQuery(sql), nil
+}
+
+func (p *PageOptions) SearchSQL(selects []string, from, query string) (string, pgx.QueryArgs) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	var joins, whereAnds []string
+	field := p.Order.Field()
+	if p.After != nil {
+		joins = append(joins, fmt.Sprintf(
+			"INNER JOIN %s %s2 ON %s2.id = "+args.Append(p.After.Value()),
+			from,
+		))
+		whereAnds = append(whereAnds, fmt.Sprintf(
+			"AND %s.%s >= %s2.%s",
+			from,
+			field,
+			from,
+			field,
+		))
 	}
-	return p.ReorderQuery(bs.String()), nil
+	if p.Before != nil {
+		joins = append(joins, fmt.Sprintf(
+			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
+			from,
+		))
+		whereAnds = append(whereAnds, fmt.Sprintf(
+			"AND %s.%s >= %s3.%s",
+			from,
+			field,
+			from,
+			field,
+		))
+	}
+
+	orderBy := ""
+	if field != "best_match" {
+		orderBy = from + "." + field
+	} else {
+		orderBy = "ts_rank(document, query)"
+	}
+
+	tsquery := ToTsQuery(query)
+	sql := `
+		SELECT 
+		` + strings.Join(selects, ",") + `
+		FROM ` + from + `, to_tsquery('english',` + args.Append(tsquery) + `) query
+		` + strings.Join(joins, " ") + `
+		WHERE document @@ query
+		` + strings.Join(whereAnds, " ") + `
+		ORDER BY ` + orderBy + ` ` + p.QueryDirection() + `
+		LIMIT ` + args.Append(p.Limit())
+
+	return p.ReorderQuery(sql), args
 }
