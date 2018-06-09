@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -20,7 +19,7 @@ type Study struct {
 	Name        pgtype.Text        `db:"name" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin   pgtype.Text        `db:"user_login"`
+	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
 }
 
 func NewStudyService(db Queryer) *StudyService {
@@ -89,73 +88,6 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 	return &row, nil
 }
 
-const numConnArgs = 3
-
-func (s *StudyService) getConnection(
-	name string,
-	whereSQL string,
-	args pgx.QueryArgs,
-	po *PageOptions,
-) ([]*Study, error) {
-	if po == nil {
-		return nil, ErrEmptyPageOptions
-	}
-	var joins, whereAnds []string
-	field := po.Order.Field()
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN study s2 ON s2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND s1.`+field+` >= s2.`+field)
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN study s3 ON s3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND s1.`+field+` <= s3.`+field)
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			s1.advanced_at,
-			s1.created_at,
-			s1.description,
-			s1.id,
-			s1.name,
-			s1.updated_at,
-			s1.user_id
-		FROM study s1 ` +
-		strings.Join(joins, " ") + `
-		WHERE ` + whereSQL + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY s1.` + field + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po != nil && po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			field,
-			direction,
-		)
-	}
-
-	psName := preparedName(name, sql)
-
-	return s.getMany(psName, sql, args...)
-}
-
 func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
 	var rows []*Study
 
@@ -213,10 +145,25 @@ func (s *StudyService) GetByUser(
 	po *PageOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 	whereSQL := `s1.user_id = ` + args.Append(userId)
 
-	return s.getConnection("getStudiesByUserId", whereSQL, args, po)
+	selects := []string{
+		"advanced_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "study_master"
+	sql := po.SQL(selects, from, whereSQL, &args)
+
+	psName := preparedName("getStudiesByUserId", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 const getStudyByNameSQL = `
@@ -286,8 +233,8 @@ func (s *StudyService) Create(row *Study) error {
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
-		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(util.Split(row.Name.String, studyDelimeter))
+		nameTokens := &pgtype.Text{}
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
 	}
@@ -309,6 +256,7 @@ func (s *StudyService) Create(row *Study) error {
 	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.UpdatedAt,
+		&row.UserLogin,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create study")
@@ -379,7 +327,7 @@ func (s *StudyService) Search(query string, po *PageOptions) ([]*Study, error) {
 	from := "study_search_index"
 	sql, args := po.SearchSQL(selects, from, query)
 
-	psName := preparedName("searchStudiesByName", sql)
+	psName := preparedName("searchStudyIndex", sql)
 
 	return s.getMany(psName, sql, args...)
 }
@@ -398,7 +346,7 @@ func (s *StudyService) Update(row *Study) error {
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(util.Split(row.Name.String, studyDelimeter))
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 

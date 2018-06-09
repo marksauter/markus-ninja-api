@@ -112,6 +112,13 @@ func (r *StudyPermit) UserId() (*mytype.OID, error) {
 	return &r.study.UserId, nil
 }
 
+func (r *StudyPermit) UserLogin() (string, error) {
+	if ok := r.checkFieldPermission("user_login"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.study.UserLogin.String, nil
+}
+
 func NewStudyRepo(perms *PermRepo, svc *data.StudyService) *StudyRepo {
 	return &StudyRepo{
 		perms: perms,

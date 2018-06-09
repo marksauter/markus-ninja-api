@@ -234,6 +234,8 @@ func (s *LessonService) Get(id string) (*Lesson, error) {
 	return s.get("getLessonById", getLessonByIdSQL, id)
 }
 
+const numConnArgs = 3
+
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))

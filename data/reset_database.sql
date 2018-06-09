@@ -566,7 +566,7 @@ SELECT
   account.login user_login,
   setweight(to_tsvector('english', lesson.title_tokens), 'A') ||
   setweight(to_tsvector('english', coalesce(lesson.body, '')), 'B') ||
-  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
+  setweight(to_tsvector('english', study.name_tokens), 'C') ||
   setweight(to_tsvector('simple', account.login), 'C') ||
   setweight(to_tsvector('english', coalesce(string_agg(label.name, ' '))), 'A') as document
 FROM lesson
@@ -594,7 +594,7 @@ SELECT
   description,
   id,
   name,
-  setweight(to_tsvector('simple', name_tokens), 'A') ||
+  setweight(to_tsvector('english', name_tokens), 'A') ||
   setweight(to_tsvector('simple', description), 'B') as document
 FROM topic;
 
@@ -615,7 +615,7 @@ SELECT
   study.name study_name,
   user_asset.subtype,
   user_asset.type,
-  account.login user_login,
+  account.login user_login
 FROM user_asset
 JOIN study ON study.id = user_asset.study_id
 JOIN account ON account.id = user_asset.user_id;
@@ -632,10 +632,10 @@ SELECT
   user_asset.subtype,
   user_asset.type,
   account.login user_login,
-  setweight(to_tsvector('simple', user_asset.name_tokens), 'A') ||
+  setweight(to_tsvector('english', user_asset.name_tokens), 'A') ||
   setweight(to_tsvector('english', user_asset.type), 'A') ||
   setweight(to_tsvector('simple', user_asset.subtype), 'C') ||
-  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
+  setweight(to_tsvector('english', study.name_tokens), 'C') ||
   setweight(to_tsvector('simple', account.login), 'C') AS document
 FROM user_asset
 JOIN study ON study.id = user_asset.study_id

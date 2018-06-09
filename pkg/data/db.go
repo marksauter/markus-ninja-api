@@ -191,15 +191,27 @@ func (p *PageOptions) Limit() int32 {
 	return limit
 }
 
-func (p *PageOptions) SQL(selects []string, from, where string) (string, error) {
-	args := pgx.QueryArgs(make([]interface{}, 0, 3))
-	var joins, whereAnds []string
-	field := p.Order.Field()
+func (p *PageOptions) joins(from string, args *pgx.QueryArgs) []string {
+	var joins []string
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
 			"INNER JOIN %s %s2 ON %s2.id = "+args.Append(p.After.Value()),
 			from,
 		))
+	}
+	if p.Before != nil {
+		joins = append(joins, fmt.Sprintf(
+			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
+			from,
+		))
+	}
+	return joins
+}
+
+func (p *PageOptions) whereAnds(from string) []string {
+	var whereAnds []string
+	field := p.Order.Field()
+	if p.After != nil {
 		whereAnds = append(whereAnds, fmt.Sprintf(
 			"AND %s.%s >= %s2.%s",
 			from,
@@ -209,10 +221,6 @@ func (p *PageOptions) SQL(selects []string, from, where string) (string, error) 
 		))
 	}
 	if p.Before != nil {
-		joins = append(joins, fmt.Sprintf(
-			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
-			from,
-		))
 		whereAnds = append(whereAnds, fmt.Sprintf(
 			"AND %s.%s >= %s3.%s",
 			from,
@@ -221,8 +229,14 @@ func (p *PageOptions) SQL(selects []string, from, where string) (string, error) 
 			field,
 		))
 	}
+	return whereAnds
+}
 
-	orderBy := from + "." + field
+func (p *PageOptions) SQL(selects []string, from, where string, args *pgx.QueryArgs) string {
+	joins := p.joins(from, args)
+	whereAnds := p.whereAnds(from)
+
+	orderBy := from + "." + p.Order.Field()
 	sql := `
 		SELECT 
 		` + strings.Join(selects, ",") + `
@@ -233,40 +247,15 @@ func (p *PageOptions) SQL(selects []string, from, where string) (string, error) 
 		ORDER BY ` + orderBy + ` ` + p.QueryDirection() + `
 		LIMIT ` + args.Append(p.Limit())
 
-	return p.ReorderQuery(sql), nil
+	return p.ReorderQuery(sql)
 }
 
 func (p *PageOptions) SearchSQL(selects []string, from, query string) (string, pgx.QueryArgs) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	var joins, whereAnds []string
-	field := p.Order.Field()
-	if p.After != nil {
-		joins = append(joins, fmt.Sprintf(
-			"INNER JOIN %s %s2 ON %s2.id = "+args.Append(p.After.Value()),
-			from,
-		))
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %s.%s >= %s2.%s",
-			from,
-			field,
-			from,
-			field,
-		))
-	}
-	if p.Before != nil {
-		joins = append(joins, fmt.Sprintf(
-			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
-			from,
-		))
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %s.%s >= %s3.%s",
-			from,
-			field,
-			from,
-			field,
-		))
-	}
+	joins := p.joins(from, &args)
+	whereAnds := p.whereAnds(from)
 
+	field := p.Order.Field()
 	orderBy := ""
 	if field != "best_match" {
 		orderBy = from + "." + field

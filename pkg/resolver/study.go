@@ -304,11 +304,7 @@ func (r *studyResolver) NameWithOwner() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	owner, err := r.Owner()
-	if err != nil {
-		return "", err
-	}
-	ownerLogin, err := owner.Login()
+	ownerLogin, err := r.Study.UserLogin()
 	if err != nil {
 		return "", err
 	}
