@@ -239,7 +239,7 @@ func (s *UserService) GetCredentialsByEmail(
 	)
 }
 
-func (s *UserService) Create(row *User) error {
+func (s *UserService) Create(row *User) (*User, error) {
 	mylog.Log.Info("User.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -270,38 +270,32 @@ func (s *UserService) Create(row *User) error {
 	tx, err := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	createUserSQL := `
 		INSERT INTO account(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			created_at,
-			updated_at
 	`
 
 	psName := preparedName("createUser", createUserSQL)
 
-	err = prepareQueryRow(tx, psName, createUserSQL, args...).Scan(
-		&row.CreatedAt,
-		&row.UpdatedAt,
-	)
+	_, err = prepareExec(tx, psName, createUserSQL, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
 			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
 		mylog.Log.WithError(err).Error("error during query")
-		return err
+		return nil, err
 	}
 
 	row.PrimaryEmail.Type = NewEmailType(PrimaryEmail)
@@ -310,16 +304,22 @@ func (s *UserService) Create(row *User) error {
 	err = emailSvc.Create(&row.PrimaryEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user primary email")
-		return err
+		return nil, err
+	}
+
+	userSvc := NewUserService(tx)
+	user, err := userSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
-		return err
+		return nil, err
 	}
 
-	return nil
+	return user, nil
 }
 
 const deleteUserSQL = `
@@ -377,7 +377,7 @@ func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserService) Update(row *User) error {
+func (s *UserService) Update(row *User) (*User, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("User.Update()")
 
 	sets := make([]string, 0, 4)
@@ -399,46 +399,53 @@ func (s *UserService) Update(row *User) error {
 		sets = append(sets, `profile`+"="+args.Append(&row.Profile))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	sql := `
 		UPDATE account
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
-		RETURNING
-			created_at,
-			login,
-			name,
-			profile,
-			updated_at
 	`
 
 	psName := preparedName("updateUser", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.CreatedAt,
-		&row.Login,
-		&row.Name,
-		&row.Profile,
-		&row.UpdatedAt,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err == pgx.ErrNoRows {
-		return ErrNotFound
+		return nil, ErrNotFound
 	} else if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
 			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
 		mylog.Log.WithError(err).Error("error during query")
-		return err
+		return nil, err
 	}
 
-	return nil
+	userSvc := NewUserService(tx)
+	user, err := userSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func userDelimeter(r rune) bool {

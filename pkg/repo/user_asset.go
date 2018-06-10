@@ -187,14 +187,15 @@ func (r *UserAssetRepo) CountByStudy(userId, studyId string) (int32, error) {
 	return r.svc.CountByStudy(userId, studyId)
 }
 
-func (r *UserAssetRepo) Create(userAsset *data.UserAsset) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) Create(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, userAsset); err != nil {
+	if _, err := r.perms.Check(perm.Create, a); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(userAsset); err != nil {
+	userAsset, err := r.svc.Create(a)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
@@ -310,14 +311,15 @@ func (r *UserAssetRepo) GetByUser(
 	return userAssetPermits, nil
 }
 
-func (r *UserAssetRepo) Update(userAsset *data.UserAsset) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) Update(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, userAsset); err != nil {
+	if _, err := r.perms.Check(perm.Update, a); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Update(userAsset); err != nil {
+	userAsset, err := r.svc.Update(a)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -37,8 +36,8 @@ type LessonService struct {
 
 const countLessonBySearchSQL = `
 	SELECT COUNT(*)
-	FROM lesson
-	WHERE title_tokens @@ to_tsquery('simple', $1)
+	FROM lesson_search_index
+	WHERE document @@ to_tsquery('english', $1)
 `
 
 func (s *LessonService) CountBySearch(query string) (int32, error) {
@@ -101,9 +100,11 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyId,
+		&row.StudyName,
 		&row.Title,
 		&row.UpdatedAt,
 		&row.UserId,
+		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -113,73 +114,6 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 	}
 
 	return &row, nil
-}
-
-func (s *LessonService) getConnection(
-	name string,
-	whereSQL string,
-	args pgx.QueryArgs,
-	po *PageOptions,
-) ([]*Lesson, error) {
-	if po == nil {
-		return nil, ErrEmptyPageOptions
-	}
-	var joins, whereAnds []string
-	field := po.Order.Field()
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN lesson l2 ON l2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+field+` >= l2.`+field)
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN lesson l3 ON l3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND l1.`+field+` <= l3.`+field)
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	sql := `
-		SELECT
-			l1.body,
-			l1.created_at,
-			l1.id,
-			l1.number,
-			l1.published_at,
-			l1.study_id,
-			l1.title,
-			l1.updated_at,
-			l1.user_id
-		FROM lesson l1 ` +
-		strings.Join(joins, " ") + `
-		WHERE ` + whereSQL + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY l1.` + field + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			field,
-			direction,
-		)
-	}
-
-	psName := preparedName(name, sql)
-
-	return s.getMany(psName, sql, args...)
 }
 
 func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([]*Lesson, error) {
@@ -199,9 +133,11 @@ func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyId,
+			&row.StudyName,
 			&row.Title,
 			&row.UpdatedAt,
 			&row.UserId,
+			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -222,10 +158,12 @@ const getLessonByIdSQL = `
 		number,
 		published_at,
 		study_id,
+		study_name,
 		title,
 		updated_at,
-		user_id
-	FROM lesson
+		user_id,
+		user_login
+	FROM lesson_master
 	WHERE id = $1
 `
 
@@ -238,10 +176,28 @@ const numConnArgs = 3
 
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `l1.user_id = ` + args.Append(userId)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `lesson.user_id = ` + args.Append(userId)
 
-	return s.getConnection("getLessonsByUser", whereSQL, args, po)
+	selects := []string{
+		"body",
+		"created_at",
+		"id",
+		"number",
+		"published_at",
+		"study_id",
+		"study_name",
+		"title",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "lesson_master"
+	sql := po.SQL(selects, from, whereSQL, &args)
+
+	psName := preparedName("getLessonsByUser", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*Lesson, error) {
@@ -250,10 +206,28 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 	).Info("Lesson.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
 	whereSQL := `
-		li.user_id = ` + args.Append(userId) + ` AND
-		l1.study_id = ` + args.Append(studyId)
+		lesson.user_id = ` + args.Append(userId) + ` AND
+		lesson.study_id = ` + args.Append(studyId)
 
-	return s.getConnection("getLessonsByStudy", whereSQL, args, po)
+	selects := []string{
+		"body",
+		"created_at",
+		"id",
+		"number",
+		"published_at",
+		"study_id",
+		"study_name",
+		"title",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "lesson_master"
+	sql := po.SQL(selects, from, whereSQL, &args)
+
+	psName := preparedName("getLessonsByStudy", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 const getLessonByNumberSQL = `
@@ -264,10 +238,12 @@ const getLessonByNumberSQL = `
 		number,
 		published_at,
 		study_id,
+		study_name,
 		title,
 		updated_at,
-		user_id
-	FROM lesson
+		user_id,
+		user_login
+	FROM lesson_master
 	WHERE user_id = $1 AND study_id = $2 AND number = $3
 `
 
@@ -285,7 +261,7 @@ func (s *LessonService) GetByNumber(userId, studyId string, number int32) (*Less
 	)
 }
 
-func (s *LessonService) Create(row *Lesson) error {
+func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 	mylog.Log.Info("Lesson.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
@@ -315,10 +291,10 @@ func (s *LessonService) Create(row *Lesson) error {
 	if row.Title.Status != pgtype.Undefined {
 		columns = append(columns, "title")
 		values = append(values, args.Append(&row.Title))
-		titleArray := &pgtype.TextArray{}
-		titleArray.Set(util.Split(row.Title.String, lessonDelimeter))
-		columns = append(columns, "title_array")
-		values = append(values, args.Append(titleArray))
+		titleTokens := &pgtype.Text{}
+		titleTokens.Set(strings.Join(util.Split(row.Title.String, lessonDelimeter), " "))
+		columns = append(columns, "title_tokens")
+		values = append(values, args.Append(titleTokens))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -328,58 +304,58 @@ func (s *LessonService) Create(row *Lesson) error {
 	tx, err := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	sql := `
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			created_at,
-			updated_at
 	`
 
 	psName := preparedName("createLesson", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.CreatedAt,
-		&row.UpdatedAt,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create lesson")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
+	}
+
+	lessonSvc := NewLessonService(tx)
+	lesson, err := lessonSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
 	}
 
 	study := &Study{}
 	study.Id.Set(row.StudyId)
 	err = study.AdvancedAt.Set(time.Now())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	studySvc := NewStudyService(tx)
-	err = studySvc.Update(study)
+	studySvc := NewStudyService(s.db)
+	_, err = studySvc.Update(study)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return err
-	}
-
-	return nil
+	return lesson, nil
 }
 
 const deleteLessonSQl = `
@@ -400,16 +376,48 @@ func (s *LessonService) Delete(id string) error {
 	return nil
 }
 
-func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error) {
-	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `l1.title_tokens @@ to_tsquery('simple', ` +
-		args.Append(ToTsQuery(query)) + `)`
+const refreshLessonSearchIndexSQL = `
+	REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_search_index
+`
 
-	return s.getConnection("searchLessonsByTitle", whereSQL, args, po)
+func (s *LessonService) RefreshSearchIndex() error {
+	mylog.Log.Info("Lesson.RefreshSearchIndex()")
+	_, err := prepareExec(
+		s.db,
+		"refreshLessonSearchIndex",
+		refreshLessonSearchIndexSQL,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (s *LessonService) Update(row *Lesson) error {
+func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error) {
+	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
+	selects := []string{
+		"body",
+		"created_at",
+		"id",
+		"number",
+		"published_at",
+		"study_id",
+		"study_name",
+		"title",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "lesson_search_index"
+	sql, args := po.SearchSQL(selects, from, query)
+
+	psName := preparedName("searchLessonIndex", sql)
+
+	return s.getMany(psName, sql, args...)
+}
+
+func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("Lesson.Update(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
@@ -428,56 +436,57 @@ func (s *LessonService) Update(row *Lesson) error {
 	}
 	if row.Title.Status != pgtype.Undefined {
 		sets = append(sets, `title`+"="+args.Append(&row.Title))
-		titleArray := &pgtype.TextArray{}
-		titleArray.Set(util.Split(row.Title.String, lessonDelimeter))
-		sets = append(sets, `title_array`+"="+args.Append(titleArray))
+		titleTokens := &pgtype.Text{}
+		titleTokens.Set(strings.Join(util.Split(row.Title.String, lessonDelimeter), " "))
+		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
+
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
 
 	sql := `
 		UPDATE lesson
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
-		RETURNING
-			body,
-			created_at,
-			number,
-			published_at,
-			study_id,
-			title,
-			updated_at,
-			user_id
 	`
 
 	psName := preparedName("updateLesson", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.Body,
-		&row.CreatedAt,
-		&row.Number,
-		&row.PublishedAt,
-		&row.StudyId,
-		&row.Title,
-		&row.UpdatedAt,
-		&row.UserId,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err == pgx.ErrNoRows {
-		return ErrNotFound
+		return nil, ErrNotFound
 	} else if err != nil {
 		mylog.Log.WithError(err).Error("failed to create lesson")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	lessonSvc := NewLessonService(tx)
+	lesson, err := lessonSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return lesson, nil
 }
 
 func lessonDelimeter(r rune) bool {

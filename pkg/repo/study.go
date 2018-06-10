@@ -165,19 +165,20 @@ func (r *StudyRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
-func (r *StudyRepo) Create(study *data.Study) (*StudyPermit, error) {
+func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, study); err != nil {
+	if _, err := r.perms.Check(perm.Create, s); err != nil {
 		return nil, err
 	}
-	name := strings.TrimSpace(study.Name.String)
-	toKabob := regexp.MustCompile(`\s+`)
-	if err := study.Name.Set(toKabob.ReplaceAllString(name, "-")); err != nil {
+	name := strings.TrimSpace(s.Name.String)
+	innerSpace := regexp.MustCompile(`\s+`)
+	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(study); err != nil {
+	study, err := r.svc.Create(s)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, study)
@@ -284,14 +285,15 @@ func (r *StudyRepo) Search(query string, po *data.PageOptions) ([]*StudyPermit, 
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) Update(study *data.Study) (*StudyPermit, error) {
+func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, study); err != nil {
+	if _, err := r.perms.Check(perm.Update, s); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Update(study); err != nil {
+	study, err := r.svc.Update(s)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, study)

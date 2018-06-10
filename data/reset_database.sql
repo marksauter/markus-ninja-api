@@ -523,11 +523,11 @@ SELECT
   setweight(to_tsvector('english', study.name_tokens), 'A') ||
   setweight(to_tsvector('english', coalesce(study.description, '')), 'B') ||
   setweight(to_tsvector('simple', account.login), 'C') ||
-  setweight(to_tsvector('english', coalesce(string_agg(topic.name, ' '))), 'A') as document
+  setweight(to_tsvector('english', coalesce(string_agg(topic.name, ' '), '')), 'A') as document
 FROM study
 JOIN account ON account.id = study.user_id
-JOIN study_topic ON study_topic.study_id = study.id
-JOIN topic ON topic.id = study_topic.topic_id
+LEFT JOIN study_topic ON study_topic.study_id = study.id
+LEFT JOIN topic ON topic.id = study_topic.topic_id
 GROUP BY study.id, account.id;
 
 CREATE UNIQUE INDEX study_search_index_id_unique_idx
@@ -547,7 +547,8 @@ SELECT
   study.name study_name,
   lesson.title,
   lesson.updated_at,
-  account.login user_login,
+  lesson.user_id,
+  account.login user_login
 FROM lesson
 JOIN study ON study.id = lesson.study_id
 JOIN account ON account.id = lesson.user_id;
@@ -563,17 +564,18 @@ SELECT
   study.name study_name,
   lesson.title,
   lesson.updated_at,
+  lesson.user_id,
   account.login user_login,
-  setweight(to_tsvector('english', lesson.title_tokens), 'A') ||
+  setweight(to_tsvector('simple', lesson.title_tokens), 'A') ||
   setweight(to_tsvector('english', coalesce(lesson.body, '')), 'B') ||
-  setweight(to_tsvector('english', study.name_tokens), 'C') ||
+  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
   setweight(to_tsvector('simple', account.login), 'C') ||
-  setweight(to_tsvector('english', coalesce(string_agg(label.name, ' '))), 'A') as document
+  setweight(to_tsvector('simple', coalesce(string_agg(label.name, ' '), '')), 'A') as document
 FROM lesson
 JOIN study ON study.id = lesson.study_id
 JOIN account ON account.id = lesson.user_id
-JOIN lesson_label ON lesson_label.lesson_id = lesson.id
-JOIN label ON label.id = lesson_label.label_id
+LEFT JOIN lesson_label ON lesson_label.lesson_id = lesson.id
+LEFT JOIN label ON label.id = lesson_label.label_id
 GROUP BY lesson.id, study.id, account.id;
 
 CREATE UNIQUE INDEX lesson_search_index_id_unique_idx
@@ -594,7 +596,7 @@ SELECT
   description,
   id,
   name,
-  setweight(to_tsvector('english', name_tokens), 'A') ||
+  setweight(to_tsvector('simple', name_tokens), 'A') ||
   setweight(to_tsvector('simple', description), 'B') as document
 FROM topic;
 
@@ -610,11 +612,14 @@ SELECT
   user_asset.id,
   user_asset.key,
   user_asset.name,
+  user_asset.original_name,
   user_asset.published_at,
   user_asset.size,
+  user_asset.study_id,
   study.name study_name,
   user_asset.subtype,
   user_asset.type,
+  user_asset.user_id,
   account.login user_login
 FROM user_asset
 JOIN study ON study.id = user_asset.study_id
@@ -626,13 +631,16 @@ SELECT
   user_asset.id,
   user_asset.key,
   user_asset.name,
+  user_asset.original_name,
   user_asset.published_at,
   user_asset.size,
+  user_asset.study_id,
   study.name study_name,
   user_asset.subtype,
   user_asset.type,
+  user_asset.user_id,
   account.login user_login,
-  setweight(to_tsvector('english', user_asset.name_tokens), 'A') ||
+  setweight(to_tsvector('simple', user_asset.name_tokens), 'A') ||
   setweight(to_tsvector('english', user_asset.type), 'A') ||
   setweight(to_tsvector('simple', user_asset.subtype), 'C') ||
   setweight(to_tsvector('english', study.name_tokens), 'C') ||

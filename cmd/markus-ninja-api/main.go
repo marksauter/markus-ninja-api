@@ -211,7 +211,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	guest.Login.Set("guest")
 	guest.Password.Set("guest")
 	guest.PrimaryEmail.Value.Set("guest@rkus.ninja")
-	if err := svcs.User.Create(guest); err != nil {
+	if _, err := svcs.User.Create(guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to create guest account")
@@ -229,7 +229,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	markus.Login.Set("markus")
 	markus.Password.Set("fender917")
 	markus.PrimaryEmail.Value.Set("m@rkus.ninja")
-	if err := svcs.User.Create(markus); err != nil {
+	if _, err := svcs.User.Create(markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to create markus account")
@@ -274,5 +274,7 @@ func startRefreshMV(svcs *service.Services) {
 		go svcs.User.RefreshSearchIndex()
 		time.Sleep(time.Minute)
 		go svcs.Study.RefreshSearchIndex()
+		time.Sleep(time.Minute)
+		go svcs.Lesson.RefreshSearchIndex()
 	}
 }

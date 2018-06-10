@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -19,10 +18,12 @@ type UserAsset struct {
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"read"`
 	StudyId      mytype.OID         `db:"study_id" permit:"read"`
+	StudyName    pgtype.Text        `db:"study_name"`
 	Subtype      pgtype.Text        `db:"subtype" permit:"read"`
 	Type         pgtype.Text        `db:"type" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
+	UserLogin    pgtype.Text        `db:"user_login"`
 }
 
 func NewUserAssetService(db Queryer) *UserAssetService {
@@ -46,6 +47,24 @@ func (src UserAssetFilterOption) String() string {
 	default:
 		return ""
 	}
+}
+
+const countUserAssetBySearchSQL = `
+	SELECT COUNT(*)
+	FROM user_asset_search_index
+	WHERE document @@ to_tsquery('english', $1)
+`
+
+func (s *UserAssetService) CountBySearch(query string) (int32, error) {
+	mylog.Log.WithField("query", query).Info("UserAsset.CountBySearch(query)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserAssetBySearch",
+		countUserAssetBySearchSQL,
+		ToTsQuery(query),
+	).Scan(&n)
+	return n, err
 }
 
 const countUserAssetByStudySQL = `
@@ -100,10 +119,12 @@ func (s *UserAssetService) get(
 		&row.PublishedAt,
 		&row.Size,
 		&row.StudyId,
+		&row.StudyName,
 		&row.Subtype,
 		&row.Type,
 		&row.UpdatedAt,
 		&row.UserId,
+		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -113,86 +134,6 @@ func (s *UserAssetService) get(
 	}
 
 	return &row, nil
-}
-
-func (s *UserAssetService) getConnection(
-	name string,
-	whereSQL string,
-	args pgx.QueryArgs,
-	po *PageOptions,
-	opts ...UserAssetFilterOption,
-) ([]*UserAsset, error) {
-	if po == nil {
-		return nil, ErrEmptyPageOptions
-	}
-	var joins, whereAnds []string
-	field := po.Order.Field()
-	if po.After != nil {
-		joins = append(joins, `
-			INNER JOIN user_asset ua2 ON ua2.id = `+
-			args.Append(po.After.Value()),
-		)
-		whereAnds = append(whereAnds, `AND ua1.`+field+` >= ua2.`+field)
-	}
-	if po.Before != nil {
-		joins = append(joins, `
-			INNER JOIN user_asset ua3 ON ua3.id = `+
-			args.Append(po.Before.Value()),
-		)
-		whereAnds = append(whereAnds, `AND ua1.`+field+` <= ua3.`+field)
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	for _, o := range opts {
-		whereAnds = append(whereAnds, `AND ua1.`+o.String())
-	}
-
-	sql := `
-		SELECT
-			ua1.content_type,
-			ua1.created_at,
-			ua1.id,
-			ua1.key,
-			ua1.name,
-			ua1.original_name,
-			ua1.published_at,
-			ua1.size,
-			ua1.study_id,
-			ua1.updated_at,
-			ua1.user_id
-		FROM user_asset ua1 ` +
-		strings.Join(joins, " ") + `
-		WHERE ` + whereSQL + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY ua1.` + field + ` ` + direction.String() + `
-		LIMIT ` + args.Append(limit)
-
-	if po != nil && po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			field,
-			direction,
-		)
-	}
-
-	psName := preparedName(name, sql)
-
-	return s.getMany(psName, sql, args)
 }
 
 func (s *UserAssetService) getMany(
@@ -244,11 +185,13 @@ const getUserAssetByIdSQL = `
 		published_at,
 		size,
 		study_id,
+		study_name,
 		subtype,
 		type,
 		updated_at,
-		user_id
-	FROM user_asset
+		user_id,
+		user_login
+	FROM user_asset_master
 	WHERE id = $1
 `
 
@@ -267,11 +210,13 @@ const getUserAssetByNameSQL = `
 		published_at,
 		size,
 		study_id,
+		study_name,
 		subtype,
 		type,
 		updated_at,
-		user_id
-	FROM user_asset
+		user_id,
+		user_login
+	FROM user_asset_master
 	WHERE user_id = $1 AND study_id = $2 AND name = $2
 `
 
@@ -288,19 +233,20 @@ func (s *UserAssetService) GetByName(userId, studyId, name string) (*UserAsset, 
 
 const getAssetByUserStudyAndNameSQL = `
 	SELECT
-		ua.content_type,
 		ua.created_at,
 		ua.id,
 		ua.key,
 		ua.name,
-		ua.name original_name,
+		ua.original_name,
 		ua.published_at,
 		ua.size,
 		ua.study_id,
+		s.name study_name,
 		ua.subtype,
 		ua.type,
 		ua.updated_at,
-		ua.user_id
+		ua.user_id,
+		a.login user_login
 	FROM user_asset ua
 	INNER JOIN account a ON LOWER(a.login) = LOWER($1)
 	INNER JOIN study s ON s.user_id = a.id AND LOWER(s.name) = LOWER($2)
@@ -333,12 +279,33 @@ func (s *UserAssetService) GetByStudy(
 	mylog.Log.WithField(
 		"study_id", studyId.String,
 	).Info("UserAsset.GetByStudy(studyId)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
-		ua1.user_id = ` + args.Append(userId) + ` AND
-		ua1.study_id = ` + args.Append(studyId)
+		user_asset.user_id = ` + args.Append(userId) + ` AND
+		user_asset.study_id = ` + args.Append(studyId)
 
-	return s.getConnection("getUserAssetsByStudy", whereSQL, args, po, opts...)
+	selects := []string{
+		"created_at",
+		"id",
+		"key",
+		"name",
+		"original_name",
+		"published_at",
+		"size",
+		"study_id",
+		"study_name",
+		"subtype",
+		"type",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "user_asset_master"
+	sql := po.SQL(selects, from, whereSQL, &args)
+
+	psName := preparedName("getUserAssetsByStudy", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 func (s *UserAssetService) GetByUser(
@@ -350,12 +317,33 @@ func (s *UserAssetService) GetByUser(
 		"user_id", userId.String,
 	).Info("UserAsset.GetByUser(userId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `ua1.user_id = ` + args.Append(userId)
+	whereSQL := `user_asset.user_id = ` + args.Append(userId)
 
-	return s.getConnection("getUserAssetsByUser", whereSQL, args, po, opts...)
+	selects := []string{
+		"created_at",
+		"id",
+		"key",
+		"name",
+		"original_name",
+		"published_at",
+		"size",
+		"study_id",
+		"study_name",
+		"subtype",
+		"type",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "user_asset_master"
+	sql := po.SQL(selects, from, whereSQL, &args)
+
+	psName := preparedName("getUserAssetsByUser", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserAssetService) Create(row *UserAsset) error {
+func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 	mylog.Log.Info("Create() UserAsset")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
@@ -397,36 +385,49 @@ func (s *UserAssetService) Create(row *UserAsset) error {
 		values = append(values, args.Append(&row.UserId))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	sql := `
 		INSERT INTO user_asset(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			created_at,
-			updated_at
 	`
 
 	psName := preparedName("createUserAsset", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.CreatedAt,
-		&row.UpdatedAt,
-	)
+	_, err = prepareExec(s.db, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user_asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	userAssetSvc := NewUserAssetService(tx)
+	userAsset, err := userAssetSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return userAsset, nil
 }
 
 const deleteAssetSQl = `
@@ -446,7 +447,7 @@ func (s *UserAssetService) Delete(id string) error {
 	return nil
 }
 
-func (s *UserAssetService) Update(row *UserAsset) error {
+func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 	mylog.Log.Info("Update() UserAsset")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
@@ -456,8 +457,15 @@ func (s *UserAssetService) Update(row *UserAsset) error {
 	}
 
 	if len(sets) == 0 {
-		return nil
+		return nil, nil
 	}
+
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
 
 	sql := `
 		UPDATE user_asset
@@ -479,35 +487,35 @@ func (s *UserAssetService) Update(row *UserAsset) error {
 
 	psName := preparedName("updateAsset", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.CreatedAt,
-		&row.Key,
-		&row.Name,
-		&row.OriginalName,
-		&row.PublishedAt,
-		&row.Size,
-		&row.StudyId,
-		&row.Subtype,
-		&row.Type,
-		&row.UpdatedAt,
-		&row.UserId,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err == pgx.ErrNoRows {
-		return ErrNotFound
+		return nil, ErrNotFound
 	} else if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user_asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	userAssetSvc := NewUserAssetService(tx)
+	userAsset, err := userAssetSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return userAsset, nil
 }

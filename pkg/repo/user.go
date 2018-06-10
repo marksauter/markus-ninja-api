@@ -126,14 +126,15 @@ func (r *UserRepo) CountBySearch(query string) (int32, error) {
 	return r.svc.CountBySearch(query)
 }
 
-func (r *UserRepo) Create(user *data.User) (*UserPermit, error) {
+func (r *UserRepo) Create(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, user); err != nil {
+	if _, err := r.perms.Check(perm.Create, u); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(user); err != nil {
+	user, err := r.svc.Create(u)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, user)
@@ -205,14 +206,15 @@ func (r *UserRepo) Search(query string, po *data.PageOptions) ([]*UserPermit, er
 	return userPermits, nil
 }
 
-func (r *UserRepo) Update(user *data.User) (*UserPermit, error) {
+func (r *UserRepo) Update(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, user); err != nil {
+	if _, err := r.perms.Check(perm.Update, u); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Update(user); err != nil {
+	user, err := r.svc.Update(u)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, user)

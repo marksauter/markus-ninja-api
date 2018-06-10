@@ -144,14 +144,15 @@ func (r *LessonRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
 
-func (r *LessonRepo) Create(lesson *data.Lesson) (*LessonPermit, error) {
+func (r *LessonRepo) Create(l *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, lesson); err != nil {
+	if _, err := r.perms.Check(perm.Create, l); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(lesson); err != nil {
+	lesson, err := r.svc.Create(l)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
@@ -275,14 +276,15 @@ func (r *LessonRepo) Search(query string, po *data.PageOptions) ([]*LessonPermit
 	return lessonPermits, nil
 }
 
-func (r *LessonRepo) Update(lesson *data.Lesson) (*LessonPermit, error) {
+func (r *LessonRepo) Update(l *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, lesson); err != nil {
+	if _, err := r.perms.Check(perm.Update, l); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Update(lesson); err != nil {
+	lesson, err := r.svc.Update(l)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, lesson)

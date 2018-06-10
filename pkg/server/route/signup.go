@@ -92,23 +92,23 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user := &data.User{}
-	user.Login.Set(registration.Username)
-	user.PrimaryEmail.Value.Set(registration.Email)
+	u := &data.User{}
+	u.Login.Set(registration.Username)
+	u.PrimaryEmail.Value.Set(registration.Email)
 
-	if err := user.Password.Set(registration.Password); err != nil {
+	if err := u.Password.Set(registration.Password); err != nil {
 		response := myhttp.InvalidPasswordResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
+	if err := u.Password.CheckStrength(mytype.VeryWeak); err != nil {
 		response := myhttp.PasswordStrengthErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	err = h.Svcs.User.Create(user)
+	user, err := h.Svcs.User.Create(u)
 	if err != nil {
 		var response *myhttp.ErrorResponse
 		if dfErr, ok := err.(data.DataFieldError); ok {

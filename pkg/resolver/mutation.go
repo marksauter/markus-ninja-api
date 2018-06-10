@@ -608,7 +608,7 @@ func (r *RootResolver) ResetPassword(
 		return false, err
 	}
 
-	if err := r.Svcs.User.Update(user); err != nil {
+	if _, err := r.Svcs.User.Update(user); err != nil {
 		return false, myerr.UnexpectedError{"failed to update user"}
 	}
 

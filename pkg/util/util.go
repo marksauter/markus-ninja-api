@@ -78,8 +78,11 @@ func Split(s string, f func(rune) bool) []string {
 	firstSplit := strings.FieldsFunc(s, f)
 	secondSplit := []string{}
 	for _, v := range firstSplit {
-		secondSplit = append(secondSplit, v)
-		secondSplit = append(secondSplit, camelcase.Split(v)...)
+		camelcaseSplit := camelcase.Split(v)
+		if len(camelcaseSplit) > 1 {
+			secondSplit = append(secondSplit, v)
+		}
+		secondSplit = append(secondSplit, camelcaseSplit...)
 	}
 	for i, v := range secondSplit {
 		secondSplit[i] = strings.ToLower(v)

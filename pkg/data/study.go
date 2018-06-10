@@ -145,8 +145,8 @@ func (s *StudyService) GetByUser(
 	po *PageOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 3))
-	whereSQL := `s1.user_id = ` + args.Append(userId)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `study.user_id = ` + args.Append(userId)
 
 	selects := []string{
 		"advanced_at",
@@ -211,7 +211,7 @@ func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
 	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
 }
 
-func (s *StudyService) Create(row *Study) error {
+func (s *StudyService) Create(row *Study) (*Study, error) {
 	mylog.Log.Info("Study.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
@@ -243,37 +243,49 @@ func (s *StudyService) Create(row *Study) error {
 		values = append(values, args.Append(&row.UserId))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	sql := `
 		INSERT INTO study(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			created_at,
-			updated_at
 	`
 
 	psName := preparedName("createStudy", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.CreatedAt,
-		&row.UpdatedAt,
-		&row.UserLogin,
-	)
+	_, err = prepareExec(s.db, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create study")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	studySvc := NewStudyService(tx)
+	study, err := studySvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return study, nil
 }
 
 const deleteStudySQL = `
@@ -332,7 +344,7 @@ func (s *StudyService) Search(query string, po *PageOptions) ([]*Study, error) {
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *StudyService) Update(row *Study) error {
+func (s *StudyService) Update(row *Study) (*Study, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("Study.Update(id)")
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
@@ -350,49 +362,52 @@ func (s *StudyService) Update(row *Study) error {
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	sql := `
 		UPDATE study
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
-		RETURNING
-			advanced_at,
-			created_at,
-			description,
-			id,
-			name,
-			updated_at,
-			user_id
 	`
 
 	psName := preparedName("updateStudy", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.AdvancedAt,
-		&row.CreatedAt,
-		&row.Description,
-		&row.Id,
-		&row.Name,
-		&row.UpdatedAt,
-		&row.UserId,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err == pgx.ErrNoRows {
-		return ErrNotFound
+		return nil, ErrNotFound
 	} else if err != nil {
 		mylog.Log.WithError(err).Error("failed to update study")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	studySvc := NewStudyService(tx)
+	study, err := studySvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return study, nil
 }
 
 func studyDelimeter(r rune) bool {
