@@ -26,7 +26,7 @@ func (r *userResolver) Assets(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *UserAssetOrderArg
+		OrderBy *OrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
 	id, err := r.User.ID()

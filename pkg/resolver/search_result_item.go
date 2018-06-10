@@ -21,3 +21,8 @@ func (r *searchResultItemResolver) ToUser() (*userResolver, bool) {
 	user, ok := r.Item.(*repo.UserPermit)
 	return &userResolver{User: user, Repos: r.Repos}, ok
 }
+
+func (r *searchResultItemResolver) ToUserAsset() (*userAssetResolver, bool) {
+	userAsset, ok := r.Item.(*repo.UserAssetPermit)
+	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, ok
+}

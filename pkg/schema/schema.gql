@@ -43,6 +43,9 @@ type Query {
 
     # The types of search items to search within.
     type: SearchType!
+
+    # The ID of the node to search within.
+    within: ID
   ): SearchResultItemConnection!
 
   # Lookup a given study by the owner and study name.

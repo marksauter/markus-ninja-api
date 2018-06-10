@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -250,10 +251,24 @@ func (p *PageOptions) SQL(selects []string, from, where string, args *pgx.QueryA
 	return p.ReorderQuery(sql)
 }
 
-func (p *PageOptions) SearchSQL(selects []string, from, query string) (string, pgx.QueryArgs) {
+func (p *PageOptions) SearchSQL(
+	selects []string,
+	from string,
+	within *mytype.OID,
+	query string,
+) (string, pgx.QueryArgs) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	joins := p.joins(from, &args)
 	whereAnds := p.whereAnds(from)
+	if within != nil {
+		andIn := fmt.Sprintf(
+			"AND %s.%s = %s",
+			from,
+			within.DBVarName(),
+			args.Append(within),
+		)
+		whereAnds = append(whereAnds, andIn)
+	}
 
 	field := p.Order.Field()
 	orderBy := ""
@@ -267,7 +282,7 @@ func (p *PageOptions) SearchSQL(selects []string, from, query string) (string, p
 	sql := `
 		SELECT 
 		` + strings.Join(selects, ",") + `
-		FROM ` + from + `, to_tsquery('english',` + args.Append(tsquery) + `) query
+		FROM ` + from + `, to_tsquery('simple',` + args.Append(tsquery) + `) query
 		` + strings.Join(joins, " ") + `
 		WHERE document @@ query
 		` + strings.Join(whereAnds, " ") + `

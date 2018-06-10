@@ -11,6 +11,7 @@ const (
 	SearchTypeLesson SearchType = iota
 	SearchTypeStudy
 	SearchTypeUser
+	SearchTypeUserAsset
 )
 
 func ParseSearchType(s string) (SearchType, error) {
@@ -21,6 +22,8 @@ func ParseSearchType(s string) (SearchType, error) {
 		return SearchTypeStudy, nil
 	case "USER":
 		return SearchTypeUser, nil
+	case "USER_ASSET":
+		return SearchTypeUserAsset, nil
 	default:
 		var f SearchType
 		return f, fmt.Errorf("invalid SearchType: %q", s)
@@ -35,6 +38,8 @@ func (f SearchType) String() string {
 		return "study"
 	case SearchTypeUser:
 		return "user"
+	case SearchTypeUserAsset:
+		return "user_asset"
 	default:
 		return "unknown"
 	}

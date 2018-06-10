@@ -79,6 +79,8 @@ func ParseSearchOrder(t SearchType, arg *OrderArg) (data.Order, error) {
 		return ParseStudyOrder(arg)
 	case SearchTypeUser:
 		return ParseUserOrder(arg)
+	case SearchTypeUserAsset:
+		return ParseUserAssetOrder(arg)
 	default:
 
 		return nil, fmt.Errorf("invalid SearchType: %q", t)

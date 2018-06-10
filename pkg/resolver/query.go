@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -56,6 +57,12 @@ func (r *RootResolver) Node(
 			return nil, err
 		}
 		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
+	case "UserAsset":
+		userAsset, err := r.Repos.UserAsset().Get(args.Id)
+		if err != nil {
+			return nil, err
+		}
+		return &nodeResolver{&userAssetResolver{UserAsset: userAsset, Repos: r.Repos}}, nil
 	default:
 		return nil, errors.New("invalid id")
 	}
@@ -94,8 +101,20 @@ func (r *RootResolver) Search(
 		OrderBy *OrderArg
 		Query   string
 		Type    string
+		Within  *string
 	},
 ) (*searchResultItemConnectionResolver, error) {
+	var within *mytype.OID
+	if args.Within != nil {
+		var err error
+		within, err = mytype.ParseOID(*args.Within)
+		if err != nil {
+			return nil, err
+		}
+		if within.Type != "User" && within.Type != "Study" {
+			return nil, fmt.Errorf("cannot search within %s", within.Type)
+		}
+	}
 	searchType, err := ParseSearchType(args.Type)
 	if err != nil {
 		return nil, err
@@ -116,15 +135,19 @@ func (r *RootResolver) Search(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountBySearch(args.Query)
+	lessonCount, err := r.Repos.Lesson().CountBySearch(within, args.Query)
 	if err != nil {
 		return nil, err
 	}
-	studyCount, err := r.Repos.Study().CountBySearch(args.Query)
+	studyCount, err := r.Repos.Study().CountBySearch(within, args.Query)
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountBySearch(args.Query)
+	userCount, err := r.Repos.User().CountBySearch(within, args.Query)
+	if err != nil {
+		return nil, err
+	}
+	userAssetCount, err := r.Repos.UserAsset().CountBySearch(within, args.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +155,7 @@ func (r *RootResolver) Search(
 
 	switch searchType {
 	case SearchTypeLesson:
-		lessons, err := r.Repos.Lesson().Search(args.Query, pageOptions)
+		lessons, err := r.Repos.Lesson().Search(within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +164,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().Search(args.Query, pageOptions)
+		studies, err := r.Repos.Study().Search(within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -150,12 +173,21 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeUser:
-		users, err := r.Repos.User().Search(args.Query, pageOptions)
+		users, err := r.Repos.User().Search(within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
 		permits = make([]repo.Permit, len(users))
 		for i, l := range users {
+			permits[i] = l
+		}
+	case SearchTypeUserAsset:
+		userAssets, err := r.Repos.UserAsset().Search(within, args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(userAssets))
+		for i, l := range userAssets {
 			permits[i] = l
 		}
 	}
@@ -167,6 +199,7 @@ func (r *RootResolver) Search(
 		lessonCount,
 		studyCount,
 		userCount,
+		userAssetCount,
 	)
 }
 

@@ -12,8 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Study struct {
-	AdvancedAt  pgtype.Timestamptz `db:"advanced_at" permit:"read"`
+type Topic struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
@@ -23,38 +22,38 @@ type Study struct {
 	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
 }
 
-func NewStudyService(db Queryer) *StudyService {
-	return &StudyService{db}
+func NewTopicService(db Queryer) *TopicService {
+	return &TopicService{db}
 }
 
-type StudyService struct {
+type TopicService struct {
 	db Queryer
 }
 
-const countStudyByUserSQL = `
+const countTopicByUserSQL = `
 	SELECT COUNT(*)
-	FROM study
+	FROM topic
 	WHERE user_id = $1
 `
 
-func (s *StudyService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.CountByUser(user_id)")
+func (s *TopicService) CountByUser(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("Topic.CountByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countStudyByUser",
-		countStudyByUserSQL,
+		"countTopicByUser",
+		countTopicByUserSQL,
 		userId,
 	).Scan(&n)
 	return n, err
 }
 
-func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("Study.CountBySearch(query)")
+func (s *TopicService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("Topic.CountBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
-		FROM study_search_index
+		FROM topic_search_index
 		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
 	`
 	if within != nil {
@@ -63,21 +62,21 @@ func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32,
 			return
 		}
 		andIn := fmt.Sprintf(
-			"AND study_search_index.%s = %s",
+			"AND topic_search_index.%s = %s",
 			within.DBVarName(),
 			args.Append(within),
 		)
 		sql = sql + andIn
 	}
 
-	psName := preparedName("countStudyBySearch", sql)
+	psName := preparedName("countTopicBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
 	return
 }
 
-func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study, error) {
-	var row Study
+func (s *TopicService) get(name string, sql string, args ...interface{}) (*Topic, error) {
+	var row Topic
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.AdvancedAt,
 		&row.CreatedAt,
@@ -91,15 +90,15 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get study")
+		mylog.Log.WithError(err).Error("failed to get topic")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
-	var rows []*Study
+func (s *TopicService) getMany(name string, sql string, args ...interface{}) ([]*Topic, error) {
+	var rows []*Topic
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
@@ -107,7 +106,7 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 	}
 
 	for dbRows.Next() {
-		var row Study
+		var row Topic
 		dbRows.Scan(
 			&row.AdvancedAt,
 			&row.CreatedAt,
@@ -131,7 +130,7 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 	return rows, nil
 }
 
-const getStudyByIdSQL = `
+const getTopicByIdSQL = `
 	SELECT
 		advanced_at,
 		created_at,
@@ -141,22 +140,22 @@ const getStudyByIdSQL = `
 		updated_at,
 		user_id,
 		user_login
-	FROM study_master
+	FROM topic_master
 	WHERE id = $1
 `
 
-func (s *StudyService) Get(id string) (*Study, error) {
-	mylog.Log.WithField("id", id).Info("Study.Get(id)")
-	return s.get("getStudyById", getStudyByIdSQL, id)
+func (s *TopicService) Get(id string) (*Topic, error) {
+	mylog.Log.WithField("id", id).Info("Topic.Get(id)")
+	return s.get("getTopicById", getTopicByIdSQL, id)
 }
 
-func (s *StudyService) GetByUser(
+func (s *TopicService) GetByUser(
 	userId string,
 	po *PageOptions,
-) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
+) ([]*Topic, error) {
+	mylog.Log.WithField("user_id", userId).Info("Topic.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_master.user_id = ` + args.Append(userId)
+	whereSQL := `topic_master.user_id = ` + args.Append(userId)
 
 	selects := []string{
 		"advanced_at",
@@ -168,7 +167,7 @@ func (s *StudyService) GetByUser(
 		"user_id",
 		"user_login",
 	}
-	from := "study_master"
+	from := "topic_master"
 	sql := po.SQL(selects, from, whereSQL, &args)
 
 	psName := preparedName("getStudiesByUserId", sql)
@@ -176,7 +175,7 @@ func (s *StudyService) GetByUser(
 	return s.getMany(psName, sql, args...)
 }
 
-const getStudyByNameSQL = `
+const getTopicByNameSQL = `
 	SELECT
 		advanced_at,
 		created_at,
@@ -186,19 +185,19 @@ const getStudyByNameSQL = `
 		updated_at,
 		user_id,
 		user_login
-	FROM study_master
+	FROM topic_master
 	WHERE user_id = $1 AND LOWER(name) = LOWER($2)
 `
 
-func (s *StudyService) GetByName(userId, name string) (*Study, error) {
+func (s *TopicService) GetByName(userId, name string) (*Topic, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"name":    name,
-	}).Info("Study.GetByName(user_id, name)")
-	return s.get("getStudyByName", getStudyByNameSQL, userId, name)
+	}).Info("Topic.GetByName(user_id, name)")
+	return s.get("getTopicByName", getTopicByNameSQL, userId, name)
 }
 
-const getStudyByUserAndNameSQL = `
+const getTopicByUserAndNameSQL = `
 	SELECT
 		s.advanced_at,
 		s.created_at,
@@ -208,26 +207,26 @@ const getStudyByUserAndNameSQL = `
 		s.updated_at,
 		s.user_id,
 		a.login user_login
-	FROM study s
+	FROM topic s
 	INNER JOIN account a ON a.login = $1
 	WHERE s.user_id = a.id AND LOWER(s.name) = LOWER($2)  
 `
 
-func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
+func (s *TopicService) GetByUserAndName(owner, name string) (*Topic, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"owner": owner,
 		"name":  name,
-	}).Info("Study.GetByUserAndName(owner, name)")
-	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	}).Info("Topic.GetByUserAndName(owner, name)")
+	return s.get("getTopicByUserAndName", getTopicByUserAndNameSQL, owner, name)
 }
 
-func (s *StudyService) Create(row *Study) (*Study, error) {
-	mylog.Log.Info("Study.Create()")
+func (s *TopicService) Create(row *Topic) (*Topic, error) {
+	mylog.Log.Info("Topic.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
 
-	id, _ := mytype.NewOID("Study")
+	id, _ := mytype.NewOID("Topic")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
@@ -244,7 +243,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
 		nameTokens := &pgtype.Text{}
-		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, topicDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
 	}
@@ -261,15 +260,15 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 	defer tx.Rollback()
 
 	sql := `
-		INSERT INTO study(` + strings.Join(columns, ",") + `)
+		INSERT INTO topic(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createStudy", sql)
+	psName := preparedName("createTopic", sql)
 
 	_, err = prepareExec(s.db, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create study")
+		mylog.Log.WithError(err).Error("failed to create topic")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -283,8 +282,8 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	studySvc := NewStudyService(tx)
-	study, err := studySvc.Get(row.Id.String)
+	topicSvc := NewTopicService(tx)
+	topic, err := topicSvc.Get(row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -295,17 +294,17 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	return study, nil
+	return topic, nil
 }
 
-const deleteStudySQL = `
-	DELETE FROM study
+const deleteTopicSQL = `
+	DELETE FROM topic
 	WHERE id = $1
 `
 
-func (s *StudyService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Study.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteStudy", deleteStudySQL, id)
+func (s *TopicService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("Topic.Delete(id)")
+	commandTag, err := prepareExec(s.db, "deleteTopic", deleteTopicSQL, id)
 	if err != nil {
 		return err
 	}
@@ -316,16 +315,16 @@ func (s *StudyService) Delete(id string) error {
 	return nil
 }
 
-const refreshStudySearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY study_search_index
+const refreshTopicSearchIndexSQL = `
+	REFRESH MATERIALIZED VIEW CONCURRENTLY topic_search_index
 `
 
-func (s *StudyService) RefreshSearchIndex() error {
-	mylog.Log.Info("Study.RefreshSearchIndex()")
+func (s *TopicService) RefreshSearchIndex() error {
+	mylog.Log.Info("Topic.RefreshSearchIndex()")
 	_, err := prepareExec(
 		s.db,
-		"refreshStudySearchIndex",
-		refreshStudySearchIndexSQL,
+		"refreshTopicSearchIndex",
+		refreshTopicSearchIndexSQL,
 	)
 	if err != nil {
 		return err
@@ -334,8 +333,8 @@ func (s *StudyService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions) ([]*Study, error) {
-	mylog.Log.WithField("query", query).Info("Study.Search(query)")
+func (s *TopicService) Search(within *mytype.OID, query string, po *PageOptions) ([]*Topic, error) {
+	mylog.Log.WithField("query", query).Info("Topic.Search(query)")
 	if within != nil {
 		if within.Type != "User" {
 			return nil, fmt.Errorf(
@@ -354,16 +353,16 @@ func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions)
 		"user_id",
 		"user_login",
 	}
-	from := "study_search_index"
+	from := "topic_search_index"
 	sql, args := po.SearchSQL(selects, from, within, query)
 
-	psName := preparedName("searchStudyIndex", sql)
+	psName := preparedName("searchTopicIndex", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *StudyService) Update(row *Study) (*Study, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Study.Update(id)")
+func (s *TopicService) Update(row *Topic) (*Topic, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("Topic.Update(id)")
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -376,7 +375,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, topicDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
@@ -388,18 +387,18 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 	defer tx.Rollback()
 
 	sql := `
-		UPDATE study
+		UPDATE topic
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
 	`
 
-	psName := preparedName("updateStudy", sql)
+	psName := preparedName("updateTopic", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to update study")
+		mylog.Log.WithError(err).Error("failed to update topic")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -413,8 +412,8 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	studySvc := NewStudyService(tx)
-	study, err := studySvc.Get(row.Id.String)
+	topicSvc := NewTopicService(tx)
+	topic, err := topicSvc.Get(row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -425,9 +424,9 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	return study, nil
+	return topic, nil
 }
 
-func studyDelimeter(r rune) bool {
+func topicDelimeter(r rune) bool {
 	return r == '-' || r == '_'
 }

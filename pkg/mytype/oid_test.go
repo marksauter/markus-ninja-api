@@ -49,3 +49,15 @@ func TestParseOID(t *testing.T) {
 		)
 	}
 }
+
+func TestDBVarName(t *testing.T) {
+	expected := "test_id"
+	actual := testOID.DBVarName()
+	if actual != expected {
+		t.Errorf(
+			"TestDBVarName(): expected %+v, actual %+v",
+			expected,
+			actual,
+		)
+	}
+}

@@ -12,6 +12,7 @@ func NewSearchResultItemConnectionResolver(
 	lessonCount int32,
 	studyCount int32,
 	userCount int32,
+	userAssetCount int32,
 ) (*searchResultItemConnectionResolver, error) {
 	edges := make([]*searchResultItemEdgeResolver, len(searchResultItems))
 	for i := range edges {
@@ -36,6 +37,7 @@ func NewSearchResultItemConnectionResolver(
 		lessonCount:       lessonCount,
 		studyCount:        studyCount,
 		userCount:         userCount,
+		userAssetCount:    userAssetCount,
 	}
 	return resolver, nil
 }
@@ -48,6 +50,7 @@ type searchResultItemConnectionResolver struct {
 	repos             *repo.Repos
 	studyCount        int32
 	userCount         int32
+	userAssetCount    int32
 }
 
 func (r *searchResultItemConnectionResolver) Edges() *[]*searchResultItemEdgeResolver {
@@ -84,4 +87,8 @@ func (r *searchResultItemConnectionResolver) StudyCount() int32 {
 
 func (r *searchResultItemConnectionResolver) UserCount() int32 {
 	return r.userCount
+}
+
+func (r *searchResultItemConnectionResolver) UserAssetCount() int32 {
+	return r.userAssetCount
 }

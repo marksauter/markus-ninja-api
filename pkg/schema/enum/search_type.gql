@@ -8,4 +8,7 @@ enum SearchType {
 
   # Returns results matching users on rkus.ninja.
   USER
+
+  # Returns results matching user assets on rkus.ninja.
+  USER_ASSET
 }

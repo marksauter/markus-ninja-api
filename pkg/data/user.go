@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -31,22 +32,31 @@ type UserService struct {
 	db Queryer
 }
 
-const countUserBySearchSQL = `
-	SELECT COUNT(*)
-	FROM user_search_index
-	WHERE document @@ to_tsquery('english', $1)
-`
-
-func (s *UserService) CountBySearch(query string) (int32, error) {
+func (s *UserService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
 	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserBySearch",
-		countUserBySearchSQL,
-		ToTsQuery(query),
-	).Scan(&n)
-	return n, err
+	if within != nil {
+		// Currently users aren't contained within anything, so return 0 by default.
+		return
+	}
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	sql := `
+		SELECT COUNT(*)
+		FROM user_search_index
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+	`
+	if within != nil {
+		andIn := fmt.Sprintf(
+			"AND user_search_index.%s = %s",
+			within.DBVarName(),
+			args.Append(within),
+		)
+		sql = sql + andIn
+	}
+
+	psName := preparedName("countUserBySearch", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	return
 }
 
 const batchGetUserSQL = `
@@ -358,8 +368,15 @@ func (s *UserService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
+func (s *UserService) Search(within *mytype.OID, query string, po *PageOptions) ([]*User, error) {
 	mylog.Log.WithField("query", query).Info("User.Search(query)")
+	if within != nil {
+		// Currently users aren't contained within anything, so return 0 by default.
+		return nil, fmt.Errorf(
+			"cannot search for users within type `%s`",
+			within.Type,
+		)
+	}
 	selects := []string{
 		"created_at",
 		"id",
@@ -370,9 +387,9 @@ func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 		"updated_at",
 	}
 	from := "user_search_index"
-	sql, args := po.SearchSQL(selects, from, query)
+	sql, args := po.SearchSQL(selects, from, within, query)
 
-	psName := preparedName("searchUsersByName", sql)
+	psName := preparedName("searchUserIndex", sql)
 
 	return s.getMany(psName, sql, args...)
 }

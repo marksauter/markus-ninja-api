@@ -55,12 +55,7 @@ func (o *UserAssetOrder) Field() string {
 	return o.field.String()
 }
 
-type UserAssetOrderArg struct {
-	Direction string
-	Field     string
-}
-
-func ParseUserAssetOrder(arg *UserAssetOrderArg) (*UserAssetOrder, error) {
+func ParseUserAssetOrder(arg *OrderArg) (*UserAssetOrder, error) {
 	if arg == nil {
 		return &UserAssetOrder{
 			direction: data.DESC,
@@ -86,7 +81,10 @@ type userAssetOrderResolver struct {
 	UserAssetOrder
 }
 
-func NewUserAssetOrder(d data.OrderDirection, f UserAssetOrderField) *UserAssetOrder {
+func NewUserAssetOrder(
+	d data.OrderDirection,
+	f UserAssetOrderField,
+) *UserAssetOrder {
 	return &UserAssetOrder{
 		direction: d,
 		field:     f,

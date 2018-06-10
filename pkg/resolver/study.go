@@ -60,7 +60,7 @@ func (r *studyResolver) Assets(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *UserAssetOrderArg
+		OrderBy *OrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
 	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)

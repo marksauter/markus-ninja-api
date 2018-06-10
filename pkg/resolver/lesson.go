@@ -140,11 +140,11 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 
 func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	study, err := r.Study()
+	userLogin, err := r.Lesson.UserLogin()
 	if err != nil {
 		return uri, err
 	}
-	studyResourcePath, err := study.ResourcePath()
+	studyName, err := r.Lesson.StudyName()
 	if err != nil {
 		return uri, err
 	}
@@ -152,7 +152,7 @@ func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/lesson/%d", studyResourcePath, number))
+	uri = mygql.URI(fmt.Sprintf("%s/%s/lesson/%d", userLogin, studyName, number))
 	return uri, nil
 }
 

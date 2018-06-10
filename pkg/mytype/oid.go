@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/rs/xid"
 )
@@ -68,6 +69,10 @@ func ParseOID(id string) (*OID, error) {
 	t := s[3 : 3+n]
 	short := s[3+n:]
 	return &OID{Short: short, Status: pgtype.Present, Type: t, String: id}, nil
+}
+
+func (src *OID) DBVarName() string {
+	return fmt.Sprintf("%s_id", strcase.ToSnake(src.Type))
 }
 
 func (dst *OID) Set(src interface{}) error {

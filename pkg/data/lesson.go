@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,22 +35,31 @@ type LessonService struct {
 	db Queryer
 }
 
-const countLessonBySearchSQL = `
-	SELECT COUNT(*)
-	FROM lesson_search_index
-	WHERE document @@ to_tsquery('english', $1)
-`
-
-func (s *LessonService) CountBySearch(query string) (int32, error) {
+func (s *LessonService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
 	mylog.Log.WithField("query", query).Info("Lesson.CountBySearch(query)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countLessonBySearch",
-		countLessonBySearchSQL,
-		ToTsQuery(query),
-	).Scan(&n)
-	return n, err
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	sql := `
+		SELECT COUNT(*)
+		FROM lesson_search_index
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+	`
+	if within != nil {
+		if within.Type != "User" && within.Type != "Study" {
+			// Only users and studies 'contain' lessons, so return 0 otherwise
+			return
+		}
+		andIn := fmt.Sprintf(
+			"AND lesson_search_index.%s = %s",
+			within.DBVarName(),
+			args.Append(within),
+		)
+		sql = sql + andIn
+	}
+
+	psName := preparedName("countLessonBySearch", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	return
 }
 
 const countLessonByStudySQL = `
@@ -177,7 +187,7 @@ const numConnArgs = 3
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `lesson.user_id = ` + args.Append(userId)
+	whereSQL := `lesson_master.user_id = ` + args.Append(userId)
 
 	selects := []string{
 		"body",
@@ -206,8 +216,8 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 	).Info("Lesson.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
 	whereSQL := `
-		lesson.user_id = ` + args.Append(userId) + ` AND
-		lesson.study_id = ` + args.Append(studyId)
+		lesson_master.user_id = ` + args.Append(userId) + ` AND
+		lesson_master.study_id = ` + args.Append(studyId)
 
 	selects := []string{
 		"body",
@@ -394,8 +404,16 @@ func (s *LessonService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error) {
+func (s *LessonService) Search(within *mytype.OID, query string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
+	if within != nil {
+		if within.Type != "User" && within.Type != "Study" {
+			return nil, fmt.Errorf(
+				"cannot search for lessons within type `%s`",
+				within.Type,
+			)
+		}
+	}
 	selects := []string{
 		"body",
 		"created_at",
@@ -410,7 +428,7 @@ func (s *LessonService) Search(query string, po *PageOptions) ([]*Lesson, error)
 		"user_login",
 	}
 	from := "lesson_search_index"
-	sql, args := po.SearchSQL(selects, from, query)
+	sql, args := po.SearchSQL(selects, from, within, query)
 
 	psName := preparedName("searchLessonIndex", sql)
 

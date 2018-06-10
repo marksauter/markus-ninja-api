@@ -157,8 +157,8 @@ func (r *StudyRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *StudyRepo) CountBySearch(query string) (int32, error) {
-	return r.svc.CountBySearch(query)
+func (r *StudyRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
+	return r.svc.CountBySearch(within, query)
 }
 
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
@@ -264,11 +264,11 @@ func (r *StudyRepo) Delete(study *data.Study) error {
 	return r.svc.Delete(study.Id.String)
 }
 
-func (r *StudyRepo) Search(query string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.Search(query, po)
+	studies, err := r.svc.Search(within, query, po)
 	if err != nil {
 		return nil, err
 	}

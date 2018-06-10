@@ -73,6 +73,13 @@ func (r *LessonPermit) StudyId() (*mytype.OID, error) {
 	return &r.lesson.StudyId, nil
 }
 
+func (r *LessonPermit) StudyName() (string, error) {
+	if ok := r.checkFieldPermission("study_name"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.lesson.StudyName.String, nil
+}
+
 func (r *LessonPermit) Title() (string, error) {
 	if ok := r.checkFieldPermission("title"); !ok {
 		return "", ErrAccessDenied
@@ -92,6 +99,13 @@ func (r *LessonPermit) UserId() (*mytype.OID, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.lesson.UserId, nil
+}
+
+func (r *LessonPermit) UserLogin() (string, error) {
+	if ok := r.checkFieldPermission("user_login"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.lesson.UserLogin.String, nil
 }
 
 func NewLessonRepo(perms *PermRepo, svc *data.LessonService) *LessonRepo {
@@ -132,8 +146,8 @@ func (r *LessonRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonRepo) CountBySearch(query string) (int32, error) {
-	return r.svc.CountBySearch(query)
+func (r *LessonRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
+	return r.svc.CountBySearch(within, query)
 }
 
 func (r *LessonRepo) CountByStudy(userId, studyId string) (int32, error) {
@@ -255,11 +269,11 @@ func (r *LessonRepo) Delete(lesson *data.Lesson) error {
 	return r.svc.Delete(lesson.Id.String)
 }
 
-func (r *LessonRepo) Search(query string, po *data.PageOptions) ([]*LessonPermit, error) {
+func (r *LessonRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessons, err := r.svc.Search(query, po)
+	lessons, err := r.svc.Search(within, query, po)
 	if err != nil {
 		return nil, err
 	}

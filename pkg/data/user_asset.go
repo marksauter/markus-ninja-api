@@ -1,12 +1,14 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type UserAsset struct {
@@ -49,22 +51,31 @@ func (src UserAssetFilterOption) String() string {
 	}
 }
 
-const countUserAssetBySearchSQL = `
-	SELECT COUNT(*)
-	FROM user_asset_search_index
-	WHERE document @@ to_tsquery('english', $1)
-`
-
-func (s *UserAssetService) CountBySearch(query string) (int32, error) {
+func (s *UserAssetService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
 	mylog.Log.WithField("query", query).Info("UserAsset.CountBySearch(query)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserAssetBySearch",
-		countUserAssetBySearchSQL,
-		ToTsQuery(query),
-	).Scan(&n)
-	return n, err
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	sql := `
+		SELECT COUNT(*)
+		FROM user_asset_search_index
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+	`
+	if within != nil {
+		if within.Type != "User" && within.Type != "Study" {
+			// Only users and studies 'contain' user assets, so return 0 otherwise
+			return
+		}
+		andIn := fmt.Sprintf(
+			"AND user_asset_search_index.%s = %s",
+			within.DBVarName(),
+			args.Append(within),
+		)
+		sql = sql + andIn
+	}
+
+	psName := preparedName("countUserAssetBySearch", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	return
 }
 
 const countUserAssetByStudySQL = `
@@ -159,10 +170,12 @@ func (s *UserAssetService) getMany(
 			&row.PublishedAt,
 			&row.Size,
 			&row.StudyId,
+			&row.StudyName,
 			&row.Subtype,
 			&row.Type,
 			&row.UpdatedAt,
 			&row.UserId,
+			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -217,7 +230,7 @@ const getUserAssetByNameSQL = `
 		user_id,
 		user_login
 	FROM user_asset_master
-	WHERE user_id = $1 AND study_id = $2 AND name = $2
+	WHERE user_id = $1 AND study_id = $2 AND lower(name) = lower($3)
 `
 
 func (s *UserAssetService) GetByName(userId, studyId, name string) (*UserAsset, error) {
@@ -248,9 +261,9 @@ const getAssetByUserStudyAndNameSQL = `
 		ua.user_id,
 		a.login user_login
 	FROM user_asset ua
-	INNER JOIN account a ON LOWER(a.login) = LOWER($1)
-	INNER JOIN study s ON s.user_id = a.id AND LOWER(s.name) = LOWER($2)
-	WHERE ua.user_id = a.id AND ua.study_id = s.id AND LOWER(ua.name) = LOWER($3)
+	JOIN account a ON lower(a.login) = lower($1)
+	JOIN study s ON s.user_id = a.id AND lower(s.name) = lower($2)
+	WHERE ua.user_id = a.id AND ua.study_id = s.id AND lower(ua.name) = lower($3)
 `
 
 func (s *UserAssetService) GetByUserStudyAndName(
@@ -260,7 +273,7 @@ func (s *UserAssetService) GetByUserStudyAndName(
 ) (*UserAsset, error) {
 	mylog.Log.WithField(
 		"name", name,
-	).Info("GetByUserStudyAndName(name) UserAsset")
+	).Info("UserAsset.GetByUserStudyAndName(name)")
 	return s.get(
 		"getAssetByUserStudyAndName",
 		getAssetByUserStudyAndNameSQL,
@@ -281,8 +294,8 @@ func (s *UserAssetService) GetByStudy(
 	).Info("UserAsset.GetByStudy(studyId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
-		user_asset.user_id = ` + args.Append(userId) + ` AND
-		user_asset.study_id = ` + args.Append(studyId)
+		user_asset_master.user_id = ` + args.Append(userId) + ` AND
+		user_asset_master.study_id = ` + args.Append(studyId)
 
 	selects := []string{
 		"created_at",
@@ -316,7 +329,7 @@ func (s *UserAssetService) GetByUser(
 	mylog.Log.WithField(
 		"user_id", userId.String,
 	).Info("UserAsset.GetByUser(userId)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `user_asset.user_id = ` + args.Append(userId)
 
 	selects := []string{
@@ -344,7 +357,7 @@ func (s *UserAssetService) GetByUser(
 }
 
 func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
-	mylog.Log.Info("Create() UserAsset")
+	mylog.Log.Info("UserAsset.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -359,10 +372,14 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		values = append(values, args.Append(&row.Key))
 	}
 	if row.OriginalName.Status != pgtype.Undefined {
-		columns = append(columns, "name")
-		values = append(values, args.Append(&row.OriginalName))
 		columns = append(columns, "original_name")
 		values = append(values, args.Append(&row.OriginalName))
+		columns = append(columns, "name")
+		values = append(values, args.Append(&row.OriginalName))
+		nameTokens := &pgtype.Text{}
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, userAssetDelimeter), " "))
+		columns = append(columns, "name_tokens")
+		values = append(values, args.Append(nameTokens))
 	}
 	if row.Size.Status != pgtype.Undefined {
 		columns = append(columns, "size")
@@ -399,7 +416,7 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 
 	psName := preparedName("createUserAsset", sql)
 
-	_, err = prepareExec(s.db, psName, sql, args...)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user_asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -436,6 +453,7 @@ const deleteAssetSQl = `
 `
 
 func (s *UserAssetService) Delete(id string) error {
+	mylog.Log.WithField("id", id).Info("UserAsset.Delete(id)")
 	commandTag, err := prepareExec(s.db, "deleteAsset", deleteAssetSQl, id)
 	if err != nil {
 		return err
@@ -447,8 +465,60 @@ func (s *UserAssetService) Delete(id string) error {
 	return nil
 }
 
+const refreshUserAssetSearchIndexSQL = `
+	REFRESH MATERIALIZED VIEW CONCURRENTLY user_asset_search_index
+`
+
+func (s *UserAssetService) RefreshSearchIndex() error {
+	mylog.Log.Info("UserAsset.RefreshSearchIndex()")
+	_, err := prepareExec(
+		s.db,
+		"refreshUserAssetSearchIndex",
+		refreshUserAssetSearchIndexSQL,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserAssetService) Search(within *mytype.OID, query string, po *PageOptions) ([]*UserAsset, error) {
+	mylog.Log.WithField("query", query).Info("UserAsset.Search(query)")
+	if within != nil {
+		if within.Type != "User" && within.Type != "Study" {
+			return nil, fmt.Errorf(
+				"cannot search for user assets within type `%s`",
+				within.Type,
+			)
+		}
+	}
+	selects := []string{
+		"created_at",
+		"id",
+		"key",
+		"name",
+		"original_name",
+		"published_at",
+		"size",
+		"study_id",
+		"study_name",
+		"subtype",
+		"type",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "user_asset_search_index"
+	sql, args := po.SearchSQL(selects, from, within, query)
+
+	psName := preparedName("searchUserAssetIndex", sql)
+
+	return s.getMany(psName, sql, args...)
+}
+
 func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
-	mylog.Log.Info("Update() UserAsset")
+	mylog.Log.Info("UserAsset.Update()")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -471,18 +541,6 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		UPDATE user_asset
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
-		RETURNING
-			created_at,
-			key,
-			name,
-			original_name,
-			published_at,
-			size,
-			study_id,
-			subtype,
-			type,
-			updated_at,
-			user_id
 	`
 
 	psName := preparedName("updateAsset", sql)
@@ -518,4 +576,8 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 	}
 
 	return userAsset, nil
+}
+
+func userAssetDelimeter(r rune) bool {
+	return r == '-' || r == '_'
 }

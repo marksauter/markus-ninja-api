@@ -392,11 +392,16 @@ CREATE TABLE topic(
   description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40)  NOT NULL,
-  name_tokens TEXT         NOT NULL
+  name_tokens TEXT         NOT NULL,
+  updated_at  TIMESTAMPTZ  DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX topic_unique_name_idx
   ON topic (LOWER(name));
+
+CREATE TRIGGER topic_updated_at_modtime
+  BEFORE UPDATE ON topic
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS study_topic CASCADE;
 CREATE TABLE study_topic(
@@ -442,19 +447,9 @@ CREATE INDEX user_asset_user_id_study_id_type_subtype_idx
 CREATE INDEX user_asset_user_id_study_id_created_at_idx
   ON user_asset (user_id, study_id, created_at);
 
-CREATE TRIGGER user_asset_insert_name_tokens
-  BEFORE INSERT ON user_asset
-  FOR EACH ROW EXECUTE PROCEDURE insert_name_tokens();
-
-CREATE TRIGGER user_asset_update_name_tokens
-  BEFORE UPDATE ON user_asset
-  FOR EACH ROW EXECUTE PROCEDURE update_name_tokens();
-
 CREATE TRIGGER user_asset_updated_at_modtime
   BEFORE UPDATE ON user_asset
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-
-
 
 CREATE VIEW user_master AS
 SELECT
@@ -520,10 +515,10 @@ SELECT
   study.updated_at,
   study.user_id,
   account.login user_login,
-  setweight(to_tsvector('english', study.name_tokens), 'A') ||
+  setweight(to_tsvector('simple', study.name_tokens), 'A') ||
   setweight(to_tsvector('english', coalesce(study.description, '')), 'B') ||
   setweight(to_tsvector('simple', account.login), 'C') ||
-  setweight(to_tsvector('english', coalesce(string_agg(topic.name, ' '), '')), 'A') as document
+  setweight(to_tsvector('simple', coalesce(string_agg(topic.name, ' '), '')), 'A') as document
 FROM study
 JOIN account ON account.id = study.user_id
 LEFT JOIN study_topic ON study_topic.study_id = study.id
@@ -619,6 +614,7 @@ SELECT
   study.name study_name,
   user_asset.subtype,
   user_asset.type,
+  user_asset.updated_at,
   user_asset.user_id,
   account.login user_login
 FROM user_asset
@@ -638,12 +634,13 @@ SELECT
   study.name study_name,
   user_asset.subtype,
   user_asset.type,
+  user_asset.updated_at,
   user_asset.user_id,
   account.login user_login,
   setweight(to_tsvector('simple', user_asset.name_tokens), 'A') ||
-  setweight(to_tsvector('english', user_asset.type), 'A') ||
+  setweight(to_tsvector('simple', user_asset.type), 'A') ||
   setweight(to_tsvector('simple', user_asset.subtype), 'C') ||
-  setweight(to_tsvector('english', study.name_tokens), 'C') ||
+  setweight(to_tsvector('simple', study.name_tokens), 'C') ||
   setweight(to_tsvector('simple', account.login), 'C') AS document
 FROM user_asset
 JOIN study ON study.id = user_asset.study_id

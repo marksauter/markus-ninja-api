@@ -107,6 +107,13 @@ func (r *UserAssetPermit) StudyId() (*mytype.OID, error) {
 	return &r.userAsset.StudyId, nil
 }
 
+func (r *UserAssetPermit) StudyName() (string, error) {
+	if ok := r.checkFieldPermission("study_name"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.StudyName.String, nil
+}
+
 func (r *UserAssetPermit) Subtype() (string, error) {
 	if ok := r.checkFieldPermission("subtype"); !ok {
 		return "", ErrAccessDenied
@@ -133,6 +140,13 @@ func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.userAsset.UserId, nil
+}
+
+func (r *UserAssetPermit) UserLogin() (string, error) {
+	if ok := r.checkFieldPermission("user_login"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.UserLogin.String, nil
 }
 
 func NewUserAssetRepo(
@@ -179,12 +193,16 @@ func (r *UserAssetRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserAssetRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *UserAssetRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
+	return r.svc.CountBySearch(within, query)
 }
 
 func (r *UserAssetRepo) CountByStudy(userId, studyId string) (int32, error) {
 	return r.svc.CountByStudy(userId, studyId)
+}
+
+func (r *UserAssetRepo) CountByUser(userId string) (int32, error) {
+	return r.svc.CountByUser(userId)
 }
 
 func (r *UserAssetRepo) Create(a *data.UserAsset) (*UserAssetPermit, error) {
@@ -295,6 +313,27 @@ func (r *UserAssetRepo) GetByUser(
 		return nil, err
 	}
 	userAssets, err := r.svc.GetByUser(userId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
+	if len(userAssets) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, userAssets[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range userAssets {
+			userAssetPermits[i] = &UserAssetPermit{fieldPermFn, l}
+		}
+	}
+	return userAssetPermits, nil
+}
+
+func (r *UserAssetRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userAssets, err := r.svc.Search(within, query, po)
 	if err != nil {
 		return nil, err
 	}
