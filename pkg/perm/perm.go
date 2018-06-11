@@ -126,6 +126,7 @@ const (
 	LessonCommentType
 	PRTType
 	StudyType
+	TopicType
 	UserType
 	UserAssetType
 )
@@ -144,6 +145,8 @@ func (nt NodeType) String() string {
 		return "PRT"
 	case StudyType:
 		return "Study"
+	case TopicType:
+		return "Topic"
 	case UserType:
 		return "User"
 	case UserAssetType:
@@ -167,6 +170,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return PRTType, nil
 	case "study":
 		return StudyType, nil
+	case "topic":
+		return TopicType, nil
 	case "user":
 		return UserType, nil
 	case "userasset":

@@ -32,6 +32,11 @@ func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToTopic() (*topicResolver, bool) {
+	resolver, ok := r.node.(*topicResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToUser() (*userResolver, bool) {
 	resolver, ok := r.node.(*userResolver)
 	return resolver, ok

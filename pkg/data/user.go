@@ -387,7 +387,7 @@ func (s *UserService) Search(within *mytype.OID, query string, po *PageOptions) 
 		"updated_at",
 	}
 	from := "user_search_index"
-	sql, args := po.SearchSQL(selects, from, within, query)
+	sql, args := SearchSQL(selects, from, within, query, po)
 
 	psName := preparedName("searchUserIndex", sql)
 

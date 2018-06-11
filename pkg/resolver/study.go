@@ -333,6 +333,59 @@ func (r *studyResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *studyResolver) Topics(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*topicConnectionResolver, error) {
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	topicOrder, err := ParseTopicOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		topicOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	topics, err := r.Repos.Topic().GetByStudy(
+		studyId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Topic().CountByStudy(studyId.String)
+	if err != nil {
+		return nil, err
+	}
+	topicConnectionResolver, err := NewTopicConnectionResolver(
+		topics,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return topicConnectionResolver, nil
+}
+
 func (r *studyResolver) UpdatedAt() (graphql.Time, error) {
 	t, err := r.Study.UpdatedAt()
 	return graphql.Time{t}, err

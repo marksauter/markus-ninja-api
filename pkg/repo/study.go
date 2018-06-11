@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -34,19 +32,6 @@ func (r *StudyPermit) Get() *data.Study {
 		}
 	}
 	return study
-}
-
-func (r *StudyPermit) ViewerCanAdmin(ctx context.Context) error {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return errors.New("viewer not found")
-	}
-	if viewer.Id.String == r.study.UserId.String {
-		r.checkFieldPermission = func(field string) bool {
-			return true
-		}
-	}
-	return nil
 }
 
 func (r *StudyPermit) PreCheckPermissions() error {

@@ -99,6 +99,7 @@ CREATE TYPE node_type AS ENUM(
   'LessonComment',
   'PRT',
   'Study',
+  'Topic',
   'User',
   'UserAsset'
 );
@@ -405,7 +406,7 @@ CREATE TRIGGER topic_updated_at_modtime
 
 DROP TABLE IF EXISTS study_topic CASCADE;
 CREATE TABLE study_topic(
-  created_at TIMESTAMPTZ  DEFAULT NOW(),
+  related_at TIMESTAMPTZ  DEFAULT NOW(),
   study_id   VARCHAR(100),
   topic_id   VARCHAR(100),
   PRIMARY KEY (study_id, topic_id),
@@ -581,18 +582,34 @@ CREATE INDEX lesson_search_index_fts_idx
 
 CREATE VIEW topic_master AS
 SELECT
-  description,
-  id,
-  name
-FROM topic;
-
-CREATE MATERIALIZED VIEW topic_search_index AS
-SELECT
+  created_at,
   description,
   id,
   name,
+  updated_at
+FROM topic;
+
+CREATE VIEW study_topic_master AS
+SELECT
+  topic.created_at,
+  topic.description,
+  study_topic.topic_id id,
+  topic.name,
+  study_topic.related_at,
+  study_topic.study_id,
+  topic.updated_at
+FROM study_topic
+JOIN topic ON topic.id = study_topic.topic_id;
+
+CREATE MATERIALIZED VIEW topic_search_index AS
+SELECT
+  created_at,
+  description,
+  id,
+  name,
+  updated_at,
   setweight(to_tsvector('simple', name_tokens), 'A') ||
-  setweight(to_tsvector('simple', description), 'B') as document
+  setweight(to_tsvector('english', coalesce(description, '')), 'B') as document
 FROM topic;
 
 CREATE UNIQUE INDEX topic_search_index_id_unique_idx

@@ -1,0 +1,49 @@
+# Represents a topic.
+type Topic implements Node, UniformResourceLocatable {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The description of the topic.
+  description: String!
+
+  # The description of the topic rendered to HTML.
+  descriptionHTML: HTML!
+
+  id: ID!
+
+  # The name of the topic.
+  name: String!
+
+  # The HTTP path for this topic.
+  resourcePath: URI!
+
+  # Identifies when the topic was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this topic.
+  url: URI!
+}
+
+# An edge type for Topic.
+type TopicEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Topic
+}
+
+# A connection type for Topic.
+type TopicConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [TopicEdge]
+
+  # A list of nodes.
+  nodes: [Topic]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

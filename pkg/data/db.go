@@ -169,19 +169,6 @@ func (p *PageOptions) QueryDirection() string {
 	return direction.String()
 }
 
-// Then, we can reorder the items to the originally requested direction.
-func (p *PageOptions) ReorderQuery(query string) string {
-	if p.Last != 0 {
-		return fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			query,
-			p.Order.Field(),
-			p.Order.Direction(),
-		)
-	}
-	return query
-}
-
 func (p *PageOptions) Limit() int32 {
 	// Assuming one of these is 0, so the sum will be the non-zero field + 1
 	limit := p.First + p.Last + 1
@@ -233,11 +220,17 @@ func (p *PageOptions) whereAnds(from string) []string {
 	return whereAnds
 }
 
-func (p *PageOptions) SQL(selects []string, from, where string, args *pgx.QueryArgs) string {
-	joins := p.joins(from, args)
-	whereAnds := p.whereAnds(from)
+func SQL(selects []string, from, where string, args *pgx.QueryArgs, po *PageOptions) string {
+	var joins, whereAnds []string
+	var limit, orderBy string
+	if po != nil {
+		joins = po.joins(from, args)
+		whereAnds = po.whereAnds(from)
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = "ORDER BY " +
+			from + "." + po.Order.Field() + " " + po.QueryDirection()
+	}
 
-	orderBy := from + "." + p.Order.Field()
 	sql := `
 		SELECT 
 		` + strings.Join(selects, ",") + `
@@ -245,21 +238,37 @@ func (p *PageOptions) SQL(selects []string, from, where string, args *pgx.QueryA
 		` + strings.Join(joins, " ") + `
 		WHERE ` + where + `
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY ` + orderBy + ` ` + p.QueryDirection() + `
-		LIMIT ` + args.Append(p.Limit())
+		` + orderBy + `
+		` + limit
 
-	return p.ReorderQuery(sql)
+	return ReorderQuery(po, sql)
 }
 
-func (p *PageOptions) SearchSQL(
+func SearchSQL(
 	selects []string,
 	from string,
 	within *mytype.OID,
 	query string,
+	po *PageOptions,
 ) (string, pgx.QueryArgs) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	joins := p.joins(from, &args)
-	whereAnds := p.whereAnds(from)
+	var joins, whereAnds []string
+	var limit, orderBy string
+	if po != nil {
+		joins = po.joins(from, &args)
+		whereAnds = po.whereAnds(from)
+		limit = "LIMIT " + args.Append(po.Limit())
+
+		field := po.Order.Field()
+		orderBy := ""
+		if field != "best_match" {
+			orderBy = from + "." + field
+		} else {
+			orderBy = "ts_rank(document, query)"
+		}
+
+		orderBy = "ORDER BY " + orderBy + " " + po.QueryDirection()
+	}
 	if within != nil {
 		andIn := fmt.Sprintf(
 			"AND %s.%s = %s",
@@ -270,14 +279,6 @@ func (p *PageOptions) SearchSQL(
 		whereAnds = append(whereAnds, andIn)
 	}
 
-	field := p.Order.Field()
-	orderBy := ""
-	if field != "best_match" {
-		orderBy = from + "." + field
-	} else {
-		orderBy = "ts_rank(document, query)"
-	}
-
 	tsquery := ToTsQuery(query)
 	sql := `
 		SELECT 
@@ -286,8 +287,21 @@ func (p *PageOptions) SearchSQL(
 		` + strings.Join(joins, " ") + `
 		WHERE document @@ query
 		` + strings.Join(whereAnds, " ") + `
-		ORDER BY ` + orderBy + ` ` + p.QueryDirection() + `
-		LIMIT ` + args.Append(p.Limit())
+		` + orderBy + `
+		` + limit
 
-	return p.ReorderQuery(sql), args
+	return ReorderQuery(po, sql), args
+}
+
+// Then, we can reorder the items to the originally requested direction.
+func ReorderQuery(po *PageOptions, query string) string {
+	if po != nil && po.Last != 0 {
+		return fmt.Sprintf(
+			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
+			query,
+			po.Order.Field(),
+			po.Order.Direction(),
+		)
+	}
+	return query
 }

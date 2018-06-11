@@ -203,7 +203,7 @@ func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, er
 		"user_login",
 	}
 	from := "lesson_master"
-	sql := po.SQL(selects, from, whereSQL, &args)
+	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getLessonsByUser", sql)
 
@@ -233,7 +233,7 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 		"user_login",
 	}
 	from := "lesson_master"
-	sql := po.SQL(selects, from, whereSQL, &args)
+	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getLessonsByStudy", sql)
 
@@ -428,7 +428,7 @@ func (s *LessonService) Search(within *mytype.OID, query string, po *PageOptions
 		"user_login",
 	}
 	from := "lesson_search_index"
-	sql, args := po.SearchSQL(selects, from, within, query)
+	sql, args := SearchSQL(selects, from, within, query, po)
 
 	psName := preparedName("searchLessonIndex", sql)
 

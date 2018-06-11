@@ -169,7 +169,7 @@ func (s *StudyService) GetByUser(
 		"user_login",
 	}
 	from := "study_master"
-	sql := po.SQL(selects, from, whereSQL, &args)
+	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getStudiesByUserId", sql)
 
@@ -267,7 +267,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 
 	psName := preparedName("createStudy", sql)
 
-	_, err = prepareExec(s.db, psName, sql, args...)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create study")
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -355,7 +355,7 @@ func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions)
 		"user_login",
 	}
 	from := "study_search_index"
-	sql, args := po.SearchSQL(selects, from, within, query)
+	sql, args := SearchSQL(selects, from, within, query, po)
 
 	psName := preparedName("searchStudyIndex", sql)
 

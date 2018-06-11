@@ -244,7 +244,6 @@ func (r *userResolver) Study(
 	if err != nil {
 		return nil, err
 	}
-	study.ViewerCanAdmin(ctx)
 
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }

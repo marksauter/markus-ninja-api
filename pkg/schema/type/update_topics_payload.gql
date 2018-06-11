@@ -1,0 +1,8 @@
+# Return type for UpdateTopics.
+type UpdateTopicsPayload {
+  # Names of the provided topics that are not valid.
+  invalidTopicNames: [String!]
+
+  # The updated study.
+  study: Study!
+}

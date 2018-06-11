@@ -773,6 +773,59 @@ func (r *RootResolver) UpdateStudy(
 	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
 }
 
+type UpdateTopicsInput struct {
+	Description *string
+	StudyId     string
+	TopicNames  []string
+}
+
+func (r *RootResolver) UpdateTopics(
+	ctx context.Context,
+	args struct{ Input UpdateTopicsInput },
+) (*updateTopicsPayloadResolver, error) {
+	newTopics := make(map[string]bool)
+	oldTopics := make(map[string]bool)
+	invalidTopicNames := make([]string, 0, len(args.Input.TopicNames))
+	topicPermits, err := r.Repos.Topic().GetByStudy(args.Input.StudyId, nil)
+	if err != nil {
+		return nil, err
+	}
+	topics := make([]*data.Topic, len(topicPermits))
+	for i, tp := range topicPermits {
+		topics[i] = tp.Get()
+		oldTopics[topics[i].Name.String] = false
+	}
+	for _, name := range args.Input.TopicNames {
+		if _, prs := oldTopics[name]; !prs {
+			topic := &data.Topic{}
+			topic.Name.Set(name)
+			topic.StudyId.Set(args.Input.StudyId)
+			_, err := r.Repos.Topic().Create(topic)
+			if err != nil {
+				return nil, err
+			}
+			newTopics[name] = true
+		} else {
+			newTopics[name] = false
+		}
+	}
+	for _, t := range topics {
+		name := t.Name.String
+		if _, prs := newTopics[name]; !prs {
+			err := r.Repos.Topic().DeleteStudyRelation(t)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &updateTopicsPayloadResolver{
+		InvalidNames: invalidTopicNames,
+		StudyId:      args.Input.StudyId,
+		Repos:        r.Repos,
+	}, nil
+}
+
 type UpdateUserInput struct {
 	Bio    *string
 	Login  *string

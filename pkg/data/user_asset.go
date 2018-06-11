@@ -314,7 +314,7 @@ func (s *UserAssetService) GetByStudy(
 		"user_login",
 	}
 	from := "user_asset_master"
-	sql := po.SQL(selects, from, whereSQL, &args)
+	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getUserAssetsByStudy", sql)
 
@@ -349,7 +349,7 @@ func (s *UserAssetService) GetByUser(
 		"user_login",
 	}
 	from := "user_asset_master"
-	sql := po.SQL(selects, from, whereSQL, &args)
+	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getUserAssetsByUser", sql)
 
@@ -510,7 +510,7 @@ func (s *UserAssetService) Search(within *mytype.OID, query string, po *PageOpti
 		"user_login",
 	}
 	from := "user_asset_search_index"
-	sql, args := po.SearchSQL(selects, from, within, query)
+	sql, args := SearchSQL(selects, from, within, query, po)
 
 	psName := preparedName("searchUserAssetIndex", sql)
 

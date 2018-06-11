@@ -107,6 +107,8 @@ type Mutation {
   updateLessonComment(input: UpdateLessonCommentInput!): LessonComment!
   # Updates the description of a study.
   updateStudy(input: UpdateStudyInput!): Study!
+  # Replaces the study's topics with the given topics.
+  updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
   # Updates the bio, login, and/or name of a user.
   updateUser(input: UpdateUserInput!): User!
 }
