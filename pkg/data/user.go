@@ -12,12 +12,13 @@ import (
 )
 
 type User struct {
+	BackupEmail  mytype.Email       `db:"backup_email" permit:"create"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           mytype.OID         `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     mytype.Password    `db:"password" permit:"create"`
-	PrimaryEmail Email              `db:"primary_email" permit:"create"`
+	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
 	Profile      pgtype.Text        `db:"profile" permit:"read"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
@@ -175,9 +176,11 @@ func (s *UserService) getCredentials(
 ) (*User, error) {
 	var row User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
+		&row.BackupEmail,
 		&row.Id,
 		&row.Login,
 		&row.Password,
+		&row.PrimaryEmail,
 		&row.Roles,
 	)
 	if err == pgx.ErrNoRows {
@@ -192,9 +195,11 @@ func (s *UserService) getCredentials(
 
 const getUserCredentialsSQL = `  
 	SELECT
+		backup_email,
 		id,
 		login,
 		password,
+		primary_email,
 		roles
 	FROM user_credentials
 	WHERE id = $1
@@ -209,9 +214,11 @@ func (s *UserService) GetCredentials(
 
 const getUserCredentialsByLoginSQL = `  
 	SELECT
+		backup_email,
 		id,
 		login,
 		password,
+		primary_email,
 		roles
 	FROM user_credentials
 	WHERE LOWER(login) = LOWER($1)
@@ -308,10 +315,12 @@ func (s *UserService) Create(row *User) (*User, error) {
 		return nil, err
 	}
 
-	row.PrimaryEmail.Type = NewEmailType(PrimaryEmail)
-	row.PrimaryEmail.UserId.Set(row.Id)
+	primaryEmail := &Email{}
+	primaryEmail.Type.Set(PrimaryEmail)
+	primaryEmail.UserId.Set(row.Id)
+	primaryEmail.Value.Set(row.PrimaryEmail.String)
 	emailSvc := NewEmailService(tx)
-	err = emailSvc.Create(&row.PrimaryEmail)
+	err = emailSvc.Create(primaryEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user primary email")
 		return nil, err

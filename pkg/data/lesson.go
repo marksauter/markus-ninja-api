@@ -14,7 +14,7 @@ import (
 )
 
 type Lesson struct {
-	Body        mytype.Body        `db:"body" permit:"read"`
+	Body        pgtype.Text        `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`

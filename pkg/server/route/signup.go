@@ -94,7 +94,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	u := &data.User{}
 	u.Login.Set(registration.Username)
-	u.PrimaryEmail.Value.Set(registration.Email)
+	u.PrimaryEmail.Set(registration.Email)
 
 	if err := u.Password.Set(registration.Password); err != nil {
 		response := myhttp.InvalidPasswordResponse()

@@ -12,13 +12,13 @@ CREATE TABLE account(
   created_at    TIMESTAMPTZ  DEFAULT NOW(),
   id            VARCHAR(100) PRIMARY KEY,
   login         VARCHAR(40)  NOT NULL,
-  name          TEXT,
+  name          TEXT         CHECK(name ~ '^[\w|-][\w|-|\s]+[\w|-]$'),
   password      BYTEA        NOT NULL,
   profile       TEXT,
   updated_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX account_unique_login_idx
+CREATE UNIQUE INDEX account_unique__login__idx
   ON account (LOWER(login));
 
 CREATE TRIGGER account_updated_at_modtime
@@ -44,7 +44,7 @@ CREATE TABLE email(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX email_unique_value_idx
+CREATE UNIQUE INDEX email_unique__value__idx
   ON email (LOWER(value));
 CREATE INDEX email_value_text_pattern_ops_idx
   ON email(LOWER(value) text_pattern_ops);
@@ -52,7 +52,7 @@ CREATE INDEX email_user_id_idx ON email (user_id);
 CREATE UNIQUE INDEX email_user_id_type_idx
   ON email (user_id, type)
   WHERE type = ANY('{"PRIMARY", "BACKUP"}');
-CREATE UNIQUE INDEX email_user_id_public_unique_idx
+CREATE UNIQUE INDEX email_unique__user_id_public__idx
   ON email (user_id, public)
   WHERE public = TRUE;
 
@@ -185,7 +185,7 @@ CREATE TABLE study(
   created_at    TIMESTAMPTZ   DEFAULT NOW(),
   description   TEXT,
   id            VARCHAR(100)  PRIMARY KEY,
-  name          TEXT          NOT NULL CHECK (name !~ ' '),
+  name          TEXT          NOT NULL CHECK (name ~ '[\w|-]+'),
   name_tokens   TEXT          NOT NULL,
   updated_at    TIMESTAMPTZ   DEFAULT NOW(),
   user_id       VARCHAR(100)  NOT NULL,
@@ -294,10 +294,6 @@ CREATE INDEX lesson_user_id_study_id_published_at_idx
 CREATE INDEX lesson_user_id_study_id_updated_at_idx
   ON lesson (user_id, study_id, updated_at);
 
-CREATE TRIGGER update_lesson_search_vector
-  BEFORE INSERT OR UPDATE ON lesson
-  FOR EACH ROW EXECUTE PROCEDURE lesson_search_vector_update(); 
-
 CREATE TRIGGER insert_lesson_number
   BEFORE INSERT ON lesson
   FOR EACH ROW EXECUTE PROCEDURE inc_study_lesson_number(); 
@@ -360,7 +356,7 @@ CREATE TABLE label(
   updated_at  TIMESTAMPTZ  DEFAULT NOW()
 ); 
 
-CREATE UNIQUE INDEX label_unique_name_idx
+CREATE UNIQUE INDEX label_unique__name__idx
   ON label (LOWER(name));
 
 CREATE TRIGGER label_updated_at_modtime
@@ -392,12 +388,12 @@ CREATE TABLE topic(
   created_at  TIMESTAMPTZ  DEFAULT NOW(),
   description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
-  name        VARCHAR(40)  NOT NULL,
+  name        VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-zA-Z0-9][a-zA-Z0-9|-]+[a-zA-Z0-9]$'),
   name_tokens TEXT         NOT NULL,
   updated_at  TIMESTAMPTZ  DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX topic_unique_name_idx
+CREATE UNIQUE INDEX topic_unique__name__idx
   ON topic (LOWER(name));
 
 CREATE TRIGGER topic_updated_at_modtime
@@ -423,7 +419,7 @@ CREATE TABLE user_asset(
   created_at    TIMESTAMPTZ  DEFAULT NOW(),
   id            VARCHAR(100) PRIMARY KEY,
   key           TEXT         NOT NULL,
-  name          TEXT         NOT NULL,
+  name          TEXT         NOT NULL CHECK(name ~ '[\w|-]+'),
   name_tokens   TEXT         NOT NULL,
   original_name TEXT         NOT NULL, 
   published_at  TIMESTAMPTZ,
@@ -441,7 +437,7 @@ CREATE TABLE user_asset(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX user_asset_unique_user_id_study_id_name_idx
+CREATE UNIQUE INDEX user_asset_unique__user_id_study_id_name__idx
   ON user_asset (user_id, study_id, LOWER(name));
 CREATE INDEX user_asset_user_id_study_id_type_subtype_idx
   ON user_asset (user_id, study_id, type, subtype);
@@ -467,16 +463,22 @@ LEFT JOIN email ON email.user_id = account.id
 
 CREATE VIEW user_credentials AS
 SELECT
+  backup_email.value backup_email,
   account.id,
   account.login,
   account.password,
+  primary_email.value primary_email,
   ARRAY(
     SELECT role.name
     FROM role
     LEFT JOIN user_role ON user_role.user_id = account.id
     WHERE role.id = user_role.role_id
   ) roles
-FROM account;
+FROM account
+JOIN email primary_email ON primary_email.user_id = account.id
+  AND primary_email.type = 'PRIMARY'
+LEFT JOIN email backup_email ON backup_email.user_id = account.id
+  AND backup_email.type = 'BACKUP';
 
 CREATE MATERIALIZED VIEW user_search_index AS
 SELECT

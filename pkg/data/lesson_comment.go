@@ -11,7 +11,7 @@ import (
 )
 
 type LessonComment struct {
-	Body        mytype.Body        `db:"body" permit:"read"`
+	Body        pgtype.Text        `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	LessonId    mytype.OID         `db:"lesson_id" permit:"read"`

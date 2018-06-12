@@ -34,7 +34,7 @@ func (e DataFieldError) Error() string {
 }
 
 func ParseConstraintName(constraintName string) (field string) {
-	parsedContraintName := strings.Split(constraintName, "_")
+	parsedContraintName := strings.Split(constraintName, "__")
 	field = strings.Join(
 		parsedContraintName[1:len(parsedContraintName)-1],
 		"_",

@@ -42,7 +42,7 @@ func TestToTsQuery(t *testing.T) {
 	}
 }
 
-var ToPatternQueryTests = []struct {
+var ToLikeAnyPatternQueryTests = []struct {
 	s        string
 	expected []string
 }{
@@ -60,14 +60,14 @@ var ToPatternQueryTests = []struct {
 	},
 	{
 		"fooBar baz-qux",
-		[]string{"fooBar%", "baz%", "qux%"},
+		[]string{"foobar%", "baz%", "qux%"},
 	},
 }
 
-func TestToPatternQuery(t *testing.T) {
-	for _, tt := range ToPatternQueryTests {
-		actual := data.ToPatternQuery(tt.s)
-		if len(actual) != len(tt.expected) {
+func TestToLikeAnyPatternQuery(t *testing.T) {
+	for _, tt := range ToLikeAnyPatternQueryTests {
+		actual := data.ToLikeAnyPatternQuery(tt.s)
+		if len(actual.Elements) != len(tt.expected) {
 			t.Errorf(
 				"ToPatternQuery(%s) expected %v actual %v",
 				tt.s,
@@ -76,12 +76,12 @@ func TestToPatternQuery(t *testing.T) {
 			)
 		} else {
 			for i, expected := range tt.expected {
-				if actual[i] != expected {
+				if actual.Elements[i].String != expected {
 					t.Errorf(
 						"ToPatternQuery(%s) expected %v actual %v",
 						tt.s,
 						tt.expected,
-						actual,
+						actual.Elements,
 					)
 				}
 			}

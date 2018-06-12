@@ -17,7 +17,7 @@ type Study struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"read"`
+	Name        mytype.URLSafeName `db:"name" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
@@ -375,8 +375,11 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
-		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
+		nameTokens := &pgtype.Text{}
+		err := nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
+		if err != nil {
+			return nil, err
+		}
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 

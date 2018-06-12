@@ -118,8 +118,6 @@ func (s *TopicService) getMany(name string, sql string, args ...interface{}) ([]
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("found rows")
-
 	return rows, nil
 }
 
@@ -180,6 +178,7 @@ func (s *TopicService) GetByStudy(
 		"description",
 		"id",
 		"name",
+		"study_id",
 		"updated_at",
 	}
 	from := "study_topic_master"
@@ -187,7 +186,32 @@ func (s *TopicService) GetByStudy(
 
 	psName := preparedName("getTopicsByStudyId", sql)
 
-	return s.getMany(psName, sql, args...)
+	var rows []*Topic
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Topic
+		dbRows.Scan(
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.Name,
+			&row.StudyId,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get topics")
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getTopicByNameSQL = `
@@ -305,7 +329,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 
 const deleteTopicStudyRelationSQL = `
 	DELETE FROM study_topic
-	WHERE study_id = $1 AND topic_id = $1
+	WHERE study_id = $1 AND topic_id = $2
 `
 
 func (s *TopicService) DeleteStudyRelation(studyId, topicId string) error {
@@ -423,5 +447,5 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 }
 
 func topicDelimeter(r rune) bool {
-	return r == '-' || r == '_'
+	return r == '-'
 }

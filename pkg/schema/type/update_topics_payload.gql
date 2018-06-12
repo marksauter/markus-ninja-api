@@ -3,6 +3,9 @@ type UpdateTopicsPayload {
   # Names of the provided topics that are not valid.
   invalidTopicNames: [String!]
 
+  # Error message associated with invalid topic names.
+  message: String!
+
   # The updated study.
   study: Study!
 }

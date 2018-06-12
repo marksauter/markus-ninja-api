@@ -211,7 +211,9 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	guest.Id.Set(guestId)
 	guest.Login.Set("guest")
 	guest.Password.Set("guest")
-	guest.PrimaryEmail.Value.Set("guest@rkus.ninja")
+	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
+		return err
+	}
 	if _, err := svcs.User.Create(guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
@@ -229,7 +231,9 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	markus.Id.Set(markusId)
 	markus.Login.Set("markus")
 	markus.Password.Set("fender917")
-	markus.PrimaryEmail.Value.Set("m@rkus.ninja")
+	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
+		return err
+	}
 	if _, err := svcs.User.Create(markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
@@ -277,5 +281,7 @@ func startRefreshMV(svcs *service.Services) {
 		go svcs.Study.RefreshSearchIndex()
 		time.Sleep(time.Minute)
 		go svcs.Lesson.RefreshSearchIndex()
+		time.Sleep(time.Minute)
+		go svcs.Topic.RefreshSearchIndex()
 	}
 }

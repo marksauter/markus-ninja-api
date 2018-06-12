@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"regexp"
 	"time"
 
 	graphql "github.com/graph-gophers/graphql-go"
@@ -198,7 +199,7 @@ func (r *RootResolver) CreateUser(
 	if err := user.Login.Set(args.Input.Login); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user login"}
 	}
-	if err := user.PrimaryEmail.Value.Set(args.Input.Email); err != nil {
+	if err := user.PrimaryEmail.Set(args.Input.Email); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
 	}
 
@@ -206,12 +207,15 @@ func (r *RootResolver) CreateUser(
 	if err != nil {
 		return nil, err
 	}
+	user = userPermit.Get()
+	emailPermit, err := r.Repos.Email().GetByValue(args.Input.Email)
+	primaryEmail := emailPermit.Get()
 
 	uResolver := &userResolver{User: userPermit, Repos: r.Repos}
 
 	if user.Login.String != "guest" {
 		evt := &data.EVT{}
-		evt.EmailId.Set(user.PrimaryEmail.Id)
+		evt.EmailId.Set(primaryEmail.Id)
 		evt.UserId.Set(user.Id)
 
 		err = r.Svcs.EVT.Create(evt)
@@ -220,8 +224,8 @@ func (r *RootResolver) CreateUser(
 		}
 
 		sendMailInput := &service.SendEmailVerificationMailInput{
-			EmailId:   user.PrimaryEmail.Id.String,
-			To:        user.PrimaryEmail.Value.String,
+			EmailId:   primaryEmail.Id.String,
+			To:        primaryEmail.Value.String,
 			UserLogin: user.Login.String,
 			Token:     evt.Token.String,
 		}
@@ -783,9 +787,17 @@ func (r *RootResolver) UpdateTopics(
 	ctx context.Context,
 	args struct{ Input UpdateTopicsInput },
 ) (*updateTopicsPayloadResolver, error) {
+	resolver := &updateTopicsPayloadResolver{
+		StudyId: args.Input.StudyId,
+		Repos:   r.Repos,
+	}
 	newTopics := make(map[string]bool)
 	oldTopics := make(map[string]bool)
-	invalidTopicNames := make([]string, 0, len(args.Input.TopicNames))
+	invalidTopicNames := validateTopicNames(args.Input.TopicNames)
+	if len(invalidTopicNames) > 0 {
+		resolver.InvalidNames = invalidTopicNames
+		return resolver, nil
+	}
 	topicPermits, err := r.Repos.Topic().GetByStudy(args.Input.StudyId, nil)
 	if err != nil {
 		return nil, err
@@ -819,11 +831,19 @@ func (r *RootResolver) UpdateTopics(
 		}
 	}
 
-	return &updateTopicsPayloadResolver{
-		InvalidNames: invalidTopicNames,
-		StudyId:      args.Input.StudyId,
-		Repos:        r.Repos,
-	}, nil
+	return resolver, nil
+}
+
+var validTopicName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9|-]+[a-zA-Z0-9]$`)
+
+func validateTopicNames(topicNames []string) (invalidTopicNames []string) {
+	invalidTopicNames = make([]string, 0, len(topicNames))
+	for _, name := range topicNames {
+		if ok := validTopicName.MatchString(name); !ok {
+			invalidTopicNames = append(invalidTopicNames, name)
+		}
+	}
+	return
 }
 
 type UpdateUserInput struct {
