@@ -122,8 +122,8 @@ func (r *UserRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
+func (r *UserRepo) CountBySearch(query string) (int32, error) {
+	return r.svc.CountBySearch(query)
 }
 
 func (r *UserRepo) Create(u *data.User) (*UserPermit, error) {
@@ -185,11 +185,11 @@ func (r *UserRepo) Delete(user *data.User) error {
 	return r.svc.Delete(user.Id.String)
 }
 
-func (r *UserRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) Search(query string, po *data.PageOptions) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.Search(within, query, po)
+	users, err := r.svc.Search(query, po)
 	if err != nil {
 		return nil, err
 	}

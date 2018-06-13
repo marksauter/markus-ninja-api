@@ -153,14 +153,15 @@ func (r *EmailRepo) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
 	return r.svc.CountVerifiedByUser(userId)
 }
 
-func (r *EmailRepo) Create(email *data.Email) (*EmailPermit, error) {
+func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, email); err != nil {
+	if _, err := r.perms.Check(perm.Create, e); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(email); err != nil {
+	email, err := r.svc.Create(e)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, email)
@@ -235,14 +236,15 @@ func (r *EmailRepo) GetByUser(
 	return emailPermits, nil
 }
 
-func (r *EmailRepo) Update(email *data.Email) (*EmailPermit, error) {
+func (r *EmailRepo) Update(e *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, email); err != nil {
+	if _, err := r.perms.Check(perm.Update, e); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Update(email); err != nil {
+	email, err := r.svc.Update(e)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, email)

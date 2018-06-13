@@ -113,14 +113,15 @@ func (r *PRTRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *PRTRepo) Create(prt *data.PRT) (*PRTPermit, error) {
+func (r *PRTRepo) Create(t *data.PRT) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, prt); err != nil {
+	if _, err := r.perms.Check(perm.Create, t); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(prt); err != nil {
+	prt, err := r.svc.Create(t)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, prt)

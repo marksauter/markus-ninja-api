@@ -218,7 +218,7 @@ func (r *RootResolver) CreateUser(
 		evt.EmailId.Set(primaryEmail.Id)
 		evt.UserId.Set(user.Id)
 
-		err = r.Svcs.EVT.Create(evt)
+		newEvt, err := r.Svcs.EVT.Create(evt)
 		if err != nil {
 			return uResolver, err
 		}
@@ -227,7 +227,7 @@ func (r *RootResolver) CreateUser(
 			EmailId:   primaryEmail.Id.String,
 			To:        primaryEmail.Value.String,
 			UserLogin: user.Login.String,
-			Token:     evt.Token.String,
+			Token:     newEvt.Token.String,
 		}
 		err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 		if err != nil {
@@ -257,7 +257,7 @@ func (r *RootResolver) DeleteEmail(
 	if err != nil {
 		return nil, err
 	}
-	if n < 2 {
+	if n == 1 {
 		return nil, errors.New("cannot delete your only verified email")
 	}
 
@@ -628,7 +628,7 @@ func (r *RootResolver) ResetPassword(
 		return false, myerr.UnexpectedError{"failed to set prt ended_at"}
 	}
 
-	if err := r.Svcs.PRT.Update(prt); err != nil {
+	if _, err := r.Svcs.PRT.Update(prt); err != nil {
 		return false, myerr.UnexpectedError{"failed to update prt"}
 	}
 

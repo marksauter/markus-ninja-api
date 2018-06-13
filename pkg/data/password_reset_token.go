@@ -79,7 +79,7 @@ func (s *PRTService) Get(userId, token string) (*PRT, error) {
 	)
 }
 
-func (s *PRTService) Create(row *PRT) error {
+func (s *PRTService) Create(row *PRT) (*PRT, error) {
 	mylog.Log.Info("PRT.Create()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
@@ -87,7 +87,7 @@ func (s *PRTService) Create(row *PRT) error {
 
 	token := xid.New()
 	if err := row.Token.Set(token.String()); err != nil {
-		return myerr.UnexpectedError{"failed to set prt token"}
+		return nil, myerr.UnexpectedError{"failed to set prt token"}
 	}
 	columns = append(columns, `token`)
 	values = append(values, args.Append(token))
@@ -121,23 +121,53 @@ func (s *PRTService) Create(row *PRT) error {
 		values = append(values, args.Append(&row.EndedAt))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer rollbackTransaction(tx)
+
 	sql := `
 		INSERT INTO password_reset_token(` + strings.Join(columns, ", ") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			issued_at,
-			expires_at
   `
 
 	psName := preparedName("createPRT", sql)
 
-	return prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.IssuedAt,
-		&row.ExpiresAt,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return nil, err
+			}
+		}
+		mylog.Log.WithError(err).Error("error during query")
+		return nil, err
+	}
+
+	prtSvc := NewPRTService(tx)
+	prt, err := prtSvc.Get(row.UserId.String, row.Token.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return prt, nil
 }
 
-func (s *PRTService) Update(row *PRT) error {
+func (s *PRTService) Update(row *PRT) (*PRT, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": row.UserId.String,
 		"token":   row.Token.String,
@@ -153,53 +183,43 @@ func (s *PRTService) Update(row *PRT) error {
 		sets = append(sets, `ended_at`+"="+args.Append(&row.EndedAt))
 	}
 
-	if len(sets) == 0 {
-		return nil
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
 	}
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE password_reset_token
 		SET ` + strings.Join(sets, ", ") + `
 		WHERE token = ` + args.Append(row.Token.String) + `
 		AND user_id = ` + args.Append(row.UserId.String) + `
-		RETURNING
-			email_id,
-			ended_at,
-			end_ip,
-			expires_at,
-			issued_at,
-			request_ip
 	`
 
 	psName := preparedName("updatePRT", sql)
 
-	err := prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.EmailId,
-		&row.EndedAt,
-		&row.EndIP,
-		&row.ExpiresAt,
-		&row.IssuedAt,
-		&row.RequestIP,
-	)
-	if err == pgx.ErrNoRows {
-		return ErrNotFound
-	} else if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return err
-			}
-		}
-		mylog.Log.WithError(err).Error("error during query")
-		return err
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
 	}
 
-	return nil
+	prtSvc := NewPRTService(tx)
+	prt, err := prtSvc.Get(row.UserId.String, row.Token.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return prt, nil
 }
 
 const deletePRTSQL = `

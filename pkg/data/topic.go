@@ -266,7 +266,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		INSERT INTO topic(` + strings.Join(columns, ",") + `)
@@ -318,7 +318,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
@@ -403,7 +403,7 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE topic
@@ -413,22 +413,12 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 
 	psName := preparedName("updateTopic", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to update topic")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return nil, err
-			}
-		}
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
 		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
 	}
 
 	topicSvc := NewTopicService(tx)
@@ -437,7 +427,7 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err

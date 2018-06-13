@@ -113,14 +113,15 @@ func (r *EVTRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *EVTRepo) Create(evt *data.EVT) (*EVTPermit, error) {
+func (r *EVTRepo) Create(t *data.EVT) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, evt); err != nil {
+	if _, err := r.perms.Check(perm.Create, t); err != nil {
 		return nil, err
 	}
-	if err := r.svc.Create(evt); err != nil {
+	evt, err := r.svc.Create(t)
+	if err != nil {
 		return nil, err
 	}
 	fieldPermFn, err := r.perms.Check(perm.Read, evt)

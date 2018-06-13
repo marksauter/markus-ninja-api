@@ -258,7 +258,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		INSERT INTO study(` + strings.Join(columns, ",") + `)
@@ -289,7 +289,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
@@ -388,7 +388,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE study
@@ -398,10 +398,8 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 
 	psName := preparedName("updateStudy", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
 		mylog.Log.WithError(err).Error("failed to update study")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -415,6 +413,9 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		}
 		return nil, err
 	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
 
 	studySvc := NewStudyService(tx)
 	study, err := studySvc.Get(row.Id.String)
@@ -422,7 +423,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err

@@ -46,10 +46,8 @@ CREATE TABLE email(
 
 CREATE UNIQUE INDEX email_unique__value__idx
   ON email (LOWER(value));
-CREATE INDEX email_value_text_pattern_ops_idx
-  ON email(LOWER(value) text_pattern_ops);
 CREATE INDEX email_user_id_idx ON email (user_id);
-CREATE UNIQUE INDEX email_user_id_type_idx
+CREATE UNIQUE INDEX email_unique__user_id_type__idx
   ON email (user_id, type)
   WHERE type = ANY('{"PRIMARY", "BACKUP"}');
 CREATE UNIQUE INDEX email_unique__user_id_public__idx
@@ -115,10 +113,10 @@ CREATE TABLE IF NOT EXISTS permission(
   updated_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX permission_access_level_type_field_key
+CREATE UNIQUE INDEX permission__access_level_type_field__key
   ON permission (access_level, type, field)
   WHERE field IS NOT NULL;
-CREATE UNIQUE INDEX permission_access_level_type_key
+CREATE UNIQUE INDEX permission__access_level_type__key
   ON permission (access_level, type)
   WHERE field IS NULL;
 
@@ -194,7 +192,7 @@ CREATE TABLE study(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX study_user_id_name_key
+CREATE UNIQUE INDEX study_unique__user_id_name__key
   ON study (user_id, LOWER(name));
 CREATE INDEX study_user_id_advanced_at_idx
   ON study (user_id, advanced_at);
@@ -495,6 +493,20 @@ CREATE UNIQUE INDEX user_search_index_id_unique_idx
 CREATE INDEX user_search_index_fts_idx
   ON user_search_index USING gin(document);
 
+CREATE VIEW email_master AS
+SELECT
+  email.created_at,
+  email.id,
+  email.public, 
+  email.type,
+  email.user_id,
+  account.login user_login,
+  email.updated_at,
+  email.value,
+  email.verified_at
+FROM email
+JOIN account ON account.id = email.user_id;
+
 CREATE VIEW study_master AS
 SELECT
   study.advanced_at,
@@ -581,6 +593,24 @@ CREATE UNIQUE INDEX lesson_search_index_id_unique_idx
 
 CREATE INDEX lesson_search_index_fts_idx
   ON lesson_search_index USING gin(document);
+
+CREATE VIEW lesson_comment_master AS
+SELECT
+  lesson_comment.body,
+  lesson_comment.created_at,
+  lesson_comment.id,
+  lesson_comment.lesson_id,
+  lesson.number lesson_number,
+  lesson_comment.published_at,
+  lesson_comment.study_id,
+  study.name study_name,
+  lesson_comment.updated_at,
+  lesson_comment.user_id,
+  account.login user_login
+FROM lesson_comment
+JOIN lesson ON lesson.id = lesson_comment.lesson_id
+JOIN study ON study.id = lesson_comment.study_id
+JOIN account ON account.id = lesson_comment.user_id;
 
 CREATE VIEW topic_master AS
 SELECT

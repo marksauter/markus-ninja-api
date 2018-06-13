@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -33,27 +32,14 @@ type UserService struct {
 	db Queryer
 }
 
-func (s *UserService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
+func (s *UserService) CountBySearch(query string) (n int32, err error) {
 	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
-	if within != nil {
-		// Currently users aren't contained within anything, so return 0 by default.
-		return
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
 		FROM user_search_index
 		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
 	`
-	if within != nil {
-		andIn := fmt.Sprintf(
-			"AND user_search_index.%s = %s",
-			within.DBVarName(),
-			args.Append(within),
-		)
-		sql = sql + andIn
-	}
-
 	psName := preparedName("countUserBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
@@ -289,7 +275,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	createUserSQL := `
 		INSERT INTO account(` + strings.Join(columns, ",") + `)
@@ -320,7 +306,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 	primaryEmail.UserId.Set(row.Id)
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
 	emailSvc := NewEmailService(tx)
-	err = emailSvc.Create(primaryEmail)
+	_, err = emailSvc.Create(primaryEmail)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user primary email")
 		return nil, err
@@ -332,7 +318,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
@@ -377,15 +363,8 @@ func (s *UserService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *UserService) Search(within *mytype.OID, query string, po *PageOptions) ([]*User, error) {
+func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 	mylog.Log.WithField("query", query).Info("User.Search(query)")
-	if within != nil {
-		// Currently users aren't contained within anything, so return 0 by default.
-		return nil, fmt.Errorf(
-			"cannot search for users within type `%s`",
-			within.Type,
-		)
-	}
 	selects := []string{
 		"created_at",
 		"id",
@@ -396,7 +375,7 @@ func (s *UserService) Search(within *mytype.OID, query string, po *PageOptions) 
 		"updated_at",
 	}
 	from := "user_search_index"
-	sql, args := SearchSQL(selects, from, within, query, po)
+	sql, args := SearchSQL(selects, from, nil, query, po)
 
 	psName := preparedName("searchUserIndex", sql)
 
@@ -430,7 +409,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE account
@@ -440,10 +419,8 @@ func (s *UserService) Update(row *User) (*User, error) {
 
 	psName := preparedName("updateUser", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
 			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
@@ -458,6 +435,9 @@ func (s *UserService) Update(row *User) (*User, error) {
 		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
 	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
 
 	userSvc := NewUserService(tx)
 	user, err := userSvc.Get(row.Id.String)
@@ -465,7 +445,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err

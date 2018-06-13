@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -15,8 +14,8 @@ type Email struct {
 	Id         mytype.OID         `db:"id"`
 	Public     pgtype.Bool        `db:"public"`
 	Type       EmailType          `db:"type"`
-	UserLogin  pgtype.Varchar     `db:"user"`
 	UserId     mytype.OID         `db:"user_id"`
+	UserLogin  pgtype.Varchar     `db:"user_login"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	Value      pgtype.Varchar     `db:"value"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
@@ -90,8 +89,8 @@ func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email
 		&row.Id,
 		&row.Public,
 		&row.Type,
-		&row.UserLogin,
 		&row.UserId,
+		&row.UserLogin,
 		&row.UpdatedAt,
 		&row.Value,
 		&row.VerifiedAt,
@@ -104,83 +103,6 @@ func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email
 	}
 
 	return &row, nil
-}
-
-func (s *EmailService) getConnection(
-	name string,
-	whereSQL string,
-	args pgx.QueryArgs,
-	po *PageOptions,
-	opts ...EmailFilterOption,
-) ([]*Email, error) {
-	if po == nil {
-		return nil, ErrEmptyPageOptions
-	}
-	var joins, whereAnds []string
-
-	field := po.Order.Field()
-	if po.After != nil {
-		joins = append(joins, `INNER JOIN email e2 ON e2.id = `+args.Append(po.After.Value()))
-		whereAnds = append(whereAnds, `AND e1.`+field+` >= e2.`+field)
-	}
-	if po.Before != nil {
-		joins = append(joins, `INNER JOIN email e3 ON e3.id = `+args.Append(po.Before.Value()))
-		whereAnds = append(whereAnds, `AND e1.`+field+` <= e3.`+field)
-	}
-
-	// If the query is asking for the last elements in a list, then we need two
-	// queries to get the items more efficiently and in the right order.
-	// First, we query the reverse direction of that requested, so that only
-	// the items needed are returned.
-	// Then, we reorder the items to the originally requested direction.
-	direction := po.Order.Direction()
-	if po.Last != 0 {
-		direction = !po.Order.Direction()
-	}
-	limit := po.First + po.Last + 1
-	if (po.After != nil && po.First > 0) ||
-		(po.Before != nil && po.Last > 0) {
-		limit = limit + int32(1)
-	}
-
-	for _, o := range opts {
-		whereAnds = append(whereAnds, `AND e1.`+o.String())
-	}
-
-	sql := `
-		SELECT
-			e1.created_at,
-			e1.id,
-			e1.public,
-			e1.type,
-			a.login user_login,
-			e1.user_id,
-			e1.updated_at,
-			e1.value,
-			e1.verified_at
-		FROM email e1 ` +
-		strings.Join(joins, " ") + `
-		INNER JOIN account a ON a.id = e1.user_id
-		WHERE ` + whereSQL + `
-		` + strings.Join(whereAnds, " ") + `
-		ORDER BY e1.` + field + ` ` + direction.String()
-	if limit > 0 {
-		sql = sql + `
-			LIMIT ` + args.Append(limit)
-	}
-
-	if po.Last != 0 {
-		sql = fmt.Sprintf(
-			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
-			sql,
-			field,
-			direction,
-		)
-	}
-
-	psName := preparedName(name, sql)
-
-	return s.getMany(psName, sql, args...)
 }
 
 func (s *EmailService) getMany(
@@ -202,8 +124,8 @@ func (s *EmailService) getMany(
 			&row.Id,
 			&row.Public,
 			&row.Type,
-			&row.UserLogin,
 			&row.UserId,
+			&row.UserLogin,
 			&row.UpdatedAt,
 			&row.Value,
 			&row.VerifiedAt,
@@ -222,18 +144,17 @@ func (s *EmailService) getMany(
 
 const getEmailByIdSQL = `
 	SELECT
-		e.created_at,
-		e.id,
-		e.public,
-		e.type,
-		a.login user_login,
-		e.user_id,
-		e.updated_at,
-		e.value,
-		e.verified_at
-	FROM email e
-	INNER JOIN account a ON a.id = e.user_id
-	WHERE e.id = $1
+		created_at,
+		id,
+		public,
+		type,
+		user_id,
+		user_login,
+		updated_at,
+		value,
+		verified_at
+	FROM email_master
+	WHERE id = $1
 `
 
 func (s *EmailService) Get(id string) (*Email, error) {
@@ -243,18 +164,17 @@ func (s *EmailService) Get(id string) (*Email, error) {
 
 const getEmailByValueSQL = `
 	SELECT
-		e.created_at,
-		e.id,
-		e.public,
-		e.type,
-		a.login user_login,
-		e.user_id,
-		e.updated_at,
-		e.value,
-		e.verified_at
-	FROM email e
-	INNER JOIN account a ON a.id = e.user_id
-	WHERE LOWER(e.value) = LOWER($1)
+		created_at,
+		id,
+		public,
+		type,
+		user_id,
+		user_login,
+		updated_at,
+		value,
+		verified_at
+	FROM email_master
+	WHERE lower(value) = lower($1)
 `
 
 func (s *EmailService) GetByValue(email string) (*Email, error) {
@@ -277,13 +197,29 @@ func (s *EmailService) GetByUser(
 		"user_id", userId.String,
 	).Info("Email.GetByUser(userId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
-	whereSQL := `e1.user_id = ` + args.Append(userId)
+	whereSQL := `email_master.user_id = ` + args.Append(userId)
 
-	return s.getConnection("getEmailByUser", whereSQL, args, po, opts...)
+	selects := []string{
+		"created_at",
+		"id",
+		"public",
+		"type",
+		"user_id",
+		"user_login",
+		"updated_at",
+		"value",
+		"verified_at",
+	}
+	from := "email_master"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getEmailByUser", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
-func (s *EmailService) Create(row *Email) error {
-	mylog.Log.Info("Create() Email")
+func (s *EmailService) Create(row *Email) (*Email, error) {
+	mylog.Log.Info("Email.Create()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -311,37 +247,50 @@ func (s *EmailService) Create(row *Email) error {
 		values = append(values, args.Append(&row.Value))
 	}
 
-	createEmailSQL := `
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer rollbackTransaction(tx)
+
+	sql := `
 		INSERT INTO email(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			created_at,
-			updated_at
 	`
 
-	psName := preparedName("createEmail", createEmailSQL)
+	psName := preparedName("createEmail", sql)
 
-	err := prepareQueryRow(s.db, psName, createEmailSQL, args...).Scan(
-		&row.CreatedAt,
-		&row.UpdatedAt,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
 			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
-				return RequiredFieldError(pgErr.ColumnName)
+				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				return err
+				return nil, err
 			}
 		}
 		mylog.Log.WithError(err).Error("error during query")
-		return err
+		return nil, err
 	}
 
-	return nil
+	emailSvc := NewEmailService(tx)
+	email, err := emailSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return email, nil
 }
 
 const deleteEmailSQL = `
@@ -350,7 +299,7 @@ const deleteEmailSQL = `
 `
 
 func (s *EmailService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Delete(id) Email")
+	mylog.Log.WithField("id", id).Info("Email.Delete(id)")
 
 	commandTag, err := prepareExec(
 		s.db,
@@ -369,8 +318,8 @@ func (s *EmailService) Delete(id string) error {
 	return nil
 }
 
-func (s *EmailService) Update(row *Email) error {
-	mylog.Log.Info("Update() Email")
+func (s *EmailService) Update(row *Email) (*Email, error) {
+	mylog.Log.Info("Email.Update()")
 
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
@@ -385,6 +334,13 @@ func (s *EmailService) Update(row *Email) error {
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer rollbackTransaction(tx)
+
 	sql := `
 		UPDATE email
 		SET ` + strings.Join(sets, ",") + `
@@ -393,14 +349,25 @@ func (s *EmailService) Update(row *Email) error {
 
 	psName := preparedName("updateEmail", sql)
 
-	commandTag, err := prepareExec(s.db, psName, sql, args...)
+	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update email")
-		return err
+		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		return nil, ErrNotFound
 	}
 
-	return nil
+	emailSvc := NewEmailService(tx)
+	email, err := emailSvc.Get(row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return email, nil
 }

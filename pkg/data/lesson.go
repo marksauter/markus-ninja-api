@@ -20,11 +20,11 @@ type Lesson struct {
 	Number      pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
 	StudyId     mytype.OID         `db:"study_id" permit:"read"`
-	StudyName   pgtype.Text        `db:"study_name"`
+	StudyName   pgtype.Text        `db:"study_name" permit:"read"`
 	Title       pgtype.Text        `db:"title" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin   pgtype.Text        `db:"user_login"`
+	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
 }
 
 func NewLessonService(db Queryer) *LessonService {
@@ -316,7 +316,7 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
@@ -347,7 +347,7 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
@@ -449,9 +449,6 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
-		sets = append(sets, `study_id`+"="+args.Append(&row.StudyId))
-	}
 	if row.Title.Status != pgtype.Undefined {
 		sets = append(sets, `title`+"="+args.Append(&row.Title))
 		titleTokens := &pgtype.Text{}
@@ -464,7 +461,7 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE lesson
@@ -474,22 +471,12 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 
 	psName := preparedName("updateLesson", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to create lesson")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return nil, err
-			}
-		}
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
 		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
 	}
 
 	lessonSvc := NewLessonService(tx)
@@ -498,7 +485,7 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err

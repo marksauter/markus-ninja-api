@@ -407,7 +407,7 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		INSERT INTO user_asset(` + strings.Join(columns, ",") + `)
@@ -438,7 +438,7 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
@@ -526,16 +526,12 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
 
-	if len(sets) == 0 {
-		return nil, nil
-	}
-
 	tx, err := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE user_asset
@@ -545,10 +541,8 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 
 	psName := preparedName("updateAsset", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create user_asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -562,6 +556,9 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		}
 		return nil, err
 	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
 
 	userAssetSvc := NewUserAssetService(tx)
 	userAsset, err := userAssetSvc.Get(row.Id.String)
@@ -569,7 +566,7 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		return nil, err
 	}
 
-	err = tx.Commit()
+	err = commitTransaction(tx)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err

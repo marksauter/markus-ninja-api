@@ -79,7 +79,7 @@ func (s *EVTService) Get(
 	)
 }
 
-func (s *EVTService) Create(row *EVT) error {
+func (s *EVTService) Create(row *EVT) (*EVT, error) {
 	mylog.Log.Info("EVT.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
@@ -111,25 +111,55 @@ func (s *EVTService) Create(row *EVT) error {
 		values = append(values, args.Append(&row.VerifiedAt))
 	}
 
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	defer rollbackTransaction(tx)
+
 	sql := `
 		INSERT INTO email_verification_token(` + strings.Join(columns, ", ") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING
-			issued_at,
-			expires_at
   `
 
 	psName := preparedName("createEVT", sql)
 
-	return prepareQueryRow(s.db, psName, sql, args...).Scan(
-		&row.IssuedAt,
-		&row.ExpiresAt,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return nil, err
+			}
+		}
+		mylog.Log.WithError(err).Error("error during query")
+		return nil, err
+	}
+
+	evtSvc := NewEVTService(tx)
+	evt, err := evtSvc.Get(row.EmailId.String, row.Token.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return evt, nil
 }
 
 func (s *EVTService) Update(
 	row *EVT,
-) error {
+) (*EVT, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"email_id": row.EmailId.String,
 		"token":    row.Token.String,
@@ -141,9 +171,12 @@ func (s *EVTService) Update(
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
-	if len(sets) == 0 {
-		return nil
+	tx, err := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
 	}
+	defer rollbackTransaction(tx)
 
 	sql := `
 		UPDATE email_verification_token
@@ -153,15 +186,27 @@ func (s *EVTService) Update(
 
 	psName := preparedName("updateEVT", sql)
 
-	commandTag, err := prepareExec(s.db, psName, sql, args...)
+	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		return nil, ErrNotFound
 	}
 
-	return nil
+	evtSvc := NewEVTService(tx)
+	evt, err := evtSvc.Get(row.EmailId.String, row.Token.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitTransaction(tx)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error during transaction")
+		return nil, err
+	}
+
+	return evt, nil
 }
 
 const deleteEVTSQL = `

@@ -22,6 +22,7 @@ type Queryer interface {
 
 type transactor interface {
 	Begin() (*pgx.Tx, error)
+	Commit() error
 }
 
 type preparer interface {
@@ -29,11 +30,25 @@ type preparer interface {
 	Deallocate(name string) error
 }
 
-func beginTransaction(db Queryer) (*pgx.Tx, error) {
+func beginTransaction(db Queryer) (Queryer, error) {
 	if transactor, ok := db.(transactor); ok {
 		return transactor.Begin()
 	}
-	return nil, errors.New("queryer is not a transactor")
+	return db, nil
+}
+
+func commitTransaction(db Queryer) error {
+	if transactor, ok := db.(transactor); ok {
+		return transactor.Commit()
+	}
+	return nil
+}
+
+func rollbackTransaction(db Queryer) error {
+	if transactor, ok := db.(transactor); ok {
+		return transactor.Commit()
+	}
+	return nil
 }
 
 func prepareQuery(db Queryer, name, sql string, args ...interface{}) (*pgx.Rows, error) {

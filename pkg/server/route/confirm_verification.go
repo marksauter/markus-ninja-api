@@ -103,7 +103,8 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	if err := h.Svcs.EVT.Update(evt); err != nil {
+	evt, err = h.Svcs.EVT.Update(evt)
+	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
@@ -121,7 +122,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	if err := h.Svcs.Email.Update(email); err != nil {
+	if _, err := h.Svcs.Email.Update(email); err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return

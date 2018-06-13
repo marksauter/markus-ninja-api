@@ -143,7 +143,7 @@ func (r *RootResolver) Search(
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountBySearch(within, args.Query)
+	userCount, err := r.Repos.User().CountBySearch(args.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeUser:
-		users, err := r.Repos.User().Search(within, args.Query, pageOptions)
+		users, err := r.Repos.User().Search(args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
