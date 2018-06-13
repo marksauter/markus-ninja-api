@@ -28,7 +28,7 @@ type Config struct {
 func Load(name string) *Config {
 	config := viper.New()
 	config.SetConfigName(name)
-	config.AddConfigPath("$GOPATH/src/github.com/marksauter/markus-ninja-api/")
+	config.AddConfigPath(".")
 	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
