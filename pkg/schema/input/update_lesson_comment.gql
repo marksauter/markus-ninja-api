@@ -1,0 +1,8 @@
+# Input type for UpdateLessonComment.
+input UpdateLessonCommentInput {
+  # The body of the lesson comment.
+  body: String
+
+  # ID of the lesson comment.
+  lessonCommentId: ID!
+}

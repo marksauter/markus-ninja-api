@@ -1,0 +1,11 @@
+# Properties by which lesson connections can be ordered.
+enum LessonOrderField {
+  # Order lessons by creation time.
+  CREATED_AT
+
+  # Order lessons by number.
+  NUMBER
+
+  # Order lessons by update time.
+  UPDATED_AT
+}

@@ -1,0 +1,11 @@
+# A text match within a search result.
+type TextMatch {
+  # The specific text fragment within the property matched on.
+  fragment: String!
+
+  # Highlights within the matched fragment.
+  highlights: [TextMatchHighlight!]!
+
+  # The property matched on.
+  property: String!
+}

@@ -1,0 +1,114 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+type Query {
+  # Lookup a given asset by the owner, study name, and asset name.
+  asset(
+    name: String!
+    owner: String!
+    study: String!
+  ): UserAsset
+
+  # Lookup node by ID.
+  node(
+    # The ID of the node.
+    id: ID!
+  ): Node
+
+  # Lookup nodes by a list of IDs.
+  nodes(
+    # The list of IDs.
+    ids: [ID!]!
+  ): [Node]!
+
+  search(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for items returned from the connection.
+    orderBy: SearchOrder
+
+    # The search string to look for.
+    query: String!
+
+    # The types of search items to search within.
+    type: SearchType!
+
+    # The ID of the node to search within.
+    within: ID
+  ): SearchResultItemConnection!
+
+  # Lookup a given study by the owner and study name.
+  study(
+    # The name of the study.
+    name: String!
+    # The login field of a user.
+    owner: String!
+  ): Study
+
+  # Lookup a user by login. 
+  user(
+    # The login of the user.
+    login: String!
+  ): User
+
+  # The currently authenticated user.
+  viewer: User!
+}
+type Mutation {
+  # Adds an email to the viewer's account.
+  addEmail(input: AddEmailInput!): AddEmailPayload
+  # Adds a comment to a lesson.
+  addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
+
+  # Creates a new lesson.
+  createLesson(input: CreateLessonInput!): Lesson
+  # Creates a new study.
+  createStudy(input: CreateStudyInput!): Study
+  # Creates a new user.
+  createUser(input: CreateUserInput!): User
+
+  # Deletes an email from the viewer's account.
+  deleteEmail(input: DeleteEmailInput!): DeleteEmailPayload
+  # Deletes a lesson from a study.
+  deleteLesson(input: DeleteLessonInput!): DeleteLessonPayload
+  # Deletes a comment from a lesson.
+  deleteLessonComment(input: DeleteLessonCommentInput!): DeleteLessonCommentPayload
+  # Deletes a study.
+  deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
+  # Deletes a user.
+  deleteUser(input: DeleteUserInput!): ID
+
+  # Moves a lesson to a new numbered position within a study.
+  moveLesson(input: MoveLessonInput!): LessonEdge!
+
+  # Requests an email verification mail to be sent.
+  requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
+  # Requests a password reset mail to be sent.
+  requestPasswordReset(input: RequestPasswordResetInput!): PRT!
+  # Resets a user's password.
+  resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # Updates an email's type and/or whether it's public or not.
+  updateEmail(input: UpdateEmailInput!): Email!
+  # Updates the body and/or title of a lesson.
+  updateLesson(input: UpdateLessonInput!): Lesson!
+  # Updates the body of a lesson comment.
+  updateLessonComment(input: UpdateLessonCommentInput!): LessonComment!
+  # Updates the description of a study.
+  updateStudy(input: UpdateStudyInput!): Study!
+  # Replaces the study's topics with the given topics.
+  updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
+  # Updates the bio, login, and/or name of a user.
+  updateUser(input: UpdateUserInput!): User!
+}

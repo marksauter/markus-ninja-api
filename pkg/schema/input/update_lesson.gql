@@ -1,0 +1,11 @@
+# Input type for UpdateLesson.
+input UpdateLessonInput {
+  # The body of the lesson.
+  body: String
+
+  # ID of the lesson.
+  lessonId: ID!
+
+  # The title of the lesson.
+  title: String
+}

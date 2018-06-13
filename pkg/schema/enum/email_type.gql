@@ -1,0 +1,11 @@
+# Possible types of emails.
+enum EmailType {
+  # Email used for backup account security.
+  BACKUP
+
+  # Email added to account, but without function.
+  EXTRA
+
+  # Email used for primary account security.
+  PRIMARY
+}

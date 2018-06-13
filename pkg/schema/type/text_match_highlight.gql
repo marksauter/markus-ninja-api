@@ -1,0 +1,11 @@
+# Represents a single highlight in a search result match.
+type TextMatchHighlight {
+  # The indice in the fragment where the matched text begins.
+  beginIndice: Int!
+  
+  # The indice in the fragment where the matched text ends.
+  endIndice: Int!
+
+  # The text matched.
+  text: String!
+}

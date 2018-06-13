@@ -1,0 +1,5 @@
+# Input type for DeleteUser.
+input DeleteUserInput {
+  # ID of the user.
+  userId: ID!
+}

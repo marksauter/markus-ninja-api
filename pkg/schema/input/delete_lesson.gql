@@ -1,0 +1,5 @@
+# Input type for DeleteLesson.
+input DeleteLessonInput {
+  # ID of the lesson.
+  lessonId: ID!
+}

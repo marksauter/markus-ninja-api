@@ -1,0 +1,21 @@
+[app]
+name = "api.rkus.ninja"
+
+[auth]
+key_id = "alias/markus-ninja-api-key-alias"
+
+[aws]
+region = "us-east-1"
+upload_bucket = "markus-ninja-test-user-asset-us-east-1"
+
+[db]
+host = "localhost"
+port = 5432
+name = "markusninja_test"
+user = "markus"
+password = "fender917"
+
+[mail]
+char_set = "UTF-8"
+sender = "noreply@rkus.ninja"
+root_url = "http://localhost:3000"

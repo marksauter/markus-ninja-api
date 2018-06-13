@@ -1,0 +1,8 @@
+# Return type for DeleteLesson.
+type DeleteLessonPayload {
+  # The deleted lesson id.
+  deletedLessonId: ID!
+
+  # The study the deleted lesson was in.
+  study: Study!
+}

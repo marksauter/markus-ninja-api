@@ -1,0 +1,5 @@
+# Input type for RequestEmailVerification
+input RequestEmailVerificationInput {
+  # Email to verify. 
+  email: String!
+}

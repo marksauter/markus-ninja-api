@@ -1,0 +1,112 @@
+# Represents a user.
+type User implements Node, UniformResourceLocatable {
+  # Returns a list of assets that the user owns.
+  assets(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for assets returned from the connection.
+    orderBy: UserAssetOrder
+  ): UserAssetConnection!
+
+  # The user's public profile bio.
+  bio: String!
+
+  # The user's public profile bio as HTML.
+  bioHTML: HTML!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The user's public profile email.
+  email: String!
+
+  # Returns a list of the user's emails.
+  emails(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+  ): EmailConnection!
+
+  id: ID!
+
+  # Whether or not this user is a site administrator.
+  isSiteAdmin: Boolean!
+
+  # Whether or not this user is the viewing user.
+  isViewer: Boolean!
+
+  # Returns a list of lessons that the user owns.
+  lessons(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for lessons returned from the connection.
+    orderBy: LessonOrder
+  ): LessonConnection!
+
+  # The username used to login.
+  login: String!
+
+  # The user's public profile name.
+  name: String!
+
+  # The HTTP path for this user.
+  resourcePath: URI!
+
+  # Find study by its name.
+  study(
+    # Name of study to find.
+    name: String!
+  ): Study
+
+  # A list of studies that the user owns.
+  studies(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for studies returned from the connection.
+    orderBy: StudyOrder
+  ): StudyConnection!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this user.
+  url: URI!
+}

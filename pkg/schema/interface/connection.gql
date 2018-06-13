@@ -1,0 +1,14 @@
+# A connection to a list of items.
+interface Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [Edge]
+
+  # A list of nodes.
+  nodes: [Node]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

@@ -1,0 +1,8 @@
+# Return type for DeleteEmail.
+type DeleteEmailPayload {
+  # The deleted email ID.
+  deletedEmailId: ID!
+
+  # The user the deleted email was registered for.
+  user: User!
+}

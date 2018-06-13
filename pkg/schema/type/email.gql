@@ -1,0 +1,49 @@
+# Represents a email.
+type Email implements Node {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # Is the email verified?
+  isVerified: Boolean!
+
+  # Identifies whether the email is public or not.
+  public: Boolean!
+
+  # Identifies the type of email.
+  type: EmailType!
+
+  # The user associated with the email.
+  user: User!
+
+  # The value of the email.
+  value: String!
+
+  # Identifies when the email was verified.
+  verifiedAt: Time
+}
+
+# An edge type for Email.
+type EmailEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Email
+}
+
+# A connection type for Email.
+type EmailConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [EmailEdge]
+
+  # A list of nodes.
+  nodes: [Email]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

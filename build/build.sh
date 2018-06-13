@@ -33,6 +33,7 @@ fi
 
 export CGO_ENABLED=0
 export GOARCH="${ARCH}"
+export PATH=$PATH:$GOPATH/bin
 
 go install                                                         \
     -installsuffix "static"                                        \

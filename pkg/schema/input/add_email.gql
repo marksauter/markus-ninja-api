@@ -1,0 +1,5 @@
+# Input type for AddEmail.
+input AddEmailInput {
+  # Value of the email address to add.
+  email: String!
+}
