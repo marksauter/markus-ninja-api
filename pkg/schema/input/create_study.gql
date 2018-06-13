@@ -1,0 +1,5 @@
+# Input type for CreateStudy.
+input CreateStudyInput {
+  description:  String
+  name:         String!
+}

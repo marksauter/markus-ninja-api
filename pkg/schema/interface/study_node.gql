@@ -1,0 +1,4 @@
+interface StudyNode {
+  # The study associated with this node.
+  study: Study!
+}

@@ -80,6 +80,7 @@ build: bin/$(ARCH)/$(BIN)
 
 bin/$(ARCH)/$(BIN): build-dirs
 	@echo "building: $@"
+	@go generate ./pkg/schema
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
@@ -170,3 +171,6 @@ container-clean:
 
 bin-clean:
 	rm -rf .go bin
+
+watch:
+	gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go

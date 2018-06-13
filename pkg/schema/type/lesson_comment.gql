@@ -1,0 +1,70 @@
+# Represents a lesson comment.
+type LessonComment implements Deletable, Node, UniformResourceLocatable, Updateable {
+  # The author of the comment.
+  author: User
+
+  # The body as Markdown.
+  body: String!
+
+  # The body rendered to HTML.
+  bodyHTML: HTML!
+
+  # The body rendered to text.
+  bodyText: String!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The lesson associated with this comment.
+  lesson: Lesson!
+
+  # Identifies when the lesson comment was published at.
+  publishedAt: Time
+
+  # The HTTP path for this lesson comment.
+  resourcePath: URI!
+
+  # The study associated with this lesson comment.
+  study: Study!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this lesson comment.
+  url: URI!
+
+  # Can the viewer delete this object.
+  viewerCanDelete: Boolean!
+
+  # Can the viewer update this object.
+  viewerCanUpdate: Boolean!
+
+  # Did the viewer author this comment.
+  viewerDidAuthor: Boolean!
+}
+
+# An edge type for LessonComment.
+type LessonCommentEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: LessonComment
+}
+
+# A connection type for LessonComment.
+type LessonCommentConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [LessonCommentEdge]
+
+  # A list of nodes.
+  nodes: [LessonComment]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

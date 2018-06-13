@@ -1,0 +1,14 @@
+# Properties by which study connections can be ordered.
+enum StudyOrderField {
+  # Order studies by advance time.
+  ADVANCED_AT
+
+  # Order studies by creation time.
+  CREATED_AT
+
+  # Order studies by name.
+  NAME
+
+  # Order studies by update time.
+  UPDATED_AT
+}

@@ -1,0 +1,8 @@
+# Ways in which lesson comments can be ordered upon return.
+input LessonCommentOrder {
+  # The direction in which to order lesson comments by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order lesson comments by.
+  field: LessonCommentOrderField!
+}

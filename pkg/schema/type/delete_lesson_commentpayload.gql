@@ -1,0 +1,8 @@
+# Return type for DeleteLessonComment.
+type DeleteLessonCommentPayload {
+  # The deleted lesson id.
+  deletedLessonCommentId: ID!
+
+  # The lesson the deleted lesson comment was for.
+  lesson: Lesson!
+}

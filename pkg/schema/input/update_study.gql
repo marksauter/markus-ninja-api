@@ -1,0 +1,8 @@
+# Input type for UpdateStudy.
+input UpdateStudyInput {
+  # The description of the study.
+  description: String
+
+  # ID of the study.
+  studyId: ID!
+}

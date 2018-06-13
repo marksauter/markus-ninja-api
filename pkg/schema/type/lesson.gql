@@ -1,0 +1,88 @@
+# Represents a lesson.
+type Lesson implements Node, UniformResourceLocatable, Updateable {
+  # The author of the lesson.
+  author: User
+
+  # The body of the lesson.
+  body: String!
+
+  # The body of the lesson rendered to HTML.
+  bodyHTML: HTML!
+
+  # The body of the lesson rendered to text.
+  bodyText: String!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # Returns a list of comments for the current lesson.
+  comments(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for comments returned from the connection.
+    orderBy: LessonCommentOrder
+  ): LessonCommentConnection!
+
+  id: ID!
+
+  # Identifies the lesson number.
+  number: Int!
+
+  # Identifies when the lesson was published at.
+  publishedAt: Time!
+
+  # The study associated with this lesson.
+  study: Study!
+
+  # The title of the lesson.
+  title: String!
+
+  # The HTTP path for this lesson.
+  resourcePath: URI!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this lesson.
+  url: URI!
+
+  # Can the viewer update this lesson.
+  viewerCanUpdate: Boolean!
+
+  # Did the viewer author this lesson.
+  viewerDidAuthor: Boolean!
+}
+
+# An edge type for Lesson.
+type LessonEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Lesson
+}
+
+# A connection type for Lesson.
+type LessonConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [LessonEdge]
+
+  # A list of nodes.
+  nodes: [Lesson]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    body {
+      height: 100%;
+      margin: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+    #root {
+      height: 100vh;
+    }
+    
+    .Root {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .Root__toggle {
+      align-self: stretch;
+    }
+
+    .LoginForm {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .LoginForm__field {
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
+
+    .LoginForm__submit {
+      align-self: stretch;
+    }
+
+    .SignupForm {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .SignupForm__field {
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
+
+    .SignupForm__submit {
+      align-self: stretch;
+    }
+  </style>
+  <script src="//cdn.jsdelivr.net/es6-promise/4.0.5/es6-promise.auto.min.js"></script>
+  <script src="//cdn.jsdelivr.net/fetch/0.9.0/fetch.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react-dom.min.js"></script>
+</head>
+<body>
+  <div id="root">Loading...</div>
+  <script>
+    class Root extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          form: "login"
+        }
+
+        this.handleClickLogin = this.handleClickLogin.bind(this);
+        this.handleClickSignup = this.handleClickSignup.bind(this);
+      }
+
+      handleClickLogin(e) {
+        e.preventDefault();
+
+        this.setState({
+          form: "login"
+        })
+      }
+
+      handleClickSignup(e) {
+        e.preventDefault();
+
+        this.setState({
+          form: "signup"
+        })
+      }
+
+      render() {
+        const loginForm = React.createElement(LoginForm);
+        const signupForm = React.createElement(SignupForm);
+        let children;
+        let button;
+        if (this.state.form === "login") {
+          children = loginForm;
+          button = React.createElement("button", {
+            className: "Root__toggle",
+            onClick: this.handleClickSignup
+          }, "Signup");
+        } else if (this.state.form === "signup") {
+          children = signupForm;
+          button = React.createElement("button", {
+            className: "Root__toggle",
+            onClick: this.handleClickLogin
+          }, "Login");
+        } else {
+          children = null;
+        }
+        return React.createElement("div", {
+          className: "Root",
+        },
+          children,
+          button
+        );
+      }
+    }
+
+    class LoginForm extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          error: null,
+          login: "",
+          password: "",
+        };
+
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+      }
+
+      handleSubmit(e) {
+        e.preventDefault();
+        const type = "Basic";
+        const credentials = btoa(this.state.login + ":" + this.state.password);
+        return fetch("/token", {
+          method: "POST",
+          headers: {
+            "Authorization": type + " " + credentials,
+            "Content-Type": "application/json",
+          },
+        }).then(function (response) {
+          return response.text();
+        }).then(function (responseBody) {
+          try {
+            return JSON.parse(responseBody);
+          } catch (error) {
+            return responseBody;
+          }
+        }).then((data) => {
+          if (data.error) {
+            this.setState({
+              error: data.error_description,
+            });
+            return;
+          }
+          window.sessionStorage.setItem("access_token", data.access_token);
+          window.location.replace("/graphiql");
+          return;
+        });
+      }
+
+      handleChange(e) {
+        this.setState({
+          [e.target.name]: e.target.value,
+        });
+      }
+
+      render() {
+        return React.createElement("form", {
+          className: "LoginForm",
+          onSubmit: this.handleSubmit,
+        },
+          React.createElement("fieldset", {
+            className: "LoginForm__field"
+          },
+            React.createElement("label", {
+              className: "LoginForm__label",
+              htmlFor: "LoginForm__login"
+            }, "Email"),
+            React.createElement("input", {
+              className: "LoginForm__input",
+              id: "LoginForm__login",
+              name: "login",
+              value: this.state.login,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "LoginForm__field"
+          },
+            React.createElement("label", {
+              className: "LoginForm__label",
+              htmlFor: "LoginForm__password"
+            }, "Password"),
+            React.createElement("input", {
+              className: "LoginForm__input",
+              id: "LoginForm__password",
+              type: "password",
+              name: "password",
+              value: this.state.password,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("button", {
+            className: "LoginForm__submit",
+            type: "submit"
+          }, "Login"),
+          React.createElement("span", {
+            className: "LoginForm__error"
+          }, this.state.error)
+        );
+      }
+    }
+
+    class SignupForm extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          error: null,
+          email: "",
+          login: "",
+          password: "",
+        };
+
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+      }
+
+      handleSubmit(e) {
+        e.preventDefault();
+        const accessToken = window.sessionStorage.getItem("access_token");
+        return fetch("/signup", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Authorization": "Bearer " + accessToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: this.state.email,
+            login: this.state.login,
+            password: this.state.password
+          })
+        }).then(function (response) {
+          return response.text();
+        }).then(function (responseBody) {
+          try {
+            return JSON.parse(responseBody);
+          } catch (error) {
+            return responseBody;
+          }
+        }).then((data) => {
+          if (data.error) {
+            this.setState({
+              error: data.error_description,
+            });
+            return;
+          }
+          window.sessionStorage.setItem("access_token", data.access_token);
+          window.location.replace("/graphiql");
+          return;
+        });
+      }
+
+      handleChange(e) {
+        this.setState({
+          [e.target.name]: e.target.value,
+        });
+      }
+
+      render() {
+        return React.createElement("form", {
+          className: "SignupForm",
+          onSubmit: this.handleSubmit,
+        },
+          React.createElement("fieldset", {
+            className: "SignupForm__field"
+          },
+            React.createElement("label", {
+              className: "SignupForm__label",
+              htmlFor: "SignupForm__email"
+            }, "Email"),
+            React.createElement("input", {
+              className: "SignupForm__input",
+              id: "SignupForm__email",
+              name: "email",
+              value: this.state.email,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "SignupForm__field"
+          },
+            React.createElement("label", {
+              className: "SignupForm__label",
+              htmlFor: "SignupForm__login"
+            }, "Username"),
+            React.createElement("input", {
+              className: "SignupForm__input",
+              id: "SignupForm__login",
+              name: "login",
+              value: this.state.login,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "SignupForm__field"
+          },
+            React.createElement("label", {
+              className: "SignupForm__label",
+              htmlFor: "SignupForm__password"
+            }, "Password"),
+            React.createElement("input", {
+              className: "SignupForm__input",
+              id: "SignupForm__password",
+              type: "password",
+              name: "password",
+              value: this.state.password,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("button", {
+            className: "SignupForm__submit",
+            type: "submit"
+          }, "Signup"),
+          React.createElement("span", {
+            className: "SignupForm__error"
+          }, this.state.error)
+        );
+      }
+    }
+
+    ReactDOM.render(
+      React.createElement(Root),
+      document.getElementById('root')
+    );
+  </script>
+</body>
+</html>

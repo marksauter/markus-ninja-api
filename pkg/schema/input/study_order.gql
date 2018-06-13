@@ -1,0 +1,8 @@
+# Ways in which studies can be ordered upon return.
+input StudyOrder {
+  # The direction in which to order studies by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order studies by.
+  field: StudyOrderField!
+}

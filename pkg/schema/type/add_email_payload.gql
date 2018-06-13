@@ -1,0 +1,11 @@
+# Return type for AddEmail.
+type AddEmailPayload {
+  # The edge from the user's email connection.
+  emailEdge: EmailEdge!
+
+  # The email verification token for the email.
+  token: EVT
+
+  # The user for which the email was added.
+  user: User!
+}

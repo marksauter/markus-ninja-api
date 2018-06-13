@@ -1,0 +1,8 @@
+# Return type for DeleteStudy.
+type DeleteStudyPayload {
+  # The deleted study id.
+  deletedStudyId: ID!
+
+  # The owner of the deleted study.
+  owner: User!
+}

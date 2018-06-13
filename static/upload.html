@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    body {
+      height: 100%;
+      margin: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+    #root {
+      height: 100vh;
+    }
+
+    .UploadForm {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .UploadForm__field {
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
+
+    .UploadForm__submit {
+      align-self: stretch;
+    }
+  </style>
+  <script src="//cdn.jsdelivr.net/es6-promise/4.0.5/es6-promise.auto.min.js"></script>
+  <script src="//cdn.jsdelivr.net/fetch/0.9.0/fetch.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react.min.js"></script>
+  <script src="//cdn.jsdelivr.net/react/15.4.2/react-dom.min.js"></script>
+</head>
+<body>
+  <div id="root">Loading...</div>
+  <script>
+    class UploadForm extends React.Component {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          error: null,
+          file: null,
+          studyId: null,
+        };
+
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+      }
+
+      handleSubmit(e) {
+        e.preventDefault();
+        const accessToken = window.sessionStorage.getItem("access_token");
+        const formData = new FormData();
+
+        formData.append("study_id", this.state.studyId); 
+        formData.append("file", this.state.file);
+
+        return fetch("/upload/assets", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + accessToken,
+          },
+          body: formData
+        }).then(function (response) {
+          return response.text();
+        }).then(function (responseBody) {
+          try {
+            return JSON.parse(responseBody);
+          } catch (error) {
+            return responseBody;
+          }
+        }).then((data) => {
+          if (data.error) {
+            this.setState({
+              error: data.error_description,
+            });
+            return;
+          }
+          return;
+        }).catch(function (error) {
+          console.error(error);
+        });
+      }
+
+      handleChange(e) {
+        const value = e.target.name === "file" ? e.target.files[0] : e.target.value;
+        this.setState({
+          [e.target.name]: value,
+        });
+      }
+
+      render() {
+        return React.createElement("form", {
+          className: "UploadForm",
+          onSubmit: this.handleSubmit,
+        },
+          React.createElement("fieldset", {
+            className: "UploadForm__field"
+          },
+            React.createElement("label", {
+              className: "UploadForm__label",
+              htmlFor: "UploadForm__file"
+            }, "File"),
+            React.createElement("input", {
+              className: "UploadForm__input",
+              id: "UploadForm__file",
+              name: "file",
+              type: "file",
+              value: this.state.file,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("fieldset", {
+            className: "UploadForm__field"
+          },
+            React.createElement("label", {
+              className: "UploadForm__label",
+              htmlFor: "UploadForm__studyId"
+            }, "Study Id"),
+            React.createElement("input", {
+              className: "UploadForm__input",
+              id: "UploadForm__studyId",
+              name: "studyId",
+              type: "text",
+              value: this.state.studyId,
+              onChange: this.handleChange
+            })
+          ),
+          React.createElement("input", {
+            name: "token",
+            type: "hidden",
+            value: this.state.file,
+          }),
+          React.createElement("button", {
+            className: "UploadForm__submit",
+            type: "submit"
+          }, "Upload"),
+          React.createElement("span", {
+            className: "UploadForm__error"
+          }, this.state.error)
+        );
+      }
+    }
+
+    ReactDOM.render(
+      React.createElement(UploadForm),
+      document.getElementById('root')
+    );
+  </script>
+</body>
+</html>

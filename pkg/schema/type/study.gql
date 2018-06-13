@@ -1,0 +1,137 @@
+# Represents a study.
+type Study implements Node, UniformResourceLocatable {
+  # Identifies when the study was advanced at.
+  advancedAt: Time
+
+  # Returns a single asset from the current study by name.
+  asset(
+    name: String!
+  ): UserAsset
+
+  # Returns a list of assets that the study owns.
+  assets(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for assets returned from the connection.
+    orderBy: UserAssetOrder
+  ): UserAssetConnection!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The description of the study.
+  description: String!
+
+  # The description of the study rendered to HTML.
+  descriptionHTML: HTML!
+
+  id: ID!
+
+  # Returns a single lesson from the current study by number.
+  lesson(
+    # The number for the lesson to be returned.
+    number: Int!  
+  ): Lesson
+
+  # Returns a list of lessons from the current study.
+  lessons(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for lessons returned from the connection.
+    orderBy: LessonOrder
+  ): LessonConnection!
+
+  lessonComments(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+  ): LessonCommentConnection!
+
+  # How many lessons there are in this study.
+  lessonCount: Int!
+
+  # The name of the study.
+  name: String!
+
+  # The study's name with owner.
+  nameWithOwner: String!
+
+  # The owner of the study.
+  owner: User!
+
+  # The HTTP path for this study.
+  resourcePath: URI!
+
+  # Returns a list of topics from the current study.
+  topics(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+  ): TopicConnection!
+
+  # Identifies when the study was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this study.
+  url: URI!
+}
+
+# An edge type for Study.
+type StudyEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Study
+}
+
+# A connection type for Study.
+type StudyConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [StudyEdge]
+
+  # A list of nodes.
+  nodes: [Study]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}
