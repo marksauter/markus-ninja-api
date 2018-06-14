@@ -124,6 +124,9 @@ container: .container-$(DOTFILE_IMAGE) container-name
 	    -e 's|ARG_ARCH|$(ARCH)|g' \
 	    -e 's|ARG_FROM|$(BASEIMAGE)|g' \
 	    Dockerfile.in > .dockerfile-$(ARCH)
+	@sed \
+	    -e 's|VERSION|$(VERSION)|g' \
+	    Dockerrun.aws.tmpl > Dockerrun.aws.json
 	@docker build -t $(IMAGE):$(VERSION) -f .dockerfile-$(ARCH) .
 	@docker images -q $(IMAGE):$(VERSION) > $@
 
