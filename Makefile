@@ -87,7 +87,7 @@ bin/$(ARCH)/$(BIN): build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
-	    -e BRANCH="$(BRANCH)"
+	    -e BRANCH="$(BRANCH)" 						\
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
@@ -109,7 +109,7 @@ shell: build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
-	    -e BRANCH="$(BRANCH)"
+	    -e BRANCH="$(BRANCH)" 						\
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
@@ -158,7 +158,7 @@ test: build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
-	    -e BRANCH="$(BRANCH)"
+	    -e BRANCH="$(BRANCH)" 						\
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
