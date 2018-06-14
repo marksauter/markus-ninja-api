@@ -3,7 +3,7 @@
 /.push-*
 /.container-*
 /.dockerfile-*
-/.toml
+*.toml
 /gin-bin
 
 vendor/*
