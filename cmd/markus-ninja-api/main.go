@@ -39,7 +39,9 @@ import (
 )
 
 func main() {
-	conf := myconf.Load("config.development")
+	branch := util.GetRequiredEnv("BRANCH")
+	confFilename := fmt.Sprintf("config.%s", branch)
+	conf := myconf.Load(confFilename)
 	dbConfig := pgx.ConnConfig{
 		User:     conf.DBUser,
 		Password: conf.DBPassword,

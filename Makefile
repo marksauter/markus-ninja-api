@@ -87,6 +87,7 @@ bin/$(ARCH)/$(BIN): build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
+	    -e BRANCH="$(BRANCH)"
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
@@ -108,6 +109,7 @@ shell: build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
+	    -e BRANCH="$(BRANCH)"
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
@@ -156,6 +158,7 @@ test: build-dirs
 	@docker run                                                             \
 	    -ti                                                                 \
 	    --rm                                                                \
+	    -e BRANCH="$(BRANCH)"
 	    -u $$(id -u):$$(id -g)                                              \
 	    -v "$$(pwd)/.go:/go"                                                \
 	    -v "$$(pwd):/go/src/$(PKG)"                                         \
@@ -180,7 +183,7 @@ bin-clean:
 	rm -rf .go bin
 
 watch:
-	gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
+	BRANCH=development gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
 
 deploy:
 	@$(MAKE) --no-print-directory container
