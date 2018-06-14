@@ -75,6 +75,9 @@ func (s *UserAssetService) CountBySearch(within *mytype.OID, query string) (n in
 	psName := preparedName("countUserAssetBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return
 }
 
@@ -94,6 +97,9 @@ func (s *UserAssetService) CountByStudy(userId, studyId string) (int32, error) {
 		userId,
 		studyId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -112,6 +118,9 @@ func (s *UserAssetService) CountByUser(userId string) (int32, error) {
 		countUserAssetByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -184,6 +193,8 @@ func (s *UserAssetService) getMany(
 		mylog.Log.WithError(err).Error("failed to get user_assets")
 		return nil, err
 	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }

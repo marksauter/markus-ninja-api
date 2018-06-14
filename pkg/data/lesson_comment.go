@@ -54,6 +54,9 @@ func (s *LessonCommentService) CountByLesson(
 		studyId,
 		lessonId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -78,6 +81,9 @@ func (s *LessonCommentService) CountByStudy(
 		userId,
 		studyId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -98,6 +104,9 @@ func (s *LessonCommentService) CountByUser(userId string) (int32, error) {
 		countLessonCommentByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -156,6 +165,8 @@ func (s *LessonCommentService) getMany(name string, sql string, args ...interfac
 		mylog.Log.WithError(err).Error("failed to get lesson_comments")
 		return nil, err
 	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
