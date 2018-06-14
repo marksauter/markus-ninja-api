@@ -181,3 +181,10 @@ bin-clean:
 
 watch:
 	gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
+
+deploy:
+	@$(MAKE) --no-print-directory container
+	@$(MAKE) --no-print-directory push
+	@git add .
+	@git commit -m "$(VERSION)"
+	@eb deploy
