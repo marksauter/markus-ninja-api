@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/jackc/pgx"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,9 +17,12 @@ type Logger struct {
 
 func New() *Logger {
 	log := logrus.New()
-	log.Formatter = &logrus.TextFormatter{ForceColors: true}
+	log.Formatter = &logrus.TextFormatter{}
 	log.Out = os.Stdout
-	log.SetLevel(logrus.DebugLevel)
+	branch := util.GetRequiredEnv("BRANCH")
+	if branch != "production" {
+		log.SetLevel(logrus.DebugLevel)
+	}
 	return &Logger{log}
 }
 

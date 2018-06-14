@@ -117,6 +117,10 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 }
 
 func (s *PermService) UpdatePermissionSuite(model interface{}) error {
+	mylog.Log.WithField(
+		"model",
+		mType,
+	).Info("UpdatePermissionSuite(model)")
 	mType, err := perm.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
