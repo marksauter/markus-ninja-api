@@ -15,6 +15,9 @@
 # The binary to build (just the basename).
 BIN := markus-ninja-api
 
+# The branch we are working in.
+BRANCH ?= development 
+
 # This repo's root import path (under GOPATH).
 PKG := github.com/marksauter/markus-ninja-api
 
@@ -123,6 +126,7 @@ container: .container-$(DOTFILE_IMAGE) container-name
 	    -e 's|ARG_BIN|$(BIN)|g' \
 	    -e 's|ARG_ARCH|$(ARCH)|g' \
 	    -e 's|ARG_FROM|$(BASEIMAGE)|g' \
+	    -e 's|ARG_BRANCH|$(BRANCH)|g' \
 	    Dockerfile.in > .dockerfile-$(ARCH)
 	@sed \
 	    -e 's|VERSION|$(VERSION)|g' \

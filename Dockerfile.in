@@ -18,6 +18,7 @@ FROM ARG_FROM
 MAINTAINER Mark Sauter <m@rkus.ninja>
 
 ADD bin/ARG_ARCH/ARG_BIN /ARG_BIN
+ADD config.ARG_BRANCH.toml /ARG_BIN
 
 USER nobody:nobody
 ENTRYPOINT ["/ARG_BIN"]
