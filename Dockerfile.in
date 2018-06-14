@@ -19,6 +19,7 @@ MAINTAINER Mark Sauter <m@rkus.ninja>
 
 ADD bin/ARG_ARCH/ARG_BIN /ARG_BIN
 ADD --chown=55 config.ARG_BRANCH.toml /
+ADD --chown=55 static /static
 
 USER nobody:nobody
 ENTRYPOINT BRANCH=ARG_BRANCH /ARG_BIN
