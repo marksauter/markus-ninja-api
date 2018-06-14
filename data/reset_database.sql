@@ -25,6 +25,7 @@ CREATE TRIGGER account_updated_at_modtime
   BEFORE UPDATE ON account
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
+DROP TYPE IF EXISTS email_type CASCADE;
 CREATE TYPE email_type AS ENUM('BACKUP', 'EXTRA', 'PRIMARY');
 
 DROP TABLE IF EXISTS email CASCADE;

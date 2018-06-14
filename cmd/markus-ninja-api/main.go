@@ -107,11 +107,10 @@ func main() {
 }
 
 func initDB(svcs *service.Services, db *mydb.DB) error {
-	defer func() {
-		if r := recover(); r != nil {
-			mylog.Log.Panic(r)
-		}
-	}()
+	err := data.Initialize(db)
+	if err != nil {
+		return err
+	}
 
 	roles := []data.RoleType{
 		data.AdminRole,

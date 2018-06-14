@@ -59,6 +59,9 @@ func (s *LessonService) CountBySearch(within *mytype.OID, query string) (n int32
 	psName := preparedName("countLessonBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return
 }
 
@@ -80,6 +83,9 @@ func (s *LessonService) CountByStudy(userId, studyId string) (int32, error) {
 		userId,
 		studyId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -98,6 +104,9 @@ func (s *LessonService) CountByUser(userId string) (int32, error) {
 		countLessonByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -156,6 +165,8 @@ func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([
 		mylog.Log.WithError(err).Error("failed to get lessons")
 		return nil, err
 	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }

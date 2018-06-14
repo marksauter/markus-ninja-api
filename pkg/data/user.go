@@ -43,6 +43,9 @@ func (s *UserService) CountBySearch(query string) (n int32, err error) {
 	psName := preparedName("countUserBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return
 }
 
@@ -115,6 +118,8 @@ func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*
 		mylog.Log.WithError(err).Error("failed to get users")
 		return nil, err
 	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -272,7 +277,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 
 	tx, err := beginTransaction(s.db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	defer rollbackTransaction(tx)
@@ -287,7 +291,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 	_, err = prepareExec(tx, psName, createUserSQL, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
 				return nil, RequiredFieldError(pgErr.ColumnName)
@@ -297,7 +300,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
 	}
 
@@ -308,7 +310,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 	emailSvc := NewEmailService(tx)
 	_, err = emailSvc.Create(primaryEmail)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user primary email")
 		return nil, err
 	}
 
@@ -320,7 +321,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 
 	err = commitTransaction(tx)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
 		return nil, err
 	}
 

@@ -46,6 +46,9 @@ func (s *StudyService) CountByUser(userId string) (int32, error) {
 		countStudyByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -73,6 +76,9 @@ func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32,
 	psName := preparedName("countStudyBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return
 }
 
@@ -126,7 +132,7 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("found rows")
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }

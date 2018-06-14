@@ -44,6 +44,9 @@ func (s *TopicService) CountByStudy(studyId string) (int32, error) {
 		countTopicByStudySQL,
 		studyId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -71,6 +74,9 @@ func (s *TopicService) CountBySearch(within *mytype.OID, query string) (n int32,
 	psName := preparedName("countTopicBySearch", sql)
 
 	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return
 }
 
@@ -117,6 +123,8 @@ func (s *TopicService) getMany(name string, sql string, args ...interface{}) ([]
 		mylog.Log.WithError(err).Error("failed to get topics")
 		return nil, err
 	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }

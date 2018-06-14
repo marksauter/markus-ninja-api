@@ -114,6 +114,8 @@ func (s *RoleService) getMany(name string, sql string, args ...interface{}) ([]*
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info("")
+
 	return rows, nil
 }
 

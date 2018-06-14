@@ -59,6 +59,9 @@ func (s *EmailService) CountByUser(userId string) (int32, error) {
 		countEmailByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -79,6 +82,9 @@ func (s *EmailService) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
 		countEmailVerifiedByUserSQL,
 		userId,
 	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
 	return n, err
 }
 
@@ -137,7 +143,7 @@ func (s *EmailService) getMany(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("found rows")
+	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
