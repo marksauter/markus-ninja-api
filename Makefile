@@ -16,7 +16,7 @@
 BIN := markus-ninja-api
 
 # The branch we are working in.
-BRANCH ?= development 
+BRANCH ?= development
 
 # This repo's root import path (under GOPATH).
 PKG := github.com/marksauter/markus-ninja-api
