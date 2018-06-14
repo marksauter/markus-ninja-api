@@ -117,14 +117,14 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 }
 
 func (s *PermService) UpdatePermissionSuite(model interface{}) error {
-	mylog.Log.WithField(
-		"model",
-		mType,
-	).Info("UpdatePermissionSuite(model)")
 	mType, err := perm.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
 	}
+	mylog.Log.WithField(
+		"model",
+		mType,
+	).Info("UpdatePermissionSuite(model)")
 	permissableUserFields, err := perm.GetPermissableFields(model)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("failed to get user field permissions")
