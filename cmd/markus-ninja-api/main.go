@@ -275,13 +275,13 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 
 func startRefreshMV(svcs *service.Services) {
 	for {
-		time.Sleep(time.Minute)
 		go svcs.User.RefreshSearchIndex()
-		time.Sleep(time.Minute)
+		time.Sleep(10 * time.Second)
 		go svcs.Study.RefreshSearchIndex()
-		time.Sleep(time.Minute)
+		time.Sleep(10 * time.Second)
 		go svcs.Lesson.RefreshSearchIndex()
-		time.Sleep(time.Minute)
+		time.Sleep(10 * time.Second)
 		go svcs.Topic.RefreshSearchIndex()
+		time.Sleep(30 * time.Minute)
 	}
 }
