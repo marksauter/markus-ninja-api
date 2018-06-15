@@ -45,17 +45,17 @@ type lessonConnectionResolver struct {
 }
 
 func (r *lessonConnectionResolver) Edges() *[]*lessonEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*lessonEdgeResolver{}
 }
 
 func (r *lessonConnectionResolver) Nodes() *[]*lessonResolver {
 	n := len(r.lessons)
 	nodes := make([]*lessonResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		lessons := r.lessons[r.pageInfo.start : r.pageInfo.end+1]
 		for _, l := range lessons {
 			nodes = append(nodes, &lessonResolver{Lesson: l, Repos: r.repos})

@@ -55,7 +55,7 @@ func (r *lessonCommentConnectionResolver) Edges() *[]*lessonCommentEdgeResolver 
 func (r *lessonCommentConnectionResolver) Nodes() *[]*lessonCommentResolver {
 	n := len(r.lessonComments)
 	nodes := make([]*lessonCommentResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		lessonComments := r.lessonComments[r.pageInfo.start : r.pageInfo.end+1]
 		for _, l := range lessonComments {
 			nodes = append(nodes, &lessonCommentResolver{LessonComment: l, Repos: r.repos})

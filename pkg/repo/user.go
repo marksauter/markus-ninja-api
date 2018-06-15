@@ -63,7 +63,7 @@ func (r *UserPermit) Profile() (string, error) {
 	if ok := r.checkFieldPermission("profile"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.user.Profile.String, nil
+	return r.user.Bio.String, nil
 }
 
 func (r *UserPermit) PublicEmail() (string, error) {

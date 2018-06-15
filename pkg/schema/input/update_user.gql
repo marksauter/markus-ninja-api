@@ -9,6 +9,9 @@ input UpdateUserInput {
   # The user's public profile name.
   name: String
 
+  # The user's public profile email.
+  publicEmail: String
+
   # ID of the user.
   userId: String!
 }

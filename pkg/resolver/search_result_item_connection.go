@@ -54,11 +54,11 @@ type searchResultItemConnectionResolver struct {
 }
 
 func (r *searchResultItemConnectionResolver) Edges() *[]*searchResultItemEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*searchResultItemEdgeResolver{}
 }
 
 func (r *searchResultItemConnectionResolver) LessonCount() int32 {
@@ -68,7 +68,7 @@ func (r *searchResultItemConnectionResolver) LessonCount() int32 {
 func (r *searchResultItemConnectionResolver) Nodes() *[]*searchResultItemResolver {
 	n := len(r.searchResultItems)
 	nodes := make([]*searchResultItemResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		searchResultItems := r.searchResultItems[r.pageInfo.start : r.pageInfo.end+1]
 		for _, node := range searchResultItems {
 			nodes = append(nodes, &searchResultItemResolver{Item: node, Repos: r.repos})

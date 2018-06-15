@@ -47,17 +47,17 @@ type studyConnectionResolver struct {
 }
 
 func (r *studyConnectionResolver) Edges() *[]*studyEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*studyEdgeResolver{}
 }
 
 func (r *studyConnectionResolver) Nodes() *[]*studyResolver {
 	n := len(r.studies)
 	nodes := make([]*studyResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		studies := r.studies[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range studies {
 			nodes = append(nodes, &studyResolver{Study: s, Repos: r.repos})

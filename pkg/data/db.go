@@ -357,12 +357,12 @@ END;
 $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS account(
+  bio						TEXT,
   created_at    TIMESTAMPTZ  DEFAULT NOW(),
   id            VARCHAR(100) PRIMARY KEY,
   login         VARCHAR(40)  NOT NULL,
   name          TEXT         CHECK(name ~ '^[\w|-][\w|-|\s]+[\w|-]$'),
   password      BYTEA        NOT NULL,
-  profile       TEXT,
   updated_at    TIMESTAMPTZ  DEFAULT NOW()
 );
 
@@ -945,11 +945,11 @@ $$ language 'plpgsql';
 
 CREATE OR REPLACE VIEW user_master AS
 SELECT
+  account.bio,
   account.created_at,
   account.id,
   account.login,
   account.name,
-  account.profile,
   email.value public_email,
   account.updated_at
 FROM account
@@ -980,7 +980,7 @@ SELECT
   *,
   setweight(to_tsvector('simple', login), 'A') ||
   setweight(to_tsvector('simple', coalesce(name, '')), 'A') ||
-  setweight(to_tsvector('simple', coalesce(profile, '')), 'B') ||
+  setweight(to_tsvector('simple', coalesce(bio, '')), 'B') ||
   setweight(to_tsvector('simple', coalesce(public_email, '')), 'B') as document
 FROM user_master;
 

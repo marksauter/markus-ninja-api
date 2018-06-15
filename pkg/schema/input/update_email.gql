@@ -3,9 +3,6 @@ input UpdateEmailInput {
   # Id of the email.
   emailId: ID!
 
-  # Identifies whether the email is public or not.
-  public: Boolean
-
   # The type of the email.
   type: EmailType
 }

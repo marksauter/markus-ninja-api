@@ -45,17 +45,17 @@ type userAssetConnectionResolver struct {
 }
 
 func (r *userAssetConnectionResolver) Edges() *[]*userAssetEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*userAssetEdgeResolver{}
 }
 
 func (r *userAssetConnectionResolver) Nodes() *[]*userAssetResolver {
 	n := len(r.userAssets)
 	nodes := make([]*userAssetResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		userAssets := r.userAssets[r.pageInfo.start : r.pageInfo.end+1]
 		for _, l := range userAssets {
 			nodes = append(nodes, &userAssetResolver{UserAsset: l, Repos: r.repos})

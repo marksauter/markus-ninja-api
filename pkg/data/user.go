@@ -1,24 +1,24 @@
 package data
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type User struct {
 	BackupEmail  mytype.Email       `db:"backup_email" permit:"create"`
+	Bio          pgtype.Text        `db:"bio" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           mytype.OID         `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     mytype.Password    `db:"password" permit:"create"`
 	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
-	Profile      pgtype.Text        `db:"profile" permit:"read"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -51,11 +51,11 @@ func (s *UserService) CountBySearch(query string) (n int32, err error) {
 
 const batchGetUserSQL = `
 	SELECT
+		bio,
 		created_at,
 		id,
 		login,
 		name,
-		profile,
 		public_email,
 		updated_at
 	FROM user_master
@@ -74,11 +74,11 @@ func (s *UserService) BatchGet(ids []string) ([]*User, error) {
 func (s *UserService) get(name string, sql string, arg interface{}) (*User, error) {
 	var row User
 	err := prepareQueryRow(s.db, name, sql, arg).Scan(
+		&row.Bio,
 		&row.CreatedAt,
 		&row.Id,
 		&row.Login,
 		&row.Name,
-		&row.Profile,
 		&row.PublicEmail,
 		&row.UpdatedAt,
 	)
@@ -103,11 +103,11 @@ func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
+			&row.Bio,
 			&row.CreatedAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
-			&row.Profile,
 			&row.PublicEmail,
 			&row.UpdatedAt,
 		)
@@ -126,11 +126,11 @@ func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*
 
 const getUserByIdSQL = `  
 	SELECT
+		bio,
 		created_at,
 		id,
 		login,
 		name,
-		profile,
 		public_email,
 		updated_at
 	FROM user_master
@@ -144,11 +144,11 @@ func (s *UserService) Get(id string) (*User, error) {
 
 const getUserByLoginSQL = `
 	SELECT
+		bio,
 		created_at,
 		id,
 		login,
 		name,
-		profile,
 		public_email,
 		updated_at
 	FROM user_master
@@ -263,10 +263,6 @@ func (s *UserService) Create(row *User) (*User, error) {
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
-		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(util.Split(row.Name.String, userDelimeter))
-		columns = append(columns, "name_tokens")
-		values = append(values, args.Append(nameTokens))
 	}
 	if row.Login.Status != pgtype.Undefined {
 		columns = append(columns, `login`)
@@ -372,11 +368,11 @@ func (s *UserService) RefreshSearchIndex() error {
 func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 	mylog.Log.WithField("query", query).Info("User.Search(query)")
 	selects := []string{
+		"bio",
 		"created_at",
 		"id",
 		"login",
 		"name",
-		"profile",
 		"public_email",
 		"updated_at",
 	}
@@ -394,20 +390,17 @@ func (s *UserService) Update(row *User) (*User, error) {
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
+	if row.Bio.Status != pgtype.Undefined {
+		sets = append(sets, `bio`+"="+args.Append(&row.Bio))
+	}
 	if row.Login.Status != pgtype.Undefined {
 		sets = append(sets, `login`+"="+args.Append(&row.Login))
 	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
-		nameTokens := &pgtype.TextArray{}
-		nameTokens.Set(util.Split(row.Name.String, userDelimeter))
-		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 	if row.Password.Status != pgtype.Undefined {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
-	}
-	if row.Profile.Status != pgtype.Undefined {
-		sets = append(sets, `profile`+"="+args.Append(&row.Profile))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)
@@ -445,6 +438,22 @@ func (s *UserService) Update(row *User) (*User, error) {
 	}
 	if commandTag.RowsAffected() != 1 {
 		return nil, ErrNotFound
+	}
+
+	if row.PublicEmail.Status != pgtype.Undefined {
+		emailSvc := NewEmailService(tx)
+		publicEmail, err := emailSvc.GetByValue(row.PublicEmail.String)
+		if err != nil {
+			return nil, err
+		}
+		if publicEmail.VerifiedAt.Status == pgtype.Null {
+			return nil, errors.New("cannot set unverified email to public")
+		}
+		publicEmail.Public.Set(true)
+		_, err = emailSvc.Update(publicEmail)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	userSvc := NewUserService(tx)

@@ -349,7 +349,9 @@ func (s *EmailService) Update(row *Email) (*Email, error) {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE email
