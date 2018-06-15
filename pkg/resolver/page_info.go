@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 type pageInfoResolver struct {
@@ -142,8 +141,6 @@ func NewPageInfoResolver(
 	if end < start {
 		resolver.isEmpty = true
 	}
-
-	mylog.Log.Debug(start, end)
 
 	return resolver
 }

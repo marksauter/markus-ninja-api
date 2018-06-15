@@ -47,17 +47,17 @@ type topicConnectionResolver struct {
 }
 
 func (r *topicConnectionResolver) Edges() *[]*topicEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*topicEdgeResolver{}
 }
 
 func (r *topicConnectionResolver) Nodes() *[]*topicResolver {
 	n := len(r.topics)
 	nodes := make([]*topicResolver, 0, n)
-	if n > 0 {
+	if n > 0 && !r.pageInfo.isEmpty {
 		topics := r.topics[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range topics {
 			nodes = append(nodes, &topicResolver{Topic: s, Repos: r.repos})

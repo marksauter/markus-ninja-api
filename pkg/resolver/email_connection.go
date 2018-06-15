@@ -53,10 +53,13 @@ func (r *emailConnectionResolver) Edges() *[]*emailEdgeResolver {
 }
 
 func (r *emailConnectionResolver) Nodes() *[]*emailResolver {
-	emails := r.emails[r.pageInfo.start : r.pageInfo.end+1]
-	nodes := make([]*emailResolver, len(emails))
-	for i := range nodes {
-		nodes[i] = &emailResolver{Email: emails[i], Repos: r.repos}
+	n := len(r.emails)
+	nodes := make([]*emailResolver, 0, n)
+	if n > 0 && !r.pageInfo.isEmpty {
+		emails := r.emails[r.pageInfo.start : r.pageInfo.end+1]
+		for _, e := range emails {
+			nodes = append(nodes, &emailResolver{Email: e, Repos: r.repos})
+		}
 	}
 	return &nodes
 }

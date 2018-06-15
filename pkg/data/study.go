@@ -386,10 +386,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 		nameTokens := &pgtype.Text{}
-		err := nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
-		if err != nil {
-			return nil, err
-		}
+		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 

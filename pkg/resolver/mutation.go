@@ -637,7 +637,6 @@ func (r *RootResolver) ResetPassword(
 
 type UpdateEmailInput struct {
 	EmailId string
-	Public  *bool
 	Type    *string
 }
 
@@ -660,11 +659,6 @@ func (r *RootResolver) UpdateEmail(
 
 	email := emailPermit.Get()
 
-	if args.Input.Public != nil {
-		if err := email.Public.Set(args.Input.Public); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user_email public"}
-		}
-	}
 	if args.Input.Type != nil {
 		if err := email.Type.Set(args.Input.Type); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user_email type"}
@@ -847,10 +841,11 @@ func validateTopicNames(topicNames []string) (invalidTopicNames []string) {
 }
 
 type UpdateUserInput struct {
-	Bio    *string
-	Login  *string
-	Name   *string
-	UserId string
+	Bio         *string
+	Login       *string
+	Name        *string
+	PublicEmail *string
+	UserId      string
 }
 
 func (r *RootResolver) UpdateUser(
@@ -865,7 +860,7 @@ func (r *RootResolver) UpdateUser(
 	user := userPermit.Get()
 
 	if args.Input.Bio != nil {
-		if err := user.Profile.Set(args.Input.Bio); err != nil {
+		if err := user.Bio.Set(args.Input.Bio); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user bio"}
 		}
 	}
@@ -877,6 +872,11 @@ func (r *RootResolver) UpdateUser(
 	if args.Input.Name != nil {
 		if err := user.Name.Set(args.Input.Name); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user name"}
+		}
+	}
+	if args.Input.PublicEmail != nil {
+		if err := user.PublicEmail.Set(args.Input.PublicEmail); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user public_email"}
 		}
 	}
 
