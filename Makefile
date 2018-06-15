@@ -185,6 +185,9 @@ bin-clean:
 watch:
 	BRANCH=development gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
 
+login:
+	aws ecr get-login --no-include-email --region us-east-1 | bash
+
 deploy:
 	@$(MAKE) --no-print-directory container
 	@$(MAKE) --no-print-directory push
