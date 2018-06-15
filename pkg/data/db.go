@@ -27,7 +27,11 @@ type Queryer interface {
 
 type transactor interface {
 	Begin() (*pgx.Tx, error)
+}
+
+type committer interface {
 	Commit() error
+	Rollback() error
 }
 
 type preparer interface {
@@ -35,23 +39,24 @@ type preparer interface {
 	Deallocate(name string) error
 }
 
-func beginTransaction(db Queryer) (Queryer, error) {
+func beginTransaction(db Queryer) (Queryer, error, bool) {
 	if transactor, ok := db.(transactor); ok {
-		return transactor.Begin()
+		tx, err := transactor.Begin()
+		return tx, err, true
 	}
-	return db, nil
+	return db, nil, false
 }
 
 func commitTransaction(db Queryer) error {
-	if transactor, ok := db.(transactor); ok {
-		return transactor.Commit()
+	if committer, ok := db.(committer); ok {
+		return committer.Commit()
 	}
 	return nil
 }
 
 func rollbackTransaction(db Queryer) error {
-	if transactor, ok := db.(transactor); ok {
-		return transactor.Commit()
+	if committer, ok := db.(committer); ok {
+		return committer.Rollback()
 	}
 	return nil
 }
@@ -203,13 +208,13 @@ func (p *PageOptions) joins(from string, args *pgx.QueryArgs) []string {
 	var joins []string
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
-			"INNER JOIN %s %s2 ON %s2.id = "+args.Append(p.After.Value()),
+			"JOIN %[1]s %[1]s2 ON %[1]s2.id = "+args.Append(p.After.Value()),
 			from,
 		))
 	}
 	if p.Before != nil {
 		joins = append(joins, fmt.Sprintf(
-			"INNER JOIN %s %s3 ON %s3.id = "+args.Append(p.Before.Value()),
+			"JOIN %[1]s %[1]s3 ON %[1]s3.id = "+args.Append(p.Before.Value()),
 			from,
 		))
 	}
@@ -220,21 +225,33 @@ func (p *PageOptions) whereAnds(from string) []string {
 	var whereAnds []string
 	field := p.Order.Field()
 	if p.After != nil {
+		relation := ""
+		switch p.Order.Direction() {
+		case ASC:
+			relation = ">="
+		case DESC:
+			relation = "<="
+		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %s.%s >= %s2.%s",
+			"AND %[1]s.%[2]s %s %[1]s2.%[2]s",
 			from,
 			field,
-			from,
-			field,
+			relation,
 		))
 	}
 	if p.Before != nil {
+		relation := ""
+		switch p.Order.Direction() {
+		case ASC:
+			relation = "<="
+		case DESC:
+			relation = ">="
+		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %s.%s >= %s3.%s",
+			"AND %[1]s.%[2]s %s %[1]s3.%[2]s",
 			from,
 			field,
-			from,
-			field,
+			relation,
 		))
 	}
 	return whereAnds
@@ -249,6 +266,9 @@ func SQL(selects []string, from, where string, args *pgx.QueryArgs, po *PageOpti
 		limit = "LIMIT " + args.Append(po.Limit())
 		orderBy = "ORDER BY " +
 			from + "." + po.Order.Field() + " " + po.QueryDirection()
+	}
+	for i, s := range selects {
+		selects[i] = from + "." + s
 	}
 
 	sql := `

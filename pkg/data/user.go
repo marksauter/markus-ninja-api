@@ -224,12 +224,14 @@ func (s *UserService) GetCredentialsByLogin(
 
 const getUserCredentialsByEmailSQL = `
 	SELECT
+		u.backup_email,
 		u.id,
 		u.login,
 		u.password,
+		u.primary_email,
 		u.roles
 	FROM user_credentials u
-	INNER JOIN email e ON LOWER(e.value) = LOWER($1)
+	JOIN email e ON LOWER(e.value) = LOWER($1)
 		AND e.type = ANY('{"PRIMARY", "BACKUP"}')
 	WHERE u.id = e.user_id
 `
@@ -275,11 +277,13 @@ func (s *UserService) Create(row *User) (*User, error) {
 		values = append(values, args.Append(&row.Password))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	createUserSQL := `
 		INSERT INTO account(` + strings.Join(columns, ",") + `)
@@ -319,9 +323,11 @@ func (s *UserService) Create(row *User) (*User, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return user, nil
@@ -385,8 +391,8 @@ func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 func (s *UserService) Update(row *User) (*User, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("User.Update()")
 
-	sets := make([]string, 0, 4)
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	sets := make([]string, 0, 5)
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	if row.Login.Status != pgtype.Undefined {
 		sets = append(sets, `login`+"="+args.Append(&row.Login))
@@ -404,12 +410,14 @@ func (s *UserService) Update(row *User) (*User, error) {
 		sets = append(sets, `profile`+"="+args.Append(&row.Profile))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE account
@@ -445,10 +453,12 @@ func (s *UserService) Update(row *User) (*User, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return user, nil

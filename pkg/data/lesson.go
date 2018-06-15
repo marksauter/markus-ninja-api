@@ -322,12 +322,14 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
@@ -358,10 +360,12 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	study := &Study{}
@@ -467,12 +471,14 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE lesson
@@ -496,10 +502,12 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return lesson, nil

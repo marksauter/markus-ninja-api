@@ -19,7 +19,7 @@ func (r *deleteStudyPayloadResolver) DeletedStudyId() graphql.ID {
 }
 
 func (r *deleteStudyPayloadResolver) Owner() (*userResolver, error) {
-	user, err := r.Repos.User().Get(r.StudyId.String)
+	user, err := r.Repos.User().Get(r.OwnerId.String)
 	if err != nil {
 		return nil, err
 	}

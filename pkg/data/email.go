@@ -253,12 +253,14 @@ func (s *EmailService) Create(row *Email) (*Email, error) {
 		values = append(values, args.Append(&row.Value))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		INSERT INTO email(` + strings.Join(columns, ",") + `)
@@ -290,10 +292,12 @@ func (s *EmailService) Create(row *Email) (*Email, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return email, nil
@@ -340,7 +344,7 @@ func (s *EmailService) Update(row *Email) (*Email, error) {
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -369,10 +373,12 @@ func (s *EmailService) Update(row *Email) (*Email, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return email, nil

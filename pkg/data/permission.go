@@ -42,6 +42,29 @@ func NewPermService(db Queryer) *PermService {
 	return &PermService{db}
 }
 
+const countPermByNodeTypeSQL = `
+	SELECT COUNT(*)
+	FROM permission
+	WHERE type = $1
+`
+
+func (s *PermService) CountByNodeType(nodeType interface{}) (n int32, err error) {
+	mType, err := perm.ParseNodeType(structs.Name(nodeType))
+	if err != nil {
+		return
+	}
+	mylog.Log.WithField("node_type", mType).Info("Perm.CountByNodeType(nodeType)")
+	err = prepareQueryRow(
+		s.db,
+		"countPermByNodeType",
+		countPermByNodeTypeSQL,
+		mType,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+	return
+}
+
 // Creates a suite of permissions for the passed model.
 //	- permissions for Create/Read/Update access for each field in model.
 //  - permissions for Connect/Disconnect/Delete.
@@ -88,7 +111,21 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 		i += 1
 	}
 
-	copyCount, err := s.db.CopyFrom(
+	tx, err, newTx := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
+
+	permSvc := NewPermService(tx)
+	if err := permSvc.DeletePermissionSuite(model); err != nil {
+		return err
+	}
+
+	copyCount, err := tx.CopyFrom(
 		pgx.Identifier{"permission"},
 		[]string{"id", "access_level", "type", "audience", "field"},
 		pgx.CopyFromRows(permissions),
@@ -108,9 +145,42 @@ func (s *PermService) CreatePermissionSuite(model interface{}) error {
 
 	mylog.Log.Infof("created %v permissions for type %s", copyCount, mType)
 
-	err = s.UpdatePermissionSuite(model)
+	err = permSvc.UpdatePermissionSuite(model)
 	if err != nil {
 		return err
+	}
+
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	return nil
+}
+
+const deletePermissionSuiteSQL = `
+	DELETE FROM permission
+	WHERE type = $1
+`
+
+func (s *PermService) DeletePermissionSuite(nodeType interface{}) error {
+	mType, err := perm.ParseNodeType(structs.Name(nodeType))
+	if err != nil {
+		return err
+	}
+	mylog.Log.WithField(
+		"node_type", mType,
+	).Info("Perm.DeletePermissionSuite(node_type)")
+	_, err = prepareExec(
+		s.db,
+		"deletePermissionSuite",
+		deletePermissionSuiteSQL,
+		mType,
+	)
+	if err != nil {
 	}
 
 	return nil

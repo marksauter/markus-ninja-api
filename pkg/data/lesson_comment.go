@@ -202,7 +202,7 @@ func (s *LessonCommentService) GetByLesson(
 	mylog.Log.WithField(
 		"lesson_id", lessonId,
 	).Info("LessonComment.GetByLesson(lesson_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
 		lesson_comment_master.user_id = ` + args.Append(userId) + ` AND
 		lesson_comment_master.study_id = ` + args.Append(studyId) + ` AND
@@ -326,12 +326,14 @@ func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		INSERT INTO lesson_comment(` + strings.Join(columns, ",") + `)
@@ -362,10 +364,12 @@ func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return lessonComment, nil
@@ -406,12 +410,14 @@ func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE lesson_comments
@@ -434,10 +440,12 @@ func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return lessonComment, nil
