@@ -60,7 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	if err = initDB(svcs, db); err != nil {
+	if err := initDB(svcs, db); err != nil {
 		mylog.Log.WithField("error", err).Fatal("error initializing database")
 	}
 

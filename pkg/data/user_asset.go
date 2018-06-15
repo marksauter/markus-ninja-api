@@ -413,12 +413,14 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		INSERT INTO user_asset(` + strings.Join(columns, ",") + `)
@@ -449,10 +451,12 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return userAsset, nil
@@ -537,12 +541,14 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE user_asset
@@ -577,10 +583,12 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return userAsset, nil

@@ -121,12 +121,14 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 		values = append(values, args.Append(&row.EndedAt))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		INSERT INTO password_reset_token(` + strings.Join(columns, ", ") + `)
@@ -158,10 +160,12 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return prt, nil
@@ -183,12 +187,14 @@ func (s *PRTService) Update(row *PRT) (*PRT, error) {
 		sets = append(sets, `ended_at`+"="+args.Append(&row.EndedAt))
 	}
 
-	tx, err := beginTransaction(s.db)
+	tx, err, newTx := beginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
-	defer rollbackTransaction(tx)
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
 
 	sql := `
 		UPDATE password_reset_token
@@ -213,10 +219,12 @@ func (s *PRTService) Update(row *PRT) (*PRT, error) {
 		return nil, err
 	}
 
-	err = commitTransaction(tx)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during transaction")
-		return nil, err
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
 	}
 
 	return prt, nil

@@ -17,9 +17,13 @@ type Logger struct {
 
 func New() *Logger {
 	log := logrus.New()
-	log.Formatter = &logrus.TextFormatter{}
-	log.Out = os.Stdout
 	branch := util.GetRequiredEnv("BRANCH")
+	forceColors := false
+	if branch == "development.local" {
+		forceColors = true
+	}
+	log.Formatter = &logrus.TextFormatter{ForceColors: forceColors}
+	log.Out = os.Stdout
 	if branch != "production" {
 		log.SetLevel(logrus.DebugLevel)
 	}

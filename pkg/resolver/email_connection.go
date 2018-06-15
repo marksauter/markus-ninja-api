@@ -45,8 +45,11 @@ type emailConnectionResolver struct {
 }
 
 func (r *emailConnectionResolver) Edges() *[]*emailEdgeResolver {
-	edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
-	return &edges
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
+		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
+		return &edges
+	}
+	return &[]*emailEdgeResolver{}
 }
 
 func (r *emailConnectionResolver) Nodes() *[]*emailResolver {

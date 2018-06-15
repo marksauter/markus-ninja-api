@@ -45,11 +45,11 @@ type lessonCommentConnectionResolver struct {
 }
 
 func (r *lessonCommentConnectionResolver) Edges() *[]*lessonCommentEdgeResolver {
-	if len(r.edges) > 0 {
+	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &r.edges
+	return &[]*lessonCommentEdgeResolver{}
 }
 
 func (r *lessonCommentConnectionResolver) Nodes() *[]*lessonCommentResolver {
