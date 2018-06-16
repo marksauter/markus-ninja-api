@@ -420,7 +420,7 @@ func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error
 	}
 
 	sql := `
-		UPDATE lesson_comments
+		UPDATE lesson_comment
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String)
 
