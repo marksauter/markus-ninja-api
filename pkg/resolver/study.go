@@ -10,6 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Study = studyResolver
@@ -128,8 +129,9 @@ func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", description))
-	return h, nil
+	descriptionHTML := util.MarkdownToHTML([]byte(description))
+	gqlHTML := mygql.HTML(descriptionHTML)
+	return gqlHTML, nil
 }
 
 func (r *studyResolver) ID() (graphql.ID, error) {
