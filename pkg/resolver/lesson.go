@@ -187,20 +187,12 @@ func (r *lessonResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.Lesson.UserId()
-	if err != nil {
-		return false, err
-	}
-
-	return viewer.Id.String == userId.String, nil
+func (r *lessonResolver) ViewerCanUpdate() bool {
+	lesson := r.Lesson.Get()
+	return r.Repos.Lesson().ViewerCanUpdate(lesson)
 }
 
-func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
+func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")

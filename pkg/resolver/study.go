@@ -2,12 +2,10 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -403,15 +401,11 @@ func (r *studyResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *studyResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return false, err
-	}
+func (r *studyResolver) ViewerCanUpdate() bool {
+	study := r.Study.Get()
+	return r.Repos.Study().ViewerCanUpdate(study)
+}
 
-	return viewer.Id.String == userId.String, nil
+func (r *studyResolver) ViewerHasAppled() (bool, error) {
+	return false, nil
 }

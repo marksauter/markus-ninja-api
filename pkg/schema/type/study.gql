@@ -1,5 +1,5 @@
 # Represents a study.
-type Study implements Node, UniformResourceLocatable {
+type Study implements Appleable, Node, UniformResourceLocatable {
   # Identifies when the study was advanced at.
   advancedAt: Time
 
@@ -110,6 +110,9 @@ type Study implements Node, UniformResourceLocatable {
 
   # The HTTP URL for this study.
   url: URI!
+
+  # Has the viewer appled this appleable.
+  viewerHasAppled: Boolean!
 }
 
 # An edge type for Study.

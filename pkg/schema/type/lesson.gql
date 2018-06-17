@@ -1,15 +1,15 @@
 # Represents a lesson.
-type Lesson implements Node, UniformResourceLocatable, Updateable {
-  # The author of the lesson.
+type Lesson implements Authorable, Node, UniformResourceLocatable, Updateable {
+  # The user who authored this body. 
   author: User
 
-  # The body of the lesson.
+  # The body as Markdown.
   body: String!
 
-  # The body of the lesson rendered to HTML.
+  # The body rendered to HTML.
   bodyHTML: HTML!
 
-  # The body of the lesson rendered to text.
+  # The body rendered to text.
   bodyText: String!
 
   # Identifies the date and time when the object was created.

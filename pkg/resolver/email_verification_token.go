@@ -21,8 +21,3 @@ func (r *evtResolver) IssuedAt() (graphql.Time, error) {
 	t, err := r.EVT.IssuedAt()
 	return graphql.Time{t}, err
 }
-
-func (r *evtResolver) VerifiedAt() (*graphql.Time, error) {
-	t, err := r.EVT.VerifiedAt()
-	return &graphql.Time{t}, err
-}

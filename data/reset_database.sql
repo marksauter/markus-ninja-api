@@ -428,11 +428,11 @@ CREATE TABLE user_asset(
   type          TEXT         NOT NULL,
   updated_at    TIMESTAMPTZ  DEFAULT NOW(),
   user_id       VARCHAR(100) NOT NULL,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (study_id)
     REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
@@ -446,6 +446,20 @@ CREATE INDEX user_asset_user_id_study_id_created_at_idx
 CREATE TRIGGER user_asset_updated_at_modtime
   BEFORE UPDATE ON user_asset
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TABLE IF EXISTS study_apple CASCADE;
+CREATE TABLE study_apple (
+  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  study_id      VARCHAR(100),
+  user_id       VARCHAR(100),
+  PRIMARY KEY (study_id, user_id),
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
 
 CREATE VIEW user_master AS
 SELECT

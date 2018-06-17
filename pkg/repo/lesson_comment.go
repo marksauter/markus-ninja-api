@@ -294,6 +294,20 @@ func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit
 	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
+func (r *LessonCommentRepo) ViewerCanDelete(l *data.LessonComment) bool {
+	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+		return false
+	}
+	return true
+}
+
+func (r *LessonCommentRepo) ViewerCanUpdate(l *data.LessonComment) bool {
+	if _, err := r.perms.Check(perm.Update, l); err != nil {
+		return false
+	}
+	return true
+}
+
 // Middleware
 func (r *LessonCommentRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
