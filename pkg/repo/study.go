@@ -288,6 +288,13 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
+func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
+	if _, err := r.perms.Check(perm.Update, s); err != nil {
+		return false
+	}
+	return true
+}
+
 // Middleware
 func (r *StudyRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

@@ -21,8 +21,3 @@ func (r *prtResolver) IssuedAt() (graphql.Time, error) {
 	t, err := r.PRT.IssuedAt()
 	return graphql.Time{t}, err
 }
-
-func (r *prtResolver) EndedAt() (*graphql.Time, error) {
-	t, err := r.PRT.EndedAt()
-	return &graphql.Time{t}, err
-}

@@ -1,0 +1,7 @@
+# Things that can be appled.
+interface Appleable {
+  id: ID!
+
+  # Has the viewer appled this appleable.
+  viewerHasAppled: Boolean!
+}

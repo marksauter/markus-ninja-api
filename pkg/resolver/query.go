@@ -64,7 +64,7 @@ func (r *RootResolver) Node(
 		}
 		return &nodeResolver{&userAssetResolver{UserAsset: userAsset, Repos: r.Repos}}, nil
 	default:
-		return nil, errors.New("invalid id")
+		return nil, errors.New("invalid node id")
 	}
 }
 
@@ -85,7 +85,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 			}
 			nodes[i] = &nodeResolver{&userResolver{User: user, Repos: r.Repos}}
 		default:
-			return nil, errors.New("invalid id")
+			return nil, fmt.Errorf("invalid node id: %s", id)
 		}
 	}
 	return nodes, nil

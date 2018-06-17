@@ -70,6 +70,8 @@ type Mutation {
   addEmail(input: AddEmailInput!): AddEmailPayload
   # Adds a comment to a lesson.
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
+  # Adds an apple to an Appleable.
+  addApple(input: AddAppleInput!): Appleable!
 
   # Creates a new lesson.
   createLesson(input: CreateLessonInput!): Lesson
@@ -91,6 +93,9 @@ type Mutation {
 
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge!
+
+  # Removes an apple from an Appleable.
+  removeApple(input: RemoveAppleInput!): Appleable!
 
   # Requests an email verification mail to be sent.
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!

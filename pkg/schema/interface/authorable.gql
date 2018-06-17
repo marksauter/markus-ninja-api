@@ -1,0 +1,28 @@
+# Body that can be authored.
+interface Authorable {
+  # The user who authored this body. 
+  author: User
+
+  # The body as Markdown.
+  body: String!
+
+  # The body rendered to HTML.
+  bodyHTML: HTML!
+
+  # The body rendered to text.
+  bodyText: String!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # Identifies when the lesson comment was published at.
+  publishedAt: Time
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+
+  # Did the viewer author this body.
+  viewerDidAuthor: Boolean!
+}

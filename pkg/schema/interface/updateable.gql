@@ -1,5 +1,7 @@
 # Entities that can be updated.
 interface Updateable {
+  id: ID!
+
   # Can the viewer update this object.
   viewerCanUpdate: Boolean!
 }

@@ -1,5 +1,7 @@
 # Entities that can be deleted.
 interface Deletable {
+  id: ID!
+
   # Can the viewer delete this object.
   viewerCanDelete: Boolean!
 }

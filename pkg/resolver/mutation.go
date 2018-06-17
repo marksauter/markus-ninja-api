@@ -16,6 +16,30 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
+type AddAppleInput struct {
+	AppleableId string
+}
+
+func (r *RootResolver) AddApple(
+	ctx context.Context,
+	args struct{ Input AddAppleInput },
+) (*appleableResolver, error) {
+	id, err := mytype.ParseOID(args.Input.AppleableId)
+	if err != nil {
+		return nil, err
+	}
+	switch id.Type {
+	case "Study":
+		study, err := r.Repos.Study().Get(id.String)
+		if err != nil {
+			return nil, err
+		}
+		return &appleableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
+	default:
+		return nil, errors.New("invalid appleable id")
+	}
+}
+
 type AddEmailInput struct {
 	Email string
 }
@@ -441,6 +465,30 @@ func (r *RootResolver) MoveLesson(
 	}
 
 	return resolver, nil
+}
+
+type RemoveAppleInput struct {
+	AppleableId string
+}
+
+func (r *RootResolver) RemoveApple(
+	ctx context.Context,
+	args struct{ Input RemoveAppleInput },
+) (*appleableResolver, error) {
+	id, err := mytype.ParseOID(args.Input.AppleableId)
+	if err != nil {
+		return nil, err
+	}
+	switch id.Type {
+	case "Study":
+		study, err := r.Repos.Study().Get(id.String)
+		if err != nil {
+			return nil, err
+		}
+		return &appleableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
+	default:
+		return nil, errors.New("invalid appleable id")
+	}
 }
 
 type RequestEmailVerificationInput struct {

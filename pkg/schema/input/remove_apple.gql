@@ -1,0 +1,5 @@
+# Input type for RemoveApple.
+input RemoveAppleInput {
+  # The Appleable ID to apple.
+  appleableId: ID!
+}

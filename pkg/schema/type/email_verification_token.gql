@@ -5,7 +5,4 @@ type EVT implements Token {
 
   # Identifies the date and time when the token expires.
   expiresAt: Time!
-
-  # Identifies the date and time when the token was verified.
-  verifiedAt: Time
 }

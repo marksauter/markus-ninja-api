@@ -138,30 +138,14 @@ func (r *lessonCommentResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.LessonComment.UserId()
-	if err != nil {
-		return false, err
-	}
-
-	return viewer.Id.String == userId.String, nil
+func (r *lessonCommentResolver) ViewerCanDelete() bool {
+	lessonComment := r.LessonComment.Get()
+	return r.Repos.LessonComment().ViewerCanDelete(lessonComment)
 }
 
-func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.LessonComment.UserId()
-	if err != nil {
-		return false, err
-	}
-
-	return viewer.Id.String == userId.String, nil
+func (r *lessonCommentResolver) ViewerCanUpdate() bool {
+	lessonComment := r.LessonComment.Get()
+	return r.Repos.LessonComment().ViewerCanUpdate(lessonComment)
 }
 
 func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
