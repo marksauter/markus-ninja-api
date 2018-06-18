@@ -1,12 +1,14 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
 )
 
 type appleable interface {
 	ID() (graphql.ID, error)
-	ViewerHasAppled() (bool, error)
+	ViewerHasAppled(ctx context.Context) (bool, error)
 }
 
 type appleableResolver struct {

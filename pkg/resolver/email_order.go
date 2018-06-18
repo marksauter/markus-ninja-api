@@ -62,7 +62,7 @@ type EmailOrderArg struct {
 	Field     string
 }
 
-func ParseEmailOrder(arg *EmailOrderArg) (*EmailOrder, error) {
+func ParseEmailOrder(arg *OrderArg) (*EmailOrder, error) {
 	if arg == nil {
 		return &EmailOrder{
 			direction: data.ASC,

@@ -19,6 +19,7 @@ const (
 	permRepoKey          key = "perm"
 	prtRepoKey           key = "prt"
 	studyRepoKey         key = "study"
+	studyAppleRepoKey    key = "study_apple"
 	topicRepoKey         key = "topic"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
@@ -55,6 +56,7 @@ func NewRepos(svcs *service.Services) *Repos {
 			permRepoKey:          permRepo,
 			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
+			studyAppleRepoKey:    NewStudyAppleRepo(permRepo, svcs.StudyApple),
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
@@ -110,6 +112,11 @@ func (r *Repos) PRT() *PRTRepo {
 
 func (r *Repos) Study() *StudyRepo {
 	repo, _ := r.lookup[studyRepoKey].(*StudyRepo)
+	return repo
+}
+
+func (r *Repos) StudyApple() *StudyAppleRepo {
+	repo, _ := r.lookup[studyAppleRepoKey].(*StudyAppleRepo)
 	return repo
 }
 

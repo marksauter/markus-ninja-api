@@ -30,7 +30,7 @@ type Permission struct {
 	CreatedAt   time.Time   `db:"created_at"`
 	Id          string      `db:"id"`
 	Field       pgtype.Text `db:"field"`
-	Type        string      `db:"type"`
+	Type        pgtype.Text `db:"type"`
 	UpdatedAt   time.Time   `db:"updated_at"`
 }
 

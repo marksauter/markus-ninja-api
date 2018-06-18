@@ -3,6 +3,24 @@ type Study implements Appleable, Node, UniformResourceLocatable {
   # Identifies when the study was advanced at.
   advancedAt: Time
 
+  # Returns a list users who have appled this appleable.
+  appleGivers(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Order for connection.
+    orderBy: AppleOrder
+  ): UserConnection!
+
   # Returns a single asset from the current study by name.
   asset(
     name: String!

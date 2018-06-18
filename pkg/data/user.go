@@ -32,6 +32,27 @@ type UserService struct {
 	db Queryer
 }
 
+const countUserByAppleSQL = `
+	SELECT COUNT(*)
+	FROM user_apple
+	WHERE study_id = $1
+`
+
+func (s *UserService) CountByApple(studyId string) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("User.CountByApple(study_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByApple",
+		countUserByAppleSQL,
+		studyId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
 func (s *UserService) CountBySearch(query string) (n int32, err error) {
 	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
@@ -140,6 +161,31 @@ const getUserByIdSQL = `
 func (s *UserService) Get(id string) (*User, error) {
 	mylog.Log.WithField("id", id).Info("User.Get(id)")
 	return s.get("getUserById", getUserByIdSQL, id)
+}
+
+func (s *UserService) GetByApple(
+	studyId string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("study_id", studyId).Info("User.GetByApple(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `user_apple.study_id = ` + args.Append(studyId)
+
+	selects := []string{
+		"bio",
+		"created_at",
+		"id",
+		"login",
+		"name",
+		"public_email",
+		"updated_at",
+	}
+	from := "user_apple"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getUsersByApple", sql)
+
+	return s.getMany(psName, sql, args...)
 }
 
 const getUserByLoginSQL = `

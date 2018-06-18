@@ -1,0 +1,5 @@
+# Properties by which apple connections can be ordered.
+enum AppleOrderField {
+  # Order apples by creation time.
+  APPLED_AT
+}
