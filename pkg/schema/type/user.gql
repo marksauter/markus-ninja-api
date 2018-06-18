@@ -110,3 +110,27 @@ type User implements Node, UniformResourceLocatable {
   # The HTTP URL for this user.
   url: URI!
 }
+
+# An edge type for User.
+type UserEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: User
+}
+
+# A connection type for User.
+type UserConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [UserEdge]
+
+  # A list of nodes.
+  nodes: [User]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

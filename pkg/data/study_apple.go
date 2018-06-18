@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/sirupsen/logrus"
 )
 
 type StudyApple struct {
@@ -44,28 +45,11 @@ func (s *StudyAppleService) CountByStudy(studyId string) (int32, error) {
 	return n, err
 }
 
-const countStudyAppleByUserSQL = `
-	SELECT COUNT(*)
-	FROM study_apple
-	WHERE user_id = $1
-`
-
-func (s *StudyAppleService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("StudyApple.CountByUser(user_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countStudyAppleByUser",
-		countStudyAppleByUserSQL,
-		userId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
-func (s *StudyAppleService) get(name string, sql string, args ...interface{}) (*StudyApple, error) {
+func (s *StudyAppleService) get(
+	name string,
+	sql string,
+	args ...interface{},
+) (*StudyApple, error) {
 	var row StudyApple
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
@@ -82,7 +66,11 @@ func (s *StudyAppleService) get(name string, sql string, args ...interface{}) (*
 	return &row, nil
 }
 
-func (s *StudyAppleService) getMany(name string, sql string, args ...interface{}) ([]*StudyApple, error) {
+func (s *StudyAppleService) getMany(
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*StudyApple, error) {
 	var rows []*StudyApple
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
@@ -114,23 +102,26 @@ const getStudyAppleSQL = `
 	SELECT
 		created_at,
 		study_id,
-		user_id,
+		user_id
 	FROM study_apple
 	WHERE study_id = $1 AND user_id = $2
 `
 
-func (s *StudyAppleService) Get(id string) (*StudyApple, error) {
-	mylog.Log.WithField("id", id).Info("StudyApple.Get()")
-	return s.get("getStudyApple", getStudyAppleSQL, id)
+func (s *StudyAppleService) Get(studyId, userId string) (*StudyApple, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"user_id":  userId,
+	}).Info("StudyApple.Get()")
+	return s.get("getStudyApple", getStudyAppleSQL, studyId, userId)
 }
 
 func (s *StudyAppleService) GetByStudy(
-	userId string,
+	studyId string,
 	po *PageOptions,
 ) ([]*StudyApple, error) {
-	mylog.Log.WithField("user_id", userId).Info("StudyApple.GetByStudy(user_id)")
+	mylog.Log.WithField("study_id", studyId).Info("StudyApple.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_apple.user_id = ` + args.Append(userId)
+	whereSQL := `study_apple.study_id = ` + args.Append(studyId)
 
 	selects := []string{
 		"created_at",
@@ -145,40 +136,14 @@ func (s *StudyAppleService) GetByStudy(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *StudyAppleService) GetByUser(
-	userId string,
-	po *PageOptions,
-) ([]*StudyApple, error) {
-	mylog.Log.WithField("user_id", userId).Info("StudyApple.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_apple.user_id = ` + args.Append(userId)
-
-	selects := []string{
-		"created_at",
-		"study_id",
-		"user_id",
-	}
-	from := "study_apple"
-	sql := SQL(selects, from, whereSQL, &args, po)
-
-	psName := preparedName("getStudyApplesByUserId", sql)
-
-	return s.getMany(psName, sql, args...)
-}
-
 func (s *StudyAppleService) Create(row *StudyApple) (*StudyApple, error) {
 	mylog.Log.Info("StudyApple.Create()")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
 
-	id, _ := mytype.NewOID("StudyApple")
-	row.Id.Set(id)
-	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
-
 	if row.StudyId.Status != pgtype.Undefined {
-		columns = append(columns, "user_id")
+		columns = append(columns, "study_id")
 		values = append(values, args.Append(&row.StudyId))
 	}
 	if row.UserId.Status != pgtype.Undefined {
@@ -218,8 +183,8 @@ func (s *StudyAppleService) Create(row *StudyApple) (*StudyApple, error) {
 		return nil, err
 	}
 
-	studySvc := NewStudyAppleService(tx)
-	study, err := studySvc.Get(row.Id.String)
+	studyAppleSvc := NewStudyAppleService(tx)
+	studyApple, err := studyAppleSvc.Get(row.StudyId.String, row.UserId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +197,7 @@ func (s *StudyAppleService) Create(row *StudyApple) (*StudyApple, error) {
 		}
 	}
 
-	return study, nil
+	return studyApple, nil
 }
 
 const deleteStudyAppleSQL = `
@@ -240,9 +205,18 @@ const deleteStudyAppleSQL = `
 	WHERE study_id = $1 AND user_id = $2
 `
 
-func (s *StudyAppleService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("StudyApple.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteStudyApple", deleteStudyAppleSQL, id)
+func (s *StudyAppleService) Delete(studyId, userId string) error {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"user_id":  userId,
+	}).Info("StudyApple.Delete(study_id, user_id)")
+	commandTag, err := prepareExec(
+		s.db,
+		"deleteStudyApple",
+		deleteStudyAppleSQL,
+		studyId,
+		userId,
+	)
 	if err != nil {
 		return err
 	}

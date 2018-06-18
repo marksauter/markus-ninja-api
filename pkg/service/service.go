@@ -18,6 +18,7 @@ type Services struct {
 	Role          *data.RoleService
 	Storage       *StorageService
 	Study         *data.StudyService
+	StudyApple    *data.StudyAppleService
 	Topic         *data.TopicService
 	User          *data.UserService
 	UserAsset     *data.UserAssetService
@@ -48,6 +49,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Role:          data.NewRoleService(db),
 		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),
+		StudyApple:    data.NewStudyAppleService(db),
 		Topic:         data.NewTopicService(db),
 		User:          data.NewUserService(db),
 		UserAsset:     data.NewUserAssetService(db),

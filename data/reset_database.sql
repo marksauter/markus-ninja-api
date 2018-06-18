@@ -89,19 +89,6 @@ DROP TYPE IF EXISTS access_level CASCADE;
 CREATE TYPE access_level AS ENUM('Read', 'Create', 'Connect', 'Disconnect', 'Update', 'Delete');
 DROP TYPE IF EXISTS audience CASCADE;
 CREATE TYPE audience AS ENUM('AUTHENTICATED', 'EVERYONE');
-DROP TYPE IF EXISTS node_type CASCADE;
-CREATE TYPE node_type AS ENUM(
-  'Email',
-  'EVT',
-  'Label',
-  'Lesson',
-  'LessonComment',
-  'PRT',
-  'Study',
-  'Topic',
-  'User',
-  'UserAsset'
-);
 
 DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
@@ -110,7 +97,7 @@ CREATE TABLE IF NOT EXISTS permission(
   created_at   TIMESTAMPTZ  DEFAULT NOW(),
   field        TEXT,
   id           VARCHAR(100) PRIMARY KEY,
-  type         node_type    NOT NULL,
+  type         TEXT         NOT NULL,
   updated_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
@@ -492,6 +479,20 @@ JOIN email primary_email ON primary_email.user_id = account.id
   AND primary_email.type = 'PRIMARY'
 LEFT JOIN email backup_email ON backup_email.user_id = account.id
   AND backup_email.type = 'BACKUP';
+
+CREATE VIEW user_apple AS
+SELECT
+  study_apple.created_at appled_at,
+  user_master.bio,
+  user_master.created_at,
+  user_master.id,
+  user_master.login,
+  user_master.name,
+  user_master.public_email,
+  study_apple.study_id,
+  user_master.updated_at
+FROM user_master
+JOIN study_apple ON study_apple.user_id = user_master.id;
 
 CREATE MATERIALIZED VIEW user_search_index AS
 SELECT

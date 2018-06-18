@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
@@ -32,17 +31,6 @@ func (r *StudyPermit) Get() *data.Study {
 		}
 	}
 	return study
-}
-
-func (r *StudyPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.study) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
 }
 
 func (r *StudyPermit) AdvancedAt() (*time.Time, error) {

@@ -122,6 +122,10 @@ func (r *UserRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *UserRepo) CountByApple(studyId string) (int32, error) {
+	return r.svc.CountByApple(studyId)
+}
+
 func (r *UserRepo) CountBySearch(query string) (int32, error) {
 	return r.svc.CountBySearch(query)
 }
@@ -158,6 +162,27 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 		return nil, err
 	}
 	return &UserPermit{fieldPermFn, user}, nil
+}
+
+func (r *UserRepo) GetByApple(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.GetByApple(studyId, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
 }
 
 func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {

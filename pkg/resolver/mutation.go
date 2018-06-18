@@ -24,12 +24,24 @@ func (r *RootResolver) AddApple(
 	ctx context.Context,
 	args struct{ Input AddAppleInput },
 ) (*appleableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
 	id, err := mytype.ParseOID(args.Input.AppleableId)
 	if err != nil {
 		return nil, err
 	}
 	switch id.Type {
 	case "Study":
+		studyApple := &data.StudyApple{}
+		studyApple.StudyId.Set(id)
+		studyApple.UserId.Set(viewer.Id)
+		_, err := r.Repos.StudyApple().Create(studyApple)
+		if err != nil {
+			return nil, err
+		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err
@@ -475,12 +487,24 @@ func (r *RootResolver) RemoveApple(
 	ctx context.Context,
 	args struct{ Input RemoveAppleInput },
 ) (*appleableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
 	id, err := mytype.ParseOID(args.Input.AppleableId)
 	if err != nil {
 		return nil, err
 	}
 	switch id.Type {
 	case "Study":
+		studyApple := &data.StudyApple{}
+		studyApple.StudyId.Set(id)
+		studyApple.UserId.Set(viewer.Id)
+		err := r.Repos.StudyApple().Delete(studyApple)
+		if err != nil {
+			return nil, err
+		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err

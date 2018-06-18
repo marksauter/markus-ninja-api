@@ -2,10 +2,12 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -27,6 +29,59 @@ func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 		return &graphql.Time{*t}, nil
 	}
 	return nil, nil
+}
+
+func (r *studyResolver) AppleGivers(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*userConnectionResolver, error) {
+	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		appleOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	users, err := r.Repos.User().GetByApple(
+		studyId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByApple(studyId.String)
+	if err != nil {
+		return nil, err
+	}
+	userConnectionResolver, err := NewUserConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return userConnectionResolver, nil
 }
 
 func (r *studyResolver) Asset(
@@ -406,6 +461,22 @@ func (r *studyResolver) ViewerCanUpdate() bool {
 	return r.Repos.Study().ViewerCanUpdate(study)
 }
 
-func (r *studyResolver) ViewerHasAppled() (bool, error) {
-	return false, nil
+func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := r.Repos.StudyApple().Get(studyId.String, viewer.Id.String); err != nil {
+		if err == data.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

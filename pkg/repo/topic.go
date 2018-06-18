@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -31,17 +30,6 @@ func (r *TopicPermit) Get() *data.Topic {
 		}
 	}
 	return topic
-}
-
-func (r *TopicPermit) PreCheckPermissions() error {
-	for _, f := range structs.Fields(r.topic) {
-		if !f.IsZero() {
-			if ok := r.checkFieldPermission(strcase.ToSnake(f.Name())); !ok {
-				return ErrAccessDenied
-			}
-		}
-	}
-	return nil
 }
 
 func (r *TopicPermit) CreatedAt() (time.Time, error) {
