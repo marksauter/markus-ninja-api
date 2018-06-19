@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type lessonResolver struct {
@@ -31,7 +30,11 @@ func (r *lessonResolver) Author() (*userResolver, error) {
 }
 
 func (r *lessonResolver) Body() (string, error) {
-	return r.Lesson.Body()
+	body, err := r.Lesson.Body()
+	if err != nil {
+		return "", err
+	}
+	return body.String, nil
 }
 
 func (r *lessonResolver) BodyHTML() (mygql.HTML, error) {
@@ -39,9 +42,7 @@ func (r *lessonResolver) BodyHTML() (mygql.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	bodyHTML := util.MarkdownToHTML([]byte(body))
-	gqlHTML := mygql.HTML(bodyHTML)
-	return gqlHTML, nil
+	return mygql.HTML(body.ToHTML()), nil
 }
 
 func (r *lessonResolver) BodyText() (string, error) {
@@ -49,7 +50,7 @@ func (r *lessonResolver) BodyText() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return util.MarkdownToText(body), nil
+	return body.ToText(), nil
 }
 
 func (r *lessonResolver) Comments(

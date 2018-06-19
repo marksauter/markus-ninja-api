@@ -119,6 +119,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		new(data.Lesson),
 		new(data.LessonComment),
 		new(data.PRT),
+		new(data.Ref),
 		new(data.Study),
 		new(data.StudyApple),
 		new(data.Topic),

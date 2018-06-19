@@ -14,7 +14,7 @@ import (
 )
 
 type Lesson struct {
-	Body        pgtype.Text        `db:"body" permit:"read"`
+	Body        mytype.Markdown    `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`
@@ -282,6 +282,41 @@ func (s *LessonService) GetByNumber(userId, studyId string, number int32) (*Less
 	)
 }
 
+const batchGetLessonByNumberSQL = `
+	SELECT
+		body,
+		created_at,
+		id,
+		number,
+		published_at,
+		study_id,
+		study_name,
+		title,
+		updated_at,
+		user_id,
+		user_login
+	FROM lesson_master
+	WHERE user_id = $1 AND study_id = $2 AND number = ANY($3)
+`
+
+func (s *LessonService) BatchGetByNumber(
+	userId,
+	studyId string,
+	numbers []int32,
+) ([]*Lesson, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"numbers":  numbers,
+	}).Info("Lesson.BatchGetByNumber(studyId, numbers)")
+	return s.getMany(
+		"batchGetLessonByNumber",
+		batchGetLessonByNumberSQL,
+		userId,
+		studyId,
+		numbers,
+	)
+}
+
 func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 	mylog.Log.Info("Lesson.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
@@ -353,6 +388,9 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		}
 		return nil, err
 	}
+
+	refSvc := NewRefService(tx)
+	refSvc.ParseStudyBody(&row.UserId, &row.StudyId, &row.Id, &row.Body)
 
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
@@ -495,6 +533,14 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 	if commandTag.RowsAffected() != 1 {
 		return nil, ErrNotFound
 	}
+
+	refSvc := NewRefService(tx)
+	refSvc.ParseUpdatedStudyBody(
+		&row.UserId,
+		&row.StudyId,
+		&row.Id,
+		&row.Body,
+	)
 
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
