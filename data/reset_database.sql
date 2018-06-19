@@ -448,6 +448,24 @@ CREATE TABLE study_apple (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS ref CASCADE;
+CREATE TABLE ref (
+  created_at    TIMESTAMPTZ  DEFAULT now(),
+  id            VARCHAR(100) PRIMARY KEY,
+  referrer_id   VARCHAR(100) NOT NULL,
+  referent_id   VARCHAR(100) NOT NULL,
+  study_id      VARCHAR(100) NOT NULL,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS ref_study_id_referrer_id_referent_id_idx
+  ON ref (study_id, referrer_id, referent_id);
+
+CREATE INDEX IF NOT EXISTS ref_study_id_referent_id_referrer_id_idx
+  ON ref (study_id, referent_id, referrer_id);
+
 CREATE VIEW user_master AS
 SELECT
   account.bio,

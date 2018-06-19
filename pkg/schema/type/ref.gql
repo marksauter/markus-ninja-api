@@ -1,0 +1,40 @@
+# Represents a reference between two nodes.
+type Ref implements Node {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The node that is being referenced.
+  referent: Node!
+
+  # The node that created the ref.
+  referrer: Node!
+
+  # The study associated with this ref.
+  study: Study!
+}
+
+# An edge type for Ref.
+type RefEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Ref
+}
+
+# A connection type for Ref.
+type RefConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [RefEdge]
+
+  # A list of nodes.
+  nodes: [Ref]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

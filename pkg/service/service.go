@@ -15,6 +15,7 @@ type Services struct {
 	Mail          *MailService
 	Perm          *data.PermService
 	PRT           *data.PRTService
+	Ref           *data.RefService
 	Role          *data.RoleService
 	Storage       *StorageService
 	Study         *data.StudyService
@@ -46,6 +47,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Mail:          NewMailService(myaws.NewSES(), mailConfig),
 		Perm:          data.NewPermService(db),
 		PRT:           data.NewPRTService(db),
+		Ref:           data.NewRefService(db),
 		Role:          data.NewRoleService(db),
 		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),

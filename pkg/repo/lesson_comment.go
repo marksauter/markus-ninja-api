@@ -30,11 +30,11 @@ func (r *LessonCommentPermit) Get() *data.LessonComment {
 	return lessonComment
 }
 
-func (r *LessonCommentPermit) Body() (string, error) {
+func (r *LessonCommentPermit) Body() (*mytype.Markdown, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.lessonComment.Body.String, nil
+	return &r.lessonComment.Body, nil
 }
 
 func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {

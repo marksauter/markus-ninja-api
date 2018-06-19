@@ -84,12 +84,26 @@ const batchGetUserSQL = `
 `
 
 func (s *UserService) BatchGet(ids []string) ([]*User, error) {
-	mylog.Log.WithField("ids", ids).Info("BatchGet(ids) User")
-	args := make([]interface{}, len(ids))
-	for i, v := range ids {
-		args[i] = v
-	}
-	return s.getMany("batchGetUserById", batchGetUserSQL, args...)
+	mylog.Log.WithField("ids", ids).Info("User.BatchGet(ids) User")
+	return s.getMany("batchGetUserById", batchGetUserSQL, ids)
+}
+
+const batchGetUserByLoginSQL = `
+	SELECT
+		bio,
+		created_at,
+		id,
+		login,
+		name,
+		public_email,
+		updated_at
+	FROM user_master
+	WHERE lower(login) = any($1)
+`
+
+func (s *UserService) BatchGetByLogin(logins []string) ([]*User, error) {
+	mylog.Log.WithField("logins", logins).Info("User.BatchGetByLogin(logins) User")
+	return s.getMany("batchGetUserByLoginById", batchGetUserByLoginSQL, logins)
 }
 
 func (s *UserService) get(name string, sql string, arg interface{}) (*User, error) {

@@ -9,66 +9,66 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewLessonLoader(svc *data.LessonService) *LessonLoader {
-	return &LessonLoader{
+func NewRefLoader(svc *data.RefService) *RefLoader {
+	return &RefLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetLessonFn(svc.Get)),
+		batchGet: createLoader(newBatchGetRefFn(svc.Get)),
 	}
 }
 
-type LessonLoader struct {
-	svc *data.LessonService
+type RefLoader struct {
+	svc *data.RefService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *LessonLoader) Clear(id string) {
+func (r *RefLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *LessonLoader) ClearAll() {
+func (r *RefLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *LessonLoader) Get(id string) (*data.Lesson, error) {
+func (r *RefLoader) Get(id string) (*data.Ref, error) {
 	ctx := context.Background()
-	lessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+	refData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
-	lesson, ok := lessonData.(*data.Lesson)
+	ref, ok := refData.(*data.Ref)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return lesson, nil
+	return ref, nil
 }
 
-func (r *LessonLoader) GetMany(ids *[]string) ([]*data.Lesson, []error) {
+func (r *RefLoader) GetMany(ids *[]string) ([]*data.Ref, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
 	}
-	lessonData, errs := r.batchGet.LoadMany(ctx, keys)()
+	refData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}
-	lessons := make([]*data.Lesson, len(lessonData))
-	for i, d := range lessonData {
+	refs := make([]*data.Ref, len(refData))
+	for i, d := range refData {
 		var ok bool
-		lessons[i], ok = d.(*data.Lesson)
+		refs[i], ok = d.(*data.Ref)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
 	}
 
-	return lessons, nil
+	return refs, nil
 }
 
-func newBatchGetLessonFn(
-	getter func(string) (*data.Lesson, error),
+func newBatchGetRefFn(
+	getter func(string) (*data.Ref, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -82,8 +82,8 @@ func newBatchGetLessonFn(
 		for i, key := range keys {
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
-				lesson, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: lesson, Error: err}
+				ref, err := getter(key.String())
+				results[i] = &dataloader.Result{Data: ref, Error: err}
 			}(i, key)
 		}
 

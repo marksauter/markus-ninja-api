@@ -857,8 +857,8 @@ func (r *RootResolver) UpdateTopics(
 		StudyId: args.Input.StudyId,
 		Repos:   r.Repos,
 	}
-	newTopics := make(map[string]bool)
-	oldTopics := make(map[string]bool)
+	newTopics := make(map[string]struct{})
+	oldTopics := make(map[string]struct{})
 	invalidTopicNames := validateTopicNames(args.Input.TopicNames)
 	if len(invalidTopicNames) > 0 {
 		resolver.InvalidNames = invalidTopicNames
@@ -871,9 +871,10 @@ func (r *RootResolver) UpdateTopics(
 	topics := make([]*data.Topic, len(topicPermits))
 	for i, tp := range topicPermits {
 		topics[i] = tp.Get()
-		oldTopics[topics[i].Name.String] = false
+		oldTopics[topics[i].Name.String] = struct{}{}
 	}
 	for _, name := range args.Input.TopicNames {
+		newTopics[name] = struct{}{}
 		if _, prs := oldTopics[name]; !prs {
 			topic := &data.Topic{}
 			topic.Name.Set(name)
@@ -882,9 +883,6 @@ func (r *RootResolver) UpdateTopics(
 			if err != nil {
 				return nil, err
 			}
-			newTopics[name] = true
-		} else {
-			newTopics[name] = false
 		}
 	}
 	for _, t := range topics {
