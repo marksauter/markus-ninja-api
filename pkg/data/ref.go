@@ -10,11 +10,11 @@ import (
 )
 
 type Ref struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id         mytype.OID         `db:"id" permit:"read"`
-	ReferrerId mytype.OID         `db:"referrer_id" permit:"read"`
-	ReferentId mytype.OID         `db:"referent_id" permit:"read"`
-	StudyId    mytype.OID         `db:"study_id" permit:"read"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id        mytype.OID         `db:"id" permit:"read"`
+	SourceId  mytype.OID         `db:"source_id" permit:"read"`
+	TargetId  mytype.OID         `db:"target_id" permit:"read"`
+	UserId    mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewRefService(db Queryer) *RefService {
@@ -25,71 +25,24 @@ type RefService struct {
 	db Queryer
 }
 
-const countRefByReferentSQL = `
+const countRefByTargetSQL = `
 	SELECT COUNT(*)
 	FROM ref
-	WHERE study_id = $1 AND referent_id = $2
+	WHERE target_id = $2
 `
 
-func (s *RefService) CountByReferent(
-	studyId,
+func (s *RefService) CountByTarget(
+	userId,
 	referentId string,
 ) (int32, error) {
-	mylog.Log.WithField("referent_id", referentId).Info("Ref.CountByReferent()")
+	mylog.Log.WithField("target_id", referentId).Info("Ref.CountByTarget()")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countRefByReferent",
-		countRefByReferentSQL,
-		studyId,
+		"countRefByTarget",
+		countRefByTargetSQL,
+		userId,
 		referentId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
-const countRefByReferrerSQL = `
-	SELECT COUNT(*)
-	FROM ref
-	WHERE study_id = $1 AND referrer_id = $2
-`
-
-func (s *RefService) CountByReferrer(
-	studyId,
-	referrerId string,
-) (int32, error) {
-	mylog.Log.WithField("referrer_id", referrerId).Info("Ref.CountByReferrer()")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countRefByReferrer",
-		countRefByReferrerSQL,
-		studyId,
-		referrerId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
-const countRefByStudySQL = `
-	SELECT COUNT(*)
-	FROM ref
-	WHERE study_id = $1
-`
-
-func (s *RefService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Ref.CountByStudy()")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countRefByStudy",
-		countRefByStudySQL,
-		studyId,
-		studyId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -106,9 +59,9 @@ func (s *RefService) get(
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
-		&row.ReferrerId,
-		&row.ReferentId,
-		&row.StudyId,
+		&row.SourceId,
+		&row.TargetId,
+		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -137,9 +90,9 @@ func (s *RefService) getMany(
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.Id,
-			&row.ReferrerId,
-			&row.ReferentId,
-			&row.StudyId,
+			&row.SourceId,
+			&row.TargetId,
+			&row.UserId,
 		)
 		rows = append(rows, &row)
 	}
@@ -158,11 +111,10 @@ const getRefSQL = `
 	SELECT
 		created_at,
 		id,
-		referrer_id,
-		referent_id,
-		study_id
+		target_id,
+		source_id,
+		user_id
 	FROM ref
-	WHERE id = $1
 `
 
 func (s *RefService) Get(id string) (*Ref, error) {
@@ -170,69 +122,44 @@ func (s *RefService) Get(id string) (*Ref, error) {
 	return s.get("getRef", getRefSQL, id)
 }
 
-func (s *RefService) GetByReferent(
-	studyId,
-	referentId string,
-	po *PageOptions,
-) ([]*Ref, error) {
-	mylog.Log.WithField("referent_id", referentId).Info("Ref.GetByReferent(referent_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.study_id = ` + args.Append(studyId) + `
-		AND ref.referent_id = ` + args.Append(referentId)
-
-	selects := []string{
-		"created_at",
-		"id",
-		"referrer_id",
-		"referent_id",
-		"study_id",
-	}
-	from := "ref"
-	sql := SQL(selects, from, whereSQL, &args, po)
-
-	psName := preparedName("getRefsByReferent", sql)
-
-	return s.getMany(psName, sql, args...)
-}
-
-func (s *RefService) GetByReferrer(
-	studyId,
+func (s *RefService) GetBySource(
+	userId,
 	referrerId string,
 	po *PageOptions,
 ) ([]*Ref, error) {
-	mylog.Log.WithField("referrer_id", referrerId).Info("Ref.GetByReferrer(referrer_id)")
+	mylog.Log.WithField("source_id", referrerId).Info("Ref.GetBySource(source_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.study_id = ` + args.Append(studyId) + `
-		AND ref.referrer_id = ` + args.Append(referrerId)
+	whereSQL := `ref.study_id = ` + args.Append(userId) + `
+		AND ref.source_id = ` + args.Append(referrerId)
 
 	selects := []string{
 		"created_at",
 		"id",
-		"referrer_id",
-		"referent_id",
+		"source_id",
+		"target_id",
 		"study_id",
 	}
 	from := "ref"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getRefsByReferrer", sql)
+	psName := preparedName("getRefsBySource", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
 func (s *RefService) GetByStudy(
-	studyId string,
+	userId string,
 	po *PageOptions,
 ) ([]*Ref, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Ref.GetByStudy(study_id)")
+	mylog.Log.WithField("study_id", userId).Info("Ref.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.study_id = ` + args.Append(studyId)
+	whereSQL := `ref.study_id = ` + args.Append(userId)
 
 	selects := []string{
 		"created_at",
 		"id",
-		"referrer_id",
-		"referent_id",
+		"source_id",
+		"target_id",
 		"study_id",
 	}
 	from := "ref"
@@ -254,17 +181,17 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
-	if row.ReferrerId.Status != pgtype.Undefined {
-		columns = append(columns, "referrer_id")
-		values = append(values, args.Append(&row.ReferrerId))
+	if row.SourceId.Status != pgtype.Undefined {
+		columns = append(columns, "source_id")
+		values = append(values, args.Append(&row.SourceId))
 	}
-	if row.ReferentId.Status != pgtype.Undefined {
-		columns = append(columns, "referent_id")
-		values = append(values, args.Append(&row.ReferentId))
+	if row.TargetId.Status != pgtype.Undefined {
+		columns = append(columns, "target_id")
+		values = append(values, args.Append(&row.TargetId))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.UserId))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)
@@ -327,14 +254,14 @@ func (s *RefService) BatchCreate(row *Ref, referentIds []string) error {
 		refs[i] = []interface{}{
 			row.Id.String,
 			referentId,
-			row.ReferrerId.String,
-			row.StudyId.String,
+			row.SourceId.String,
+			row.UserId.String,
 		}
 	}
 
 	copyCount, err := s.db.CopyFrom(
 		pgx.Identifier{"ref"},
-		[]string{"id", "referent_id", "referrer_id", "study_id"},
+		[]string{"id", "target_id", "source_id", "study_id"},
 		pgx.CopyFromRows(refs),
 	)
 	if err != nil {
@@ -380,7 +307,7 @@ func (s *RefService) Delete(id string) error {
 
 func (s *RefService) ParseStudyBody(
 	userId,
-	studyId,
+	userId,
 	referrerId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
@@ -408,7 +335,7 @@ func (s *RefService) ParseStudyBody(
 	if len(lessonNumberRefs) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
-			studyId.String,
+			userId.String,
 			lessonNumberRefs,
 		)
 		if err != nil {
@@ -432,8 +359,8 @@ func (s *RefService) ParseStudyBody(
 	}
 
 	ref := &Ref{}
-	ref.ReferrerId.Set(referrerId)
-	ref.StudyId.Set(studyId)
+	ref.SourceId.Set(referrerId)
+	ref.UserId.Set(userId)
 	err = refSvc.BatchCreate(ref, referentIds)
 	if err != nil {
 		return err
@@ -452,7 +379,7 @@ func (s *RefService) ParseStudyBody(
 
 func (s *RefService) ParseUpdatedStudyBody(
 	userId,
-	studyId,
+	userId,
 	referrerId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
@@ -470,12 +397,12 @@ func (s *RefService) ParseUpdatedStudyBody(
 
 	newRefs := make(map[string]struct{})
 	oldRefs := make(map[string]struct{})
-	refs, err := refSvc.GetByReferrer(studyId.String, referrerId.String, nil)
+	refs, err := refSvc.GetBySource(userId.String, referrerId.String, nil)
 	if err != nil {
 		return err
 	}
 	for _, ref := range refs {
-		oldRefs[ref.ReferentId.String] = struct{}{}
+		oldRefs[ref.TargetId.String] = struct{}{}
 	}
 
 	lessonNumberRefs, err := body.NumberRefs()
@@ -485,7 +412,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 	if len(lessonNumberRefs) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
-			studyId.String,
+			userId.String,
 			lessonNumberRefs,
 		)
 		if err != nil {
@@ -495,9 +422,9 @@ func (s *RefService) ParseUpdatedStudyBody(
 			newRefs[l.Id.String] = struct{}{}
 			if _, prs := oldRefs[l.Id.String]; !prs {
 				ref := &Ref{}
-				ref.ReferentId.Set(l.Id)
-				ref.ReferrerId.Set(referrerId)
-				ref.StudyId.Set(studyId)
+				ref.TargetId.Set(l.Id)
+				ref.SourceId.Set(referrerId)
+				ref.UserId.Set(userId)
 				_, err = refSvc.Create(ref)
 				if err != nil {
 					return err
@@ -521,9 +448,9 @@ func (s *RefService) ParseUpdatedStudyBody(
 			newRefs[u.Id.String] = struct{}{}
 			if _, prs := oldRefs[u.Id.String]; !prs {
 				ref := &Ref{}
-				ref.ReferentId.Set(u.Id)
-				ref.ReferrerId.Set(referrerId)
-				ref.StudyId.Set(studyId)
+				ref.TargetId.Set(u.Id)
+				ref.SourceId.Set(referrerId)
+				ref.UserId.Set(userId)
 				_, err = refSvc.Create(ref)
 				if err != nil {
 					return err
@@ -532,7 +459,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 		}
 	}
 	for _, ref := range refs {
-		if _, prs := newRefs[ref.ReferentId.String]; !prs {
+		if _, prs := newRefs[ref.TargetId.String]; !prs {
 			err := refSvc.Delete(ref.Id.String)
 			if err != nil {
 				return err

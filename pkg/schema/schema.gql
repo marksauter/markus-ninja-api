@@ -70,8 +70,6 @@ type Mutation {
   addEmail(input: AddEmailInput!): AddEmailPayload
   # Adds a comment to a lesson.
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
-  # Adds an apple to an Appleable.
-  addApple(input: AddAppleInput!): Appleable!
 
   # Creates a new lesson.
   createLesson(input: CreateLessonInput!): Lesson
@@ -91,11 +89,11 @@ type Mutation {
   # Deletes a user.
   deleteUser(input: DeleteUserInput!): ID
 
+  # Gives an apple to an Appleable.
+  giveApple(input: GiveAppleInput!): Appleable!
+
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge!
-
-  # Removes an apple from an Appleable.
-  removeApple(input: RemoveAppleInput!): Appleable!
 
   # Requests an email verification mail to be sent.
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
@@ -103,6 +101,9 @@ type Mutation {
   requestPasswordReset(input: RequestPasswordResetInput!): PRT!
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # Takes an apple from an Appleable.
+  takeApple(input: TakeAppleInput!): Appleable!
 
   # Updates an email's type and/or whether it's public or not.
   updateEmail(input: UpdateEmailInput!): Email!

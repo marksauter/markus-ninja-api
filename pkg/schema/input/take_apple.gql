@@ -1,0 +1,5 @@
+# Input type for TakeApple.
+input TakeAppleInput {
+  # The Appleable ID to apple.
+  appleableId: ID!
+}

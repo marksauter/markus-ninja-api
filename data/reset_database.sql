@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = NOW();
+  NEW.updated_at = now();
   RETURN NEW;
 END;
 $$ language 'plpgsql';
@@ -10,12 +10,12 @@ $$ language 'plpgsql';
 DROP TABLE IF EXISTS account CASCADE;
 CREATE TABLE account(
   bio           TEXT,
-  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  created_at    TIMESTAMPTZ  DEFAULT now(),
   id            VARCHAR(100) PRIMARY KEY,
   login         VARCHAR(40)  NOT NULL,
   name          TEXT         CHECK(name ~ '^[\w|-][\w|-|\s]+[\w|-]$'),
   password      BYTEA        NOT NULL,
-  updated_at    TIMESTAMPTZ  DEFAULT NOW()
+  updated_at    TIMESTAMPTZ  DEFAULT now()
 );
 
 CREATE UNIQUE INDEX account_unique__login__idx
@@ -35,8 +35,8 @@ CREATE TABLE email(
   value       VARCHAR(40) NOT NULL,
   type        email_type  DEFAULT 'EXTRA',
   public      BOOLEAN     DEFAULT FALSE,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ DEFAULT now(),
   verified_at TIMESTAMPTZ,
   CONSTRAINT check_verified_before_public
     CHECK ((public AND verified_at IS NOT NULL) OR NOT public),
@@ -61,10 +61,10 @@ CREATE TRIGGER email_updated_at_modtime
 
 DROP TABLE IF EXISTS role CASCADE;
 CREATE TABLE role(
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  created_at  TIMESTAMPTZ DEFAULT now(),
   id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40) NOT NULL UNIQUE,
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+  updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TRIGGER role_updated_at_modtime
@@ -73,7 +73,7 @@ CREATE TRIGGER role_updated_at_modtime
 
 DROP TABLE IF EXISTS user_role CASCADE;
 CREATE TABLE user_role(
-  granted_at  TIMESTAMPTZ   DEFAULT NOW(),
+  granted_at  TIMESTAMPTZ   DEFAULT now(),
   role_id     VARCHAR(100),
   user_id     VARCHAR(100),
   PRIMARY KEY (user_id, role_id),
@@ -94,11 +94,11 @@ DROP TABLE IF EXISTS permission CASCADE;
 CREATE TABLE IF NOT EXISTS permission(
   access_level access_level NOT NULL,
   audience     audience     NOT NULL,
-  created_at   TIMESTAMPTZ  DEFAULT NOW(),
+  created_at   TIMESTAMPTZ  DEFAULT now(),
   field        TEXT,
   id           VARCHAR(100) PRIMARY KEY,
   type         TEXT         NOT NULL,
-  updated_at   TIMESTAMPTZ  DEFAULT NOW()
+  updated_at   TIMESTAMPTZ  DEFAULT now()
 );
 
 CREATE UNIQUE INDEX permission__access_level_type_field__key
@@ -114,7 +114,7 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TABLE IF EXISTS role_permission CASCADE;
 CREATE TABLE role_permission(
-  granted_at    TIMESTAMPTZ   DEFAULT NOW(),
+  granted_at    TIMESTAMPTZ   DEFAULT now(),
   role_id       VARCHAR(100),
   permission_id VARCHAR(100),
   PRIMARY KEY (role_id, permission_id),
@@ -129,8 +129,8 @@ CREATE TABLE role_permission(
 DROP TABLE IF EXISTS email_verification_token CASCADE;
 CREATE TABLE email_verification_token(
   email_id      VARCHAR(100),
-  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
-  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
+  expires_at    TIMESTAMPTZ   DEFAULT (now() + interval '20 minutes'),
+  issued_at     TIMESTAMPTZ   DEFAULT now(),
   token         VARCHAR(40),
   user_id       VARCHAR(100)  NOT NULL,
   verified_at   TIMESTAMPTZ,
@@ -149,10 +149,10 @@ CREATE INDEX email_verification_token_user_id_idx
 DROP TABLE IF EXISTS password_reset_token CASCADE;
 CREATE TABLE password_reset_token(
   email_id      VARCHAR(100)  NOT NULL,
-  issued_at     TIMESTAMPTZ   DEFAULT NOW(),
+  issued_at     TIMESTAMPTZ   DEFAULT now(),
   end_ip        INET,
   ended_at      TIMESTAMPTZ,
-  expires_at    TIMESTAMPTZ   DEFAULT (NOW() + interval '20 minutes'),
+  expires_at    TIMESTAMPTZ   DEFAULT (now() + interval '20 minutes'),
   request_ip    INET          NOT NULL,
   token         VARCHAR(40),
   user_id       VARCHAR(100),
@@ -168,12 +168,12 @@ CREATE TABLE password_reset_token(
 DROP TABLE IF EXISTS study CASCADE;
 CREATE TABLE study(
   advanced_at   TIMESTAMPTZ,
-  created_at    TIMESTAMPTZ   DEFAULT NOW(),
+  created_at    TIMESTAMPTZ   DEFAULT now(),
   description   TEXT,
   id            VARCHAR(100)  PRIMARY KEY,
   name          TEXT          NOT NULL CHECK (name ~ '[\w|-]+'),
   name_tokens   TEXT          NOT NULL,
-  updated_at    TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ   DEFAULT now(),
   user_id       VARCHAR(100)  NOT NULL,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
@@ -255,7 +255,7 @@ $BODY$ LANGUAGE PLPGSQL;
 
 DROP TABLE IF EXISTS lesson CASCADE;
 CREATE TABLE lesson(
-  created_at      TIMESTAMPTZ  DEFAULT NOW(),
+  created_at      TIMESTAMPTZ  DEFAULT now(),
   body            TEXT,
   id              VARCHAR(100) PRIMARY KEY,
   number          INT          CHECK(number > 0),
@@ -263,7 +263,7 @@ CREATE TABLE lesson(
   study_id        VARCHAR(100) NOT NULL,    
   title           TEXT         NOT NULL,
   title_tokens    TEXT         NOT NULL,
-  updated_at      TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ  DEFAULT now(),
   user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (study_id)
     REFERENCES study (id)
@@ -304,13 +304,13 @@ CREATE TRIGGER lesson_updated_at_modtime
 DROP TABLE IF EXISTS lesson_comment CASCADE;
 CREATE TABLE lesson_comment(
   body            TEXT,
-  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  created_at      TIMESTAMPTZ  DEFAULT now(),
   id              VARCHAR(100) PRIMARY KEY,
   lesson_id       VARCHAR(100) NOT NULL,
   published_at    TIMESTAMPTZ,
   study_id        VARCHAR(100) NOT NULL,
-  user_id         VARCHAR(100) NOT NULL,
-  updated_at      TIMESTAMPTZ   DEFAULT NOW(),
+  user_id         VARCHAR(100),
+  updated_at      TIMESTAMPTZ  DEFAULT now(),
   FOREIGN KEY (lesson_id)
     REFERENCES lesson (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -319,7 +319,7 @@ CREATE TABLE lesson_comment(
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
+    ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
 CREATE INDEX lesson_comment_user_id_study_id_lesson_id_published_at_idx
@@ -334,12 +334,12 @@ CREATE TRIGGER lesson_comment_updated_at_modtime
 DROP TABLE IF EXISTS label CASCADE;
 CREATE TABLE label(
   color       TEXT         NOT NULL,
-  created_at  TIMESTAMPTZ  DEFAULT NOW(),
+  created_at  TIMESTAMPTZ  DEFAULT now(),
   is_default  BOOLEAN      DEFAULT FALSE,
   description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40)  NOT NULL,
-  updated_at  TIMESTAMPTZ  DEFAULT NOW()
+  updated_at  TIMESTAMPTZ  DEFAULT now()
 ); 
 
 CREATE UNIQUE INDEX label_unique__name__idx
@@ -353,7 +353,7 @@ CREATE TRIGGER label_updated_at_modtime
 
 DROP TABLE IF EXISTS lesson_label CASCADE;
 CREATE TABLE lesson_label(
-  created_at TIMESTAMPTZ  DEFAULT NOW(),
+  created_at TIMESTAMPTZ  DEFAULT now(),
   label_id   VARCHAR(100),
   lesson_id  VARCHAR(100),
   study_id   VARCHAR(100),
@@ -371,12 +371,12 @@ CREATE TABLE lesson_label(
 
 DROP TABLE IF EXISTS topic CASCADE;
 CREATE TABLE topic(
-  created_at  TIMESTAMPTZ  DEFAULT NOW(),
+  created_at  TIMESTAMPTZ  DEFAULT now(),
   description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
   name        VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-zA-Z0-9][a-zA-Z0-9|-]+[a-zA-Z0-9]$'),
   name_tokens TEXT         NOT NULL,
-  updated_at  TIMESTAMPTZ  DEFAULT NOW()
+  updated_at  TIMESTAMPTZ  DEFAULT now()
 );
 
 CREATE UNIQUE INDEX topic_unique__name__idx
@@ -388,7 +388,7 @@ CREATE TRIGGER topic_updated_at_modtime
 
 DROP TABLE IF EXISTS study_topic CASCADE;
 CREATE TABLE study_topic(
-  related_at TIMESTAMPTZ  DEFAULT NOW(),
+  related_at TIMESTAMPTZ  DEFAULT now(),
   study_id   VARCHAR(100),
   topic_id   VARCHAR(100),
   PRIMARY KEY (study_id, topic_id),
@@ -402,7 +402,7 @@ CREATE TABLE study_topic(
 
 DROP TABLE IF EXISTS user_asset CASCADE;
 CREATE TABLE user_asset(
-  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  created_at    TIMESTAMPTZ  DEFAULT now(),
   id            VARCHAR(100) PRIMARY KEY,
   key           TEXT         NOT NULL,
   name          TEXT         NOT NULL CHECK(name ~ '[\w|-]+'),
@@ -413,7 +413,7 @@ CREATE TABLE user_asset(
   study_id      VARCHAR(100) NOT NULL,
   subtype       TEXT         NOT NULL,
   type          TEXT         NOT NULL,
-  updated_at    TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  DEFAULT now(),
   user_id       VARCHAR(100) NOT NULL,
   FOREIGN KEY (study_id)
     REFERENCES study (id)
@@ -436,7 +436,7 @@ CREATE TRIGGER user_asset_updated_at_modtime
 
 DROP TABLE IF EXISTS study_apple CASCADE;
 CREATE TABLE study_apple (
-  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  created_at    TIMESTAMPTZ  DEFAULT now(),
   study_id      VARCHAR(100),
   user_id       VARCHAR(100),
   PRIMARY KEY (study_id, user_id),
@@ -448,23 +448,47 @@ CREATE TABLE study_apple (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS ref CASCADE;
-CREATE TABLE ref (
-  created_at    TIMESTAMPTZ  DEFAULT now(),
-  id            VARCHAR(100) PRIMARY KEY,
-  referrer_id   VARCHAR(100) NOT NULL,
-  referent_id   VARCHAR(100) NOT NULL,
-  study_id      VARCHAR(100) NOT NULL,
-  FOREIGN KEY (study_id)
-    REFERENCES study (id)
+DROP TABLE IF EXISTS lesson_ref CASCADE;
+CREATE TABLE lesson_ref (
+  created_at      TIMESTAMPTZ  DEFAULT now(),
+  id              VARCHAR(100) PRIMARY KEY,
+  source_id       VARCHAR(100) NOT NULL,
+  target_id       VARCHAR(100) NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS ref_study_id_referrer_id_referent_id_idx
-  ON ref (study_id, referrer_id, referent_id);
+CREATE INDEX lesson_ref_target_id_idx
+  ON lesson_ref (target_id);
 
-CREATE INDEX IF NOT EXISTS ref_study_id_referent_id_referrer_id_idx
-  ON ref (study_id, referent_id, referrer_id);
+DROP TABLE IF EXISTS user_ref CASCADE;
+CREATE TABLE user_ref (
+  created_at      TIMESTAMPTZ  DEFAULT now(),
+  id              VARCHAR(100) PRIMARY KEY,
+  source_id       VARCHAR(100) NOT NULL,
+  target_id       VARCHAR(100) NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX user_ref_target_id_idx
+  ON user_ref (target_id);
 
 CREATE VIEW user_master AS
 SELECT

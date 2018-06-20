@@ -1,5 +1,5 @@
-# Input type for AddApple.
-input AddAppleInput {
+# Input type for GiveApple.
+input GiveAppleInput {
   # The Appleable ID to apple.
   appleableId: ID!
 }
