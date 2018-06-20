@@ -20,6 +20,7 @@ MAINTAINER Mark Sauter <m@rkus.ninja>
 ADD bin/ARG_ARCH/ARG_BIN /ARG_BIN
 ADD --chown=55 config.ARG_BRANCH.toml /
 ADD --chown=55 static /static
+ADD --chown=55 data /data
 # NOTE: this only works for alpine images
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/* 
 
