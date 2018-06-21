@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -28,21 +29,19 @@ type RefService struct {
 const countRefByTargetSQL = `
 	SELECT COUNT(*)
 	FROM ref
-	WHERE target_id = $2
+	WHERE target_id = $1
 `
 
 func (s *RefService) CountByTarget(
-	userId,
-	referentId string,
+	targetId string,
 ) (int32, error) {
-	mylog.Log.WithField("target_id", referentId).Info("Ref.CountByTarget()")
+	mylog.Log.WithField("target_id", targetId).Info("Ref.CountByTarget()")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countRefByTarget",
 		countRefByTargetSQL,
-		userId,
-		referentId,
+		targetId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -111,10 +110,11 @@ const getRefSQL = `
 	SELECT
 		created_at,
 		id,
-		target_id,
 		source_id,
+		target_id,
 		user_id
 	FROM ref
+	WHERE id = $1
 `
 
 func (s *RefService) Get(id string) (*Ref, error) {
@@ -123,21 +123,19 @@ func (s *RefService) Get(id string) (*Ref, error) {
 }
 
 func (s *RefService) GetBySource(
-	userId,
-	referrerId string,
+	sourceId string,
 	po *PageOptions,
 ) ([]*Ref, error) {
-	mylog.Log.WithField("source_id", referrerId).Info("Ref.GetBySource(source_id)")
+	mylog.Log.WithField("source_id", sourceId).Info("Ref.GetBySource(source_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.study_id = ` + args.Append(userId) + `
-		AND ref.source_id = ` + args.Append(referrerId)
+	whereSQL := `ref.source_id = ` + args.Append(sourceId)
 
 	selects := []string{
 		"created_at",
 		"id",
 		"source_id",
 		"target_id",
-		"study_id",
+		"user_id",
 	}
 	from := "ref"
 	sql := SQL(selects, from, whereSQL, &args, po)
@@ -147,25 +145,25 @@ func (s *RefService) GetBySource(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *RefService) GetByStudy(
-	userId string,
+func (s *RefService) GetByTarget(
+	targetId string,
 	po *PageOptions,
 ) ([]*Ref, error) {
-	mylog.Log.WithField("study_id", userId).Info("Ref.GetByStudy(study_id)")
+	mylog.Log.WithField("target_id", targetId).Info("Ref.GetByTarget(target_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.study_id = ` + args.Append(userId)
+	whereSQL := `ref.target_id = ` + args.Append(targetId)
 
 	selects := []string{
 		"created_at",
 		"id",
 		"source_id",
 		"target_id",
-		"study_id",
+		"user_id",
 	}
 	from := "ref"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getRefsByStudy", sql)
+	psName := preparedName("getRefsByTarget", sql)
 
 	return s.getMany(psName, sql, args...)
 }
@@ -190,7 +188,7 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 		values = append(values, args.Append(&row.TargetId))
 	}
 	if row.UserId.Status != pgtype.Undefined {
-		columns = append(columns, "study_id")
+		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
 	}
 
@@ -203,8 +201,28 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 		defer rollbackTransaction(tx)
 	}
 
+	var source string
+	switch row.SourceId.Type {
+	case "Lesson":
+		source = "lesson"
+	case "LessonComment":
+		source = "lesson_comment"
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for ref source id", row.SourceId.Type)
+	}
+	var target string
+	switch row.TargetId.Type {
+	case "Lesson":
+		target = "lesson"
+	case "User":
+		target = "user"
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for ref target id", row.TargetId.Type)
+	}
+
+	table := strings.Join([]string{source, target, "ref"}, "_")
 	sql := `
-		INSERT INTO ref(` + strings.Join(columns, ",") + `)
+		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -243,26 +261,57 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 	return ref, nil
 }
 
-func (s *RefService) BatchCreate(row *Ref, referentIds []string) error {
+func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
 	mylog.Log.Info("Ref.BatchCreate()")
 
-	n := len(referentIds)
-	refs := make([][]interface{}, n)
-	for i, referentId := range referentIds {
+	n := len(targetIds)
+	lessonRefs := make([][]interface{}, 0, n)
+	userRefs := make([][]interface{}, 0, n)
+	for _, targetId := range targetIds {
 		id, _ := mytype.NewOID("Ref")
-		row.Id.Set(id)
-		refs[i] = []interface{}{
-			row.Id.String,
-			referentId,
-			row.SourceId.String,
-			row.UserId.String,
+		src.Id.Set(id)
+		switch targetId.Type {
+		case "Lesson":
+			lessonRefs = append(lessonRefs, []interface{}{
+				src.Id.String,
+				targetId.String,
+				src.SourceId.String,
+				src.UserId.String,
+			})
+		case "User":
+			userRefs = append(userRefs, []interface{}{
+				src.Id.String,
+				targetId.String,
+				src.SourceId.String,
+				src.UserId.String,
+			})
+		default:
+			return fmt.Errorf("invalid type '%s' for ref target id", targetId.Type)
 		}
 	}
 
-	copyCount, err := s.db.CopyFrom(
-		pgx.Identifier{"ref"},
-		[]string{"id", "target_id", "source_id", "study_id"},
-		pgx.CopyFromRows(refs),
+	tx, err, newTx := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
+
+	var identPrefix string
+	switch src.SourceId.Type {
+	case "Lesson":
+		identPrefix = "lesson_"
+	case "LessonComment":
+		identPrefix = "lesson_comment_"
+	default:
+		return fmt.Errorf("invalid type '%s' for ref source id", src.SourceId.Type)
+	}
+	lessonRefCopyCount, err := tx.CopyFrom(
+		pgx.Identifier{identPrefix + "lesson_ref"},
+		[]string{"ref_id", "target_id", "source_id", "user_id"},
+		pgx.CopyFromRows(lessonRefs),
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -277,22 +326,48 @@ func (s *RefService) BatchCreate(row *Ref, referentIds []string) error {
 		return err
 	}
 
-	mylog.Log.WithField("n", copyCount).Info("created refs")
+	userRefCopyCount, err := tx.CopyFrom(
+		pgx.Identifier{identPrefix + "user_ref"},
+		[]string{"ref_id", "target_id", "source_id", "user_id"},
+		pgx.CopyFromRows(userRefs),
+	)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch PSQLError(pgErr.Code) {
+			default:
+				return err
+			case UniqueViolation:
+				mylog.Log.Warn("refs already created")
+				return nil
+			}
+		}
+		return err
+	}
+
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	mylog.Log.WithField("n", lessonRefCopyCount+userRefCopyCount).Info("created refs")
 
 	return nil
 }
 
-const deleteRefSQL = `
+const deleteUserRefSQL = `
 	DELETE FROM ref
 	WHERE id = $1
 `
 
-func (s *RefService) Delete(id string) error {
+func (s *RefService) Delete(id *mytype.OID) error {
 	mylog.Log.WithField("id", id).Info("Ref.Delete(id)")
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteRef",
-		deleteRefSQL,
+		deleteUserRefSQL,
 		id,
 	)
 	if err != nil {
@@ -305,10 +380,10 @@ func (s *RefService) Delete(id string) error {
 	return nil
 }
 
-func (s *RefService) ParseStudyBody(
+func (s *RefService) ParseBodyForRefs(
 	userId,
-	userId,
-	referrerId *mytype.OID,
+	studyId,
+	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
 	tx, err, newTx := beginTransaction(s.db)
@@ -328,21 +403,23 @@ func (s *RefService) ParseStudyBody(
 		return err
 	}
 	userRefs := body.AtRefs()
-	if err != nil {
-		return err
-	}
-	referentIds := make([]string, 0, len(lessonNumberRefs)+len(userRefs))
+	// TODO: add support for cross study references
+	// crossStudyRefs, err := body.CrossStudyRefs()
+	// if err != nil {
+	//   return err
+	// }
+	targetIds := make([]*mytype.OID, 0, len(lessonNumberRefs)+len(userRefs))
 	if len(lessonNumberRefs) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
-			userId.String,
+			studyId.String,
 			lessonNumberRefs,
 		)
 		if err != nil {
 			return err
 		}
 		for _, l := range lessons {
-			referentIds = append(referentIds, l.Id.String)
+			targetIds = append(targetIds, &l.Id)
 		}
 	}
 	if len(userRefs) > 0 {
@@ -354,14 +431,14 @@ func (s *RefService) ParseStudyBody(
 			return err
 		}
 		for _, l := range users {
-			referentIds = append(referentIds, l.Id.String)
+			targetIds = append(targetIds, &l.Id)
 		}
 	}
 
 	ref := &Ref{}
-	ref.SourceId.Set(referrerId)
+	ref.SourceId.Set(sourceId)
 	ref.UserId.Set(userId)
-	err = refSvc.BatchCreate(ref, referentIds)
+	err = refSvc.BatchCreate(ref, targetIds)
 	if err != nil {
 		return err
 	}
@@ -377,10 +454,10 @@ func (s *RefService) ParseStudyBody(
 	return nil
 }
 
-func (s *RefService) ParseUpdatedStudyBody(
+func (s *RefService) ParseUpdatedBodyForRefs(
 	userId,
-	userId,
-	referrerId *mytype.OID,
+	studyId,
+	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
 	tx, err, newTx := beginTransaction(s.db)
@@ -397,7 +474,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 
 	newRefs := make(map[string]struct{})
 	oldRefs := make(map[string]struct{})
-	refs, err := refSvc.GetBySource(userId.String, referrerId.String, nil)
+	refs, err := refSvc.GetBySource(sourceId.String, nil)
 	if err != nil {
 		return err
 	}
@@ -412,7 +489,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 	if len(lessonNumberRefs) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
-			userId.String,
+			studyId.String,
 			lessonNumberRefs,
 		)
 		if err != nil {
@@ -423,7 +500,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 			if _, prs := oldRefs[l.Id.String]; !prs {
 				ref := &Ref{}
 				ref.TargetId.Set(l.Id)
-				ref.SourceId.Set(referrerId)
+				ref.SourceId.Set(sourceId)
 				ref.UserId.Set(userId)
 				_, err = refSvc.Create(ref)
 				if err != nil {
@@ -433,9 +510,11 @@ func (s *RefService) ParseUpdatedStudyBody(
 		}
 	}
 	userRefs := body.AtRefs()
-	if err != nil {
-		return err
-	}
+	// TODO: add support for cross study references
+	// crossStudyRefs, err := body.CrossStudyRefs()
+	// if err != nil {
+	//   return err
+	// }
 	if len(userRefs) > 0 {
 		userSvc := NewUserService(tx)
 		users, err := userSvc.BatchGetByLogin(
@@ -449,7 +528,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 			if _, prs := oldRefs[u.Id.String]; !prs {
 				ref := &Ref{}
 				ref.TargetId.Set(u.Id)
-				ref.SourceId.Set(referrerId)
+				ref.SourceId.Set(sourceId)
 				ref.UserId.Set(userId)
 				_, err = refSvc.Create(ref)
 				if err != nil {
@@ -460,7 +539,7 @@ func (s *RefService) ParseUpdatedStudyBody(
 	}
 	for _, ref := range refs {
 		if _, prs := newRefs[ref.TargetId.String]; !prs {
-			err := refSvc.Delete(ref.Id.String)
+			err := refSvc.Delete(&ref.Id)
 			if err != nil {
 				return err
 			}

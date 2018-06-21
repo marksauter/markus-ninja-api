@@ -47,6 +47,24 @@ type Lesson implements Authorable, Node, UniformResourceLocatable, Updateable {
   # The title of the lesson.
   title: String!
 
+  # Returns a list of refs associated with the lesson.
+  refs(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for refs returned from the connection.
+    orderBy: RefOrder
+  ): RefConnection!
+
   # The HTTP path for this lesson.
   resourcePath: URI!
 

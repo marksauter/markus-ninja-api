@@ -135,7 +135,7 @@ func (r *lessonCommentResolver) URL() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
 	return uri, nil
 }
 

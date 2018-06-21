@@ -5,14 +5,14 @@ type Ref implements Node {
 
   id: ID!
 
-  # The node that is being referenced.
-  referent: Node!
+  # The lesson or lesson comment that made the reference.
+  source: ReferenceSource!
 
-  # The node that created the ref.
-  referrer: Node!
+  # The lesson or user to which the reference was made.
+  target: ReferenceTarget!
 
-  # The study associated with this ref.
-  study: Study!
+  # The user whom made this reference.
+  user: User!
 }
 
 # An edge type for Ref.

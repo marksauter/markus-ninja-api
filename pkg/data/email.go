@@ -202,7 +202,7 @@ func (s *EmailService) GetByUser(
 	mylog.Log.WithField(
 		"user_id", userId.String,
 	).Info("Email.GetByUser(userId)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `email_master.user_id = ` + args.Append(userId)
 
 	selects := []string{

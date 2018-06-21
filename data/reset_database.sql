@@ -448,13 +448,23 @@ CREATE TABLE study_apple (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS lesson_ref CASCADE;
-CREATE TABLE lesson_ref (
-  created_at      TIMESTAMPTZ  DEFAULT now(),
-  id              VARCHAR(100) PRIMARY KEY,
-  source_id       VARCHAR(100) NOT NULL,
-  target_id       VARCHAR(100) NOT NULL,
-  user_id         VARCHAR(100) NOT NULL,
+CREATE OR REPLACE FUNCTION insert_ref() RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO ref(id, source_Id, target_id, user_id)
+  VALUES (NEW.ref_id, NEW.source_id, NEW.target_id, NEW.user_id);
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TABLE IF EXISTS lesson_lesson_ref CASCADE;
+CREATE TABLE lesson_lesson_ref (
+  ref_id     VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (ref_id)
+    REFERENCES ref (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (source_id)
     REFERENCES lesson (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -466,16 +476,19 @@ CREATE TABLE lesson_ref (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX lesson_ref_target_id_idx
-  ON lesson_ref (target_id);
+CREATE TRIGGER lesson_lesson_ref_insert_ref
+  BEFORE INSERT ON lesson_lesson_ref
+  FOR EACH ROW EXECUTE PROCEDURE insert_ref();
 
-DROP TABLE IF EXISTS user_ref CASCADE;
-CREATE TABLE user_ref (
-  created_at      TIMESTAMPTZ  DEFAULT now(),
-  id              VARCHAR(100) PRIMARY KEY,
-  source_id       VARCHAR(100) NOT NULL,
-  target_id       VARCHAR(100) NOT NULL,
-  user_id         VARCHAR(100) NOT NULL,
+DROP TABLE IF EXISTS lesson_user_ref CASCADE;
+CREATE TABLE lesson_user_ref (
+  ref_id     VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (ref_id)
+    REFERENCES ref (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (source_id)
     REFERENCES lesson (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -487,8 +500,75 @@ CREATE TABLE user_ref (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX user_ref_target_id_idx
-  ON user_ref (target_id);
+CREATE TRIGGER lesson_user_ref_insert_ref
+  BEFORE INSERT ON lesson_user_ref
+  FOR EACH ROW EXECUTE PROCEDURE insert_ref();
+
+DROP TABLE IF EXISTS lesson_comment_lesson_ref CASCADE;
+CREATE TABLE lesson_comment_lesson_ref (
+  ref_id     VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (ref_id)
+    REFERENCES ref (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_comment_lesson_ref_insert_ref
+  BEFORE INSERT ON lesson_comment_lesson_ref
+  FOR EACH ROW EXECUTE PROCEDURE insert_ref();
+
+DROP TABLE IF EXISTS lesson_comment_user_ref CASCADE;
+CREATE TABLE lesson_comment_user_ref (
+  ref_id     VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (ref_id)
+    REFERENCES ref (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_comment_user_ref_insert_ref
+  BEFORE INSERT ON lesson_comment_user_ref
+  FOR EACH ROW EXECUTE PROCEDURE insert_ref();
+
+DROP TABLE IF EXISTS ref CASCADE;
+CREATE TABLE ref (
+  created_at      TIMESTAMPTZ  DEFAULT now(),
+  id              VARCHAR(100) PRIMARY KEY,
+  source_id       VARCHAR(100) NOT NULL,
+  target_id       VARCHAR(100) NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX ref_source_id_created_at_idx
+  ON ref (source_id, created_at);
+
+CREATE INDEX ref_target_id_created_at_idx
+  ON ref (target_id, created_at);
 
 CREATE VIEW user_master AS
 SELECT

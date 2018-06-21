@@ -10,13 +10,13 @@ import (
 type RefOrderField int
 
 const (
-	ReferredAt RefOrderField = iota
+	CreatedAt RefOrderField = iota
 )
 
 func ParseRefOrderField(s string) (RefOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "REFERRED_AT":
-		return ReferredAt, nil
+	case "CREATED_AT":
+		return CreatedAt, nil
 	default:
 		var f RefOrderField
 		return f, fmt.Errorf("invalid RefOrderField: %q", s)
@@ -25,8 +25,8 @@ func ParseRefOrderField(s string) (RefOrderField, error) {
 
 func (f RefOrderField) String() string {
 	switch f {
-	case ReferredAt:
-		return "referred_at"
+	case CreatedAt:
+		return "created_at"
 	default:
 		return "unknown"
 	}
@@ -61,7 +61,7 @@ func ParseRefOrder(arg *OrderArg) (*RefOrder, error) {
 	if arg == nil {
 		return &RefOrder{
 			direction: data.DESC,
-			field:     ReferredAt,
+			field:     CreatedAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
