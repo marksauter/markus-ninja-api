@@ -18,7 +18,7 @@ const (
 	lessonCommentRepoKey key = "lesson_comment"
 	permRepoKey          key = "perm"
 	prtRepoKey           key = "prt"
-	refRepoKey           key = "ref"
+	eventRepoKey         key = "event"
 	studyRepoKey         key = "study"
 	studyAppleRepoKey    key = "study_apple"
 	topicRepoKey         key = "topic"
@@ -56,7 +56,7 @@ func NewRepos(svcs *service.Services) *Repos {
 			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
 			permRepoKey:          permRepo,
 			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
-			refRepoKey:           NewRefRepo(permRepo, svcs.Ref),
+			eventRepoKey:         NewEventRepo(permRepo, svcs.Event),
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
 			studyAppleRepoKey:    NewStudyAppleRepo(permRepo, svcs.StudyApple),
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
@@ -87,6 +87,11 @@ func (r *Repos) Email() *EmailRepo {
 	return repo
 }
 
+func (r *Repos) Event() *EventRepo {
+	repo, _ := r.lookup[eventRepoKey].(*EventRepo)
+	return repo
+}
+
 func (r *Repos) EVT() *EVTRepo {
 	repo, _ := r.lookup[evtRepoKey].(*EVTRepo)
 	return repo
@@ -109,11 +114,6 @@ func (r *Repos) Perm() *PermRepo {
 
 func (r *Repos) PRT() *PRTRepo {
 	repo, _ := r.lookup[prtRepoKey].(*PRTRepo)
-	return repo
-}
-
-func (r *Repos) Ref() *RefRepo {
-	repo, _ := r.lookup[refRepoKey].(*RefRepo)
 	return repo
 }
 

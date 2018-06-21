@@ -9,13 +9,13 @@ import (
 type Services struct {
 	Auth          *AuthService
 	Email         *data.EmailService
+	Event         *data.EventService
 	EVT           *data.EVTService
 	Lesson        *data.LessonService
 	LessonComment *data.LessonCommentService
 	Mail          *MailService
 	Perm          *data.PermService
 	PRT           *data.PRTService
-	Ref           *data.RefService
 	Role          *data.RoleService
 	Storage       *StorageService
 	Study         *data.StudyService
@@ -40,14 +40,14 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 	}
 	return &Services{
 		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
-		EVT:           data.NewEVTService(db),
 		Email:         data.NewEmailService(db),
+		Event:         data.NewEventService(db),
+		EVT:           data.NewEVTService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
 		Mail:          NewMailService(myaws.NewSES(), mailConfig),
 		Perm:          data.NewPermService(db),
 		PRT:           data.NewPRTService(db),
-		Ref:           data.NewRefService(db),
 		Role:          data.NewRoleService(db),
 		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),
