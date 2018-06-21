@@ -17,6 +17,11 @@ func (r *nodeResolver) ToEmail() (*emailResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToEvent() (*eventResolver, bool) {
+	resolver, ok := r.node.(*eventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.node.(*lessonResolver)
 	return resolver, ok
@@ -24,11 +29,6 @@ func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 
 func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
 	resolver, ok := r.node.(*lessonCommentResolver)
-	return resolver, ok
-}
-
-func (r *nodeResolver) ToRef() (*refResolver, bool) {
-	resolver, ok := r.node.(*refResolver)
 	return resolver, ok
 }
 

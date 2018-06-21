@@ -139,7 +139,7 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) Refs(
+func (r *lessonResolver) Events(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -148,12 +148,12 @@ func (r *lessonResolver) Refs(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*refConnectionResolver, error) {
+) (*eventConnectionResolver, error) {
 	lessonId, err := r.Lesson.ID()
 	if err != nil {
 		return nil, err
 	}
-	refOrder, err := ParseRefOrder(args.OrderBy)
+	eventOrder, err := ParseEventOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -163,25 +163,25 @@ func (r *lessonResolver) Refs(
 		args.Before,
 		args.First,
 		args.Last,
-		refOrder,
+		eventOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	refs, err := r.Repos.Ref().GetByTarget(
+	events, err := r.Repos.Event().GetByTarget(
 		lessonId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Ref().CountByTarget(lessonId.String)
+	count, err := r.Repos.Event().CountByTarget(lessonId.String)
 	if err != nil {
 		return nil, err
 	}
-	refConnectionResolver, err := NewRefConnectionResolver(
-		refs,
+	eventConnectionResolver, err := NewEventConnectionResolver(
+		events,
 		pageOptions,
 		count,
 		r.Repos,
@@ -189,7 +189,7 @@ func (r *lessonResolver) Refs(
 	if err != nil {
 		return nil, err
 	}
-	return refConnectionResolver, nil
+	return eventConnectionResolver, nil
 }
 
 func (r *lessonResolver) ResourcePath() (mygql.URI, error) {

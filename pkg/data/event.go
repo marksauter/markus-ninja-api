@@ -10,7 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-type Ref struct {
+type Event struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id        mytype.OID         `db:"id" permit:"read"`
 	SourceId  mytype.OID         `db:"source_id" permit:"read"`
@@ -18,29 +18,29 @@ type Ref struct {
 	UserId    mytype.OID         `db:"user_id" permit:"read"`
 }
 
-func NewRefService(db Queryer) *RefService {
-	return &RefService{db}
+func NewEventService(db Queryer) *EventService {
+	return &EventService{db}
 }
 
-type RefService struct {
+type EventService struct {
 	db Queryer
 }
 
-const countRefByTargetSQL = `
+const countEventByTargetSQL = `
 	SELECT COUNT(*)
-	FROM ref
+	FROM event
 	WHERE target_id = $1
 `
 
-func (s *RefService) CountByTarget(
+func (s *EventService) CountByTarget(
 	targetId string,
 ) (int32, error) {
-	mylog.Log.WithField("target_id", targetId).Info("Ref.CountByTarget()")
+	mylog.Log.WithField("target_id", targetId).Info("Event.CountByTarget()")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countRefByTarget",
-		countRefByTargetSQL,
+		"countEventByTarget",
+		countEventByTargetSQL,
 		targetId,
 	).Scan(&n)
 
@@ -49,12 +49,12 @@ func (s *RefService) CountByTarget(
 	return n, err
 }
 
-func (s *RefService) get(
+func (s *EventService) get(
 	name string,
 	sql string,
 	args ...interface{},
-) (*Ref, error) {
-	var row Ref
+) (*Event, error) {
+	var row Event
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
@@ -65,19 +65,19 @@ func (s *RefService) get(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get ref")
+		mylog.Log.WithError(err).Error("failed to get event")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func (s *RefService) getMany(
+func (s *EventService) getMany(
 	name string,
 	sql string,
 	args ...interface{},
-) ([]*Ref, error) {
-	var rows []*Ref
+) ([]*Event, error) {
+	var rows []*Event
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
@@ -85,7 +85,7 @@ func (s *RefService) getMany(
 	}
 
 	for dbRows.Next() {
-		var row Ref
+		var row Event
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.Id,
@@ -97,7 +97,7 @@ func (s *RefService) getMany(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get refs")
+		mylog.Log.WithError(err).Error("failed to get events")
 		return nil, err
 	}
 
@@ -106,29 +106,29 @@ func (s *RefService) getMany(
 	return rows, nil
 }
 
-const getRefSQL = `
+const getEventSQL = `
 	SELECT
 		created_at,
 		id,
 		source_id,
 		target_id,
 		user_id
-	FROM ref
+	FROM event
 	WHERE id = $1
 `
 
-func (s *RefService) Get(id string) (*Ref, error) {
-	mylog.Log.WithField("id", id).Info("Ref.Get(id)")
-	return s.get("getRef", getRefSQL, id)
+func (s *EventService) Get(id string) (*Event, error) {
+	mylog.Log.WithField("id", id).Info("Event.Get(id)")
+	return s.get("getEvent", getEventSQL, id)
 }
 
-func (s *RefService) GetBySource(
+func (s *EventService) GetBySource(
 	sourceId string,
 	po *PageOptions,
-) ([]*Ref, error) {
-	mylog.Log.WithField("source_id", sourceId).Info("Ref.GetBySource(source_id)")
+) ([]*Event, error) {
+	mylog.Log.WithField("source_id", sourceId).Info("Event.GetBySource(source_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.source_id = ` + args.Append(sourceId)
+	whereSQL := `event.source_id = ` + args.Append(sourceId)
 
 	selects := []string{
 		"created_at",
@@ -137,21 +137,21 @@ func (s *RefService) GetBySource(
 		"target_id",
 		"user_id",
 	}
-	from := "ref"
+	from := "event"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getRefsBySource", sql)
+	psName := preparedName("getEventsBySource", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *RefService) GetByTarget(
+func (s *EventService) GetByTarget(
 	targetId string,
 	po *PageOptions,
-) ([]*Ref, error) {
-	mylog.Log.WithField("target_id", targetId).Info("Ref.GetByTarget(target_id)")
+) ([]*Event, error) {
+	mylog.Log.WithField("target_id", targetId).Info("Event.GetByTarget(target_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `ref.target_id = ` + args.Append(targetId)
+	whereSQL := `event.target_id = ` + args.Append(targetId)
 
 	selects := []string{
 		"created_at",
@@ -160,21 +160,21 @@ func (s *RefService) GetByTarget(
 		"target_id",
 		"user_id",
 	}
-	from := "ref"
+	from := "event"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getRefsByTarget", sql)
+	psName := preparedName("getEventsByTarget", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *RefService) Create(row *Ref) (*Ref, error) {
-	mylog.Log.Info("Ref.Create()")
+func (s *EventService) Create(row *Event) (*Event, error) {
+	mylog.Log.Info("Event.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
 
-	id, _ := mytype.NewOID("Ref")
+	id, _ := mytype.NewOID("Event")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
@@ -208,7 +208,7 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 	case "LessonComment":
 		source = "lesson_comment"
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for ref source id", row.SourceId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for event source id", row.SourceId.Type)
 	}
 	var target string
 	switch row.TargetId.Type {
@@ -217,20 +217,20 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 	case "User":
 		target = "user"
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for ref target id", row.TargetId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for event target id", row.TargetId.Type)
 	}
 
-	table := strings.Join([]string{source, target, "ref"}, "_")
+	table := strings.Join([]string{source, target, "event"}, "_")
 	sql := `
 		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createRef", sql)
+	psName := preparedName("createEvent", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create ref")
+		mylog.Log.WithError(err).Error("failed to create event")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -244,8 +244,8 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 		return nil, err
 	}
 
-	refSvc := NewRefService(tx)
-	ref, err := refSvc.Get(row.Id.String)
+	eventSvc := NewEventService(tx)
+	event, err := eventSvc.Get(row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -258,35 +258,35 @@ func (s *RefService) Create(row *Ref) (*Ref, error) {
 		}
 	}
 
-	return ref, nil
+	return event, nil
 }
 
-func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
-	mylog.Log.Info("Ref.BatchCreate()")
+func (s *EventService) BatchCreate(src *Event, targetIds []*mytype.OID) error {
+	mylog.Log.Info("Event.BatchCreate()")
 
 	n := len(targetIds)
-	lessonRefs := make([][]interface{}, 0, n)
-	userRefs := make([][]interface{}, 0, n)
+	lessonEvents := make([][]interface{}, 0, n)
+	userEvents := make([][]interface{}, 0, n)
 	for _, targetId := range targetIds {
-		id, _ := mytype.NewOID("Ref")
+		id, _ := mytype.NewOID("Event")
 		src.Id.Set(id)
 		switch targetId.Type {
 		case "Lesson":
-			lessonRefs = append(lessonRefs, []interface{}{
+			lessonEvents = append(lessonEvents, []interface{}{
 				src.Id.String,
 				targetId.String,
 				src.SourceId.String,
 				src.UserId.String,
 			})
 		case "User":
-			userRefs = append(userRefs, []interface{}{
+			userEvents = append(userEvents, []interface{}{
 				src.Id.String,
 				targetId.String,
 				src.SourceId.String,
 				src.UserId.String,
 			})
 		default:
-			return fmt.Errorf("invalid type '%s' for ref target id", targetId.Type)
+			return fmt.Errorf("invalid type '%s' for event target id", targetId.Type)
 		}
 	}
 
@@ -299,19 +299,19 @@ func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
 		defer rollbackTransaction(tx)
 	}
 
-	var identPrefix string
+	var identPeventix string
 	switch src.SourceId.Type {
 	case "Lesson":
-		identPrefix = "lesson_"
+		identPeventix = "lesson_"
 	case "LessonComment":
-		identPrefix = "lesson_comment_"
+		identPeventix = "lesson_comment_"
 	default:
-		return fmt.Errorf("invalid type '%s' for ref source id", src.SourceId.Type)
+		return fmt.Errorf("invalid type '%s' for event source id", src.SourceId.Type)
 	}
-	lessonRefCopyCount, err := tx.CopyFrom(
-		pgx.Identifier{identPrefix + "lesson_ref"},
-		[]string{"ref_id", "target_id", "source_id", "user_id"},
-		pgx.CopyFromRows(lessonRefs),
+	lessonEventCopyCount, err := tx.CopyFrom(
+		pgx.Identifier{identPeventix + "lesson_event"},
+		[]string{"event_id", "target_id", "source_id", "user_id"},
+		pgx.CopyFromRows(lessonEvents),
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -319,17 +319,17 @@ func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
 			default:
 				return err
 			case UniqueViolation:
-				mylog.Log.Warn("refs already created")
+				mylog.Log.Warn("events already created")
 				return nil
 			}
 		}
 		return err
 	}
 
-	userRefCopyCount, err := tx.CopyFrom(
-		pgx.Identifier{identPrefix + "user_ref"},
-		[]string{"ref_id", "target_id", "source_id", "user_id"},
-		pgx.CopyFromRows(userRefs),
+	userEventCopyCount, err := tx.CopyFrom(
+		pgx.Identifier{identPeventix + "user_event"},
+		[]string{"event_id", "target_id", "source_id", "user_id"},
+		pgx.CopyFromRows(userEvents),
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -337,7 +337,7 @@ func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
 			default:
 				return err
 			case UniqueViolation:
-				mylog.Log.Warn("refs already created")
+				mylog.Log.Warn("events already created")
 				return nil
 			}
 		}
@@ -352,22 +352,22 @@ func (s *RefService) BatchCreate(src *Ref, targetIds []*mytype.OID) error {
 		}
 	}
 
-	mylog.Log.WithField("n", lessonRefCopyCount+userRefCopyCount).Info("created refs")
+	mylog.Log.WithField("n", lessonEventCopyCount+userEventCopyCount).Info("created events")
 
 	return nil
 }
 
-const deleteUserRefSQL = `
-	DELETE FROM ref
+const deleteUserEventSQL = `
+	DELETE FROM event
 	WHERE id = $1
 `
 
-func (s *RefService) Delete(id *mytype.OID) error {
-	mylog.Log.WithField("id", id).Info("Ref.Delete(id)")
+func (s *EventService) Delete(id *mytype.OID) error {
+	mylog.Log.WithField("id", id).Info("Event.Delete(id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteRef",
-		deleteUserRefSQL,
+		"deleteEvent",
+		deleteUserEventSQL,
 		id,
 	)
 	if err != nil {
@@ -380,7 +380,7 @@ func (s *RefService) Delete(id *mytype.OID) error {
 	return nil
 }
 
-func (s *RefService) ParseBodyForRefs(
+func (s *EventService) ParseBodyForEvents(
 	userId,
 	studyId,
 	sourceId *mytype.OID,
@@ -396,24 +396,24 @@ func (s *RefService) ParseBodyForRefs(
 	}
 
 	lessonSvc := NewLessonService(tx)
-	refSvc := NewRefService(tx)
+	eventSvc := NewEventService(tx)
 
-	lessonNumberRefs, err := body.NumberRefs()
+	lessonNumberEvents, err := body.NumberRefs()
 	if err != nil {
 		return err
 	}
-	userRefs := body.AtRefs()
-	// TODO: add support for cross study references
-	// crossStudyRefs, err := body.CrossStudyRefs()
+	userEvents := body.AtRefs()
+	// TODO: add support for cross study eventerences
+	// crossStudyEvents, err := body.CrossStudyEvents()
 	// if err != nil {
 	//   return err
 	// }
-	targetIds := make([]*mytype.OID, 0, len(lessonNumberRefs)+len(userRefs))
-	if len(lessonNumberRefs) > 0 {
+	targetIds := make([]*mytype.OID, 0, len(lessonNumberEvents)+len(userEvents))
+	if len(lessonNumberEvents) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
 			studyId.String,
-			lessonNumberRefs,
+			lessonNumberEvents,
 		)
 		if err != nil {
 			return err
@@ -422,10 +422,10 @@ func (s *RefService) ParseBodyForRefs(
 			targetIds = append(targetIds, &l.Id)
 		}
 	}
-	if len(userRefs) > 0 {
+	if len(userEvents) > 0 {
 		userSvc := NewUserService(tx)
 		users, err := userSvc.BatchGetByLogin(
-			userRefs,
+			userEvents,
 		)
 		if err != nil {
 			return err
@@ -435,10 +435,10 @@ func (s *RefService) ParseBodyForRefs(
 		}
 	}
 
-	ref := &Ref{}
-	ref.SourceId.Set(sourceId)
-	ref.UserId.Set(userId)
-	err = refSvc.BatchCreate(ref, targetIds)
+	event := &Event{}
+	event.SourceId.Set(sourceId)
+	event.UserId.Set(userId)
+	err = eventSvc.BatchCreate(event, targetIds)
 	if err != nil {
 		return err
 	}
@@ -454,7 +454,7 @@ func (s *RefService) ParseBodyForRefs(
 	return nil
 }
 
-func (s *RefService) ParseUpdatedBodyForRefs(
+func (s *EventService) ParseUpdatedBodyForEvents(
 	userId,
 	studyId,
 	sourceId *mytype.OID,
@@ -470,76 +470,76 @@ func (s *RefService) ParseUpdatedBodyForRefs(
 	}
 
 	lessonSvc := NewLessonService(tx)
-	refSvc := NewRefService(tx)
+	eventSvc := NewEventService(tx)
 
-	newRefs := make(map[string]struct{})
-	oldRefs := make(map[string]struct{})
-	refs, err := refSvc.GetBySource(sourceId.String, nil)
+	newEvents := make(map[string]struct{})
+	oldEvents := make(map[string]struct{})
+	events, err := eventSvc.GetBySource(sourceId.String, nil)
 	if err != nil {
 		return err
 	}
-	for _, ref := range refs {
-		oldRefs[ref.TargetId.String] = struct{}{}
+	for _, event := range events {
+		oldEvents[event.TargetId.String] = struct{}{}
 	}
 
-	lessonNumberRefs, err := body.NumberRefs()
+	lessonNumberEvents, err := body.NumberRefs()
 	if err != nil {
 		return err
 	}
-	if len(lessonNumberRefs) > 0 {
+	if len(lessonNumberEvents) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
 			studyId.String,
-			lessonNumberRefs,
+			lessonNumberEvents,
 		)
 		if err != nil {
 			return err
 		}
 		for _, l := range lessons {
-			newRefs[l.Id.String] = struct{}{}
-			if _, prs := oldRefs[l.Id.String]; !prs {
-				ref := &Ref{}
-				ref.TargetId.Set(l.Id)
-				ref.SourceId.Set(sourceId)
-				ref.UserId.Set(userId)
-				_, err = refSvc.Create(ref)
+			newEvents[l.Id.String] = struct{}{}
+			if _, prs := oldEvents[l.Id.String]; !prs {
+				event := &Event{}
+				event.TargetId.Set(l.Id)
+				event.SourceId.Set(sourceId)
+				event.UserId.Set(userId)
+				_, err = eventSvc.Create(event)
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
-	userRefs := body.AtRefs()
-	// TODO: add support for cross study references
-	// crossStudyRefs, err := body.CrossStudyRefs()
+	userEvents := body.AtRefs()
+	// TODO: add support for cross study eventerences
+	// crossStudyEvents, err := body.CrossStudyEvents()
 	// if err != nil {
 	//   return err
 	// }
-	if len(userRefs) > 0 {
+	if len(userEvents) > 0 {
 		userSvc := NewUserService(tx)
 		users, err := userSvc.BatchGetByLogin(
-			userRefs,
+			userEvents,
 		)
 		if err != nil {
 			return err
 		}
 		for _, u := range users {
-			newRefs[u.Id.String] = struct{}{}
-			if _, prs := oldRefs[u.Id.String]; !prs {
-				ref := &Ref{}
-				ref.TargetId.Set(u.Id)
-				ref.SourceId.Set(sourceId)
-				ref.UserId.Set(userId)
-				_, err = refSvc.Create(ref)
+			newEvents[u.Id.String] = struct{}{}
+			if _, prs := oldEvents[u.Id.String]; !prs {
+				event := &Event{}
+				event.TargetId.Set(u.Id)
+				event.SourceId.Set(sourceId)
+				event.UserId.Set(userId)
+				_, err = eventSvc.Create(event)
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
-	for _, ref := range refs {
-		if _, prs := newRefs[ref.TargetId.String]; !prs {
-			err := refSvc.Delete(&ref.Id)
+	for _, event := range events {
+		if _, prs := newEvents[event.TargetId.String]; !prs {
+			err := eventSvc.Delete(&event.Id)
 			if err != nil {
 				return err
 			}

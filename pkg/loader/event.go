@@ -9,66 +9,66 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewRefLoader(svc *data.RefService) *RefLoader {
-	return &RefLoader{
+func NewEventLoader(svc *data.EventService) *EventLoader {
+	return &EventLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetRefFn(svc.Get)),
+		batchGet: createLoader(newBatchGetEventFn(svc.Get)),
 	}
 }
 
-type RefLoader struct {
-	svc *data.RefService
+type EventLoader struct {
+	svc *data.EventService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *RefLoader) Clear(id string) {
+func (r *EventLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *RefLoader) ClearAll() {
+func (r *EventLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *RefLoader) Get(id string) (*data.Ref, error) {
+func (r *EventLoader) Get(id string) (*data.Event, error) {
 	ctx := context.Background()
-	refData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+	eventData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
-	ref, ok := refData.(*data.Ref)
+	event, ok := eventData.(*data.Event)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return ref, nil
+	return event, nil
 }
 
-func (r *RefLoader) GetMany(ids *[]string) ([]*data.Ref, []error) {
+func (r *EventLoader) GetMany(ids *[]string) ([]*data.Event, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
 	}
-	refData, errs := r.batchGet.LoadMany(ctx, keys)()
+	eventData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}
-	refs := make([]*data.Ref, len(refData))
-	for i, d := range refData {
+	events := make([]*data.Event, len(eventData))
+	for i, d := range eventData {
 		var ok bool
-		refs[i], ok = d.(*data.Ref)
+		events[i], ok = d.(*data.Event)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
 	}
 
-	return refs, nil
+	return events, nil
 }
 
-func newBatchGetRefFn(
-	getter func(string) (*data.Ref, error),
+func newBatchGetEventFn(
+	getter func(string) (*data.Event, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -82,8 +82,8 @@ func newBatchGetRefFn(
 		for i, key := range keys {
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
-				ref, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: ref, Error: err}
+				event, err := getter(key.String())
+				results[i] = &dataloader.Result{Data: event, Error: err}
 			}(i, key)
 		}
 

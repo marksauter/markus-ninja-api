@@ -5,15 +5,15 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewRefConnectionResolver(
-	refs []*repo.RefPermit,
+func NewEventConnectionResolver(
+	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
-) (*refConnectionResolver, error) {
-	edges := make([]*refEdgeResolver, len(refs))
+) (*eventConnectionResolver, error) {
+	edges := make([]*eventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewRefEdgeResolver(refs[i], repos)
+		edge, err := NewEventEdgeResolver(events[i], repos)
 		if err != nil {
 			return nil, err
 		}
@@ -26,9 +26,9 @@ func NewRefConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &refConnectionResolver{
+	resolver := &eventConnectionResolver{
 		edges:      edges,
-		refs:       refs,
+		events:     events,
 		pageInfo:   pageInfo,
 		repos:      repos,
 		totalCount: totalCount,
@@ -36,38 +36,38 @@ func NewRefConnectionResolver(
 	return resolver, nil
 }
 
-type refConnectionResolver struct {
-	edges      []*refEdgeResolver
-	refs       []*repo.RefPermit
+type eventConnectionResolver struct {
+	edges      []*eventEdgeResolver
+	events     []*repo.EventPermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	totalCount int32
 }
 
-func (r *refConnectionResolver) Edges() *[]*refEdgeResolver {
+func (r *eventConnectionResolver) Edges() *[]*eventEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*refEdgeResolver{}
+	return &[]*eventEdgeResolver{}
 }
 
-func (r *refConnectionResolver) Nodes() *[]*refResolver {
-	n := len(r.refs)
-	nodes := make([]*refResolver, 0, n)
+func (r *eventConnectionResolver) Nodes() *[]*eventResolver {
+	n := len(r.events)
+	nodes := make([]*eventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
-		refs := r.refs[r.pageInfo.start : r.pageInfo.end+1]
-		for _, e := range refs {
-			nodes = append(nodes, &refResolver{Ref: e, Repos: r.repos})
+		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
+		for _, e := range events {
+			nodes = append(nodes, &eventResolver{Event: e, Repos: r.repos})
 		}
 	}
 	return &nodes
 }
 
-func (r *refConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *eventConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *refConnectionResolver) TotalCount() int32 {
+func (r *eventConnectionResolver) TotalCount() int32 {
 	return r.totalCount
 }

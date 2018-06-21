@@ -421,8 +421,8 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	refSvc := NewRefService(tx)
-	refSvc.ParseBodyForRefs(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	refSvc := NewEventService(tx)
+	refSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
 
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
@@ -566,8 +566,8 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		return nil, ErrNotFound
 	}
 
-	refSvc := NewRefService(tx)
-	refSvc.ParseUpdatedBodyForRefs(
+	refSvc := NewEventService(tx)
+	refSvc.ParseUpdatedBodyForEvents(
 		&row.UserId,
 		&row.StudyId,
 		&row.Id,
