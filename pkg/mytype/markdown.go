@@ -15,7 +15,7 @@ type Markdown struct {
 	String string
 }
 
-var atRef = regexp.MustCompile(`@(\w+)`)
+var atRef = regexp.MustCompile(`(?:|\s+)@(\w+)(?:\s+|$)`)
 
 func (src *Markdown) AtRefs() []string {
 	result := atRef.FindAllStringSubmatch(src.String, -1)
@@ -29,7 +29,7 @@ func (src *Markdown) AtRefs() []string {
 	return refs
 }
 
-var numberRef = regexp.MustCompile(`#(\d)`)
+var numberRef = regexp.MustCompile(`(?:^|\s+)#(\d)(?:\s+|$)`)
 
 func (src *Markdown) NumberRefs() ([]int32, error) {
 	result := numberRef.FindAllStringSubmatch(src.String, -1)
@@ -43,6 +43,34 @@ func (src *Markdown) NumberRefs() ([]int32, error) {
 			}
 			refs = append(refs, int32(n))
 		}
+	}
+	return refs, nil
+}
+
+type CrossStudyRef struct {
+	Owner  string
+	Name   string
+	Number int32
+}
+
+var crossStudyRef = regexp.MustCompile(`(?:^|\s+)(\w+)/([\w|-]+)#(\d)(?:\s+|$)`)
+
+func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
+	result := crossStudyRef.FindAllStringSubmatch(src.String, -1)
+	refs := make([]*CrossStudyRef, 0, len(result))
+	for _, r := range result {
+		owner := r[1]
+		name := r[2]
+		number, err := strconv.ParseInt(r[3], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		ref := &CrossStudyRef{
+			Owner:  owner,
+			Name:   name,
+			Number: int32(number),
+		}
+		refs = append(refs, ref)
 	}
 	return refs, nil
 }

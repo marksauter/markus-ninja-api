@@ -237,7 +237,7 @@ func (s *LessonCommentService) GetByStudy(
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("LessonComment.GetByStudy(study_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
 		lesson_comment_master.user_id = ` + args.Append(userId) + ` AND
 		lesson_comment_master.study_id = ` + args.Append(studyId)
@@ -270,7 +270,7 @@ func (s *LessonCommentService) GetByUser(
 	mylog.Log.WithField(
 		"user_id", userId,
 	).Info("LessonComment.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `lesson_comment_master.user_id = ` + args.Append(userId)
 
 	selects := []string{

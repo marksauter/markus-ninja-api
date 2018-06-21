@@ -1,0 +1,5 @@
+# Properties by which ref connections can be ordered.
+enum RefOrderField {
+  # Order refs by creation time.
+  CREATED_AT
+}

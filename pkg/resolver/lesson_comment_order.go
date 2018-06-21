@@ -55,7 +55,7 @@ type LessonCommentOrderArg struct {
 	Field     string
 }
 
-func ParseLessonCommentOrder(arg *LessonCommentOrderArg) (*LessonCommentOrder, error) {
+func ParseLessonCommentOrder(arg *OrderArg) (*LessonCommentOrder, error) {
 	if arg == nil {
 		return &LessonCommentOrder{
 			direction: data.ASC,

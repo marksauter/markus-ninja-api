@@ -1,0 +1,2 @@
+# Any referencable object.
+union ReferenceTarget = Lesson | User

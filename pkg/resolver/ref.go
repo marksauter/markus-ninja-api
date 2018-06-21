@@ -24,8 +24,8 @@ func (r *refResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *refResolver) Referent() (*nodeResolver, error) {
-	id, err := r.Ref.ReferentId()
+func (r *refResolver) Target() (*referenceTargetResolver, error) {
+	id, err := r.Ref.TargetId()
 	if err != nil {
 		return nil, err
 	}
@@ -35,20 +35,20 @@ func (r *refResolver) Referent() (*nodeResolver, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
+		return &referenceTargetResolver{Subject: lesson, Repos: r.Repos}, nil
 	case "User":
 		user, err := r.Repos.User().Get(id.String)
 		if err != nil {
 			return nil, err
 		}
-		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
+		return &referenceTargetResolver{Subject: user, Repos: r.Repos}, nil
 	default:
-		return nil, errors.New("invalid referent id")
+		return nil, errors.New("invalid target id")
 	}
 }
 
-func (r *refResolver) Referrer() (*nodeResolver, error) {
-	id, err := r.Ref.ReferrerId()
+func (r *refResolver) Source() (*referenceSourceResolver, error) {
+	id, err := r.Ref.SourceId()
 	if err != nil {
 		return nil, err
 	}
@@ -58,26 +58,26 @@ func (r *refResolver) Referrer() (*nodeResolver, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
+		return &referenceSourceResolver{Subject: lesson, Repos: r.Repos}, nil
 	case "LessonComment":
 		lessonComment, err := r.Repos.LessonComment().Get(id.String)
 		if err != nil {
 			return nil, err
 		}
-		return &nodeResolver{&lessonCommentResolver{LessonComment: lessonComment, Repos: r.Repos}}, nil
+		return &referenceSourceResolver{Subject: lessonComment, Repos: r.Repos}, nil
 	default:
-		return nil, errors.New("invalid referrer id")
+		return nil, errors.New("invalid source id")
 	}
 }
 
-func (r *refResolver) Study() (*studyResolver, error) {
-	studyId, err := r.Ref.StudyId()
+func (r *refResolver) User() (*userResolver, error) {
+	userId, err := r.Ref.UserId()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	user, err := r.Repos.User().Get(userId.String)
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &userResolver{User: user, Repos: r.Repos}, nil
 }

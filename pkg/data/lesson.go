@@ -193,7 +193,39 @@ func (s *LessonService) Get(id string) (*Lesson, error) {
 	return s.get("getLessonById", getLessonByIdSQL, id)
 }
 
-const numConnArgs = 3
+const getLessonByOwnerStudyAndNumberSQL = `
+	SELECT
+		lesson.body,
+		lesson.created_at,
+		lesson.id,
+		lesson.number,
+		lesson.published_at,
+		lesson.study_id,
+		study.name study_name,
+		lesson.title,
+		lesson.updated_at,
+		lesson.user_id,
+		account.login user_login
+	FROM lesson
+	JOIN account ON lower(account.login) = lower($1)
+	JOIN study ON lower(study.name) = lower($2)
+	WHERE lesson.number = $3
+`
+
+func (s *LessonService) GetByOwnerStudyAndNumber(
+	ownerLogin,
+	studyName string,
+	number int32,
+) (*Lesson, error) {
+	mylog.Log.Info("Lesson.GetByOwnerStudyAndNumber()")
+	return s.get(
+		"getLessonByOwnerStudyAndNumber",
+		getLessonByOwnerStudyAndNumberSQL,
+		ownerLogin,
+		studyName,
+		number,
+	)
+}
 
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
@@ -225,7 +257,7 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("Lesson.GetByStudy(study_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, numConnArgs+1))
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
 		lesson_master.user_id = ` + args.Append(userId) + ` AND
 		lesson_master.study_id = ` + args.Append(studyId)
@@ -390,7 +422,7 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 	}
 
 	refSvc := NewRefService(tx)
-	refSvc.ParseStudyBody(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	refSvc.ParseBodyForRefs(&row.UserId, &row.StudyId, &row.Id, &row.Body)
 
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
@@ -535,7 +567,7 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 	}
 
 	refSvc := NewRefService(tx)
-	refSvc.ParseUpdatedStudyBody(
+	refSvc.ParseUpdatedBodyForRefs(
 		&row.UserId,
 		&row.StudyId,
 		&row.Id,

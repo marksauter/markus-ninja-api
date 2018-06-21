@@ -60,7 +60,7 @@ func (r *lessonResolver) Comments(
 		Before  *string
 		First   *int32
 		Last    *int32
-		OrderBy *LessonCommentOrderArg
+		OrderBy *OrderArg
 	},
 ) (*lessonCommentConnectionResolver, error) {
 	userId, err := r.Lesson.UserId()
@@ -139,6 +139,59 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonResolver) Refs(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*refConnectionResolver, error) {
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+	refOrder, err := ParseRefOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		refOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	refs, err := r.Repos.Ref().GetByTarget(
+		lessonId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Ref().CountByTarget(lessonId.String)
+	if err != nil {
+		return nil, err
+	}
+	refConnectionResolver, err := NewRefConnectionResolver(
+		refs,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return refConnectionResolver, nil
+}
+
 func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
 	userLogin, err := r.Lesson.UserLogin()
@@ -184,7 +237,7 @@ func (r *lessonResolver) URL() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
 	return uri, nil
 }
 

@@ -44,25 +44,25 @@ func (r *RefPermit) ID() (*mytype.OID, error) {
 	return &r.ref.Id, nil
 }
 
-func (r *RefPermit) ReferrerId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("referrer_id"); !ok {
+func (r *RefPermit) SourceId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("source_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.ref.ReferrerId, nil
+	return &r.ref.SourceId, nil
 }
 
-func (r *RefPermit) ReferentId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("referent_id"); !ok {
+func (r *RefPermit) TargetId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("target_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.ref.ReferentId, nil
+	return &r.ref.TargetId, nil
 }
 
-func (r *RefPermit) StudyId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("study_id"); !ok {
+func (r *RefPermit) UserId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.ref.StudyId, nil
+	return &r.ref.UserId, nil
 }
 
 func NewRefRepo(perms *PermRepo, svc *data.RefService) *RefRepo {
@@ -103,16 +103,8 @@ func (r *RefRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *RefRepo) CountByReferent(studyId, referentId string) (int32, error) {
-	return r.svc.CountByReferent(studyId, referentId)
-}
-
-func (r *RefRepo) CountByReferrer(studyId, referrerId string) (int32, error) {
-	return r.svc.CountByReferrer(studyId, referrerId)
-}
-
-func (r *RefRepo) CountByStudy(studyId string) (int32, error) {
-	return r.svc.CountByStudy(studyId)
+func (r *RefRepo) CountByTarget(targetId string) (int32, error) {
+	return r.svc.CountByTarget(targetId)
 }
 
 func (r *RefRepo) Create(ref *data.Ref) (*RefPermit, error) {
@@ -133,14 +125,14 @@ func (r *RefRepo) Create(ref *data.Ref) (*RefPermit, error) {
 	return &RefPermit{fieldPermFn, ref}, nil
 }
 
-func (r *RefRepo) BatchCreate(ref *data.Ref, referentIds []string) error {
+func (r *RefRepo) BatchCreate(ref *data.Ref, targetIds []*mytype.OID) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
 	if _, err := r.perms.Check(perm.Create, ref); err != nil {
 		return err
 	}
-	return r.svc.BatchCreate(ref, referentIds)
+	return r.svc.BatchCreate(ref, targetIds)
 }
 
 func (r *RefRepo) Get(id string) (*RefPermit, error) {
@@ -158,53 +150,11 @@ func (r *RefRepo) Get(id string) (*RefPermit, error) {
 	return &RefPermit{fieldPermFn, ref}, nil
 }
 
-func (r *RefRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*RefPermit, error) {
+func (r *RefRepo) GetByTarget(targetId string, po *data.PageOptions) ([]*RefPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	refs, err := r.svc.GetByStudy(studyId, po)
-	if err != nil {
-		return nil, err
-	}
-	refPermits := make([]*RefPermit, len(refs))
-	if len(refs) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, refs[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range refs {
-			refPermits[i] = &RefPermit{fieldPermFn, l}
-		}
-	}
-	return refPermits, nil
-}
-
-func (r *RefRepo) GetByReferent(studyId, referentId string, po *data.PageOptions) ([]*RefPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	refs, err := r.svc.GetByReferent(studyId, referentId, po)
-	if err != nil {
-		return nil, err
-	}
-	refPermits := make([]*RefPermit, len(refs))
-	if len(refs) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, refs[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range refs {
-			refPermits[i] = &RefPermit{fieldPermFn, l}
-		}
-	}
-	return refPermits, nil
-}
-
-func (r *RefRepo) GetByReferrer(studyId, referrerId string, po *data.PageOptions) ([]*RefPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	refs, err := r.svc.GetByReferrer(studyId, referrerId, po)
+	refs, err := r.svc.GetByTarget(targetId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +178,7 @@ func (r *RefRepo) Delete(ref *data.Ref) error {
 	if _, err := r.perms.Check(perm.Delete, ref); err != nil {
 		return err
 	}
-	return r.svc.Delete(ref.Id.String)
+	return r.svc.Delete(&ref.Id)
 }
 
 // Middleware

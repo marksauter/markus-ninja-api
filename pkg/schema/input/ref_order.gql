@@ -1,0 +1,8 @@
+# Ways in which refs can be ordered upon return.
+input RefOrder {
+  # The direction in which to order refs by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order refs by.
+  field: RefOrderField!
+}
