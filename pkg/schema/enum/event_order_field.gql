@@ -1,0 +1,5 @@
+# Properties by which event connections can be ordered.
+enum EventOrderField {
+  # Order events by creation time.
+  CREATED_AT
+}

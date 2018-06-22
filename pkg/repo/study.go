@@ -71,6 +71,10 @@ func (r *StudyPermit) Name() (string, error) {
 	return r.study.Name.String, nil
 }
 
+func (r *StudyPermit) RelatedAt() time.Time {
+	return r.study.RelatedAt.Time
+}
+
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied

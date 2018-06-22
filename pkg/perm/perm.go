@@ -121,6 +121,7 @@ type NodeType int
 
 const (
 	EmailType NodeType = iota
+	EventType
 	EVTType
 	LessonType
 	LessonCommentType
@@ -137,6 +138,8 @@ func (nt NodeType) String() string {
 	switch nt {
 	case EmailType:
 		return "Email"
+	case EventType:
+		return "Event"
 	case EVTType:
 		return "EVT"
 	case LessonType:
@@ -166,6 +169,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
 	case "email":
 		return EmailType, nil
+	case "event":
+		return EventType, nil
 	case "evt":
 		return EVTType, nil
 	case "lesson":

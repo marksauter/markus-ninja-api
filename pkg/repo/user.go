@@ -59,6 +59,10 @@ func (r *UserPermit) Name() (string, error) {
 	return r.user.Name.String, nil
 }
 
+func (r *UserPermit) RelatedAt() time.Time {
+	return r.user.RelatedAt.Time
+}
+
 func (r *UserPermit) Profile() (string, error) {
 	if ok := r.checkFieldPermission("profile"); !ok {
 		return "", ErrAccessDenied
