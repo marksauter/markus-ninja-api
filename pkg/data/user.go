@@ -12,7 +12,7 @@ import (
 
 type User struct {
 	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"read"`
-	BackupEmail  mytype.Email       `db:"backup_email" permit:"create"`
+	BackupEmail  mytype.Email       `db:"backup_email"`
 	Bio          pgtype.Text        `db:"bio" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
@@ -70,6 +70,48 @@ func (s *UserService) CountByEnrolled(studyId string) (int32, error) {
 		"countUserByEnrolled",
 		countUserByEnrolledSQL,
 		studyId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
+const countUserByPupilSQL = `
+	SELECT COUNT(*)
+	FROM tutor
+	WHERE pupil_id = $1
+`
+
+func (s *UserService) CountByPupil(pupilId string) (int32, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("User.CountByPupil(pupil_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByPupil",
+		countUserByPupilSQL,
+		pupilId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
+const countUserByTutorSQL = `
+	SELECT COUNT(*)
+	FROM pupil
+	WHERE tutor_id = $1
+`
+
+func (s *UserService) CountByTutor(tutorId string) (int32, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("User.CountByTutor(tutor_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByTutor",
+		countUserByTutorSQL,
+		tutorId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -289,7 +331,6 @@ func (s *UserService) GetByEnrolled(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
-			&row.AppledAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.EnrolledAt,
@@ -345,7 +386,6 @@ func (s *UserService) GetByPupil(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
-			&row.AppledAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.Id,
@@ -401,7 +441,6 @@ func (s *UserService) GetByTutor(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
-			&row.AppledAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.Id,

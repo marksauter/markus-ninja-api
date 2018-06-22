@@ -57,7 +57,7 @@ func (r *userResolver) Appled(
 	if err != nil {
 		return nil, err
 	}
-	appledStudyConnectionResolver, err := NewAppledStudyConnectionResolver(
+	resolver, err := NewAppledStudyConnectionResolver(
 		studies,
 		pageOptions,
 		count,
@@ -66,7 +66,7 @@ func (r *userResolver) Appled(
 	if err != nil {
 		return nil, err
 	}
-	return appledStudyConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) Assets(
@@ -107,7 +107,7 @@ func (r *userResolver) Assets(
 	if err != nil {
 		return nil, err
 	}
-	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
+	resolver, err := NewUserAssetConnectionResolver(
 		userAssets,
 		pageOptions,
 		count,
@@ -116,7 +116,7 @@ func (r *userResolver) Assets(
 	if err != nil {
 		return nil, err
 	}
-	return userAssetConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) Bio() (string, error) {
@@ -175,7 +175,7 @@ func (r *userResolver) Emails(
 	if err != nil {
 		return nil, err
 	}
-	emailConnectionResolver, err := NewEmailConnectionResolver(
+	resolver, err := NewEmailConnectionResolver(
 		emails,
 		pageOptions,
 		count,
@@ -184,7 +184,7 @@ func (r *userResolver) Emails(
 	if err != nil {
 		return nil, err
 	}
-	return emailConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) Enrolled(
@@ -197,7 +197,44 @@ func (r *userResolver) Enrolled(
 		OrderBy *OrderArg
 	},
 ) (*enrolledStudyConnectionResolver, error) {
-	return nil, nil
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	studyOrder, err := ParseStudyOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		studyOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studies, err := r.Repos.Study().GetByEnrolled(id.String, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Study().CountByEnrolled(id.String)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewEnrolledStudyConnectionResolver(
+		studies,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *userResolver) Pupils(
@@ -210,7 +247,48 @@ func (r *userResolver) Pupils(
 		OrderBy *OrderArg
 	},
 ) (*pupilConnectionResolver, error) {
-	return nil, nil
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	pupilOrder, err := ParsePupilOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		pupilOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	users, err := r.Repos.User().GetByPupil(
+		id.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByPupil(id.String)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewPupilConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *userResolver) Tutors(
@@ -223,7 +301,48 @@ func (r *userResolver) Tutors(
 		OrderBy *OrderArg
 	},
 ) (*tutorConnectionResolver, error) {
-	return nil, nil
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	tutorOrder, err := ParseTutorOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		tutorOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	users, err := r.Repos.User().GetByPupil(
+		id.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByTutor(id.String)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewTutorConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {
@@ -290,7 +409,7 @@ func (r *userResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	lessonConnectionResolver, err := NewLessonConnectionResolver(
+	resolver, err := NewLessonConnectionResolver(
 		lessons,
 		pageOptions,
 		count,
@@ -299,7 +418,7 @@ func (r *userResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	return lessonConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) Login() (string, error) {
@@ -375,7 +494,7 @@ func (r *userResolver) Studies(
 	if err != nil {
 		return nil, err
 	}
-	studyConnectionResolver, err := NewStudyConnectionResolver(
+	resolver, err := NewStudyConnectionResolver(
 		studies,
 		pageOptions,
 		count,
@@ -384,7 +503,7 @@ func (r *userResolver) Studies(
 	if err != nil {
 		return nil, err
 	}
-	return studyConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) UpdatedAt() (graphql.Time, error) {

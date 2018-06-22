@@ -54,6 +54,27 @@ func (s *StudyService) CountByAppled(userId string) (int32, error) {
 	return n, err
 }
 
+const countStudyByEnrolledSQL = `
+	SELECT COUNT(*)
+	FROM study_enroll
+	WHERE user_id = $1
+`
+
+func (s *StudyService) CountByEnrolled(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("Study.CountByEnrolled(user_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countStudyByEnrolled",
+		countStudyByEnrolledSQL,
+		userId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
 const countStudyByUserSQL = `
 	SELECT COUNT(*)
 	FROM study

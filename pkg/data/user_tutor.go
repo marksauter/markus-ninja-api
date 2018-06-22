@@ -10,33 +10,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type UserFollow struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	PupilId mytype.OID         `db:"pupil_id" permit:"read"`
-	LeaderId   mytype.OID         `db:"leader_id" permit:"read"`
+type UserTutor struct {
+	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
+	PupilId   mytype.OID         `db:"pupil_id" permit:"read"`
+	TutorId   mytype.OID         `db:"tutor_id" permit:"read"`
 }
 
-func NewUserFollowService(db Queryer) *UserFollowService {
-	return &UserFollowService{db}
+func NewUserTutorService(db Queryer) *UserTutorService {
+	return &UserTutorService{db}
 }
 
-type UserFollowService struct {
+type UserTutorService struct {
 	db Queryer
 }
 
-const countUserFollowByPupilSQL = `
+const countUserTutorByPupilSQL = `
 	SELECT COUNT(*)
-	FROM user_follow
+	FROM user_tutor
 	WHERE pupil_id = $1
 `
 
-func (s *UserFollowService) CountByPupil(pupilId string) (int32, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("UserFollow.CountByPupil(pupil_id)")
+func (s *UserTutorService) CountByPupil(pupilId string) (int32, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("UserTutor.CountByPupil(pupil_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserFollowByPupil",
-		countUserFollowByPupilSQL,
+		"countUserTutorByPupil",
+		countUserTutorByPupilSQL,
 		pupilId,
 	).Scan(&n)
 
@@ -45,20 +45,20 @@ func (s *UserFollowService) CountByPupil(pupilId string) (int32, error) {
 	return n, err
 }
 
-const countUserFollowByLeaderSQL = `
+const countUserTutorByTutorSQL = `
 	SELECT COUNT(*)
-	FROM user_follow
-	WHERE leader_id = $1
+	FROM user_tutor
+	WHERE tutor_id = $1
 `
 
-func (s *UserFollowService) CountByLeader(leaderId string) (int32, error) {
-	mylog.Log.WithField("leader_id", leaderId).Info("UserFollow.CountByLeader(leader_id)")
+func (s *UserTutorService) CountByTutor(tutorId string) (int32, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("UserTutor.CountByTutor(tutor_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserFollowByLeader",
-		countUserFollowByLeaderSQL,
-		leaderId,
+		"countUserTutorByTutor",
+		countUserTutorByTutorSQL,
+		tutorId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -66,33 +66,33 @@ func (s *UserFollowService) CountByLeader(leaderId string) (int32, error) {
 	return n, err
 }
 
-func (s *UserFollowService) get(
+func (s *UserTutorService) get(
 	name string,
 	sql string,
 	args ...interface{},
-) (*UserFollow, error) {
-	var row UserFollow
+) (*UserTutor, error) {
+	var row UserTutor
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.PupilId,
-		&row.LeaderId,
+		&row.TutorId,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_follow")
+		mylog.Log.WithError(err).Error("failed to get user_tutor")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func (s *UserFollowService) getMany(
+func (s *UserTutorService) getMany(
 	name string,
 	sql string,
 	args ...interface{},
-) ([]*UserFollow, error) {
-	var rows []*UserFollow
+) ([]*UserTutor, error) {
+	var rows []*UserTutor
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
@@ -100,11 +100,11 @@ func (s *UserFollowService) getMany(
 	}
 
 	for dbRows.Next() {
-		var row UserFollow
+		var row UserTutor
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.PupilId,
-			&row.LeaderId,
+			&row.TutorId,
 		)
 		rows = append(rows, &row)
 	}
@@ -119,67 +119,67 @@ func (s *UserFollowService) getMany(
 	return rows, nil
 }
 
-const getUserFollowSQL = `
+const getUserTutorSQL = `
 	SELECT
 		created_at,
 		pupil_id,
-		leader_id
-	FROM user_follow
-	WHERE leader_id = $1 AND pupil_id = $2
+		tutor_id
+	FROM user_tutor
+	WHERE tutor_id = $1 AND pupil_id = $2
 `
 
-func (s *UserFollowService) Get(leaderId, pupilId string) (*UserFollow, error) {
+func (s *UserTutorService) Get(tutorId, pupilId string) (*UserTutor, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"leader_id":   leaderId,
+		"tutor_id": tutorId,
 		"pupil_id": pupilId,
-	}).Info("UserFollow.Get()")
-	return s.get("getUserFollow", getUserFollowSQL, leaderId, pupilId)
+	}).Info("UserTutor.Get()")
+	return s.get("getUserTutor", getUserTutorSQL, tutorId, pupilId)
 }
 
-func (s *UserFollowService) GetByPupil(
+func (s *UserTutorService) GetByPupil(
 	pupilId string,
 	po *PageOptions,
-) ([]*UserFollow, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("UserFollow.GetByPupil(pupil_id)")
+) ([]*UserTutor, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("UserTutor.GetByPupil(pupil_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_follow.pupil_id = ` + args.Append(pupilId)
+	whereSQL := `user_tutor.pupil_id = ` + args.Append(pupilId)
 
 	selects := []string{
 		"created_at",
 		"pupil_id",
-		"leader_id",
+		"tutor_id",
 	}
-	from := "user_follow"
+	from := "user_tutor"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUserFollowsByPupilId", sql)
+	psName := preparedName("getUserTutorsByPupilId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserFollowService) GetByLeader(
-	leaderId string,
+func (s *UserTutorService) GetByTutor(
+	tutorId string,
 	po *PageOptions,
-) ([]*UserFollow, error) {
-	mylog.Log.WithField("leader_id", leaderId).Info("UserFollow.GetByLeader(leader_id)")
+) ([]*UserTutor, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("UserTutor.GetByTutor(tutor_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_follow.leader_id = ` + args.Append(leaderId)
+	whereSQL := `user_tutor.tutor_id = ` + args.Append(tutorId)
 
 	selects := []string{
 		"created_at",
 		"pupil_id",
-		"leader_id",
+		"tutor_id",
 	}
-	from := "user_follow"
+	from := "user_tutor"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUserFollowsByLeaderId", sql)
+	psName := preparedName("getUserTutorsByTutorId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserFollowService) Create(row *UserFollow) (*UserFollow, error) {
-	mylog.Log.Info("UserFollow.Create()")
+func (s *UserTutorService) Create(row *UserTutor) (*UserTutor, error) {
+	mylog.Log.Info("UserTutor.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -188,9 +188,9 @@ func (s *UserFollowService) Create(row *UserFollow) (*UserFollow, error) {
 		columns = append(columns, "pupil_id")
 		values = append(values, args.Append(&row.PupilId))
 	}
-	if row.LeaderId.Status != pgtype.Undefined {
-		columns = append(columns, "leader_id")
-		values = append(values, args.Append(&row.LeaderId))
+	if row.TutorId.Status != pgtype.Undefined {
+		columns = append(columns, "tutor_id")
+		values = append(values, args.Append(&row.TutorId))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)
@@ -203,15 +203,15 @@ func (s *UserFollowService) Create(row *UserFollow) (*UserFollow, error) {
 	}
 
 	sql := `
-		INSERT INTO user_follow(` + strings.Join(columns, ",") + `)
+		INSERT INTO user_tutor(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createUserFollow", sql)
+	psName := preparedName("createUserTutor", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user_follow")
+		mylog.Log.WithError(err).Error("failed to create user_tutor")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -225,8 +225,8 @@ func (s *UserFollowService) Create(row *UserFollow) (*UserFollow, error) {
 		return nil, err
 	}
 
-	userFollowSvc := NewUserFollowService(tx)
-	userFollow, err := userFollowSvc.Get(row.LeaderId.String, row.PupilId.String)
+	userTutorSvc := NewUserTutorService(tx)
+	userTutor, err := userTutorSvc.Get(row.TutorId.String, row.PupilId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -239,24 +239,24 @@ func (s *UserFollowService) Create(row *UserFollow) (*UserFollow, error) {
 		}
 	}
 
-	return userFollow, nil
+	return userTutor, nil
 }
 
-const deleteUserFollowSQL = `
-	DELETE FROM user_follow
-	WHERE leader_id = $1 AND pupil_id = $2
+const deleteUserTutorSQL = `
+	DELETE FROM user_tutor
+	WHERE tutor_id = $1 AND pupil_id = $2
 `
 
-func (s *UserFollowService) Delete(leaderId, pupilId string) error {
+func (s *UserTutorService) Delete(tutorId, pupilId string) error {
 	mylog.Log.WithFields(logrus.Fields{
-		"leader_id":   leaderId,
+		"tutor_id": tutorId,
 		"pupil_id": pupilId,
-	}).Info("UserFollow.Delete(leader_id, pupil_id)")
+	}).Info("UserTutor.Delete(tutor_id, pupil_id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteUserFollow",
-		deleteUserFollowSQL,
-		leaderId,
+		"deleteUserTutor",
+		deleteUserTutorSQL,
+		tutorId,
 		pupilId,
 	)
 	if err != nil {

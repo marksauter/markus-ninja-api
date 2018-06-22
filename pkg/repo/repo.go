@@ -25,6 +25,7 @@ const (
 	topicRepoKey         key = "topic"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
+	userTutorRepoKey     key = "user_tutor"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -64,6 +65,7 @@ func NewRepos(svcs *service.Services) *Repos {
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
+			userTutorRepoKey:     NewUserTutorRepo(permRepo, svcs.UserTutor),
 		},
 	}
 }
@@ -146,6 +148,11 @@ func (r *Repos) User() *UserRepo {
 
 func (r *Repos) UserAsset() *UserAssetRepo {
 	repo, _ := r.lookup[userAssetRepoKey].(*UserAssetRepo)
+	return repo
+}
+
+func (r *Repos) UserTutor() *UserTutorRepo {
+	repo, _ := r.lookup[userTutorRepoKey].(*UserTutorRepo)
 	return repo
 }
 

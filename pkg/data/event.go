@@ -207,6 +207,10 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 		source = "lesson"
 	case "LessonComment":
 		source = "lesson_comment"
+	case "Study":
+		source = "study"
+	case "User":
+		source = "user"
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event source id", row.SourceId.Type)
 	}
@@ -214,6 +218,8 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 	switch row.TargetId.Type {
 	case "Lesson":
 		target = "lesson"
+	case "Study":
+		target = "study"
 	case "User":
 		target = "user"
 	default:
