@@ -19,7 +19,7 @@ type Study implements Appleable, Node, UniformResourceLocatable {
 
     # Order for connection.
     orderBy: AppleOrder
-  ): UserConnection!
+  ): AppleGiverConnection!
 
   # Returns a single asset from the current study by name.
   asset(

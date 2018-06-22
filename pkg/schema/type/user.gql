@@ -1,5 +1,23 @@
 # Represents a user.
 type User implements Node, UniformResourceLocatable {
+  # A list of studies the user has appled.
+  appled(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for studies returned from the connection.
+    orderBy: AppleOrder
+  ): AppledStudyConnection!
+
   # Returns a list of assets that the user owns.
   assets(
     # Returns the elements in the list that come after the specified global ID.
@@ -44,6 +62,60 @@ type User implements Node, UniformResourceLocatable {
     # Returns the last n elements form the list.
     last: Int
   ): EmailConnection!
+
+  # A list of studies the user is enrolled in.
+  enrolled(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for studies returned from the connection.
+    orderBy: StudyOrder
+  ): EnrolledStudyConnection!
+
+  # A list of users the user is followed by.
+  followers(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for users returned from the connection.
+    orderBy: FollowerOrder
+  ): FollowerConnection!
+
+  # A list of users the user is followed by.
+  following(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for users returned from the connection.
+    orderBy: FollowingOrder
+  ): FollowingConnection!
 
   id: ID!
 
@@ -117,7 +189,7 @@ type UserEdge implements Edge {
   cursor: String!
 
   # The item at the end of the edge.
-  node: User
+  node: User!
 }
 
 # A connection type for User.

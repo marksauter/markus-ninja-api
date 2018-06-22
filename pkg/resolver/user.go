@@ -19,6 +19,19 @@ type userResolver struct {
 	Repos *repo.Repos
 }
 
+func (r *userResolver) Appled(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*appledStudyConnectionResolver, error) {
+	return nil, nil
+}
+
 func (r *userResolver) Assets(
 	ctx context.Context,
 	args struct {
@@ -135,6 +148,45 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 	return emailConnectionResolver, nil
+}
+
+func (r *userResolver) Enrolled(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*enrolledStudyConnectionResolver, error) {
+	return nil, nil
+}
+
+func (r *userResolver) Followers(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*followerConnectionResolver, error) {
+	return nil, nil
+}
+
+func (r *userResolver) Following(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*followingConnectionResolver, error) {
+	return nil, nil
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {

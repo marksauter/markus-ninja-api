@@ -20,6 +20,7 @@ type User struct {
 	Password     mytype.Password    `db:"password" permit:"create"`
 	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
+	RelatedAt    pgtype.Timestamptz
 	Roles        []string           `db:"roles"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }

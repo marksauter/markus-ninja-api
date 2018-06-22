@@ -1,0 +1,26 @@
+# An edge type for Study.
+type EnrolledStudyEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Study!
+
+  # When was the item enrolled?
+  enrolledAt: Time!
+}
+
+# A connection type for Study.
+type EnrolledStudyConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [EnrolledStudyEdge]
+
+  # A list of nodes.
+  nodes: [Study]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

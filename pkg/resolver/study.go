@@ -40,7 +40,7 @@ func (r *studyResolver) AppleGivers(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*userConnectionResolver, error) {
+) (*appleGiverConnectionResolver, error) {
 	appleOrder, err := ParseAppleOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (r *studyResolver) AppleGivers(
 	if err != nil {
 		return nil, err
 	}
-	userConnectionResolver, err := NewUserConnectionResolver(
+	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
 		users,
 		pageOptions,
 		count,
@@ -81,7 +81,7 @@ func (r *studyResolver) AppleGivers(
 	if err != nil {
 		return nil, err
 	}
-	return userConnectionResolver, nil
+	return appleGiverConnectionResolver, nil
 }
 
 func (r *studyResolver) Asset(

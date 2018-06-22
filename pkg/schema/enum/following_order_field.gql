@@ -1,0 +1,5 @@
+# Properties by which following connections can be ordered.
+enum FollowingOrderField {
+  # Order followings by when they followed.
+  FOLLOWED_AT
+}

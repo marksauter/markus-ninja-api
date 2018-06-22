@@ -1,0 +1,26 @@
+# An edge type for User.
+type AppleGiverEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: User!
+
+  # When was the item appled?
+  appledAt: Time!
+}
+
+# A connection type for User.
+type AppleGiverConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [AppleGiverEdge]
+
+  # A list of nodes.
+  nodes: [User]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

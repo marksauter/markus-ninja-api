@@ -18,6 +18,7 @@ type Study struct {
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        mytype.URLSafeName `db:"name" permit:"read"`
+	RelatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
