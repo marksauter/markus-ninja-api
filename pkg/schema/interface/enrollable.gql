@@ -1,0 +1,7 @@
+# Things that can be enrolled in.
+interface Enrollable {
+  id: ID!
+
+  # Has the viewer enrolled in this enrollable.
+  viewerHasEnrolled: Boolean!
+}

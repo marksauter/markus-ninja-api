@@ -1,0 +1,5 @@
+# Properties by which student connections can be ordered.
+enum StudentOrderField {
+  # Order students by when they enrolled.
+  ENROLLED_AT
+}

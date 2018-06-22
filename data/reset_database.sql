@@ -388,7 +388,7 @@ CREATE TRIGGER topic_updated_at_modtime
 
 DROP TABLE IF EXISTS study_topic CASCADE;
 CREATE TABLE study_topic(
-  related_at TIMESTAMPTZ  DEFAULT now(),
+  created_at TIMESTAMPTZ  DEFAULT now(),
   study_id   VARCHAR(100),
   topic_id   VARCHAR(100),
   PRIMARY KEY (study_id, topic_id),
@@ -447,6 +447,9 @@ CREATE TABLE study_apple (
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX study_apple_unique__user_id_study_id__idx
+  ON study_apple (user_id, study_id);
 
 CREATE OR REPLACE FUNCTION insert_event() RETURNS TRIGGER AS $$
 BEGIN
@@ -618,22 +621,22 @@ CREATE TRIGGER study_adds_lesson_event_insert_event
   BEFORE INSERT ON study_adds_lesson_event
   FOR EACH ROW EXECUTE PROCEDURE insert_event();
 
-DROP TABLE IF EXISTS user_follow CASCADE;
-CREATE TABLE user_follow (
-  created_at    TIMESTAMPTZ  DEFAULT now(),
-  leader_id     VARCHAR(100),
-  follower_id   VARCHAR(100),
-  PRIMARY KEY (leader_id, follower_id),
-  FOREIGN KEY (leader_id)
+DROP TABLE IF EXISTS user_tutor CASCADE;
+CREATE TABLE user_tutor (
+  created_at  TIMESTAMPTZ  DEFAULT now(),
+  pupil_id    VARCHAR(100),
+  tutor_id    VARCHAR(100),
+  PRIMARY KEY (tutor_id, pupil_id),
+  FOREIGN KEY (pupil_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (follower_id)
+  FOREIGN KEY (tutor_id)
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX user_follow_follower_id_created_at_idx
-  ON user_follow (follower_id, created_at);
+CREATE INDEX user_tutor_pupil_id_created_at_idx
+  ON user_tutor (pupil_id, created_at);
 
 DROP TABLE IF EXISTS study_enroll CASCADE;
 CREATE TABLE study_enroll (
@@ -708,7 +711,7 @@ JOIN email primary_email ON primary_email.user_id = account.id
 LEFT JOIN email backup_email ON backup_email.user_id = account.id
   AND backup_email.type = 'BACKUP';
 
-CREATE VIEW user_apple AS
+CREATE VIEW apple_giver AS
 SELECT
   study_apple.created_at appled_at,
   user_master.bio,
@@ -721,6 +724,48 @@ SELECT
   user_master.updated_at
 FROM user_master
 JOIN study_apple ON study_apple.user_id = user_master.id;
+
+CREATE VIEW student AS
+SELECT
+  user_master.bio,
+  user_master.created_at,
+  study_enroll.created_at enrolled_at,
+  user_master.id,
+  user_master.login,
+  user_master.name,
+  user_master.public_email,
+  study_enroll.study_id,
+  user_master.updated_at
+FROM user_master
+JOIN study_enroll ON study_enroll.user_id = user_master.id;
+
+CREATE VIEW pupil AS
+SELECT
+  user_master.bio,
+  user_master.created_at,
+  user_master.id,
+  user_master.login,
+  user_master.name,
+  user_master.public_email,
+  user_tutor.tutor_id,
+  user_tutor.created_at tutored_at,
+  user_master.updated_at
+FROM user_master
+JOIN user_tutor ON user_tutor.pupil_id = user_master.id;
+
+CREATE VIEW tutor AS
+SELECT
+  user_master.bio,
+  user_master.created_at,
+  user_master.id,
+  user_master.login,
+  user_master.name,
+  user_master.public_email,
+  user_tutor.pupil_id,
+  user_tutor.created_at tutored_at,
+  user_master.updated_at
+FROM user_master
+JOIN user_tutor ON user_tutor.tutor_id = user_master.id;
 
 CREATE MATERIALIZED VIEW user_search_index AS
 SELECT
@@ -763,6 +808,36 @@ SELECT
   account.login user_login
 FROM study
 JOIN account ON account.id = study.user_id;
+
+CREATE VIEW appled_study AS
+SELECT
+  study_apple.user_id actor_id,
+  study_master.advanced_at,
+  study_apple.created_at appled_at,
+  study_master.created_at,
+  study_master.description,
+  study_master.id,
+  study_master.name,
+  study_master.updated_at,
+  study_master.user_id,
+  study_master.user_login
+FROM study_master
+JOIN study_apple ON study_apple.study_id = study_master.id;
+
+CREATE VIEW enrolled_study AS
+SELECT
+  study_enroll.user_id actor_id,
+  study_master.advanced_at,
+  study_master.created_at,
+  study_master.description,
+  study_enroll.created_at enrolled_at,
+  study_master.id,
+  study_master.name,
+  study_master.updated_at,
+  study_master.user_id,
+  study_master.user_login
+FROM study_master
+JOIN study_enroll ON study_enroll.study_id = study_master.id; 
 
 CREATE MATERIALIZED VIEW study_search_index AS
 SELECT
@@ -871,8 +946,8 @@ SELECT
   topic.description,
   study_topic.topic_id id,
   topic.name,
-  study_topic.related_at,
   study_topic.study_id,
+  study_topic.created_at topiced_at,
   topic.updated_at
 FROM study_topic
 JOIN topic ON topic.id = study_topic.topic_id;

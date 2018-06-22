@@ -1,0 +1,5 @@
+# Input type for Enroll.
+input EnrollInput {
+  # The Enrollable ID to enroll in.
+  enrollableId: ID!
+}

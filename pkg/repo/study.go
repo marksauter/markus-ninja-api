@@ -43,6 +43,13 @@ func (r *StudyPermit) AdvancedAt() (*time.Time, error) {
 	return &r.study.AdvancedAt.Time, nil
 }
 
+func (r *StudyPermit) AppledAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("appled_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.study.AppledAt.Time, nil
+}
+
 func (r *StudyPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -57,6 +64,13 @@ func (r *StudyPermit) Description() (string, error) {
 	return r.study.Description.String, nil
 }
 
+func (r *StudyPermit) EnrolledAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("enrolled_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.study.EnrolledAt.Time, nil
+}
+
 func (r *StudyPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
@@ -69,10 +83,6 @@ func (r *StudyPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.study.Name.String, nil
-}
-
-func (r *StudyPermit) RelatedAt() time.Time {
-	return r.study.RelatedAt.Time
 }
 
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
@@ -138,6 +148,10 @@ func (r *StudyRepo) CountBySearch(within *mytype.OID, query string) (int32, erro
 	return r.svc.CountBySearch(within, query)
 }
 
+func (r *StudyRepo) CountByAppled(userId string) (int32, error) {
+	return r.svc.CountByAppled(userId)
+}
+
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
 	return r.svc.CountByUser(userId)
 }
@@ -178,6 +192,27 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
+}
+
+func (r *StudyRepo) GetByAppled(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	studies, err := r.svc.GetByAppled(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	studyPermits := make([]*StudyPermit, len(studies))
+	if len(studies) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range studies {
+			studyPermits[i] = &StudyPermit{fieldPermFn, l}
+		}
+	}
+	return studyPermits, nil
 }
 
 func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPermit, error) {

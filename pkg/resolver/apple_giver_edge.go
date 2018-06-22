@@ -23,12 +23,13 @@ type appleGiverEdgeResolver struct {
 	repos  *repo.Repos
 }
 
-func (r *appleGiverEdgeResolver) Cursor() string {
-	return r.cursor
+func (r *appleGiverEdgeResolver) AppledAt() (graphql.Time, error) {
+	t, err := r.node.AppledAt()
+	return graphql.Time{t}, err
 }
 
-func (r *appleGiverEdgeResolver) AppledAt() graphql.Time {
-	return graphql.Time{r.node.RelatedAt()}
+func (r *appleGiverEdgeResolver) Cursor() string {
+	return r.cursor
 }
 
 func (r *appleGiverEdgeResolver) Node() *userResolver {

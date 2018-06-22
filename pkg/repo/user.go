@@ -31,11 +31,32 @@ func (r *UserPermit) Get() *data.User {
 	return user
 }
 
+func (r *UserPermit) AppledAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("appled_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.user.AppledAt.Time, nil
+}
+
 func (r *UserPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
 	}
 	return r.user.CreatedAt.Time, nil
+}
+
+func (r *UserPermit) EnrolledAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("enrolled_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.user.EnrolledAt.Time, nil
+}
+
+func (r *UserPermit) TutoredAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("tutored_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.user.TutoredAt.Time, nil
 }
 
 func (r *UserPermit) ID() (*mytype.OID, error) {
@@ -57,10 +78,6 @@ func (r *UserPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.user.Name.String, nil
-}
-
-func (r *UserPermit) RelatedAt() time.Time {
-	return r.user.RelatedAt.Time
 }
 
 func (r *UserPermit) Profile() (string, error) {
@@ -130,6 +147,10 @@ func (r *UserRepo) CountByApple(studyId string) (int32, error) {
 	return r.svc.CountByApple(studyId)
 }
 
+func (r *UserRepo) CountByEnrolled(studyId string) (int32, error) {
+	return r.svc.CountByEnrolled(studyId)
+}
+
 func (r *UserRepo) CountBySearch(query string) (int32, error) {
 	return r.svc.CountBySearch(query)
 }
@@ -173,6 +194,27 @@ func (r *UserRepo) GetByApple(studyId string, po *data.PageOptions) ([]*UserPerm
 		return nil, err
 	}
 	users, err := r.svc.GetByApple(studyId, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
+}
+
+func (r *UserRepo) GetByEnrolled(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.GetByEnrolled(studyId, po)
 	if err != nil {
 		return nil, err
 	}

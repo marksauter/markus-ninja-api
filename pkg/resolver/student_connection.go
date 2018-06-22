@@ -5,20 +5,20 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewFollowingConnectionResolver(
+func NewStudentConnectionResolver(
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
-) (*followingConnectionResolver, error) {
-	edges := make([]*followingEdgeResolver, len(users))
+) (*studentConnectionResolver, error) {
+	edges := make([]*studentEdgeResolver, len(users))
 	for i := range edges {
 		id, err := users[i].ID()
 		if err != nil {
 			return nil, err
 		}
 		cursor := data.EncodeCursor(id.String)
-		edge := NewFollowingEdgeResolver(cursor, users[i], repos)
+		edge := NewStudentEdgeResolver(cursor, users[i], repos)
 		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
@@ -28,7 +28,7 @@ func NewFollowingConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &followingConnectionResolver{
+	resolver := &studentConnectionResolver{
 		edges:      edges,
 		users:      users,
 		pageInfo:   pageInfo,
@@ -38,23 +38,23 @@ func NewFollowingConnectionResolver(
 	return resolver, nil
 }
 
-type followingConnectionResolver struct {
-	edges      []*followingEdgeResolver
+type studentConnectionResolver struct {
+	edges      []*studentEdgeResolver
 	users      []*repo.UserPermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	totalCount int32
 }
 
-func (r *followingConnectionResolver) Edges() *[]*followingEdgeResolver {
+func (r *studentConnectionResolver) Edges() *[]*studentEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*followingEdgeResolver{}
+	return &[]*studentEdgeResolver{}
 }
 
-func (r *followingConnectionResolver) Nodes() *[]*userResolver {
+func (r *studentConnectionResolver) Nodes() *[]*userResolver {
 	n := len(r.users)
 	nodes := make([]*userResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
@@ -66,10 +66,10 @@ func (r *followingConnectionResolver) Nodes() *[]*userResolver {
 	return &nodes
 }
 
-func (r *followingConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *studentConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *followingConnectionResolver) TotalCount() int32 {
+func (r *studentConnectionResolver) TotalCount() int32 {
 	return r.totalCount
 }

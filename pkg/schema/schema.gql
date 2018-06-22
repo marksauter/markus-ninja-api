@@ -88,33 +88,44 @@ type Mutation {
   deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
   # Deletes a user.
   deleteUser(input: DeleteUserInput!): ID
+  # Drops enrollment in an Enrollable.
+  dropOut(input: DropOutInput!): Enrollable
+
+  # Enrolls in an Enrollable.
+  enroll(input: EnrollInput!): Enrollable
+
+  # Follow a tutor's studies.
+  followTutor(input: FollowTutorInput!): User
 
   # Gives an apple to an Appleable.
-  giveApple(input: GiveAppleInput!): Appleable!
+  giveApple(input: GiveAppleInput!): Appleable
 
   # Moves a lesson to a new numbered position within a study.
-  moveLesson(input: MoveLessonInput!): LessonEdge!
+  moveLesson(input: MoveLessonInput!): LessonEdge
 
   # Requests an email verification mail to be sent.
-  requestEmailVerification(input: RequestEmailVerificationInput!): EVT!
+  requestEmailVerification(input: RequestEmailVerificationInput!): EVT
   # Requests a password reset mail to be sent.
-  requestPasswordReset(input: RequestPasswordResetInput!): PRT!
+  requestPasswordReset(input: RequestPasswordResetInput!): PRT
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
 
   # Takes an apple from an Appleable.
-  takeApple(input: TakeAppleInput!): Appleable!
+  takeApple(input: TakeAppleInput!): Appleable
+
+  # Unfollow a tutor.
+  unfollowTutor(input: FollowTutorInput!): User
 
   # Updates an email's type and/or whether it's public or not.
-  updateEmail(input: UpdateEmailInput!): Email!
+  updateEmail(input: UpdateEmailInput!): Email
   # Updates the body and/or title of a lesson.
-  updateLesson(input: UpdateLessonInput!): Lesson!
+  updateLesson(input: UpdateLessonInput!): Lesson
   # Updates the body of a lesson comment.
-  updateLessonComment(input: UpdateLessonCommentInput!): LessonComment!
+  updateLessonComment(input: UpdateLessonCommentInput!): LessonComment
   # Updates the description of a study.
-  updateStudy(input: UpdateStudyInput!): Study!
+  updateStudy(input: UpdateStudyInput!): Study
   # Replaces the study's topics with the given topics.
   updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
   # Updates the bio, login, and/or name of a user.
-  updateUser(input: UpdateUserInput!): User!
+  updateUser(input: UpdateUserInput!): User
 }

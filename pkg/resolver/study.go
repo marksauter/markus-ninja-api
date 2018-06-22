@@ -388,6 +388,59 @@ func (r *studyResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *studyResolver) Students(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*studentConnectionResolver, error) {
+	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		appleOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	users, err := r.Repos.User().GetByEnrolled(
+		studyId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByApple(studyId.String)
+	if err != nil {
+		return nil, err
+	}
+	studentConnectionResolver, err := NewStudentConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return studentConnectionResolver, nil
+}
+
 func (r *studyResolver) Topics(
 	ctx context.Context,
 	args struct {
@@ -472,6 +525,26 @@ func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 	}
 
 	if _, err := r.Repos.StudyApple().Get(studyId.String, viewer.Id.String); err != nil {
+		if err == data.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *studyResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := r.Repos.StudyEnroll().Get(studyId.String, viewer.Id.String); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

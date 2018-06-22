@@ -29,7 +29,44 @@ func (r *userResolver) Appled(
 		OrderBy *OrderArg
 	},
 ) (*appledStudyConnectionResolver, error) {
-	return nil, nil
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		appleOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studies, err := r.Repos.Study().GetByAppled(id.String, pageOptions)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Study().CountByAppled(id.String)
+	if err != nil {
+		return nil, err
+	}
+	appledStudyConnectionResolver, err := NewAppledStudyConnectionResolver(
+		studies,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return appledStudyConnectionResolver, nil
 }
 
 func (r *userResolver) Assets(
@@ -163,7 +200,7 @@ func (r *userResolver) Enrolled(
 	return nil, nil
 }
 
-func (r *userResolver) Followers(
+func (r *userResolver) Pupils(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -172,11 +209,11 @@ func (r *userResolver) Followers(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*followerConnectionResolver, error) {
+) (*pupilConnectionResolver, error) {
 	return nil, nil
 }
 
-func (r *userResolver) Following(
+func (r *userResolver) Tutors(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -185,7 +222,7 @@ func (r *userResolver) Following(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*followingConnectionResolver, error) {
+) (*tutorConnectionResolver, error) {
 	return nil, nil
 }
 

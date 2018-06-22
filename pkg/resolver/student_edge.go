@@ -5,32 +5,33 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewFollowerEdgeResolver(
+func NewStudentEdgeResolver(
 	cursor string,
 	node *repo.UserPermit,
 	repos *repo.Repos,
-) *followerEdgeResolver {
-	return &followerEdgeResolver{
+) *studentEdgeResolver {
+	return &studentEdgeResolver{
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
 	}
 }
 
-type followerEdgeResolver struct {
+type studentEdgeResolver struct {
 	cursor string
 	node   *repo.UserPermit
 	repos  *repo.Repos
 }
 
-func (r *followerEdgeResolver) Cursor() string {
+func (r *studentEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *followerEdgeResolver) FollowedAt() graphql.Time {
-	return graphql.Time{r.node.RelatedAt()}
+func (r *studentEdgeResolver) EnrolledAt() (graphql.Time, error) {
+	t, err := r.node.EnrolledAt()
+	return graphql.Time{t}, err
 }
 
-func (r *followerEdgeResolver) Node() *userResolver {
+func (r *studentEdgeResolver) Node() *userResolver {
 	return &userResolver{User: r.node, Repos: r.repos}
 }

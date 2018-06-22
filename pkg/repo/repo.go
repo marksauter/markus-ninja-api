@@ -21,6 +21,7 @@ const (
 	eventRepoKey         key = "event"
 	studyRepoKey         key = "study"
 	studyAppleRepoKey    key = "study_apple"
+	studyEnrollRepoKey   key = "study_enroll"
 	topicRepoKey         key = "topic"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
@@ -59,6 +60,7 @@ func NewRepos(svcs *service.Services) *Repos {
 			eventRepoKey:         NewEventRepo(permRepo, svcs.Event),
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
 			studyAppleRepoKey:    NewStudyAppleRepo(permRepo, svcs.StudyApple),
+			studyEnrollRepoKey:   NewStudyEnrollRepo(permRepo, svcs.StudyEnroll),
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
@@ -124,6 +126,11 @@ func (r *Repos) Study() *StudyRepo {
 
 func (r *Repos) StudyApple() *StudyAppleRepo {
 	repo, _ := r.lookup[studyAppleRepoKey].(*StudyAppleRepo)
+	return repo
+}
+
+func (r *Repos) StudyEnroll() *StudyEnrollRepo {
+	repo, _ := r.lookup[studyEnrollRepoKey].(*StudyEnrollRepo)
 	return repo
 }
 

@@ -1,0 +1,5 @@
+# Input type for DropOut.
+input DropOutInput {
+  # The Enrollable ID to drop out from.
+  enrollableId: ID!
+}
