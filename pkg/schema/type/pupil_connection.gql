@@ -7,7 +7,7 @@ type PupilEdge implements Edge {
   node: User!
 
   # When was the item tutored?
-  tutoredAt: Time!
+  enrolledAt: Time!
 }
 
 # A connection type for User.

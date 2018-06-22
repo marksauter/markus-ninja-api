@@ -520,3 +520,23 @@ func (r *userResolver) URL() (mygql.URI, error) {
 	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, login))
 	return uri, nil
 }
+
+func (r *userResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	userId, err := r.User.ID()
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := r.Repos.UserEnroll().Get(userId.String, viewer.Id.String); err != nil {
+		if err == data.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}

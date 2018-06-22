@@ -23,7 +23,6 @@ type User struct {
 	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
 	Roles        []string           `db:"roles"`
-	TutoredAt    pgtype.Timestamptz `db:"tutored_at" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
@@ -56,27 +55,6 @@ func (s *UserService) CountByApple(studyId string) (int32, error) {
 	return n, err
 }
 
-const countUserByEnrolledSQL = `
-	SELECT COUNT(*)
-	FROM student
-	WHERE study_id = $1
-`
-
-func (s *UserService) CountByEnrolled(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("User.CountByEnrolled(study_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserByEnrolled",
-		countUserByEnrolledSQL,
-		studyId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
 const countUserByPupilSQL = `
 	SELECT COUNT(*)
 	FROM tutor
@@ -91,6 +69,44 @@ func (s *UserService) CountByPupil(pupilId string) (int32, error) {
 		"countUserByPupil",
 		countUserByPupilSQL,
 		pupilId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
+func (s *UserService) CountBySearch(query string) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	sql := `
+		SELECT COUNT(*)
+		FROM user_search_index
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+	`
+	psName := preparedName("countUserBySearch", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
+}
+
+const countUserByStudySQL = `
+	SELECT COUNT(*)
+	FROM student
+	WHERE study_id = $1
+`
+
+func (s *UserService) CountbyStudy(studyId string) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("User.CountByStudy(study_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByStudy",
+		countUserByStudySQL,
+		studyId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -117,23 +133,6 @@ func (s *UserService) CountByTutor(tutorId string) (int32, error) {
 	mylog.Log.WithField("n", n).Info("")
 
 	return n, err
-}
-
-func (s *UserService) CountBySearch(query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	sql := `
-		SELECT COUNT(*)
-		FROM user_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
-	`
-	psName := preparedName("countUserBySearch", sql)
-
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
 }
 
 const batchGetUserSQL = `
@@ -298,11 +297,66 @@ func (s *UserService) GetByApple(
 	return rows, nil
 }
 
-func (s *UserService) GetByEnrolled(
+func (s *UserService) GetByPupil(
+	pupilId string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("User.GetByPupil(pupil_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `tutor.pupil_id = ` + args.Append(pupilId)
+
+	selects := []string{
+		"bio",
+		"created_at",
+		"id",
+		"login",
+		"name",
+		"public_email",
+		"enrolled_at",
+		"updated_at",
+	}
+	from := "tutor"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getUsersByPupil", sql)
+
+	var rows []*User
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row User
+		dbRows.Scan(
+			&row.Bio,
+			&row.CreatedAt,
+			&row.Id,
+			&row.Login,
+			&row.Name,
+			&row.PublicEmail,
+			&row.EnrolledAt,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *UserService) GetByStudy(
 	studyId string,
 	po *PageOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField("study_id", studyId).Info("User.GetByEnrolled(study_id)")
+	mylog.Log.WithField("study_id", studyId).Info("User.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `student.study_id = ` + args.Append(studyId)
 
@@ -319,7 +373,7 @@ func (s *UserService) GetByEnrolled(
 	from := "student"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUsersByEnrolled", sql)
+	psName := preparedName("getUsersByStudy", sql)
 
 	var rows []*User
 
@@ -353,61 +407,6 @@ func (s *UserService) GetByEnrolled(
 	return rows, nil
 }
 
-func (s *UserService) GetByPupil(
-	pupilId string,
-	po *PageOptions,
-) ([]*User, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("User.GetByPupil(pupil_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `tutor.pupil_id = ` + args.Append(pupilId)
-
-	selects := []string{
-		"bio",
-		"created_at",
-		"id",
-		"login",
-		"name",
-		"public_email",
-		"tutored_at",
-		"updated_at",
-	}
-	from := "tutor"
-	sql := SQL(selects, from, whereSQL, &args, po)
-
-	psName := preparedName("getUsersByPupil", sql)
-
-	var rows []*User
-
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row User
-		dbRows.Scan(
-			&row.Bio,
-			&row.CreatedAt,
-			&row.Id,
-			&row.Login,
-			&row.Name,
-			&row.PublicEmail,
-			&row.TutoredAt,
-			&row.UpdatedAt,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
-}
-
 func (s *UserService) GetByTutor(
 	tutorId string,
 	po *PageOptions,
@@ -423,7 +422,7 @@ func (s *UserService) GetByTutor(
 		"login",
 		"name",
 		"public_email",
-		"tutored_at",
+		"enrolled_at",
 		"updated_at",
 	}
 	from := "pupil"
@@ -447,7 +446,7 @@ func (s *UserService) GetByTutor(
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
-			&row.TutoredAt,
+			&row.EnrolledAt,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)

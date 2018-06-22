@@ -133,7 +133,7 @@ const (
 	TopicType
 	UserType
 	UserAssetType
-	UserTutorType
+	UserEnrollType
 )
 
 func (nt NodeType) String() string {
@@ -164,8 +164,8 @@ func (nt NodeType) String() string {
 		return "User"
 	case UserAssetType:
 		return "UserAsset"
-	case UserTutorType:
-		return "UserTutor"
+	case UserEnrollType:
+		return "UserEnroll"
 	default:
 		return "unknown"
 	}
@@ -200,7 +200,7 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	case "userasset":
 		return UserAssetType, nil
 	case "usertutor":
-		return UserTutorType, nil
+		return UserEnrollType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)

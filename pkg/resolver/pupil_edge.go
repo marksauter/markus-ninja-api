@@ -27,8 +27,8 @@ func (r *pupilEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *pupilEdgeResolver) TutoredAt() (graphql.Time, error) {
-	t, err := r.node.TutoredAt()
+func (r *pupilEdgeResolver) EnrolledAt() (graphql.Time, error) {
+	t, err := r.node.EnrolledAt()
 	return graphql.Time{t}, err
 }
 

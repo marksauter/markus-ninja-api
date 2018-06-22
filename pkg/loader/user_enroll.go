@@ -9,45 +9,45 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewUserTutorLoader(svc *data.UserTutorService) *UserTutorLoader {
-	return &UserTutorLoader{
+func NewUserEnrollLoader(svc *data.UserEnrollService) *UserEnrollLoader {
+	return &UserEnrollLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetUserTutorBy2Fn(svc.Get)),
+		batchGet: createLoader(newBatchGetUserEnrollBy2Fn(svc.Get)),
 	}
 }
 
-type UserTutorLoader struct {
-	svc *data.UserTutorService
+type UserEnrollLoader struct {
+	svc *data.UserEnrollService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *UserTutorLoader) Clear(id string) {
+func (r *UserEnrollLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *UserTutorLoader) ClearAll() {
+func (r *UserEnrollLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *UserTutorLoader) Get(tutorId, pupilId string) (*data.UserTutor, error) {
+func (r *UserEnrollLoader) Get(tutorId, pupilId string) (*data.UserEnroll, error) {
 	ctx := context.Background()
 	compositeKey := newCompositeKey(tutorId, pupilId)
-	userTutorData, err := r.batchGet.Load(ctx, compositeKey)()
+	userEnrollData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
-	userTutor, ok := userTutorData.(*data.UserTutor)
+	userEnroll, ok := userEnrollData.(*data.UserEnroll)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return userTutor, nil
+	return userEnroll, nil
 }
 
-func newBatchGetUserTutorBy2Fn(
-	getter func(string, string) (*data.UserTutor, error),
+func newBatchGetUserEnrollBy2Fn(
+	getter func(string, string) (*data.UserEnroll, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -62,8 +62,8 @@ func newBatchGetUserTutorBy2Fn(
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
 				ks := splitCompositeKey(key)
-				userTutor, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: userTutor, Error: err}
+				userEnroll, err := getter(ks[0], ks[1])
+				results[i] = &dataloader.Result{Data: userEnroll, Error: err}
 			}(i, key)
 		}
 

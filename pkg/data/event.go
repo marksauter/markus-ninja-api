@@ -168,7 +168,7 @@ func (s *EventService) GetByTarget(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *EventService) Create(row *Event) (*Event, error) {
+func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 	mylog.Log.Info("Event.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -204,29 +204,32 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 	var source string
 	switch row.SourceId.Type {
 	case "Lesson":
-		source = "lesson"
+		source = row.SourceId.DBVarName()
 	case "LessonComment":
-		source = "lesson_comment"
+		source = row.SourceId.DBVarName()
 	case "Study":
-		source = "study"
+		source = row.SourceId.DBVarName()
 	case "User":
-		source = "user"
+		source = row.SourceId.DBVarName()
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event source id", row.SourceId.Type)
 	}
 	var target string
 	switch row.TargetId.Type {
 	case "Lesson":
-		target = "lesson"
+		target = row.TargetId.DBVarName()
 	case "Study":
-		target = "study"
+		target = row.TargetId.DBVarName()
 	case "User":
-		target = "user"
+		target = row.TargetId.DBVarName()
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event target id", row.TargetId.Type)
 	}
 
-	table := strings.Join([]string{source, target, "event"}, "_")
+	table := strings.Join(
+		[]string{source, evtType.String(), target, "event"},
+		"_",
+	)
 	sql := `
 		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)

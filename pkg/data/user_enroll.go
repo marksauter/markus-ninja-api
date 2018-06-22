@@ -10,33 +10,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type UserTutor struct {
+type UserEnroll struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	PupilId   mytype.OID         `db:"pupil_id" permit:"read"`
 	TutorId   mytype.OID         `db:"tutor_id" permit:"read"`
 }
 
-func NewUserTutorService(db Queryer) *UserTutorService {
-	return &UserTutorService{db}
+func NewUserEnrollService(db Queryer) *UserEnrollService {
+	return &UserEnrollService{db}
 }
 
-type UserTutorService struct {
+type UserEnrollService struct {
 	db Queryer
 }
 
-const countUserTutorByPupilSQL = `
+const countUserEnrollByPupilSQL = `
 	SELECT COUNT(*)
-	FROM user_tutor
+	FROM user_enroll
 	WHERE pupil_id = $1
 `
 
-func (s *UserTutorService) CountByPupil(pupilId string) (int32, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("UserTutor.CountByPupil(pupil_id)")
+func (s *UserEnrollService) CountByPupil(pupilId string) (int32, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("UserEnroll.CountByPupil(pupil_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserTutorByPupil",
-		countUserTutorByPupilSQL,
+		"countUserEnrollByPupil",
+		countUserEnrollByPupilSQL,
 		pupilId,
 	).Scan(&n)
 
@@ -45,19 +45,19 @@ func (s *UserTutorService) CountByPupil(pupilId string) (int32, error) {
 	return n, err
 }
 
-const countUserTutorByTutorSQL = `
+const countUserEnrollByTutorSQL = `
 	SELECT COUNT(*)
-	FROM user_tutor
+	FROM user_enroll
 	WHERE tutor_id = $1
 `
 
-func (s *UserTutorService) CountByTutor(tutorId string) (int32, error) {
-	mylog.Log.WithField("tutor_id", tutorId).Info("UserTutor.CountByTutor(tutor_id)")
+func (s *UserEnrollService) CountByTutor(tutorId string) (int32, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("UserEnroll.CountByTutor(tutor_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserTutorByTutor",
-		countUserTutorByTutorSQL,
+		"countUserEnrollByTutor",
+		countUserEnrollByTutorSQL,
 		tutorId,
 	).Scan(&n)
 
@@ -66,12 +66,12 @@ func (s *UserTutorService) CountByTutor(tutorId string) (int32, error) {
 	return n, err
 }
 
-func (s *UserTutorService) get(
+func (s *UserEnrollService) get(
 	name string,
 	sql string,
 	args ...interface{},
-) (*UserTutor, error) {
-	var row UserTutor
+) (*UserEnroll, error) {
+	var row UserEnroll
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.PupilId,
@@ -80,19 +80,19 @@ func (s *UserTutorService) get(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_tutor")
+		mylog.Log.WithError(err).Error("failed to get user_enroll")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func (s *UserTutorService) getMany(
+func (s *UserEnrollService) getMany(
 	name string,
 	sql string,
 	args ...interface{},
-) ([]*UserTutor, error) {
-	var rows []*UserTutor
+) ([]*UserEnroll, error) {
+	var rows []*UserEnroll
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
@@ -100,7 +100,7 @@ func (s *UserTutorService) getMany(
 	}
 
 	for dbRows.Next() {
-		var row UserTutor
+		var row UserEnroll
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.PupilId,
@@ -119,67 +119,67 @@ func (s *UserTutorService) getMany(
 	return rows, nil
 }
 
-const getUserTutorSQL = `
+const getUserEnrollSQL = `
 	SELECT
 		created_at,
 		pupil_id,
 		tutor_id
-	FROM user_tutor
+	FROM user_enroll
 	WHERE tutor_id = $1 AND pupil_id = $2
 `
 
-func (s *UserTutorService) Get(tutorId, pupilId string) (*UserTutor, error) {
+func (s *UserEnrollService) Get(tutorId, pupilId string) (*UserEnroll, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"tutor_id": tutorId,
 		"pupil_id": pupilId,
-	}).Info("UserTutor.Get()")
-	return s.get("getUserTutor", getUserTutorSQL, tutorId, pupilId)
+	}).Info("UserEnroll.Get()")
+	return s.get("getUserEnroll", getUserEnrollSQL, tutorId, pupilId)
 }
 
-func (s *UserTutorService) GetByPupil(
+func (s *UserEnrollService) GetByPupil(
 	pupilId string,
 	po *PageOptions,
-) ([]*UserTutor, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("UserTutor.GetByPupil(pupil_id)")
+) ([]*UserEnroll, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("UserEnroll.GetByPupil(pupil_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_tutor.pupil_id = ` + args.Append(pupilId)
+	whereSQL := `user_enroll.pupil_id = ` + args.Append(pupilId)
 
 	selects := []string{
 		"created_at",
 		"pupil_id",
 		"tutor_id",
 	}
-	from := "user_tutor"
+	from := "user_enroll"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUserTutorsByPupilId", sql)
+	psName := preparedName("getUserEnrollsByPupilId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserTutorService) GetByTutor(
+func (s *UserEnrollService) GetByTutor(
 	tutorId string,
 	po *PageOptions,
-) ([]*UserTutor, error) {
-	mylog.Log.WithField("tutor_id", tutorId).Info("UserTutor.GetByTutor(tutor_id)")
+) ([]*UserEnroll, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("UserEnroll.GetByTutor(tutor_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_tutor.tutor_id = ` + args.Append(tutorId)
+	whereSQL := `user_enroll.tutor_id = ` + args.Append(tutorId)
 
 	selects := []string{
 		"created_at",
 		"pupil_id",
 		"tutor_id",
 	}
-	from := "user_tutor"
+	from := "user_enroll"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUserTutorsByTutorId", sql)
+	psName := preparedName("getUserEnrollsByTutorId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserTutorService) Create(row *UserTutor) (*UserTutor, error) {
-	mylog.Log.Info("UserTutor.Create()")
+func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
+	mylog.Log.Info("UserEnroll.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -203,15 +203,15 @@ func (s *UserTutorService) Create(row *UserTutor) (*UserTutor, error) {
 	}
 
 	sql := `
-		INSERT INTO user_tutor(` + strings.Join(columns, ",") + `)
+		INSERT INTO user_enroll(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createUserTutor", sql)
+	psName := preparedName("createUserEnroll", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user_tutor")
+		mylog.Log.WithError(err).Error("failed to create user_enroll")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -225,8 +225,8 @@ func (s *UserTutorService) Create(row *UserTutor) (*UserTutor, error) {
 		return nil, err
 	}
 
-	userTutorSvc := NewUserTutorService(tx)
-	userTutor, err := userTutorSvc.Get(row.TutorId.String, row.PupilId.String)
+	userEnrollSvc := NewUserEnrollService(tx)
+	userEnroll, err := userEnrollSvc.Get(row.TutorId.String, row.PupilId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -239,23 +239,23 @@ func (s *UserTutorService) Create(row *UserTutor) (*UserTutor, error) {
 		}
 	}
 
-	return userTutor, nil
+	return userEnroll, nil
 }
 
-const deleteUserTutorSQL = `
-	DELETE FROM user_tutor
+const deleteUserEnrollSQL = `
+	DELETE FROM user_enroll
 	WHERE tutor_id = $1 AND pupil_id = $2
 `
 
-func (s *UserTutorService) Delete(tutorId, pupilId string) error {
+func (s *UserEnrollService) Delete(tutorId, pupilId string) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"tutor_id": tutorId,
 		"pupil_id": pupilId,
-	}).Info("UserTutor.Delete(tutor_id, pupil_id)")
+	}).Info("UserEnroll.Delete(tutor_id, pupil_id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteUserTutor",
-		deleteUserTutorSQL,
+		"deleteUserEnroll",
+		deleteUserEnrollSQL,
 		tutorId,
 		pupilId,
 	)
