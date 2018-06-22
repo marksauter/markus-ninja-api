@@ -9,45 +9,45 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewUserFollowLoader(svc *data.UserFollowService) *UserFollowLoader {
-	return &UserFollowLoader{
+func NewUserTutorLoader(svc *data.UserTutorService) *UserTutorLoader {
+	return &UserTutorLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetUserFollowBy2Fn(svc.Get)),
+		batchGet: createLoader(newBatchGetUserTutorBy2Fn(svc.Get)),
 	}
 }
 
-type UserFollowLoader struct {
-	svc *data.UserFollowService
+type UserTutorLoader struct {
+	svc *data.UserTutorService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *UserFollowLoader) Clear(id string) {
+func (r *UserTutorLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *UserFollowLoader) ClearAll() {
+func (r *UserTutorLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *UserFollowLoader) Get(leaderId, pupilId string) (*data.UserFollow, error) {
+func (r *UserTutorLoader) Get(tutorId, pupilId string) (*data.UserTutor, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(leaderId, pupilId)
-	userFollowData, err := r.batchGet.Load(ctx, compositeKey)()
+	compositeKey := newCompositeKey(tutorId, pupilId)
+	userTutorData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
-	userFollow, ok := userFollowData.(*data.UserFollow)
+	userTutor, ok := userTutorData.(*data.UserTutor)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return userFollow, nil
+	return userTutor, nil
 }
 
-func newBatchGetUserFollowBy2Fn(
-	getter func(string, string) (*data.UserFollow, error),
+func newBatchGetUserTutorBy2Fn(
+	getter func(string, string) (*data.UserTutor, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -62,8 +62,8 @@ func newBatchGetUserFollowBy2Fn(
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
 				ks := splitCompositeKey(key)
-				userFollow, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: userFollow, Error: err}
+				userTutor, err := getter(ks[0], ks[1])
+				results[i] = &dataloader.Result{Data: userTutor, Error: err}
 			}(i, key)
 		}
 

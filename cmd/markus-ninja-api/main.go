@@ -122,9 +122,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		new(data.PRT),
 		new(data.Study),
 		new(data.StudyApple),
+		new(data.StudyEnroll),
 		new(data.Topic),
 		new(data.User),
 		new(data.UserAsset),
+		new(data.UserTutor),
 	}
 
 	for _, model := range modelTypes {
@@ -251,6 +253,49 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 					return err
 				}
 				mylog.Log.Info("markus is already an admin")
+			} else {
+				return err
+			}
+		}
+	}
+
+	testUserId, _ := mytype.NewOID("User")
+	testUser := &data.User{}
+	testUser.Id.Set(testUserId)
+	testUser.Login.Set("test")
+	testUser.Password.Set("test")
+	if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
+		return err
+	}
+	if _, err := svcs.User.Create(testUser); err != nil {
+		if dfErr, ok := err.(data.DataFieldError); ok {
+			if dfErr.Code != data.DuplicateField {
+				mylog.Log.WithError(err).Fatal("failed to create testUser account")
+				return err
+			}
+			mylog.Log.Info("testUser account already exists")
+			testUser, err = svcs.User.GetByLogin("test")
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	testUserIsUser := false
+	for _, r := range testUser.Roles {
+		if r == data.AdminRole.String() {
+			testUserIsUser = true
+		}
+	}
+	if !testUserIsUser {
+		if err := svcs.Role.GrantUser(testUser.Id.String, data.AdminRole); err != nil {
+			if dfErr, ok := err.(data.DataFieldError); ok {
+				if dfErr.Code != data.DuplicateField {
+					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")
+					return err
+				}
+				mylog.Log.Info("testUser is already an admin")
 			} else {
 				return err
 			}

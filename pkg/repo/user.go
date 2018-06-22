@@ -151,6 +151,14 @@ func (r *UserRepo) CountByEnrolled(studyId string) (int32, error) {
 	return r.svc.CountByEnrolled(studyId)
 }
 
+func (r *UserRepo) CountByPupil(pupilId string) (int32, error) {
+	return r.svc.CountByPupil(pupilId)
+}
+
+func (r *UserRepo) CountByTutor(tutorId string) (int32, error) {
+	return r.svc.CountByTutor(tutorId)
+}
+
 func (r *UserRepo) CountBySearch(query string) (int32, error) {
 	return r.svc.CountBySearch(query)
 }
@@ -215,6 +223,48 @@ func (r *UserRepo) GetByEnrolled(studyId string, po *data.PageOptions) ([]*UserP
 		return nil, err
 	}
 	users, err := r.svc.GetByEnrolled(studyId, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
+}
+
+func (r *UserRepo) GetByPupil(pupilId string, po *data.PageOptions) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.GetByPupil(pupilId, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
+}
+
+func (r *UserRepo) GetByTutor(tutorId string, po *data.PageOptions) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.GetByTutor(tutorId, po)
 	if err != nil {
 		return nil, err
 	}

@@ -144,12 +144,16 @@ func (r *StudyRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *StudyRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
-}
-
 func (r *StudyRepo) CountByAppled(userId string) (int32, error) {
 	return r.svc.CountByAppled(userId)
+}
+
+func (r *StudyRepo) CountByEnrolled(userId string) (int32, error) {
+	return r.svc.CountByEnrolled(userId)
+}
+
+func (r *StudyRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
+	return r.svc.CountBySearch(within, query)
 }
 
 func (r *StudyRepo) CountByUser(userId string) (int32, error) {
@@ -199,6 +203,27 @@ func (r *StudyRepo) GetByAppled(userId string, po *data.PageOptions) ([]*StudyPe
 		return nil, err
 	}
 	studies, err := r.svc.GetByAppled(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	studyPermits := make([]*StudyPermit, len(studies))
+	if len(studies) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range studies {
+			studyPermits[i] = &StudyPermit{fieldPermFn, l}
+		}
+	}
+	return studyPermits, nil
+}
+
+func (r *StudyRepo) GetByEnrolled(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	studies, err := r.svc.GetByEnrolled(userId, po)
 	if err != nil {
 		return nil, err
 	}

@@ -398,7 +398,7 @@ func (r *studyResolver) Students(
 		OrderBy *OrderArg
 	},
 ) (*studentConnectionResolver, error) {
-	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	studentOrder, err := ParseStudentOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func (r *studyResolver) Students(
 		args.Before,
 		args.First,
 		args.Last,
-		appleOrder,
+		studentOrder,
 	)
 	if err != nil {
 		return nil, err
@@ -425,7 +425,7 @@ func (r *studyResolver) Students(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByApple(studyId.String)
+	count, err := r.Repos.User().CountByEnrolled(studyId.String)
 	if err != nil {
 		return nil, err
 	}

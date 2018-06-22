@@ -10,13 +10,13 @@ import (
 type StudentOrderField int
 
 const (
-	StudentStudentdAt StudentOrderField = iota
+	StudentEnrolledAt StudentOrderField = iota
 )
 
 func ParseStudentOrderField(s string) (StudentOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "ENROLLED_AT":
-		return StudentStudentdAt, nil
+		return StudentEnrolledAt, nil
 	default:
 		var f StudentOrderField
 		return f, fmt.Errorf("invalid StudentOrderField: %q", s)
@@ -25,7 +25,7 @@ func ParseStudentOrderField(s string) (StudentOrderField, error) {
 
 func (f StudentOrderField) String() string {
 	switch f {
-	case StudentStudentdAt:
+	case StudentEnrolledAt:
 		return "enrolled_at"
 	default:
 		return "unknown"
@@ -61,7 +61,7 @@ func ParseStudentOrder(arg *OrderArg) (*StudentOrder, error) {
 	if arg == nil {
 		return &StudentOrder{
 			direction: data.ASC,
-			field:     StudentStudentdAt,
+			field:     StudentEnrolledAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

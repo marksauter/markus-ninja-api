@@ -403,6 +403,105 @@ func (r *RootResolver) DeleteUser(
 	return &gqlID, nil
 }
 
+type DropOutInput struct {
+	EnrollableId string
+}
+
+func (r *RootResolver) DropOut(
+	ctx context.Context,
+	args struct{ Input DropOutInput },
+) (*enrollableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	id, err := mytype.ParseOID(args.Input.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	switch id.Type {
+	case "Study":
+		studyEnroll := &data.StudyEnroll{}
+		studyEnroll.StudyId.Set(id)
+		studyEnroll.UserId.Set(viewer.Id)
+		err := r.Repos.StudyEnroll().Delete(studyEnroll)
+		if err != nil {
+			return nil, err
+		}
+		study, err := r.Repos.Study().Get(id.String)
+		if err != nil {
+			return nil, err
+		}
+		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
+	default:
+		return nil, errors.New("invalid enrollable id")
+	}
+}
+
+type EnrollInput struct {
+	EnrollableId string
+}
+
+func (r *RootResolver) Enroll(
+	ctx context.Context,
+	args struct{ Input EnrollInput },
+) (*enrollableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	id, err := mytype.ParseOID(args.Input.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	switch id.Type {
+	case "Study":
+		studyEnroll := &data.StudyEnroll{}
+		studyEnroll.StudyId.Set(id)
+		studyEnroll.UserId.Set(viewer.Id)
+		_, err := r.Repos.StudyEnroll().Create(studyEnroll)
+		if err != nil {
+			return nil, err
+		}
+		study, err := r.Repos.Study().Get(id.String)
+		if err != nil {
+			return nil, err
+		}
+		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
+	default:
+		return nil, errors.New("invalid enrollable id")
+	}
+}
+
+type FollowTutorInput struct {
+	TutorId string
+}
+
+func (r *RootResolver) FollowTutor(
+	ctx context.Context,
+	args struct{ Input FollowTutorInput },
+) (*userResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	userTutor := &data.UserTutor{}
+	userTutor.PupilId.Set(viewer.Id)
+	userTutor.TutorId.Set(args.Input.TutorId)
+	_, err := r.Repos.UserTutor().Create(userTutor)
+	if err != nil {
+		return nil, err
+	}
+	user, err := r.Repos.User().Get(args.Input.TutorId)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: user, Repos: r.Repos}, nil
+}
+
 type GiveAppleInput struct {
 	AppleableId string
 }
@@ -705,6 +804,33 @@ func (r *RootResolver) TakeApple(
 	default:
 		return nil, errors.New("invalid appleable id")
 	}
+}
+
+type UnfollowTutorInput struct {
+	TutorId string
+}
+
+func (r *RootResolver) UnfollowTutor(
+	ctx context.Context,
+	args struct{ Input UnfollowTutorInput },
+) (*userResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	userTutor := &data.UserTutor{}
+	userTutor.PupilId.Set(viewer.Id)
+	userTutor.TutorId.Set(args.Input.TutorId)
+	err := r.Repos.UserTutor().Delete(userTutor)
+	if err != nil {
+		return nil, err
+	}
+	user, err := r.Repos.User().Get(args.Input.TutorId)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
 type UpdateEmailInput struct {
