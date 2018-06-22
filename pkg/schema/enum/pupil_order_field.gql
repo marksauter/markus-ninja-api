@@ -1,0 +1,5 @@
+# Properties by which pupil connections can be ordered.
+enum PupilOrderField {
+  # Order pupils by when they tutored.
+  TUTORED_AT
+}

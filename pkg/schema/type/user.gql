@@ -81,42 +81,6 @@ type User implements Node, UniformResourceLocatable {
     orderBy: StudyOrder
   ): EnrolledStudyConnection!
 
-  # A list of users the user is followed by.
-  followers(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for users returned from the connection.
-    orderBy: FollowerOrder
-  ): FollowerConnection!
-
-  # A list of users the user is followed by.
-  following(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for users returned from the connection.
-    orderBy: FollowingOrder
-  ): FollowingConnection!
-
   id: ID!
 
   # Whether or not this user is a site administrator.
@@ -149,6 +113,24 @@ type User implements Node, UniformResourceLocatable {
   # The user's public profile name.
   name: String!
 
+  # A list of users the user is tutored by.
+  pupils(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for users returned from the connection.
+    orderBy: PupilOrder
+  ): PupilConnection!
+
   # The HTTP path for this user.
   resourcePath: URI!
 
@@ -175,6 +157,24 @@ type User implements Node, UniformResourceLocatable {
     # Ordering options for studies returned from the connection.
     orderBy: StudyOrder
   ): StudyConnection!
+
+  # A list of users the user is tutored by.
+  tutors(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for users returned from the connection.
+    orderBy: TutorOrder
+  ): TutorConnection!
 
   # Identifies the date and time when the object was last updated.
   updatedAt: Time!

@@ -1,5 +1,5 @@
 # Represents a study.
-type Study implements Appleable, Node, UniformResourceLocatable {
+type Study implements Appleable, Enrollable, Node, UniformResourceLocatable {
   # Identifies when the study was advanced at.
   advancedAt: Time
 
@@ -108,6 +108,25 @@ type Study implements Appleable, Node, UniformResourceLocatable {
   # The HTTP path for this study.
   resourcePath: URI!
 
+  # Returns a list users who have enrolled in this enrollable.
+  students(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Order for connection.
+    orderBy: StudentOrder
+  ): StudentConnection!
+
+
   # Returns a list of topics from the current study.
   topics(
     # Returns the elements in the list that come after the specified global ID.
@@ -131,6 +150,9 @@ type Study implements Appleable, Node, UniformResourceLocatable {
 
   # Has the viewer appled this appleable.
   viewerHasAppled: Boolean!
+
+  # Has the viewer enrolled in this enrollable.
+  viewerHasEnrolled: Boolean!
 }
 
 # An edge type for Study.

@@ -1,22 +1,22 @@
 # An edge type for User.
-type FollowerEdge implements Edge {
+type PupilEdge implements Edge {
   # A cursor for use in pagination.
   cursor: String!
 
   # The item at the end of the edge.
   node: User!
 
-  # When was the item followed?
-  followedAt: Time!
+  # When was the item tutored?
+  tutoredAt: Time!
 }
 
 # A connection type for User.
-type FollowerConnection implements Connection {
+type PupilConnection implements Connection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [FollowerEdge]
+  edges: [PupilEdge]
 
   # A list of nodes.
   nodes: [User]

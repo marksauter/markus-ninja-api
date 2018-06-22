@@ -5,32 +5,33 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewFollowingEdgeResolver(
+func NewPupilEdgeResolver(
 	cursor string,
 	node *repo.UserPermit,
 	repos *repo.Repos,
-) *followingEdgeResolver {
-	return &followingEdgeResolver{
+) *pupilEdgeResolver {
+	return &pupilEdgeResolver{
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
 	}
 }
 
-type followingEdgeResolver struct {
+type pupilEdgeResolver struct {
 	cursor string
 	node   *repo.UserPermit
 	repos  *repo.Repos
 }
 
-func (r *followingEdgeResolver) Cursor() string {
+func (r *pupilEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *followingEdgeResolver) FollowedAt() graphql.Time {
-	return graphql.Time{r.node.RelatedAt()}
+func (r *pupilEdgeResolver) TutoredAt() (graphql.Time, error) {
+	t, err := r.node.TutoredAt()
+	return graphql.Time{t}, err
 }
 
-func (r *followingEdgeResolver) Node() *userResolver {
+func (r *pupilEdgeResolver) Node() *userResolver {
 	return &userResolver{User: r.node, Repos: r.repos}
 }

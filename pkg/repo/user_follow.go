@@ -37,11 +37,11 @@ func (r *UserFollowPermit) CreatedAt() (time.Time, error) {
 	return r.userFollow.CreatedAt.Time, nil
 }
 
-func (r *UserFollowPermit) FollowerId() (*mytype.OID, error) {
+func (r *UserFollowPermit) PupilId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.userFollow.FollowerId, nil
+	return &r.userFollow.PupilId, nil
 }
 
 func (r *UserFollowPermit) LeaderId() (*mytype.OID, error) {
@@ -89,8 +89,8 @@ func (r *UserFollowRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserFollowRepo) CountByFollower(followerId string) (int32, error) {
-	return r.svc.CountByFollower(followerId)
+func (r *UserFollowRepo) CountByPupil(pupilId string) (int32, error) {
+	return r.svc.CountByPupil(pupilId)
 }
 
 func (r *UserFollowRepo) CountByLeader(leaderId string) (int32, error) {
@@ -115,11 +115,11 @@ func (r *UserFollowRepo) Create(s *data.UserFollow) (*UserFollowPermit, error) {
 	return &UserFollowPermit{fieldPermFn, userFollow}, nil
 }
 
-func (r *UserFollowRepo) Get(leaderId, followerId string) (*UserFollowPermit, error) {
+func (r *UserFollowRepo) Get(leaderId, pupilId string) (*UserFollowPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userFollow, err := r.load.Get(leaderId, followerId)
+	userFollow, err := r.load.Get(leaderId, pupilId)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +130,11 @@ func (r *UserFollowRepo) Get(leaderId, followerId string) (*UserFollowPermit, er
 	return &UserFollowPermit{fieldPermFn, userFollow}, nil
 }
 
-func (r *UserFollowRepo) GetByFollower(followerId string, po *data.PageOptions) ([]*UserFollowPermit, error) {
+func (r *UserFollowRepo) GetByPupil(pupilId string, po *data.PageOptions) ([]*UserFollowPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByFollower(followerId, po)
+	studies, err := r.svc.GetByPupil(pupilId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (r *UserFollowRepo) Delete(userFollow *data.UserFollow) error {
 	if _, err := r.perms.Check(perm.Delete, userFollow); err != nil {
 		return err
 	}
-	return r.svc.Delete(userFollow.LeaderId.String, userFollow.FollowerId.String)
+	return r.svc.Delete(userFollow.LeaderId.String, userFollow.PupilId.String)
 }
 
 // Middleware

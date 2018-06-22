@@ -1,5 +1,0 @@
-# Properties by which follower connections can be ordered.
-enum FollowerOrderField {
-  # Order followers by when they followed.
-  FOLLOWED_AT
-}

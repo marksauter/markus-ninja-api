@@ -5,20 +5,20 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewFollowerConnectionResolver(
+func NewPupilConnectionResolver(
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
-) (*followerConnectionResolver, error) {
-	edges := make([]*followerEdgeResolver, len(users))
+) (*pupilConnectionResolver, error) {
+	edges := make([]*pupilEdgeResolver, len(users))
 	for i := range edges {
 		id, err := users[i].ID()
 		if err != nil {
 			return nil, err
 		}
 		cursor := data.EncodeCursor(id.String)
-		edge := NewFollowerEdgeResolver(cursor, users[i], repos)
+		edge := NewPupilEdgeResolver(cursor, users[i], repos)
 		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
@@ -28,7 +28,7 @@ func NewFollowerConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &followerConnectionResolver{
+	resolver := &pupilConnectionResolver{
 		edges:      edges,
 		users:      users,
 		pageInfo:   pageInfo,
@@ -38,23 +38,23 @@ func NewFollowerConnectionResolver(
 	return resolver, nil
 }
 
-type followerConnectionResolver struct {
-	edges      []*followerEdgeResolver
+type pupilConnectionResolver struct {
+	edges      []*pupilEdgeResolver
 	users      []*repo.UserPermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	totalCount int32
 }
 
-func (r *followerConnectionResolver) Edges() *[]*followerEdgeResolver {
+func (r *pupilConnectionResolver) Edges() *[]*pupilEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*followerEdgeResolver{}
+	return &[]*pupilEdgeResolver{}
 }
 
-func (r *followerConnectionResolver) Nodes() *[]*userResolver {
+func (r *pupilConnectionResolver) Nodes() *[]*userResolver {
 	n := len(r.users)
 	nodes := make([]*userResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
@@ -66,10 +66,10 @@ func (r *followerConnectionResolver) Nodes() *[]*userResolver {
 	return &nodes
 }
 
-func (r *followerConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *pupilConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *followerConnectionResolver) TotalCount() int32 {
+func (r *pupilConnectionResolver) TotalCount() int32 {
 	return r.totalCount
 }

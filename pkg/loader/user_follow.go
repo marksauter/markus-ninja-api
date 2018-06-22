@@ -31,9 +31,9 @@ func (r *UserFollowLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *UserFollowLoader) Get(leaderId, followerId string) (*data.UserFollow, error) {
+func (r *UserFollowLoader) Get(leaderId, pupilId string) (*data.UserFollow, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(leaderId, followerId)
+	compositeKey := newCompositeKey(leaderId, pupilId)
 	userFollowData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err

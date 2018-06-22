@@ -14,11 +14,12 @@ import (
 
 type Study struct {
 	AdvancedAt  pgtype.Timestamptz `db:"advanced_at" permit:"read"`
+	AppledAt    pgtype.Timestamptz `db:"appled_at" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"read"`
+	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        mytype.URLSafeName `db:"name" permit:"read"`
-	RelatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
@@ -30,6 +31,27 @@ func NewStudyService(db Queryer) *StudyService {
 
 type StudyService struct {
 	db Queryer
+}
+
+const countStudyByAppledSQL = `
+	SELECT COUNT(*)
+	FROM study_apple
+	WHERE user_id = $1
+`
+
+func (s *StudyService) CountByAppled(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("Study.CountByAppled(user_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countStudyByAppled",
+		countStudyByAppledSQL,
+		userId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
 }
 
 const countStudyByUserSQL = `
@@ -157,6 +179,120 @@ func (s *StudyService) Get(id string) (*Study, error) {
 	return s.get("getStudyById", getStudyByIdSQL, id)
 }
 
+func (s *StudyService) GetByAppled(
+	userId string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("user_id", userId).Info("Study.GetByAppled(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `appled_study.actor_id = ` + args.Append(userId)
+
+	selects := []string{
+		"advanced_at",
+		"appled_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "appled_study"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getStudiesByAppled", sql)
+
+	var rows []*Study
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Study
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.AppledAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.Name,
+			&row.UpdatedAt,
+			&row.UserId,
+			&row.UserLogin,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *StudyService) GetByEnrolled(
+	userId string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("user_id", userId).Info("Study.GetByEnrolled(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `enrolled_study.actor_id = ` + args.Append(userId)
+
+	selects := []string{
+		"advanced_at",
+		"created_at",
+		"description",
+		"enrolled_at",
+		"id",
+		"name",
+		"updated_at",
+		"user_id",
+		"user_login",
+	}
+	from := "enrolled_study"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getStudiesByEnrolled", sql)
+
+	var rows []*Study
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Study
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.EnrolledAt,
+			&row.Id,
+			&row.Name,
+			&row.UpdatedAt,
+			&row.UserId,
+			&row.UserLogin,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
 func (s *StudyService) GetByUser(
 	userId string,
 	po *PageOptions,
@@ -194,7 +330,7 @@ const getStudyByNameSQL = `
 		user_id,
 		user_login
 	FROM study_master
-	WHERE user_id = $1 AND LOWER(name) = LOWER($2)
+	WHERE user_id = $1 AND lower(name) = lower($2)
 `
 
 func (s *StudyService) GetByName(userId, name string) (*Study, error) {
@@ -217,7 +353,7 @@ const getStudyByUserAndNameSQL = `
 		a.login user_login
 	FROM study s
 	INNER JOIN account a ON a.login = $1
-	WHERE s.user_id = a.id AND LOWER(s.name) = LOWER($2)  
+	WHERE s.user_id = a.id AND lower(s.name) = lower($2)  
 `
 
 func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {

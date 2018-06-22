@@ -11,17 +11,19 @@ import (
 )
 
 type User struct {
+	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"read"`
 	BackupEmail  mytype.Email       `db:"backup_email" permit:"create"`
 	Bio          pgtype.Text        `db:"bio" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
 	Id           mytype.OID         `db:"id" permit:"read"`
 	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
 	Name         pgtype.Text        `db:"name" permit:"read"`
 	Password     mytype.Password    `db:"password" permit:"create"`
 	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
-	RelatedAt    pgtype.Timestamptz
 	Roles        []string           `db:"roles"`
+	TutoredAt    pgtype.Timestamptz `db:"tutored_at" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
@@ -35,7 +37,7 @@ type UserService struct {
 
 const countUserByAppleSQL = `
 	SELECT COUNT(*)
-	FROM user_apple
+	FROM apple_giver
 	WHERE study_id = $1
 `
 
@@ -46,6 +48,27 @@ func (s *UserService) CountByApple(studyId string) (int32, error) {
 		s.db,
 		"countUserByApple",
 		countUserByAppleSQL,
+		studyId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
+const countUserByEnrolledSQL = `
+	SELECT COUNT(*)
+	FROM student
+	WHERE study_id = $1
+`
+
+func (s *UserService) CountByEnrolled(studyId string) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("User.CountByEnrolled(study_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByEnrolled",
+		countUserByEnrolledSQL,
 		studyId,
 	).Scan(&n)
 
@@ -184,9 +207,10 @@ func (s *UserService) GetByApple(
 ) ([]*User, error) {
 	mylog.Log.WithField("study_id", studyId).Info("User.GetByApple(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_apple.study_id = ` + args.Append(studyId)
+	whereSQL := `apple_giver.study_id = ` + args.Append(studyId)
 
 	selects := []string{
+		"appled_at",
 		"bio",
 		"created_at",
 		"id",
@@ -195,12 +219,209 @@ func (s *UserService) GetByApple(
 		"public_email",
 		"updated_at",
 	}
-	from := "user_apple"
+	from := "apple_giver"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getUsersByApple", sql)
 
-	return s.getMany(psName, sql, args...)
+	var rows []*User
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row User
+		dbRows.Scan(
+			&row.AppledAt,
+			&row.Bio,
+			&row.CreatedAt,
+			&row.Id,
+			&row.Login,
+			&row.Name,
+			&row.PublicEmail,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *UserService) GetByEnrolled(
+	studyId string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("study_id", studyId).Info("User.GetByEnrolled(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `student.study_id = ` + args.Append(studyId)
+
+	selects := []string{
+		"bio",
+		"created_at",
+		"enrolled_at",
+		"id",
+		"login",
+		"name",
+		"public_email",
+		"updated_at",
+	}
+	from := "student"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getUsersByEnrolled", sql)
+
+	var rows []*User
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row User
+		dbRows.Scan(
+			&row.AppledAt,
+			&row.Bio,
+			&row.CreatedAt,
+			&row.EnrolledAt,
+			&row.Id,
+			&row.Login,
+			&row.Name,
+			&row.PublicEmail,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *UserService) GetByPupil(
+	pupilId string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("pupil_id", pupilId).Info("User.GetByPupil(pupil_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `tutor.pupil_id = ` + args.Append(pupilId)
+
+	selects := []string{
+		"bio",
+		"created_at",
+		"id",
+		"login",
+		"name",
+		"public_email",
+		"tutored_at",
+		"updated_at",
+	}
+	from := "tutor"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getUsersByPupil", sql)
+
+	var rows []*User
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row User
+		dbRows.Scan(
+			&row.AppledAt,
+			&row.Bio,
+			&row.CreatedAt,
+			&row.Id,
+			&row.Login,
+			&row.Name,
+			&row.PublicEmail,
+			&row.TutoredAt,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *UserService) GetByTutor(
+	tutorId string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("tutor_id", tutorId).Info("User.GetByTutor(tutor_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `pupil.tutor_id = ` + args.Append(tutorId)
+
+	selects := []string{
+		"bio",
+		"created_at",
+		"id",
+		"login",
+		"name",
+		"public_email",
+		"tutored_at",
+		"updated_at",
+	}
+	from := "pupil"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getUsersByTutor", sql)
+
+	var rows []*User
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row User
+		dbRows.Scan(
+			&row.AppledAt,
+			&row.Bio,
+			&row.CreatedAt,
+			&row.Id,
+			&row.Login,
+			&row.Name,
+			&row.PublicEmail,
+			&row.TutoredAt,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
 }
 
 const getUserByLoginSQL = `
