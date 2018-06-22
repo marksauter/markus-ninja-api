@@ -26,7 +26,7 @@ func ParsePupilOrderField(s string) (PupilOrderField, error) {
 func (f PupilOrderField) String() string {
 	switch f {
 	case PupilPupildAt:
-		return "tutored_at"
+		return "enrolled_at"
 	default:
 		return "unknown"
 	}

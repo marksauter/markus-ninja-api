@@ -126,7 +126,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		new(data.Topic),
 		new(data.User),
 		new(data.UserAsset),
-		new(data.UserTutor),
+		new(data.UserEnroll),
 	}
 
 	for _, model := range modelTypes {

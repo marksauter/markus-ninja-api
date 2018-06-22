@@ -1,5 +1,0 @@
-# Input type for UnfollowTutor.
-input UnfollowTutorInput {
-  # The user ID of the tutor.
-  tutorId: ID!
-}

@@ -88,14 +88,11 @@ type Mutation {
   deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
   # Deletes a user.
   deleteUser(input: DeleteUserInput!): ID
-  # Drops enrollment in an Enrollable.
-  dropOut(input: DropOutInput!): Enrollable
+  # Dismisses from an Enrollable.
+  dismiss(input: DismissInput!): Enrollable
 
   # Enrolls in an Enrollable.
   enroll(input: EnrollInput!): Enrollable
-
-  # Follow a tutor's studies.
-  followTutor(input: FollowTutorInput!): User
 
   # Gives an apple to an Appleable.
   giveApple(input: GiveAppleInput!): Appleable
@@ -112,9 +109,6 @@ type Mutation {
 
   # Takes an apple from an Appleable.
   takeApple(input: TakeAppleInput!): Appleable
-
-  # Unfollow a tutor.
-  unfollowTutor(input: FollowTutorInput!): User
 
   # Updates an email's type and/or whether it's public or not.
   updateEmail(input: UpdateEmailInput!): Email

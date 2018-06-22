@@ -26,7 +26,7 @@ func ParseTutorOrderField(s string) (TutorOrderField, error) {
 func (f TutorOrderField) String() string {
 	switch f {
 	case TutorTutordAt:
-		return "tutored_at"
+		return "enrolled_at"
 	default:
 		return "unknown"
 	}

@@ -1,0 +1,5 @@
+# Input type for Dismiss.
+input DismissInput {
+  # The Enrollable ID to dismiss from.
+  enrollableId: ID!
+}

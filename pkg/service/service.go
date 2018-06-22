@@ -24,7 +24,7 @@ type Services struct {
 	Topic         *data.TopicService
 	User          *data.UserService
 	UserAsset     *data.UserAssetService
-	UserTutor     *data.UserTutorService
+	UserEnroll     *data.UserEnrollService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
@@ -58,6 +58,6 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Topic:         data.NewTopicService(db),
 		User:          data.NewUserService(db),
 		UserAsset:     data.NewUserAssetService(db),
-		UserTutor:     data.NewUserTutorService(db),
+		UserEnroll:     data.NewUserEnrollService(db),
 	}, nil
 }

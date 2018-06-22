@@ -19,7 +19,7 @@ CREATE TABLE account(
 );
 
 CREATE UNIQUE INDEX account_unique__login__idx
-  ON account (LOWER(login));
+  ON account (lower(login));
 
 CREATE TRIGGER account_updated_at_modtime
   BEFORE UPDATE ON account
@@ -46,7 +46,7 @@ CREATE TABLE email(
 );
 
 CREATE UNIQUE INDEX email_unique__value__idx
-  ON email (LOWER(value));
+  ON email (lower(value));
 CREATE INDEX email_user_id_idx ON email (user_id);
 CREATE UNIQUE INDEX email_unique__user_id_type__idx
   ON email (user_id, type)
@@ -181,7 +181,7 @@ CREATE TABLE study(
 );
 
 CREATE UNIQUE INDEX study_unique__user_id_name__key
-  ON study (user_id, LOWER(name));
+  ON study (user_id, lower(name));
 CREATE INDEX study_user_id_advanced_at_idx
   ON study (user_id, advanced_at);
 CREATE INDEX study_user_id_updated_at_idx
@@ -343,7 +343,7 @@ CREATE TABLE label(
 ); 
 
 CREATE UNIQUE INDEX label_unique__name__idx
-  ON label (LOWER(name));
+  ON label (lower(name));
 
 CREATE TRIGGER label_updated_at_modtime
   BEFORE UPDATE
@@ -380,7 +380,7 @@ CREATE TABLE topic(
 );
 
 CREATE UNIQUE INDEX topic_unique__name__idx
-  ON topic (LOWER(name));
+  ON topic (lower(name));
 
 CREATE TRIGGER topic_updated_at_modtime
   BEFORE UPDATE ON topic
@@ -424,7 +424,7 @@ CREATE TABLE user_asset(
 );
 
 CREATE UNIQUE INDEX user_asset_unique__user_id_study_id_name__idx
-  ON user_asset (user_id, study_id, LOWER(name));
+  ON user_asset (user_id, study_id, lower(name));
 CREATE INDEX user_asset_user_id_study_id_type_subtype_idx
   ON user_asset (user_id, study_id, type, subtype);
 CREATE INDEX user_asset_user_id_study_id_created_at_idx
@@ -451,193 +451,6 @@ CREATE TABLE study_apple (
 CREATE UNIQUE INDEX study_apple_unique__user_id_study_id__idx
   ON study_apple (user_id, study_id);
 
-CREATE OR REPLACE FUNCTION insert_event() RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO event(id, source_Id, target_id, user_id)
-  VALUES (NEW.event_id, NEW.source_id, NEW.target_id, NEW.user_id);
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-DROP TABLE IF EXISTS event CASCADE;
-CREATE TABLE event (
-  created_at      TIMESTAMPTZ  DEFAULT now(),
-  id              VARCHAR(100) PRIMARY KEY,
-  source_id       VARCHAR(100) NOT NULL,
-  target_id       VARCHAR(100) NOT NULL,
-  user_id         VARCHAR(100) NOT NULL,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE INDEX event_source_id_created_at_idx
-  ON event (source_id, created_at);
-
-CREATE INDEX event_target_id_created_at_idx
-  ON event (target_id, created_at);
-
-DROP TABLE IF EXISTS lesson_mentions_lesson_event CASCADE;
-CREATE TABLE lesson_mentions_lesson_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER lesson_mentions_lesson_event_insert_event
-  BEFORE INSERT ON lesson_mentions_lesson_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS lesson_mentions_user_event CASCADE;
-CREATE TABLE lesson_mentions_user_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER lesson_mentions_user_event_insert_event
-  BEFORE INSERT ON lesson_mentions_user_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS lesson_comment_mentions_lesson_event CASCADE;
-CREATE TABLE lesson_comment_mentions_lesson_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES lesson_comment (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER lesson_comment_mentions_lesson_event_insert_event
-  BEFORE INSERT ON lesson_comment_mentions_lesson_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS lesson_comment_mentions_user_event CASCADE;
-CREATE TABLE lesson_comment_mentions_user_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES lesson_comment (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER lesson_comment_mentions_user_event_insert_event
-  BEFORE INSERT ON lesson_comment_mentions_user_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS user_creates_study_event CASCADE;
-CREATE TABLE user_creates_study_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES study (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER user_creates_study_event_insert_event
-  BEFORE INSERT ON user_creates_study_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS study_adds_lesson_event CASCADE;
-CREATE TABLE study_adds_lesson_event (
-  event_id   VARCHAR(100) PRIMARY KEY,
-  source_id  VARCHAR(100) NOT NULL,
-  target_id  VARCHAR(100) NOT NULL,
-  user_id    VARCHAR(100) NOT NULL,
-  FOREIGN KEY (event_id)
-    REFERENCES event (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (source_id)
-    REFERENCES study (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (target_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE TRIGGER study_adds_lesson_event_insert_event
-  BEFORE INSERT ON study_adds_lesson_event
-  FOR EACH ROW EXECUTE PROCEDURE insert_event();
-
-DROP TABLE IF EXISTS user_tutor CASCADE;
-CREATE TABLE user_tutor (
-  created_at  TIMESTAMPTZ  DEFAULT now(),
-  pupil_id    VARCHAR(100),
-  tutor_id    VARCHAR(100),
-  PRIMARY KEY (tutor_id, pupil_id),
-  FOREIGN KEY (pupil_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (tutor_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE INDEX user_tutor_pupil_id_created_at_idx
-  ON user_tutor (pupil_id, created_at);
-
 DROP TABLE IF EXISTS study_enroll CASCADE;
 CREATE TABLE study_enroll (
   created_at TIMESTAMPTZ  DEFAULT now(),
@@ -655,8 +468,259 @@ CREATE TABLE study_enroll (
 CREATE INDEX study_enroll_user_id_created_at_idx
   ON study_enroll (user_id, created_at);
 
-DROP TABLE IF EXISTS notification CASCADE;
-CREATE TABLE notification (
+DROP TABLE IF EXISTS user_enroll CASCADE;
+CREATE TABLE user_enroll (
+  created_at  TIMESTAMPTZ  DEFAULT now(),
+  pupil_id    VARCHAR(100),
+  tutor_id    VARCHAR(100),
+  PRIMARY KEY (tutor_id, pupil_id),
+  FOREIGN KEY (pupil_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (tutor_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX user_enroll_pupil_id_created_at_idx
+  ON user_enroll (pupil_id, created_at);
+
+CREATE OR REPLACE FUNCTION insert_event() RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO event(id, source_Id, target_id, user_id)
+  VALUES (NEW.event_id, NEW.source_id, NEW.target_id, NEW.user_id);
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP SCHEMA IF EXISTS event CASCADE;
+CREATE SCHEMA event;
+
+CREATE TABLE event.event (
+  created_at      TIMESTAMPTZ  DEFAULT now(),
+  id              VARCHAR(100) PRIMARY KEY,
+  source_id       VARCHAR(100) NOT NULL,
+  target_id       VARCHAR(100) NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX event_source_id_created_at_idx
+  ON event.event (source_id, created_at);
+
+CREATE INDEX event_target_id_created_at_idx
+  ON event.event (target_id, created_at);
+
+CREATE TABLE event.lesson_mentioned_lesson (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_mentioned_lesson_insert_event
+  BEFORE INSERT ON event.lesson_mentioned_lesson
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.lesson_mentioned_user (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_mentioned_user_insert_event
+  BEFORE INSERT ON event.lesson_mentioned_user
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.lesson_comment_mentioned_lesson (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_comment_mentioned_lesson_insert_event
+  BEFORE INSERT ON event.lesson_comment_mentioned_lesson
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.lesson_comment_mentioned_user (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES lesson_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER lesson_comment_mentioned_user_insert_event
+  BEFORE INSERT ON event.lesson_comment_mentioned_user
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.study_created_lesson (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER study_created_lesson_insert_event
+  BEFORE INSERT ON event.study_created_lesson
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.user_created_study (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER user_created_study_insert_event
+  BEFORE INSERT ON event.user_created_study
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.user_dismissed_study (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER user_dismissed_study_insert_event
+  BEFORE INSERT ON event.user_dismissed_study
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.user_enrolled_study (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER user_enrolled_study_insert_event
+  BEFORE INSERT ON event.user_enrolled_study
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.user_enrolled_user (
+  event_id   VARCHAR(100) PRIMARY KEY,
+  source_id  VARCHAR(100) NOT NULL,
+  target_id  VARCHAR(100) NOT NULL,
+  user_id    VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES event.event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (source_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (target_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TRIGGER user_enrolled_user_insert_event
+  BEFORE INSERT ON event.user_enrolled_user
+  FOR EACH ROW EXECUTE PROCEDURE insert_event();
+
+CREATE TABLE event.notification (
   created_at    TIMESTAMPTZ  DEFAULT now(),
   event_id      VARCHAR(100) NOT NULL,
   id            VARCHAR(100) PRIMARY KEY,
@@ -666,7 +730,7 @@ CREATE TABLE notification (
   updated_at    TIMESTAMPTZ  DEFAULT now(),
   user_id       VARCHAR(100) NOT NULL,
   FOREIGN KEY (event_id)
-    REFERENCES event (id)
+    REFERENCES event.event (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (study_id)
     REFERENCES study (id)
@@ -677,7 +741,7 @@ CREATE TABLE notification (
 );
 
 CREATE INDEX notification_user_id_created_at_last_read_at_idx
-  ON notification (user_id, created_at ASC, last_read_at NULLS FIRST);
+  ON event.notification (user_id, created_at ASC, last_read_at NULLS FIRST);
 
 CREATE VIEW user_master AS
 SELECT
@@ -743,29 +807,29 @@ CREATE VIEW pupil AS
 SELECT
   user_master.bio,
   user_master.created_at,
+  user_enroll.created_at enrolled_at,
   user_master.id,
   user_master.login,
   user_master.name,
   user_master.public_email,
-  user_tutor.tutor_id,
-  user_tutor.created_at tutored_at,
+  user_enroll.tutor_id,
   user_master.updated_at
 FROM user_master
-JOIN user_tutor ON user_tutor.pupil_id = user_master.id;
+JOIN user_enroll ON user_enroll.pupil_id = user_master.id;
 
 CREATE VIEW tutor AS
 SELECT
   user_master.bio,
   user_master.created_at,
+  user_enroll.created_at enrolled_at,
   user_master.id,
   user_master.login,
   user_master.name,
   user_master.public_email,
-  user_tutor.pupil_id,
-  user_tutor.created_at tutored_at,
+  user_enroll.pupil_id,
   user_master.updated_at
 FROM user_master
-JOIN user_tutor ON user_tutor.tutor_id = user_master.id;
+JOIN user_enroll ON user_enroll.tutor_id = user_master.id;
 
 CREATE MATERIALIZED VIEW user_search_index AS
 SELECT

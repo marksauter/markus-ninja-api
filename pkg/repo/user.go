@@ -52,13 +52,6 @@ func (r *UserPermit) EnrolledAt() (time.Time, error) {
 	return r.user.EnrolledAt.Time, nil
 }
 
-func (r *UserPermit) TutoredAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("tutored_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.user.TutoredAt.Time, nil
-}
-
 func (r *UserPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
@@ -148,7 +141,7 @@ func (r *UserRepo) CountByApple(studyId string) (int32, error) {
 }
 
 func (r *UserRepo) CountByEnrolled(studyId string) (int32, error) {
-	return r.svc.CountByEnrolled(studyId)
+	return r.svc.CountbyStudy(studyId)
 }
 
 func (r *UserRepo) CountByPupil(pupilId string) (int32, error) {
@@ -222,7 +215,7 @@ func (r *UserRepo) GetByEnrolled(studyId string, po *data.PageOptions) ([]*UserP
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByEnrolled(studyId, po)
+	users, err := r.svc.GetByStudy(studyId, po)
 	if err != nil {
 		return nil, err
 	}
