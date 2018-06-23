@@ -199,7 +199,7 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return UserType, nil
 	case "userasset":
 		return UserAssetType, nil
-	case "usertutor":
+	case "userenroll":
 		return UserEnrollType, nil
 	default:
 		var t NodeType

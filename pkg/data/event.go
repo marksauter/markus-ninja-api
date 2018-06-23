@@ -227,11 +227,11 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 	}
 
 	table := strings.Join(
-		[]string{source, evtType.String(), target, "event"},
+		[]string{source, evtType.String(), target},
 		"_",
 	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO event.` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -270,30 +270,33 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 	return event, nil
 }
 
-func (s *EventService) BatchCreate(src *Event, targetIds []*mytype.OID) error {
+func (s *EventService) BatchCreate(
+	src *Event,
+	evtType EventType,
+	targetIds []*mytype.OID,
+) error {
 	mylog.Log.Info("Event.BatchCreate()")
 
 	n := len(targetIds)
 	lessonEvents := make([][]interface{}, 0, n)
+	studyEvents := make([][]interface{}, 0, n)
 	userEvents := make([][]interface{}, 0, n)
 	for _, targetId := range targetIds {
 		id, _ := mytype.NewOID("Event")
 		src.Id.Set(id)
+		event := []interface{}{
+			src.Id.String,
+			targetId.String,
+			src.SourceId.String,
+			src.UserId.String,
+		}
 		switch targetId.Type {
 		case "Lesson":
-			lessonEvents = append(lessonEvents, []interface{}{
-				src.Id.String,
-				targetId.String,
-				src.SourceId.String,
-				src.UserId.String,
-			})
+			lessonEvents = append(lessonEvents, event)
+		case "Study":
+			studyEvents = append(studyEvents, event)
 		case "User":
-			userEvents = append(userEvents, []interface{}{
-				src.Id.String,
-				targetId.String,
-				src.SourceId.String,
-				src.UserId.String,
-			})
+			userEvents = append(userEvents, event)
 		default:
 			return fmt.Errorf("invalid type '%s' for event target id", targetId.Type)
 		}
@@ -308,49 +311,90 @@ func (s *EventService) BatchCreate(src *Event, targetIds []*mytype.OID) error {
 		defer rollbackTransaction(tx)
 	}
 
-	var identPeventix string
+	var source string
 	switch src.SourceId.Type {
 	case "Lesson":
-		identPeventix = "lesson_"
+		source = "lesson"
 	case "LessonComment":
-		identPeventix = "lesson_comment_"
+		source = "lesson_comment"
+	case "Study":
+		source = "study"
+	case "User":
+		source = "user"
 	default:
 		return fmt.Errorf("invalid type '%s' for event source id", src.SourceId.Type)
 	}
-	lessonEventCopyCount, err := tx.CopyFrom(
-		pgx.Identifier{identPeventix + "lesson_event"},
-		[]string{"event_id", "target_id", "source_id", "user_id"},
-		pgx.CopyFromRows(lessonEvents),
-	)
-	if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			default:
-				return err
-			case UniqueViolation:
-				mylog.Log.Warn("events already created")
-				return nil
+
+	var lessonEventCopyCount, studyEventCopyCount, userEventCopyCount int
+	if len(lessonEvents) > 0 {
+		lessonTable := strings.Join(
+			[]string{source, evtType.String(), "lesson"},
+			"_",
+		)
+		lessonEventCopyCount, err = tx.CopyFrom(
+			pgx.Identifier{"event", lessonTable},
+			[]string{"event_id", "target_id", "source_id", "user_id"},
+			pgx.CopyFromRows(lessonEvents),
+		)
+		if err != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				default:
+					return err
+				case UniqueViolation:
+					mylog.Log.Warn("events already created")
+					return nil
+				}
 			}
+			return err
 		}
-		return err
 	}
 
-	userEventCopyCount, err := tx.CopyFrom(
-		pgx.Identifier{identPeventix + "user_event"},
-		[]string{"event_id", "target_id", "source_id", "user_id"},
-		pgx.CopyFromRows(userEvents),
-	)
-	if err != nil {
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			default:
-				return err
-			case UniqueViolation:
-				mylog.Log.Warn("events already created")
-				return nil
+	if len(studyEvents) > 0 {
+		studyTable := strings.Join(
+			[]string{source, evtType.String(), "study"},
+			"_",
+		)
+		studyEventCopyCount, err = tx.CopyFrom(
+			pgx.Identifier{"event", studyTable},
+			[]string{"event_id", "target_id", "source_id", "user_id"},
+			pgx.CopyFromRows(studyEvents),
+		)
+		if err != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				default:
+					return err
+				case UniqueViolation:
+					mylog.Log.Warn("events already created")
+					return nil
+				}
 			}
+			return err
 		}
-		return err
+	}
+	if len(userEvents) > 0 {
+		userTable := strings.Join(
+			[]string{source, evtType.String(), "user"},
+			"_",
+		)
+		userEventCopyCount, err = tx.CopyFrom(
+			pgx.Identifier{"event", userTable},
+			[]string{"event_id", "target_id", "source_id", "user_id"},
+			pgx.CopyFromRows(userEvents),
+		)
+		if err != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				default:
+					return err
+				case UniqueViolation:
+					mylog.Log.Warn("events already created")
+					return nil
+				}
+			}
+			return err
+		}
 	}
 
 	if newTx {
@@ -361,7 +405,10 @@ func (s *EventService) BatchCreate(src *Event, targetIds []*mytype.OID) error {
 		}
 	}
 
-	mylog.Log.WithField("n", lessonEventCopyCount+userEventCopyCount).Info("created events")
+	mylog.Log.WithField(
+		"n",
+		lessonEventCopyCount+studyEventCopyCount+userEventCopyCount,
+	).Info("created events")
 
 	return nil
 }
@@ -447,7 +494,7 @@ func (s *EventService) ParseBodyForEvents(
 	event := &Event{}
 	event.SourceId.Set(sourceId)
 	event.UserId.Set(userId)
-	err = eventSvc.BatchCreate(event, targetIds)
+	err = eventSvc.BatchCreate(event, MentionEvent, targetIds)
 	if err != nil {
 		return err
 	}
@@ -511,7 +558,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 				event.TargetId.Set(l.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event)
+				_, err = eventSvc.Create(event, MentionEvent)
 				if err != nil {
 					return err
 				}
@@ -539,7 +586,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 				event.TargetId.Set(u.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event)
+				_, err = eventSvc.Create(event, MentionEvent)
 				if err != nil {
 					return err
 				}

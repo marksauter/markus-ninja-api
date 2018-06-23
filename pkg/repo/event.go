@@ -107,14 +107,14 @@ func (r *EventRepo) CountByTarget(targetId string) (int32, error) {
 	return r.svc.CountByTarget(targetId)
 }
 
-func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
+func (r *EventRepo) Create(event *data.Event, evtType data.EventType) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	if _, err := r.perms.Check(perm.Create, event); err != nil {
 		return nil, err
 	}
-	event, err := r.svc.Create(event)
+	event, err := r.svc.Create(event, evtType)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +125,18 @@ func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
 	return &EventPermit{fieldPermFn, event}, nil
 }
 
-func (r *EventRepo) BatchCreate(event *data.Event, targetIds []*mytype.OID) error {
+func (r *EventRepo) BatchCreate(
+	event *data.Event,
+	evtType data.EventType,
+	targetIds []*mytype.OID,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
 	if _, err := r.perms.Check(perm.Create, event); err != nil {
 		return err
 	}
-	return r.svc.BatchCreate(event, targetIds)
+	return r.svc.BatchCreate(event, evtType, targetIds)
 }
 
 func (r *EventRepo) Get(id string) (*EventPermit, error) {
