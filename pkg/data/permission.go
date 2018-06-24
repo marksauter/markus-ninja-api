@@ -243,8 +243,8 @@ const getPermissionByRoleNameSQL = `
 			updated_at
 		FROM
 			permission p
-		INNER JOIN role_permission rp ON rp.permission_id = p.id
-		INNER JOIN role r ON r.id = rp.role_id
+		JOIN role_permission rp ON rp.permission_id = p.id
+		JOIN role r ON r.name = rp.role
 		WHERE r.name = $1
 	`
 
@@ -287,7 +287,7 @@ func (s *PermService) GetByRoleName(
 
 func (s *PermService) GetQueryPermission(
 	o perm.Operation,
-	roles ...string,
+	roles mytype.RoleNameArray,
 ) (*perm.QueryPermission, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"operation": o,
@@ -311,9 +311,8 @@ func (s *PermService) GetQueryPermission(
 		AND (p.audience = 'EVERYONE'
 			OR p.id IN (
 				SELECT permission_id
-				FROM role_permission rp
-				INNER JOIN role r ON r.id = rp.role_id
-				WHERE r.name = ANY($3)
+				FROM role_permission
+				WHERE role = ANY($3)
 			)
 		)
 	`
@@ -321,7 +320,7 @@ func (s *PermService) GetQueryPermission(
 		Group By operation
 	`
 	var row *pgx.Row
-	if len(roles) != 0 {
+	if len(roles.Elements) != 0 {
 		row = s.db.QueryRow(
 			permissionSQL+andRoleNameSQL+groupBySQL,
 			o.AccessLevel,

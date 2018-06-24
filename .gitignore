@@ -6,6 +6,7 @@
 *.toml
 /gin-bin
 
+note
 vendor/*
 
 # Elastic Beanstalk Files

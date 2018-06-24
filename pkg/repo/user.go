@@ -87,8 +87,8 @@ func (r *UserPermit) PublicEmail() (string, error) {
 	return r.user.PublicEmail.String, nil
 }
 
-func (r *UserPermit) Roles() []string {
-	return r.user.Roles
+func (r *UserPermit) Roles() []mytype.RoleName {
+	return r.user.Roles.Elements
 }
 
 func (r *UserPermit) UpdatedAt() (time.Time, error) {

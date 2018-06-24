@@ -28,7 +28,7 @@ type EventService struct {
 
 const countEventByTargetSQL = `
 	SELECT COUNT(*)
-	FROM event
+	FROM event.event
 	WHERE target_id = $1
 `
 
@@ -113,7 +113,7 @@ const getEventSQL = `
 		source_id,
 		target_id,
 		user_id
-	FROM event
+	FROM event.event
 	WHERE id = $1
 `
 
@@ -128,7 +128,7 @@ func (s *EventService) GetBySource(
 ) ([]*Event, error) {
 	mylog.Log.WithField("source_id", sourceId).Info("Event.GetBySource(source_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `event.source_id = ` + args.Append(sourceId)
+	whereSQL := `event.event.source_id = ` + args.Append(sourceId)
 
 	selects := []string{
 		"created_at",
@@ -137,7 +137,7 @@ func (s *EventService) GetBySource(
 		"target_id",
 		"user_id",
 	}
-	from := "event"
+	from := "event.event"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getEventsBySource", sql)
@@ -151,7 +151,7 @@ func (s *EventService) GetByTarget(
 ) ([]*Event, error) {
 	mylog.Log.WithField("target_id", targetId).Info("Event.GetByTarget(target_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `event.target_id = ` + args.Append(targetId)
+	whereSQL := `event.event.target_id = ` + args.Append(targetId)
 
 	selects := []string{
 		"created_at",
@@ -160,7 +160,7 @@ func (s *EventService) GetByTarget(
 		"target_id",
 		"user_id",
 	}
-	from := "event"
+	from := "event.event"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getEventsByTarget", sql)
@@ -176,7 +176,7 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 
 	id, _ := mytype.NewOID("Event")
 	row.Id.Set(id)
-	columns = append(columns, "id")
+	columns = append(columns, "event_id")
 	values = append(values, args.Append(&row.Id))
 
 	if row.SourceId.Status != pgtype.Undefined {
@@ -204,24 +204,24 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 	var source string
 	switch row.SourceId.Type {
 	case "Lesson":
-		source = row.SourceId.DBVarName()
+		source = "lesson"
 	case "LessonComment":
-		source = row.SourceId.DBVarName()
+		source = "lesson_comment"
 	case "Study":
-		source = row.SourceId.DBVarName()
+		source = "study"
 	case "User":
-		source = row.SourceId.DBVarName()
+		source = "user"
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event source id", row.SourceId.Type)
 	}
 	var target string
 	switch row.TargetId.Type {
 	case "Lesson":
-		target = row.TargetId.DBVarName()
+		target = "lesson"
 	case "Study":
-		target = row.TargetId.DBVarName()
+		target = "study"
 	case "User":
-		target = row.TargetId.DBVarName()
+		target = "user"
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event target id", row.TargetId.Type)
 	}
@@ -459,7 +459,7 @@ func (s *EventService) ParseBodyForEvents(
 		return err
 	}
 	userEvents := body.AtRefs()
-	// TODO: add support for cross study eventerences
+	// TODO: add support for cross study references
 	// crossStudyEvents, err := body.CrossStudyEvents()
 	// if err != nil {
 	//   return err
@@ -486,8 +486,8 @@ func (s *EventService) ParseBodyForEvents(
 		if err != nil {
 			return err
 		}
-		for _, l := range users {
-			targetIds = append(targetIds, &l.Id)
+		for _, u := range users {
+			targetIds = append(targetIds, &u.Id)
 		}
 	}
 
@@ -566,7 +566,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 		}
 	}
 	userEvents := body.AtRefs()
-	// TODO: add support for cross study eventerences
+	// TODO: add support for cross study references
 	// crossStudyEvents, err := body.CrossStudyEvents()
 	// if err != nil {
 	//   return err

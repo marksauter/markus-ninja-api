@@ -11,19 +11,19 @@ import (
 )
 
 type User struct {
-	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"read"`
-	BackupEmail  mytype.Email       `db:"backup_email"`
-	Bio          pgtype.Text        `db:"bio" permit:"read"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
-	Id           mytype.OID         `db:"id" permit:"read"`
-	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
-	Name         pgtype.Text        `db:"name" permit:"read"`
-	Password     mytype.Password    `db:"password" permit:"create"`
-	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
-	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
-	Roles        []string           `db:"roles"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	AppledAt     pgtype.Timestamptz   `db:"appled_at" permit:"read"`
+	BackupEmail  mytype.Email         `db:"backup_email"`
+	Bio          pgtype.Text          `db:"bio" permit:"read"`
+	CreatedAt    pgtype.Timestamptz   `db:"created_at" permit:"read"`
+	EnrolledAt   pgtype.Timestamptz   `db:"enrolled_at" permit:"read"`
+	Id           mytype.OID           `db:"id" permit:"read"`
+	Login        pgtype.Varchar       `db:"login" permit:"read/create"`
+	Name         pgtype.Text          `db:"name" permit:"read"`
+	Password     mytype.Password      `db:"password" permit:"create"`
+	PrimaryEmail mytype.Email         `db:"primary_email" permit:"create"`
+	PublicEmail  pgtype.Varchar       `db:"public_email" permit:"read"`
+	Roles        mytype.RoleNameArray `db:"roles"`
+	UpdatedAt    pgtype.Timestamptz   `db:"updated_at" permit:"read"`
 }
 
 func NewUserService(q Queryer) *UserService {
