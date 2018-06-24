@@ -99,20 +99,6 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		return err
 	}
 
-	roles := []data.RoleType{
-		data.AdminRole,
-		data.MemberRole,
-		data.OwnerRole,
-		data.UserRole,
-	}
-
-	for _, r := range roles {
-		if _, err := svcs.Role.Create(r.String()); err != nil {
-			mylog.Log.WithError(err).Fatal("error during role creation")
-			return err
-		}
-	}
-
 	modelTypes := []interface{}{
 		new(data.Email),
 		new(data.Event),
@@ -138,11 +124,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 
 	adminPermissionsSQL := `
 		SELECT
-			r.id role_id,
+			r.name,
 			p.id permission_id
 		FROM
 			role r
-		INNER JOIN permission p ON true
+		JOIN permission p ON true
 		WHERE r.name = ANY('{"ADMIN", "OWNER"}')
 	`
 	rows, err := db.Query(adminPermissionsSQL)
@@ -154,7 +140,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 	adminPermissionsCount, err := db.CopyFrom(
 		pgx.Identifier{"role_permission"},
-		[]string{"role_id", "permission_id"},
+		[]string{"role", "permission_id"},
 		rows,
 	)
 	if pgErr, ok := err.(pgx.PgError); ok {
@@ -168,11 +154,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 
 	userPermissionsSQL := `
 		SELECT
-			r.id role_id,
+			r.name,
 			p.id permission_id
 		FROM
 			role r
-		INNER JOIN permission p ON p.audience = 'EVERYONE'
+		JOIN permission p ON p.audience = 'EVERYONE'
 		WHERE r.name = 'USER'
 	`
 	rows, err = db.Query(userPermissionsSQL)
@@ -184,7 +170,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 	userPermissionsCount, err := db.CopyFrom(
 		pgx.Identifier{"role_permission"},
-		[]string{"role_id", "permission_id"},
+		[]string{"role", "permission_id"},
 		rows,
 	)
 	if pgErr, ok := err.(pgx.PgError); ok {
@@ -240,13 +226,13 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 	markusIsAdmin := false
-	for _, r := range markus.Roles {
-		if r == data.AdminRole.String() {
+	for _, r := range markus.Roles.Elements {
+		if r.Name == mytype.AdminRole {
 			markusIsAdmin = true
 		}
 	}
 	if !markusIsAdmin {
-		if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
+		if err := svcs.Role.GrantUser(markus.Id.String, mytype.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
@@ -283,13 +269,13 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 	testUserIsUser := false
-	for _, r := range testUser.Roles {
-		if r == data.AdminRole.String() {
+	for _, r := range testUser.Roles.Elements {
+		if r.Name == mytype.AdminRole {
 			testUserIsUser = true
 		}
 	}
 	if !testUserIsUser {
-		if err := svcs.Role.GrantUser(testUser.Id.String, data.AdminRole); err != nil {
+		if err := svcs.Role.GrantUser(testUser.Id.String, mytype.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")

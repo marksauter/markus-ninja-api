@@ -7,13 +7,14 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
-func NewQueryPermLoader(svc *data.PermService, viewerRoles ...string) *QueryPermLoader {
+func NewQueryPermLoader(svc *data.PermService, viewer *data.User) *QueryPermLoader {
 	loader := &QueryPermLoader{
-		viewerRoles: viewerRoles,
-		svc:         svc,
+		svc:    svc,
+		viewer: viewer,
 	}
 	loader.batchGet = createLoader(
 		func(
@@ -37,7 +38,9 @@ func NewQueryPermLoader(svc *data.PermService, viewerRoles ...string) *QueryPerm
 						results[i] = &dataloader.Result{Data: nil, Error: err}
 						return
 					}
-					queryPerm, err := svc.GetQueryPermission(operation, ks[1:]...)
+					roleNames := mytype.RoleNameArray{}
+					roleNames.Set(ks[1:])
+					queryPerm, err := svc.GetQueryPermission(operation, roleNames)
 					results[i] = &dataloader.Result{Data: queryPerm, Error: err}
 				}(i, key)
 			}
@@ -51,8 +54,8 @@ func NewQueryPermLoader(svc *data.PermService, viewerRoles ...string) *QueryPerm
 }
 
 type QueryPermLoader struct {
-	svc         *data.PermService
-	viewerRoles []string
+	svc    *data.PermService
+	viewer *data.User
 
 	batchGet *dataloader.Loader
 }
@@ -66,14 +69,19 @@ func (l *QueryPermLoader) ClearAll() {
 	l.batchGet.ClearAll()
 }
 
-func (l *QueryPermLoader) Get(o perm.Operation, roles []data.RoleType) (*perm.QueryPermission, error) {
+func (l *QueryPermLoader) Get(
+	o perm.Operation,
+	roles []mytype.RoleNameValue,
+) (*perm.QueryPermission, error) {
 	ctx := context.Background()
-	roleStrs := make([]string, len(roles))
-	for i, r := range roles {
-		roleStrs[i] = r.String()
+	roleNames := mytype.RoleNameArray{}
+	roleNames.Set(roles)
+	viewerRoles := append(l.viewer.Roles.Elements, roleNames.Elements...)
+	roleStrs := make([]string, len(viewerRoles))
+	for i, role := range viewerRoles {
+		roleStrs[i] = role.String()
 	}
-	viewerRoles := append(l.viewerRoles, roleStrs...)
-	keyParts := append([]string{o.String()}, viewerRoles...)
+	keyParts := append([]string{o.String()}, roleStrs...)
 	compositeKey := newCompositeKey(keyParts...)
 	permData, err := l.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
@@ -129,7 +137,7 @@ func (l *QueryPermLoader) batchGetFunc(
 				results[i] = &dataloader.Result{Data: nil, Error: err}
 				return
 			}
-			queryPerm, err := l.svc.GetQueryPermission(operation, l.viewerRoles...)
+			queryPerm, err := l.svc.GetQueryPermission(operation, l.viewer.Roles)
 			results[i] = &dataloader.Result{Data: queryPerm, Error: err}
 		}(i, key)
 	}

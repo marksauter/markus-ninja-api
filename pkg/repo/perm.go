@@ -11,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -31,7 +32,7 @@ func (r *PermRepo) Open(ctx context.Context) error {
 		if !ok {
 			return fmt.Errorf("viewer not found")
 		}
-		r.load = loader.NewQueryPermLoader(r.svc, r.viewer.Roles...)
+		r.load = loader.NewQueryPermLoader(r.svc, r.viewer)
 	}
 	return nil
 }
@@ -67,10 +68,10 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 	}
 	o := perm.Operation{a, nt}
 
-	additionalRoles := []data.RoleType{}
+	additionalRoles := []mytype.RoleNameValue{}
 	if a != perm.Create {
 		if ok := r.viewerCanAdmin(node); ok {
-			additionalRoles = append(additionalRoles, data.OwnerRole)
+			additionalRoles = append(additionalRoles, mytype.OwnerRole)
 		}
 	}
 	queryPerm, err := r.load.Get(o, additionalRoles)

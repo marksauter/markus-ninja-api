@@ -8,6 +8,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -75,8 +76,8 @@ func (r *topicResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	for _, role := range viewer.Roles {
-		if role == "ADMIN" {
+	for _, role := range viewer.Roles.Elements {
+		if role.Name == mytype.AdminRole {
 			return true, nil
 		}
 	}

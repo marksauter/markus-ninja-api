@@ -423,6 +423,13 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 
 	eventSvc := NewEventService(tx)
 	eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	e := &Event{}
+	e.SourceId.Set(&row.StudyId)
+	e.TargetId.Set(&row.Id)
+	_, err = eventSvc.Create(e, CreateEvent)
+	if err != nil {
+		return nil, err
+	}
 
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
