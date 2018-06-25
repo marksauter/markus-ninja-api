@@ -1,5 +1,5 @@
 # Represents a lesson.
-type Lesson implements Authorable, Node, UniformResourceLocatable, Updateable {
+type Lesson implements Authorable, Enrollable, Node, UniformResourceLocatable, Updateable {
   # The user who authored this body. 
   author: User
 
@@ -79,6 +79,9 @@ type Lesson implements Authorable, Node, UniformResourceLocatable, Updateable {
 
   # Did the viewer author this lesson.
   viewerDidAuthor: Boolean!
+
+  # Has the viewer enrolled in this enrollable.
+  viewerHasEnrolled: Boolean!
 }
 
 # An edge type for Lesson.

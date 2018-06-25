@@ -11,19 +11,19 @@ import (
 )
 
 type User struct {
-	AppledAt     pgtype.Timestamptz   `db:"appled_at" permit:"read"`
-	BackupEmail  mytype.Email         `db:"backup_email"`
-	Bio          pgtype.Text          `db:"bio" permit:"read"`
-	CreatedAt    pgtype.Timestamptz   `db:"created_at" permit:"read"`
-	EnrolledAt   pgtype.Timestamptz   `db:"enrolled_at" permit:"read"`
-	Id           mytype.OID           `db:"id" permit:"read"`
-	Login        pgtype.Varchar       `db:"login" permit:"read/create"`
-	Name         pgtype.Text          `db:"name" permit:"read"`
-	Password     mytype.Password      `db:"password" permit:"create"`
-	PrimaryEmail mytype.Email         `db:"primary_email" permit:"create"`
-	PublicEmail  pgtype.Varchar       `db:"public_email" permit:"read"`
-	Roles        mytype.RoleNameArray `db:"roles"`
-	UpdatedAt    pgtype.Timestamptz   `db:"updated_at" permit:"read"`
+	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"read"`
+	BackupEmail  mytype.Email       `db:"backup_email"`
+	Bio          pgtype.Text        `db:"bio" permit:"read"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
+	Id           mytype.OID         `db:"id" permit:"read"`
+	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
+	Name         pgtype.Text        `db:"name" permit:"read"`
+	Password     mytype.Password    `db:"password" permit:"create"`
+	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
+	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`
+	Roles        pgtype.TextArray   `db:"roles"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
 func NewUserService(q Queryer) *UserService {
@@ -55,20 +55,46 @@ func (s *UserService) CountByApple(studyId string) (int32, error) {
 	return n, err
 }
 
-const countUserByPupilSQL = `
+const countUserByEnrollableSQL = `
 	SELECT COUNT(*)
-	FROM tutor
-	WHERE pupil_id = $1
+	FROM account
+	JOIN user_enroll ON user_enroll.user_id = account.id
+	WHERE enrollable_id = $1
 `
 
-func (s *UserService) CountByPupil(pupilId string) (int32, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("User.CountByPupil(pupil_id)")
+func (s *UserService) CountByEnrollable(enrollableId string) (int32, error) {
+	mylog.Log.WithField(
+		"enrollable_id",
+		enrollableId,
+	).Info("User.CountByEnrollable(enrollable_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserByPupil",
-		countUserByPupilSQL,
-		pupilId,
+		"countUserByEnrollable",
+		countUserByEnrollableSQL,
+		enrollableId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
+const countUserByEnrolledSQL = `
+	SELECT COUNT(*)
+	FROM account
+	JOIN user_enroll ON user_enroll.enrollable_id = a.id
+	AND user_enroll.user_id = $1
+`
+
+func (s *UserService) CountByEnrolled(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("User.CountByEnrolled(user_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countUserByEnrolled",
+		countUserByEnrolledSQL,
+		userId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -91,48 +117,6 @@ func (s *UserService) CountBySearch(query string) (n int32, err error) {
 	mylog.Log.WithField("n", n).Info("")
 
 	return
-}
-
-const countUserByStudySQL = `
-	SELECT COUNT(*)
-	FROM student
-	WHERE study_id = $1
-`
-
-func (s *UserService) CountbyStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("User.CountByStudy(study_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserByStudy",
-		countUserByStudySQL,
-		studyId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
-const countUserByTutorSQL = `
-	SELECT COUNT(*)
-	FROM pupil
-	WHERE tutor_id = $1
-`
-
-func (s *UserService) CountByTutor(tutorId string) (int32, error) {
-	mylog.Log.WithField("tutor_id", tutorId).Info("User.CountByTutor(tutor_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserByTutor",
-		countUserByTutorSQL,
-		tutorId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
 }
 
 const batchGetUserSQL = `
@@ -297,28 +281,32 @@ func (s *UserService) GetByApple(
 	return rows, nil
 }
 
-func (s *UserService) GetByPupil(
-	pupilId string,
+// Tutors are users a user (pupil) has enrolled in.
+func (s *UserService) GetTutors(
+	userId string,
 	po *PageOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField("pupil_id", pupilId).Info("User.GetByPupil(pupil_id)")
+	mylog.Log.WithField(
+		"user_id",
+		userId,
+	).Info("User.GetTutors(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `tutor.pupil_id = ` + args.Append(pupilId)
+	whereSQL := `tutor.user_id = ` + args.Append(userId)
 
 	selects := []string{
 		"bio",
 		"created_at",
+		"enrolled_at",
 		"id",
 		"login",
 		"name",
 		"public_email",
-		"enrolled_at",
 		"updated_at",
 	}
 	from := "tutor"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUsersByPupil", sql)
+	psName := preparedName("getTutors", sql)
 
 	var rows []*User
 
@@ -332,11 +320,11 @@ func (s *UserService) GetByPupil(
 		dbRows.Scan(
 			&row.Bio,
 			&row.CreatedAt,
+			&row.EnrolledAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
-			&row.EnrolledAt,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -352,11 +340,12 @@ func (s *UserService) GetByPupil(
 	return rows, nil
 }
 
-func (s *UserService) GetByStudy(
+// Students are users enrolled in a study.
+func (s *UserService) GetStudents(
 	studyId string,
 	po *PageOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField("study_id", studyId).Info("User.GetByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyId).Info("User.GetStudents(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `student.study_id = ` + args.Append(studyId)
 
@@ -373,7 +362,7 @@ func (s *UserService) GetByStudy(
 	from := "student"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUsersByStudy", sql)
+	psName := preparedName("getStudents", sql)
 
 	var rows []*User
 
@@ -407,11 +396,12 @@ func (s *UserService) GetByStudy(
 	return rows, nil
 }
 
-func (s *UserService) GetByTutor(
+// Pupils are users enrolled in a user (tutor).
+func (s *UserService) GetPupils(
 	tutorId string,
 	po *PageOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField("tutor_id", tutorId).Info("User.GetByTutor(tutor_id)")
+	mylog.Log.WithField("tutor_id", tutorId).Info("User.GetPupils(tutor_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `pupil.tutor_id = ` + args.Append(tutorId)
 
@@ -428,7 +418,7 @@ func (s *UserService) GetByTutor(
 	from := "pupil"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUsersByTutor", sql)
+	psName := preparedName("getPupils", sql)
 
 	var rows []*User
 
@@ -442,11 +432,11 @@ func (s *UserService) GetByTutor(
 		dbRows.Scan(
 			&row.Bio,
 			&row.CreatedAt,
+			&row.EnrolledAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
-			&row.EnrolledAt,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)

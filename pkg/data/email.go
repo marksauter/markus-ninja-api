@@ -50,42 +50,26 @@ const countEmailByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *EmailService) CountByUser(userId string) (int32, error) {
+func (s *EmailService) CountByUser(
+	userId string,
+	opts ...EmailFilterOption,
+) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id) Email")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countEmailByUser",
-		countEmailByUserSQL,
-		userId,
-	).Scan(&n)
+
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	sqlParts := append([]string{countEmailByUserSQL}, ands...)
+	sql := strings.Join(sqlParts, " AND email.")
+
+	psName := preparedName("countEmailByUser", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, userId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
-	return n, err
-}
-
-const countEmailVerifiedByUserSQL = `
-	SELECT COUNT(*)
-	FROM email
-	WHERE user_id = $1 AND verified_at IS NOT NULL
-`
-
-func (s *EmailService) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
-	mylog.Log.WithField(
-		"user_id", userId.String,
-	).Info("CountVerifiedByUser(user_id) Email")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countEmailVerifiedByUser",
-		countEmailVerifiedByUserSQL,
-		userId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
+	return
 }
 
 func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email, error) {
@@ -202,8 +186,17 @@ func (s *EmailService) GetByUser(
 	mylog.Log.WithField(
 		"user_id", userId.String,
 	).Info("Email.GetByUser(userId)")
+
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `email_master.user_id = ` + args.Append(userId)
+	where := append(
+		[]string{`email_master.user_id = ` + args.Append(userId)},
+		ands...,
+	)
+	whereSQL := strings.Join(where, " AND email_master.")
 
 	selects := []string{
 		"created_at",

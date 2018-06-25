@@ -31,9 +31,9 @@ func (r *UserEnrollLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *UserEnrollLoader) Get(tutorId, pupilId string) (*data.UserEnroll, error) {
+func (r *UserEnrollLoader) Get(enrollableId, pupilId string) (*data.UserEnroll, error) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(tutorId, pupilId)
+	compositeKey := newCompositeKey(enrollableId, pupilId)
 	userEnrollData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err

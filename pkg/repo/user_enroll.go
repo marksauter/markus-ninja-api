@@ -15,7 +15,7 @@ import (
 
 type UserEnrollPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	userEnroll            *data.UserEnroll
+	userEnroll           *data.UserEnroll
 }
 
 func (r *UserEnrollPermit) Get() *data.UserEnroll {
@@ -37,18 +37,25 @@ func (r *UserEnrollPermit) CreatedAt() (time.Time, error) {
 	return r.userEnroll.CreatedAt.Time, nil
 }
 
-func (r *UserEnrollPermit) PupilId() (*mytype.OID, error) {
+func (r *UserEnrollPermit) EnrollableId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("enrollable_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.userEnroll.EnrollableId, nil
+}
+
+func (r *UserEnrollPermit) Manual() (bool, error) {
+	if ok := r.checkFieldPermission("manual"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.userEnroll.Manual.Bool, nil
+}
+
+func (r *UserEnrollPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.userEnroll.PupilId, nil
-}
-
-func (r *UserEnrollPermit) TutorId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("study_id"); !ok {
-		return nil, ErrAccessDenied
-	}
-	return &r.userEnroll.TutorId, nil
+	return &r.userEnroll.UserId, nil
 }
 
 func NewUserEnrollRepo(perms *PermRepo, svc *data.UserEnrollService) *UserEnrollRepo {
@@ -89,8 +96,8 @@ func (r *UserEnrollRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserEnrollRepo) CountByPupil(pupilId string) (int32, error) {
-	return r.svc.CountByPupil(pupilId)
+func (r *UserEnrollRepo) CountByEnrolledInUser(pupilId string) (int32, error) {
+	return r.svc.CountByEnrolledInUser(pupilId)
 }
 
 func (r *UserEnrollRepo) CountByTutor(tutorId string) (int32, error) {
@@ -172,14 +179,32 @@ func (r *UserEnrollRepo) GetByTutor(tutorId string, po *data.PageOptions) ([]*Us
 	return userEnrollPermits, nil
 }
 
-func (r *UserEnrollRepo) Delete(userEnroll *data.UserEnroll) error {
+func (r *UserEnrollRepo) Delete(e *data.UserEnroll) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, userEnroll); err != nil {
+	if _, err := r.perms.Check(perm.Delete, e); err != nil {
 		return err
 	}
-	return r.svc.Delete(userEnroll.TutorId.String, userEnroll.PupilId.String)
+	return r.svc.Delete(e.EnrollableId.String, e.UserId.String)
+}
+
+func (r *UserEnrollRepo) Update(e *data.UserEnroll) (*UserEnrollPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check(perm.Update, e); err != nil {
+		return nil, err
+	}
+	userEnroll, err := r.svc.Update(e)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, userEnroll)
+	if err != nil {
+		return nil, err
+	}
+	return &UserEnrollPermit{fieldPermFn, userEnroll}, nil
 }
 
 // Middleware

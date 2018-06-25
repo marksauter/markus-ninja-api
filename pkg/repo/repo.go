@@ -16,6 +16,8 @@ const (
 	evtRepoKey           key = "evt"
 	lessonRepoKey        key = "lesson"
 	lessonCommentRepoKey key = "lesson_comment"
+	lessonEnrollRepoKey  key = "lesson_enroll"
+	notificationRepoKey  key = "notification"
 	permRepoKey          key = "perm"
 	prtRepoKey           key = "prt"
 	eventRepoKey         key = "event"
@@ -25,7 +27,7 @@ const (
 	topicRepoKey         key = "topic"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
-	userEnrollRepoKey     key = "user_enroll"
+	userEnrollRepoKey    key = "user_enroll"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -56,6 +58,8 @@ func NewRepos(svcs *service.Services) *Repos {
 			evtRepoKey:           NewEVTRepo(permRepo, svcs.EVT),
 			lessonRepoKey:        NewLessonRepo(permRepo, svcs.Lesson),
 			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
+			lessonEnrollRepoKey:  NewLessonEnrollRepo(permRepo, svcs.LessonEnroll),
+			notificationRepoKey:  NewNotificationRepo(permRepo, svcs.Notification),
 			permRepoKey:          permRepo,
 			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
 			eventRepoKey:         NewEventRepo(permRepo, svcs.Event),
@@ -65,7 +69,7 @@ func NewRepos(svcs *service.Services) *Repos {
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
-			userEnrollRepoKey:     NewUserEnrollRepo(permRepo, svcs.UserEnroll),
+			userEnrollRepoKey:    NewUserEnrollRepo(permRepo, svcs.UserEnroll),
 		},
 	}
 }
@@ -108,6 +112,16 @@ func (r *Repos) Lesson() *LessonRepo {
 
 func (r *Repos) LessonComment() *LessonCommentRepo {
 	repo, _ := r.lookup[lessonCommentRepoKey].(*LessonCommentRepo)
+	return repo
+}
+
+func (r *Repos) LessonEnroll() *LessonEnrollRepo {
+	repo, _ := r.lookup[lessonEnrollRepoKey].(*LessonEnrollRepo)
+	return repo
+}
+
+func (r *Repos) Notification() *NotificationRepo {
+	repo, _ := r.lookup[notificationRepoKey].(*NotificationRepo)
 	return repo
 }
 

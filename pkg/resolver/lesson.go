@@ -172,11 +172,15 @@ func (r *lessonResolver) Events(
 	events, err := r.Repos.Event().GetByTarget(
 		lessonId.String,
 		pageOptions,
+		data.OnlyMentionEvents,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Event().CountByTarget(lessonId.String)
+	count, err := r.Repos.Event().CountByTarget(
+		lessonId.String,
+		data.OnlyMentionEvents,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -257,4 +261,24 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	}
 
 	return viewer.Id.String == userId.String, nil
+}
+
+func (r *lessonResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := r.Repos.LessonEnroll().Get(lessonId.String, viewer.Id.String); err != nil {
+		if err == data.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

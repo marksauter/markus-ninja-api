@@ -7,7 +7,6 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -38,9 +37,7 @@ func NewQueryPermLoader(svc *data.PermService, viewer *data.User) *QueryPermLoad
 						results[i] = &dataloader.Result{Data: nil, Error: err}
 						return
 					}
-					roleNames := mytype.RoleNameArray{}
-					roleNames.Set(ks[1:])
-					queryPerm, err := svc.GetQueryPermission(operation, roleNames)
+					queryPerm, err := svc.GetQueryPermission(operation, ks[1:])
 					results[i] = &dataloader.Result{Data: queryPerm, Error: err}
 				}(i, key)
 			}
@@ -71,17 +68,13 @@ func (l *QueryPermLoader) ClearAll() {
 
 func (l *QueryPermLoader) Get(
 	o perm.Operation,
-	roles []mytype.RoleNameValue,
+	roles []string,
 ) (*perm.QueryPermission, error) {
 	ctx := context.Background()
-	roleNames := mytype.RoleNameArray{}
-	roleNames.Set(roles)
-	viewerRoles := append(l.viewer.Roles.Elements, roleNames.Elements...)
-	roleStrs := make([]string, len(viewerRoles))
-	for i, role := range viewerRoles {
-		roleStrs[i] = role.String()
+	for _, role := range l.viewer.Roles.Elements {
+		roles = append(roles, role.String)
 	}
-	keyParts := append([]string{o.String()}, roleStrs...)
+	keyParts := append([]string{o.String()}, roles...)
 	compositeKey := newCompositeKey(keyParts...)
 	permData, err := l.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
@@ -137,7 +130,13 @@ func (l *QueryPermLoader) batchGetFunc(
 				results[i] = &dataloader.Result{Data: nil, Error: err}
 				return
 			}
-			queryPerm, err := l.svc.GetQueryPermission(operation, l.viewer.Roles)
+			var roles []string
+			err = l.viewer.Roles.AssignTo(roles)
+			if err != nil {
+				results[i] = &dataloader.Result{Data: nil, Error: err}
+				return
+			}
+			queryPerm, err := l.svc.GetQueryPermission(operation, roles)
 			results[i] = &dataloader.Result{Data: queryPerm, Error: err}
 		}(i, key)
 	}

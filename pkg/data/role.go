@@ -3,14 +3,20 @@ package data
 import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	AdminRole  = "ADMIN"
+	MemberRole = "MEMBER"
+	OwnerRole  = "OWNER"
+	UserRole   = "USER"
 )
 
 type Role struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
 	Description pgtype.Text        `db:"description"`
-	Name        mytype.RoleName    `db:"name"`
+	Name        pgtype.Varchar     `db:"name"`
 }
 
 type RoleService struct {
@@ -76,21 +82,17 @@ const grantUserRolesSQL = `
 	ON CONFLICT ON CONSTRAINT user_role_pkey DO NOTHING
 `
 
-func (s *RoleService) GrantUser(userId string, roles ...mytype.RoleNameValue) error {
+func (s *RoleService) GrantUser(userId string, roles ...string) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"roles":   roles,
 	}).Info("GrantUser(user_id, roles)")
 	if len(roles) > 0 {
-		roleArgs := make([]string, len(roles))
-		for i, r := range roles {
-			roleArgs[i] = r.String()
-		}
 		_, err := prepareExec(
 			s.db,
 			"grantUserRoles",
 			grantUserRolesSQL,
-			roleArgs,
+			roles,
 			userId,
 		)
 		if err != nil {

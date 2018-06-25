@@ -1,2 +1,0 @@
-# Any referencable object.
-union EventSource = Lesson | LessonComment

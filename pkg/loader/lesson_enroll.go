@@ -9,45 +9,45 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
-func NewStudyEnrollLoader(svc *data.StudyEnrollService) *StudyEnrollLoader {
-	return &StudyEnrollLoader{
+func NewLessonEnrollLoader(svc *data.LessonEnrollService) *LessonEnrollLoader {
+	return &LessonEnrollLoader{
 		svc:      svc,
-		batchGet: createLoader(newBatchGetStudyEnrollBy2Fn(svc.Get)),
+		batchGet: createLoader(newBatchGetLessonEnrollBy2Fn(svc.Get)),
 	}
 }
 
-type StudyEnrollLoader struct {
-	svc *data.StudyEnrollService
+type LessonEnrollLoader struct {
+	svc *data.LessonEnrollService
 
 	batchGet *dataloader.Loader
 }
 
-func (r *StudyEnrollLoader) Clear(id string) {
+func (r *LessonEnrollLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *StudyEnrollLoader) ClearAll() {
+func (r *LessonEnrollLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *StudyEnrollLoader) Get(enrollableId, userId string) (*data.StudyEnroll, error) {
+func (r *LessonEnrollLoader) Get(enrollableId, userId string) (*data.LessonEnroll, error) {
 	ctx := context.Background()
 	compositeKey := newCompositeKey(enrollableId, userId)
-	studyEnrollData, err := r.batchGet.Load(ctx, compositeKey)()
+	lessonEnrollData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
-	studyEnroll, ok := studyEnrollData.(*data.StudyEnroll)
+	lessonEnroll, ok := lessonEnrollData.(*data.LessonEnroll)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return studyEnroll, nil
+	return lessonEnroll, nil
 }
 
-func newBatchGetStudyEnrollBy2Fn(
-	getter func(string, string) (*data.StudyEnroll, error),
+func newBatchGetLessonEnrollBy2Fn(
+	getter func(string, string) (*data.LessonEnroll, error),
 ) dataloader.BatchFunc {
 	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 		var (
@@ -62,8 +62,8 @@ func newBatchGetStudyEnrollBy2Fn(
 			go func(i int, key dataloader.Key) {
 				defer wg.Done()
 				ks := splitCompositeKey(key)
-				studyEnroll, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: studyEnroll, Error: err}
+				lessonEnroll, err := getter(ks[0], ks[1])
+				results[i] = &dataloader.Result{Data: lessonEnroll, Error: err}
 			}(i, key)
 		}
 

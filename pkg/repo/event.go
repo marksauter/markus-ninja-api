@@ -30,6 +30,13 @@ func (r *EventPermit) Get() *data.Event {
 	return event
 }
 
+func (r *EventPermit) Action() (string, error) {
+	if ok := r.checkFieldPermission("action"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.event.Action.String, nil
+}
+
 func (r *EventPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -103,18 +110,28 @@ func (r *EventRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *EventRepo) CountByTarget(targetId string) (int32, error) {
-	return r.svc.CountByTarget(targetId)
+func (r *EventRepo) CountBySource(
+	sourceId string,
+	opts ...data.EventFilterOption,
+) (int32, error) {
+	return r.svc.CountBySource(sourceId, opts...)
 }
 
-func (r *EventRepo) Create(event *data.Event, evtType data.EventType) (*EventPermit, error) {
+func (r *EventRepo) CountByTarget(
+	targetId string,
+	opts ...data.EventFilterOption,
+) (int32, error) {
+	return r.svc.CountByTarget(targetId, opts...)
+}
+
+func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	if _, err := r.perms.Check(perm.Create, event); err != nil {
 		return nil, err
 	}
-	event, err := r.svc.Create(event, evtType)
+	event, err := r.svc.Create(event)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +144,6 @@ func (r *EventRepo) Create(event *data.Event, evtType data.EventType) (*EventPer
 
 func (r *EventRepo) BatchCreate(
 	event *data.Event,
-	evtType data.EventType,
 	targetIds []*mytype.OID,
 ) error {
 	if err := r.CheckConnection(); err != nil {
@@ -136,7 +152,7 @@ func (r *EventRepo) BatchCreate(
 	if _, err := r.perms.Check(perm.Create, event); err != nil {
 		return err
 	}
-	return r.svc.BatchCreate(event, evtType, targetIds)
+	return r.svc.BatchCreate(event, targetIds)
 }
 
 func (r *EventRepo) Get(id string) (*EventPermit, error) {
@@ -154,11 +170,40 @@ func (r *EventRepo) Get(id string) (*EventPermit, error) {
 	return &EventPermit{fieldPermFn, event}, nil
 }
 
-func (r *EventRepo) GetByTarget(targetId string, po *data.PageOptions) ([]*EventPermit, error) {
+func (r *EventRepo) GetBySource(
+	sourceId string,
+	po *data.PageOptions,
+	opts ...data.EventFilterOption,
+) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	events, err := r.svc.GetByTarget(targetId, po)
+	events, err := r.svc.GetBySource(sourceId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	eventPermits := make([]*EventPermit, len(events))
+	if len(events) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, events[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range events {
+			eventPermits[i] = &EventPermit{fieldPermFn, l}
+		}
+	}
+	return eventPermits, nil
+}
+
+func (r *EventRepo) GetByTarget(
+	targetId string,
+	po *data.PageOptions,
+	opts ...data.EventFilterOption,
+) ([]*EventPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	events, err := r.svc.GetByTarget(targetId, po, opts...)
 	if err != nil {
 		return nil, err
 	}

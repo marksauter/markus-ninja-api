@@ -90,7 +90,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	err = h.Svcs.Role.GrantUser(evt.UserId.String, mytype.UserRole)
+	err = h.Svcs.Role.GrantUser(evt.UserId.String, data.UserRole)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

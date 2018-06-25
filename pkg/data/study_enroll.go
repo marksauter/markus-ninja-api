@@ -11,9 +11,10 @@ import (
 )
 
 type StudyEnroll struct {
-	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	StudyId   mytype.OID         `db:"study_id" permit:"read"`
-	UserId    mytype.OID         `db:"user_id" permit:"read"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
+	Manual       pgtype.Bool        `db:"manual" permit:"read"`
+	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewStudyEnrollService(db Queryer) *StudyEnrollService {
@@ -27,17 +28,17 @@ type StudyEnrollService struct {
 const countStudyEnrollByStudySQL = `
 	SELECT COUNT(*)
 	FROM study_enroll
-	WHERE study_id = $1
+	WHERE enrollable_id = $1
 `
 
-func (s *StudyEnrollService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("StudyEnroll.CountByStudy(study_id)")
+func (s *StudyEnrollService) CountByStudy(enrollableId string) (int32, error) {
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("StudyEnroll.CountByStudy(enrollable_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
 		"countStudyEnrollByStudy",
 		countStudyEnrollByStudySQL,
-		studyId,
+		enrollableId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -53,7 +54,7 @@ func (s *StudyEnrollService) get(
 	var row StudyEnroll
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.StudyId,
+		&row.EnrollableId,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -82,7 +83,7 @@ func (s *StudyEnrollService) getMany(
 		var row StudyEnroll
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.StudyId,
+			&row.EnrollableId,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -101,37 +102,37 @@ func (s *StudyEnrollService) getMany(
 const getStudyEnrollSQL = `
 	SELECT
 		created_at,
-		study_id,
+		enrollable_id,
 		user_id
 	FROM study_enroll
-	WHERE study_id = $1 AND user_id = $2
+	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *StudyEnrollService) Get(studyId, userId string) (*StudyEnroll, error) {
+func (s *StudyEnrollService) Get(enrollableId, userId string) (*StudyEnroll, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
-		"user_id":  userId,
+		"enrollable_id": enrollableId,
+		"user_id":       userId,
 	}).Info("StudyEnroll.Get()")
-	return s.get("getStudyEnroll", getStudyEnrollSQL, studyId, userId)
+	return s.get("getStudyEnroll", getStudyEnrollSQL, enrollableId, userId)
 }
 
 func (s *StudyEnrollService) GetByStudy(
-	studyId string,
+	enrollableId string,
 	po *PageOptions,
 ) ([]*StudyEnroll, error) {
-	mylog.Log.WithField("study_id", studyId).Info("StudyEnroll.GetByStudy(study_id)")
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("StudyEnroll.GetByStudy(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_enroll.study_id = ` + args.Append(studyId)
+	whereSQL := `study_enroll.enrollable_id = ` + args.Append(enrollableId)
 
 	selects := []string{
 		"created_at",
-		"study_id",
+		"enrollable_id",
 		"user_id",
 	}
 	from := "study_enroll"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getStudyEnrollsByStudyId", sql)
+	psName := preparedName("getStudyEnrollsByEnrollableId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
@@ -142,9 +143,13 @@ func (s *StudyEnrollService) Create(row *StudyEnroll) (*StudyEnroll, error) {
 
 	var columns, values []string
 
-	if row.StudyId.Status != pgtype.Undefined {
-		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+	if row.EnrollableId.Status != pgtype.Undefined {
+		columns = append(columns, "enrollable_id")
+		values = append(values, args.Append(&row.EnrollableId))
+	}
+	if row.Manual.Status != pgtype.Undefined {
+		columns = append(columns, "manual")
+		values = append(values, args.Append(&row.Manual))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -184,7 +189,7 @@ func (s *StudyEnrollService) Create(row *StudyEnroll) (*StudyEnroll, error) {
 	}
 
 	studyEnrollSvc := NewStudyEnrollService(tx)
-	studyEnroll, err := studyEnrollSvc.Get(row.StudyId.String, row.UserId.String)
+	studyEnroll, err := studyEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -202,19 +207,19 @@ func (s *StudyEnrollService) Create(row *StudyEnroll) (*StudyEnroll, error) {
 
 const deleteStudyEnrollSQL = `
 	DELETE FROM study_enroll
-	WHERE study_id = $1 AND user_id = $2
+	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *StudyEnrollService) Delete(studyId, userId string) error {
+func (s *StudyEnrollService) Delete(enrollableId, userId string) error {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
-		"user_id":  userId,
-	}).Info("StudyEnroll.Delete(study_id, user_id)")
+		"enrollable_id": enrollableId,
+		"user_id":       userId,
+	}).Info("StudyEnroll.Delete(enrollable_id, user_id)")
 	commandTag, err := prepareExec(
 		s.db,
 		"deleteStudyEnroll",
 		deleteStudyEnrollSQL,
-		studyId,
+		enrollableId,
 		userId,
 	)
 	if err != nil {
@@ -225,4 +230,66 @@ func (s *StudyEnrollService) Delete(studyId, userId string) error {
 	}
 
 	return nil
+}
+
+func (s *StudyEnrollService) Update(row *StudyEnroll) (*StudyEnroll, error) {
+	mylog.Log.Info("StudyEnroll.Update()")
+	sets := make([]string, 0, 1)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+
+	if row.Manual.Status != pgtype.Undefined {
+		sets = append(sets, `manual`+"="+args.Append(&row.Manual))
+	}
+
+	tx, err, newTx := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
+
+	sql := `
+		UPDATE study_enroll
+		SET ` + strings.Join(sets, ",") + `
+		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
+		AND user_id = ` + args.Append(row.UserId.String)
+
+	psName := preparedName("updateStudyEnroll", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to update study_enroll")
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return nil, err
+			}
+		}
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
+
+	studyEnrollSvc := NewStudyEnrollService(tx)
+	studyEnroll, err := studyEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
+	if err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
+	}
+
+	return studyEnroll, nil
 }

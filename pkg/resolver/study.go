@@ -418,14 +418,14 @@ func (r *studyResolver) Students(
 	if err != nil {
 		return nil, err
 	}
-	users, err := r.Repos.User().GetByEnrolled(
+	users, err := r.Repos.User().GetStudents(
 		studyId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrolled(studyId.String)
+	count, err := r.Repos.User().CountByEnrollable(studyId.String)
 	if err != nil {
 		return nil, err
 	}

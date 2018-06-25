@@ -1,5 +1,5 @@
 # Represents a user.
-type User implements Node, UniformResourceLocatable {
+type User implements Enrollable, Node, UniformResourceLocatable {
   # A list of studies the user has appled.
   appled(
     # Returns the elements in the list that come after the specified global ID.
@@ -181,6 +181,9 @@ type User implements Node, UniformResourceLocatable {
 
   # The HTTP URL for this user.
   url: URI!
+
+  # Has the viewer enrolled in this enrollable.
+  viewerHasEnrolled: Boolean!
 }
 
 # An edge type for User.
