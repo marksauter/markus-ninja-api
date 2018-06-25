@@ -10,7 +10,16 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
+const (
+	CreateEvent  = "created"
+	DeleteEvent  = "deleted"
+	DismissEvent = "dismissed"
+	EnrollEvent  = "enrolled"
+	MentionEvent = "mentioned"
+)
+
 type Event struct {
+	Action    pgtype.Text        `db:"action" permit:"read"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id        mytype.OID         `db:"id" permit:"read"`
 	SourceId  mytype.OID         `db:"source_id" permit:"read"`
@@ -26,6 +35,76 @@ type EventService struct {
 	db Queryer
 }
 
+type EventFilterOption int
+
+const (
+	FilterCreateEvents EventFilterOption = iota
+	FilterDeleteEvents
+	FilterDismissEvents
+	FilterEnrollEvents
+	FilterMentionEvents
+	OnlyCreateEvents
+	OnlyDeleteEvents
+	OnlyDismissEvents
+	OnlyEnrollEvents
+	OnlyMentionEvents
+)
+
+func (src EventFilterOption) String() string {
+	switch src {
+	case FilterCreateEvents:
+		return `action != '` + CreateEvent + `'`
+	case FilterDeleteEvents:
+		return `action != '` + DeleteEvent + `'`
+	case FilterDismissEvents:
+		return `action != '` + DismissEvent + `'`
+	case FilterEnrollEvents:
+		return `action != '` + EnrollEvent + `'`
+	case FilterMentionEvents:
+		return `action != '` + MentionEvent + `'`
+	case OnlyCreateEvents:
+		return `action = '` + CreateEvent + `'`
+	case OnlyDeleteEvents:
+		return `action = '` + DeleteEvent + `'`
+	case OnlyDismissEvents:
+		return `action = '` + DismissEvent + `'`
+	case OnlyEnrollEvents:
+		return `action = '` + EnrollEvent + `'`
+	case OnlyMentionEvents:
+		return `action = '` + MentionEvent + `'`
+	default:
+		return ""
+	}
+}
+
+const countEventBySourceSQL = `
+	SELECT COUNT(*)
+	FROM event.event
+	WHERE source_id = $1
+`
+
+func (s *EventService) CountBySource(
+	sourceId string,
+	opts ...EventFilterOption,
+) (n int32, err error) {
+	mylog.Log.WithField("source_id", sourceId).Info("Event.CountBySource()")
+
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	sqlParts := append([]string{countEventBySourceSQL}, ands...)
+	sql := strings.Join(sqlParts, " AND event.event.")
+
+	psName := preparedName("countEventBySource", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, sourceId).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
+}
+
 const countEventByTargetSQL = `
 	SELECT COUNT(*)
 	FROM event.event
@@ -34,19 +113,24 @@ const countEventByTargetSQL = `
 
 func (s *EventService) CountByTarget(
 	targetId string,
-) (int32, error) {
+	opts ...EventFilterOption,
+) (n int32, err error) {
 	mylog.Log.WithField("target_id", targetId).Info("Event.CountByTarget()")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countEventByTarget",
-		countEventByTargetSQL,
-		targetId,
-	).Scan(&n)
+
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	sqlParts := append([]string{countEventByTargetSQL}, ands...)
+	sql := strings.Join(sqlParts, " AND event.event.")
+
+	psName := preparedName("countEventByTarget", sql)
+
+	err = prepareQueryRow(s.db, psName, sql, targetId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
-	return n, err
+	return
 }
 
 func (s *EventService) get(
@@ -56,6 +140,7 @@ func (s *EventService) get(
 ) (*Event, error) {
 	var row Event
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+		&row.Action,
 		&row.CreatedAt,
 		&row.Id,
 		&row.SourceId,
@@ -87,6 +172,7 @@ func (s *EventService) getMany(
 	for dbRows.Next() {
 		var row Event
 		dbRows.Scan(
+			&row.Action,
 			&row.CreatedAt,
 			&row.Id,
 			&row.SourceId,
@@ -108,6 +194,7 @@ func (s *EventService) getMany(
 
 const getEventSQL = `
 	SELECT
+		action,
 		created_at,
 		id,
 		source_id,
@@ -125,12 +212,22 @@ func (s *EventService) Get(id string) (*Event, error) {
 func (s *EventService) GetBySource(
 	sourceId string,
 	po *PageOptions,
+	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("source_id", sourceId).Info("Event.GetBySource(source_id)")
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `event.event.source_id = ` + args.Append(sourceId)
+	where := append(
+		[]string{`event.event.source_id = ` + args.Append(sourceId)},
+		ands...,
+	)
+	whereSQL := strings.Join(where, " AND event.event.")
 
 	selects := []string{
+		"action",
 		"created_at",
 		"id",
 		"source_id",
@@ -148,12 +245,22 @@ func (s *EventService) GetBySource(
 func (s *EventService) GetByTarget(
 	targetId string,
 	po *PageOptions,
+	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("target_id", targetId).Info("Event.GetByTarget(target_id)")
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `event.event.target_id = ` + args.Append(targetId)
+	where := append(
+		[]string{`event.event.target_id = ` + args.Append(targetId)},
+		ands...,
+	)
+	whereSQL := strings.Join(where, " AND event.event.")
 
 	selects := []string{
+		"action",
 		"created_at",
 		"id",
 		"source_id",
@@ -168,7 +275,7 @@ func (s *EventService) GetByTarget(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
+func (s *EventService) Create(row *Event) (*Event, error) {
 	mylog.Log.Info("Event.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -227,7 +334,7 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 	}
 
 	table := strings.Join(
-		[]string{source, evtType.String(), target},
+		[]string{source, row.Action.String, target},
 		"_",
 	)
 	sql := `
@@ -272,7 +379,6 @@ func (s *EventService) Create(row *Event, evtType EventType) (*Event, error) {
 
 func (s *EventService) BatchCreate(
 	src *Event,
-	evtType EventType,
 	targetIds []*mytype.OID,
 ) error {
 	mylog.Log.Info("Event.BatchCreate()")
@@ -328,7 +434,7 @@ func (s *EventService) BatchCreate(
 	var lessonEventCopyCount, studyEventCopyCount, userEventCopyCount int
 	if len(lessonEvents) > 0 {
 		lessonTable := strings.Join(
-			[]string{source, evtType.String(), "lesson"},
+			[]string{source, src.Action.String, "lesson"},
 			"_",
 		)
 		lessonEventCopyCount, err = tx.CopyFrom(
@@ -352,7 +458,7 @@ func (s *EventService) BatchCreate(
 
 	if len(studyEvents) > 0 {
 		studyTable := strings.Join(
-			[]string{source, evtType.String(), "study"},
+			[]string{source, src.Action.String, "study"},
 			"_",
 		)
 		studyEventCopyCount, err = tx.CopyFrom(
@@ -375,7 +481,7 @@ func (s *EventService) BatchCreate(
 	}
 	if len(userEvents) > 0 {
 		userTable := strings.Join(
-			[]string{source, evtType.String(), "user"},
+			[]string{source, src.Action.String, "user"},
 			"_",
 		)
 		userEventCopyCount, err = tx.CopyFrom(
@@ -492,9 +598,10 @@ func (s *EventService) ParseBodyForEvents(
 	}
 
 	event := &Event{}
+	event.Action.Set(MentionEvent)
 	event.SourceId.Set(sourceId)
 	event.UserId.Set(userId)
-	err = eventSvc.BatchCreate(event, MentionEvent, targetIds)
+	err = eventSvc.BatchCreate(event, targetIds)
 	if err != nil {
 		return err
 	}
@@ -555,10 +662,11 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 			newEvents[l.Id.String] = struct{}{}
 			if _, prs := oldEvents[l.Id.String]; !prs {
 				event := &Event{}
+				event.Action.Set(MentionEvent)
 				event.TargetId.Set(l.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event, MentionEvent)
+				_, err = eventSvc.Create(event)
 				if err != nil {
 					return err
 				}
@@ -583,10 +691,11 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 			newEvents[u.Id.String] = struct{}{}
 			if _, prs := oldEvents[u.Id.String]; !prs {
 				event := &Event{}
+				event.Action.Set(MentionEvent)
 				event.TargetId.Set(u.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event, MentionEvent)
+				_, err = eventSvc.Create(event)
 				if err != nil {
 					return err
 				}

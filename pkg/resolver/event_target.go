@@ -12,6 +12,11 @@ func (r *eventTargetResolver) ToLesson() (*lessonResolver, bool) {
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, ok
 }
 
+func (r *eventTargetResolver) ToStudy() (*studyResolver, bool) {
+	study, ok := r.Subject.(*repo.StudyPermit)
+	return &studyResolver{Study: study, Repos: r.Repos}, ok
+}
+
 func (r *eventTargetResolver) ToUser() (*userResolver, bool) {
 	user, ok := r.Subject.(*repo.UserPermit)
 	return &userResolver{User: user, Repos: r.Repos}, ok

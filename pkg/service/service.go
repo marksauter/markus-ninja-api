@@ -13,7 +13,9 @@ type Services struct {
 	EVT           *data.EVTService
 	Lesson        *data.LessonService
 	LessonComment *data.LessonCommentService
+	LessonEnroll  *data.LessonEnrollService
 	Mail          *MailService
+	Notification  *data.NotificationService
 	Perm          *data.PermService
 	PRT           *data.PRTService
 	Role          *data.RoleService
@@ -24,7 +26,7 @@ type Services struct {
 	Topic         *data.TopicService
 	User          *data.UserService
 	UserAsset     *data.UserAssetService
-	UserEnroll     *data.UserEnrollService
+	UserEnroll    *data.UserEnrollService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
@@ -47,7 +49,9 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		EVT:           data.NewEVTService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
+		LessonEnroll:  data.NewLessonEnrollService(db),
 		Mail:          NewMailService(myaws.NewSES(), mailConfig),
+		Notification:  data.NewNotificationService(db),
 		Perm:          data.NewPermService(db),
 		PRT:           data.NewPRTService(db),
 		Role:          data.NewRoleService(db),
@@ -58,6 +62,6 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Topic:         data.NewTopicService(db),
 		User:          data.NewUserService(db),
 		UserAsset:     data.NewUserAssetService(db),
-		UserEnroll:     data.NewUserEnrollService(db),
+		UserEnroll:    data.NewUserEnrollService(db),
 	}, nil
 }

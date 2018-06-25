@@ -227,12 +227,12 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 	markusIsAdmin := false
 	for _, r := range markus.Roles.Elements {
-		if r.Name == mytype.AdminRole {
+		if r.String == data.AdminRole {
 			markusIsAdmin = true
 		}
 	}
 	if !markusIsAdmin {
-		if err := svcs.Role.GrantUser(markus.Id.String, mytype.AdminRole); err != nil {
+		if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
@@ -270,12 +270,12 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 	testUserIsUser := false
 	for _, r := range testUser.Roles.Elements {
-		if r.Name == mytype.AdminRole {
+		if r.String == data.AdminRole {
 			testUserIsUser = true
 		}
 	}
 	if !testUserIsUser {
-		if err := svcs.Role.GrantUser(testUser.Id.String, mytype.AdminRole); err != nil {
+		if err := svcs.Role.GrantUser(testUser.Id.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")

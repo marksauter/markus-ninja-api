@@ -253,7 +253,10 @@ func (r *RootResolver) DeleteEmail(
 
 	email := emailPermit.Get()
 
-	n, err := r.Repos.Email().CountVerifiedByUser(&email.UserId)
+	n, err := r.Repos.Email().CountByUser(
+		email.UserId.String,
+		data.EmailIsVerified,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +426,7 @@ func (r *RootResolver) Dismiss(
 	switch id.Type {
 	case "Study":
 		studyEnroll := &data.StudyEnroll{}
-		studyEnroll.StudyId.Set(id)
+		studyEnroll.EnrollableId.Set(id)
 		studyEnroll.UserId.Set(viewer.Id)
 		err := r.Repos.StudyEnroll().Delete(studyEnroll)
 		if err != nil {
@@ -436,8 +439,8 @@ func (r *RootResolver) Dismiss(
 		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
 		userEnroll := &data.UserEnroll{}
-		userEnroll.PupilId.Set(viewer.Id)
-		userEnroll.TutorId.Set(id)
+		userEnroll.UserId.Set(viewer.Id)
+		userEnroll.EnrollableId.Set(id)
 		err := r.Repos.UserEnroll().Delete(userEnroll)
 		if err != nil {
 			return nil, err
@@ -472,7 +475,7 @@ func (r *RootResolver) Enroll(
 	switch id.Type {
 	case "Study":
 		studyEnroll := &data.StudyEnroll{}
-		studyEnroll.StudyId.Set(id)
+		studyEnroll.EnrollableId.Set(id)
 		studyEnroll.UserId.Set(viewer.Id)
 		_, err := r.Repos.StudyEnroll().Create(studyEnroll)
 		if err != nil {
@@ -485,8 +488,8 @@ func (r *RootResolver) Enroll(
 		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
 		userEnroll := &data.UserEnroll{}
-		userEnroll.PupilId.Set(viewer.Id)
-		userEnroll.TutorId.Set(id)
+		userEnroll.EnrollableId.Set(id)
+		userEnroll.UserId.Set(viewer.Id)
 		_, err := r.Repos.UserEnroll().Create(userEnroll)
 		if err != nil {
 			return nil, err

@@ -10,55 +10,34 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type UserEnroll struct {
+type LessonEnroll struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
 	Manual       pgtype.Bool        `db:"manual" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
-func NewUserEnrollService(db Queryer) *UserEnrollService {
-	return &UserEnrollService{db}
+func NewLessonEnrollService(db Queryer) *LessonEnrollService {
+	return &LessonEnrollService{db}
 }
 
-type UserEnrollService struct {
+type LessonEnrollService struct {
 	db Queryer
 }
 
-const countUserEnrollByPupilSQL = `
+const countLessonEnrollByLessonSQL = `
 	SELECT COUNT(*)
-	FROM user_enroll
-	WHERE user_id = $1
-`
-
-func (s *UserEnrollService) CountByEnrolledInUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("UserEnroll.CountByEnrolledInUser(user_id)")
-	var n int32
-	err := prepareQueryRow(
-		s.db,
-		"countUserEnrollByPupil",
-		countUserEnrollByPupilSQL,
-		userId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
-const countUserEnrollByTutorSQL = `
-	SELECT COUNT(*)
-	FROM user_enroll
+	FROM lesson_enroll
 	WHERE enrollable_id = $1
 `
 
-func (s *UserEnrollService) CountByTutor(enrollableId string) (int32, error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("UserEnroll.CountByTutor(enrollable_id)")
+func (s *LessonEnrollService) CountByLesson(enrollableId string) (int32, error) {
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("LessonEnroll.CountByLesson(enrollable_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserEnrollByTutor",
-		countUserEnrollByTutorSQL,
+		"countLessonEnrollByLesson",
+		countLessonEnrollByLessonSQL,
 		enrollableId,
 	).Scan(&n)
 
@@ -67,12 +46,12 @@ func (s *UserEnrollService) CountByTutor(enrollableId string) (int32, error) {
 	return n, err
 }
 
-func (s *UserEnrollService) get(
+func (s *LessonEnrollService) get(
 	name string,
 	sql string,
 	args ...interface{},
-) (*UserEnroll, error) {
-	var row UserEnroll
+) (*LessonEnroll, error) {
+	var row LessonEnroll
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.EnrollableId,
@@ -81,19 +60,19 @@ func (s *UserEnrollService) get(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_enroll")
+		mylog.Log.WithError(err).Error("failed to get lesson_enroll")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func (s *UserEnrollService) getMany(
+func (s *LessonEnrollService) getMany(
 	name string,
 	sql string,
 	args ...interface{},
-) ([]*UserEnroll, error) {
-	var rows []*UserEnroll
+) ([]*LessonEnroll, error) {
+	var rows []*LessonEnroll
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
@@ -101,7 +80,7 @@ func (s *UserEnrollService) getMany(
 	}
 
 	for dbRows.Next() {
-		var row UserEnroll
+		var row LessonEnroll
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.EnrollableId,
@@ -120,67 +99,46 @@ func (s *UserEnrollService) getMany(
 	return rows, nil
 }
 
-const getUserEnrollSQL = `
+const getLessonEnrollSQL = `
 	SELECT
 		created_at,
-		enrollable_id
-		user_id,
-	FROM user_enroll
+		enrollable_id,
+		user_id
+	FROM lesson_enroll
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *UserEnrollService) Get(enrollableId, userId string) (*UserEnroll, error) {
+func (s *LessonEnrollService) Get(enrollableId, userId string) (*LessonEnroll, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"enrollable_id": enrollableId,
 		"user_id":       userId,
-	}).Info("UserEnroll.Get()")
-	return s.get("getUserEnroll", getUserEnrollSQL, enrollableId, userId)
+	}).Info("LessonEnroll.Get()")
+	return s.get("getLessonEnroll", getLessonEnrollSQL, enrollableId, userId)
 }
 
-func (s *UserEnrollService) GetByPupil(
-	userId string,
-	po *PageOptions,
-) ([]*UserEnroll, error) {
-	mylog.Log.WithField("user_id", userId).Info("UserEnroll.GetByPupil(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_enroll.user_id = ` + args.Append(userId)
-
-	selects := []string{
-		"created_at",
-		"enrollable_id",
-		"user_id",
-	}
-	from := "user_enroll"
-	sql := SQL(selects, from, whereSQL, &args, po)
-
-	psName := preparedName("getUserEnrollsByUserId", sql)
-
-	return s.getMany(psName, sql, args...)
-}
-
-func (s *UserEnrollService) GetByTutor(
+func (s *LessonEnrollService) GetByLesson(
 	enrollableId string,
 	po *PageOptions,
-) ([]*UserEnroll, error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("UserEnroll.GetByTutor(enrollable_id)")
+) ([]*LessonEnroll, error) {
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("LessonEnroll.GetByLesson(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_enroll.enrollable_id = ` + args.Append(enrollableId)
+	whereSQL := `lesson_enroll.enrollable_id = ` + args.Append(enrollableId)
 
 	selects := []string{
 		"created_at",
 		"enrollable_id",
 		"user_id",
 	}
-	from := "user_enroll"
+	from := "lesson_enroll"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
-	psName := preparedName("getUserEnrollsByEnrollableId", sql)
+	psName := preparedName("getLessonEnrollsByEnrollableId", sql)
 
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
-	mylog.Log.Info("UserEnroll.Create()")
+func (s *LessonEnrollService) Create(row *LessonEnroll) (*LessonEnroll, error) {
+	mylog.Log.Info("LessonEnroll.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -208,15 +166,15 @@ func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
 	}
 
 	sql := `
-		INSERT INTO user_enroll(` + strings.Join(columns, ",") + `)
+		INSERT INTO lesson_enroll(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createUserEnroll", sql)
+	psName := preparedName("createLessonEnroll", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user_enroll")
+		mylog.Log.WithError(err).Error("failed to create lesson_enroll")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -230,8 +188,8 @@ func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
 		return nil, err
 	}
 
-	userEnrollSvc := NewUserEnrollService(tx)
-	userEnroll, err := userEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
+	lessonEnrollSvc := NewLessonEnrollService(tx)
+	lessonEnroll, err := lessonEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -244,23 +202,23 @@ func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
 		}
 	}
 
-	return userEnroll, nil
+	return lessonEnroll, nil
 }
 
-const deleteUserEnrollSQL = `
-	DELETE FROM user_enroll
+const deleteLessonEnrollSQL = `
+	DELETE FROM lesson_enroll
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *UserEnrollService) Delete(enrollableId, userId string) error {
+func (s *LessonEnrollService) Delete(enrollableId, userId string) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"enrollable_id": enrollableId,
 		"user_id":       userId,
-	}).Info("UserEnroll.Delete(enrollable_id, user_id)")
+	}).Info("LessonEnroll.Delete(enrollable_id, user_id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteUserEnroll",
-		deleteUserEnrollSQL,
+		"deleteLessonEnroll",
+		deleteLessonEnrollSQL,
 		enrollableId,
 		userId,
 	)
@@ -274,8 +232,8 @@ func (s *UserEnrollService) Delete(enrollableId, userId string) error {
 	return nil
 }
 
-func (s *UserEnrollService) Update(row *UserEnroll) (*UserEnroll, error) {
-	mylog.Log.Info("UserEnroll.Update()")
+func (s *LessonEnrollService) Update(row *LessonEnroll) (*LessonEnroll, error) {
+	mylog.Log.Info("LessonEnroll.Update()")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -293,16 +251,16 @@ func (s *UserEnrollService) Update(row *UserEnroll) (*UserEnroll, error) {
 	}
 
 	sql := `
-		UPDATE user_enroll
+		UPDATE lesson_enroll
 		SET ` + strings.Join(sets, ",") + `
 		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
 		AND user_id = ` + args.Append(row.UserId.String)
 
-	psName := preparedName("updateUserEnroll", sql)
+	psName := preparedName("updateLessonEnroll", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update user_enroll")
+		mylog.Log.WithError(err).Error("failed to update lesson_enroll")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -319,8 +277,8 @@ func (s *UserEnrollService) Update(row *UserEnroll) (*UserEnroll, error) {
 		return nil, ErrNotFound
 	}
 
-	userEnrollSvc := NewUserEnrollService(tx)
-	userEnroll, err := userEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
+	lessonEnrollSvc := NewLessonEnrollService(tx)
+	lessonEnroll, err := lessonEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -333,5 +291,5 @@ func (s *UserEnrollService) Update(row *UserEnroll) (*UserEnroll, error) {
 		}
 	}
 
-	return userEnroll, nil
+	return lessonEnroll, nil
 }

@@ -87,8 +87,12 @@ func (r *UserPermit) PublicEmail() (string, error) {
 	return r.user.PublicEmail.String, nil
 }
 
-func (r *UserPermit) Roles() []mytype.RoleName {
-	return r.user.Roles.Elements
+func (r *UserPermit) Roles() []string {
+	roles := make([]string, len(r.user.Roles.Elements))
+	for i, role := range r.user.Roles.Elements {
+		roles[i] = role.String
+	}
+	return roles
 }
 
 func (r *UserPermit) UpdatedAt() (time.Time, error) {
@@ -140,16 +144,12 @@ func (r *UserRepo) CountByApple(studyId string) (int32, error) {
 	return r.svc.CountByApple(studyId)
 }
 
-func (r *UserRepo) CountByEnrolled(studyId string) (int32, error) {
-	return r.svc.CountbyStudy(studyId)
+func (r *UserRepo) CountByEnrollable(enrollableId string) (int32, error) {
+	return r.svc.CountByEnrollable(enrollableId)
 }
 
-func (r *UserRepo) CountByPupil(pupilId string) (int32, error) {
-	return r.svc.CountByPupil(pupilId)
-}
-
-func (r *UserRepo) CountByTutor(tutorId string) (int32, error) {
-	return r.svc.CountByTutor(tutorId)
+func (r *UserRepo) CountByEnrolled(userId string) (int32, error) {
+	return r.svc.CountByEnrolled(userId)
 }
 
 func (r *UserRepo) CountBySearch(query string) (int32, error) {
@@ -211,11 +211,11 @@ func (r *UserRepo) GetByApple(studyId string, po *data.PageOptions) ([]*UserPerm
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetByEnrolled(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetPupils(tutorId string, po *data.PageOptions) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByStudy(studyId, po)
+	users, err := r.svc.GetPupils(tutorId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -232,11 +232,11 @@ func (r *UserRepo) GetByEnrolled(studyId string, po *data.PageOptions) ([]*UserP
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetByPupil(pupilId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetStudents(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByPupil(pupilId, po)
+	users, err := r.svc.GetStudents(studyId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -253,11 +253,11 @@ func (r *UserRepo) GetByPupil(pupilId string, po *data.PageOptions) ([]*UserPerm
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetByTutor(tutorId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetTutors(pupilId string, po *data.PageOptions) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByTutor(tutorId, po)
+	users, err := r.svc.GetTutors(pupilId, po)
 	if err != nil {
 		return nil, err
 	}

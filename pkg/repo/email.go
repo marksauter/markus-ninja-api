@@ -145,12 +145,11 @@ func (r *EmailRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *EmailRepo) CountByUser(userId string) (int32, error) {
+func (r *EmailRepo) CountByUser(
+	userId string,
+	opts ...data.EmailFilterOption,
+) (int32, error) {
 	return r.svc.CountByUser(userId)
-}
-
-func (r *EmailRepo) CountVerifiedByUser(userId *mytype.OID) (int32, error) {
-	return r.svc.CountVerifiedByUser(userId)
 }
 
 func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {

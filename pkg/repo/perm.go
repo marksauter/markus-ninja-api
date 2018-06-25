@@ -11,7 +11,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
@@ -68,10 +67,10 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 	}
 	o := perm.Operation{a, nt}
 
-	additionalRoles := []mytype.RoleNameValue{}
+	additionalRoles := []string{}
 	if a != perm.Create {
 		if ok := r.viewerCanAdmin(node); ok {
-			additionalRoles = append(additionalRoles, mytype.OwnerRole)
+			additionalRoles = append(additionalRoles, data.OwnerRole)
 		}
 	}
 	queryPerm, err := r.load.Get(o, additionalRoles)

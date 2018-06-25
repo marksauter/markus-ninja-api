@@ -9,12 +9,20 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
+const (
+	AuthorReason   = "author"
+	CommentReason  = "comment"
+	EnrolledReason = "enrolled"
+	MentionReason  = "mention"
+)
+
 type Notification struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EventId    mytype.OID         `db:"event_id" permit:"read"`
 	Id         mytype.OID         `db:"id" permit:"read"`
 	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read"`
-	Reason     mytype.ReasonName  `db:"reason" permit:"read"`
+	ReasonName pgtype.Varchar     `db:"reason" permit:"read"`
+	Reason     pgtype.Text        `db:"reason" permit:"read"`
 	StudyId    mytype.OID         `db:"study_id" permit:"read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId     mytype.OID         `db:"user_id" permit:"read"`
@@ -30,7 +38,7 @@ type NotificationService struct {
 
 const countNotificationByStudySQL = `
 	SELECT COUNT(*)
-	FROM event.notification
+	FROM notification
 	WHERE user_id = $1 AND study_id = $2
 `
 
@@ -54,7 +62,7 @@ func (s *NotificationService) CountByStudy(userId, studyId string) (int32, error
 
 const countNotificationByUserSQL = `
 	SELECT COUNT(*)
-	FROM event.notification
+	FROM notification
 	WHERE user_id = $1
 `
 
@@ -138,7 +146,7 @@ const getNotificationByIdSQL = `
 		study_id,
 		updated_at,
 		user_id
-	FROM event.notification
+	FROM notification_master
 	WHERE id = $1
 `
 
@@ -147,37 +155,18 @@ func (s *NotificationService) Get(id string) (*Notification, error) {
 	return s.get("getNotificationById", getNotificationByIdSQL, id)
 }
 
-func (s *NotificationService) GetByUser(userId string, po *PageOptions) ([]*Notification, error) {
-	mylog.Log.WithField("user_id", userId).Info("Notification.GetByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `event.notification.user_id = ` + args.Append(userId)
-
-	selects := []string{
-		"created_at",
-		"event_id",
-		"id",
-		"last_read_at",
-		"reason",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "event.notification"
-	sql := SQL(selects, from, whereSQL, &args, po)
-
-	psName := preparedName("getNotificationsByUser", sql)
-
-	return s.getMany(psName, sql, args...)
-}
-
-func (s *NotificationService) GetByStudy(userId, studyId string, po *PageOptions) ([]*Notification, error) {
+func (s *NotificationService) GetByStudy(
+	userId,
+	studyId string,
+	po *PageOptions,
+) ([]*Notification, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("Notification.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	whereSQL := `
-		event.notification.user_id = ` + args.Append(userId) + ` AND
-		event.notification.study_id = ` + args.Append(studyId)
+		notification_master.user_id = ` + args.Append(userId) + ` AND
+		notification_master.study_id = ` + args.Append(studyId)
 
 	selects := []string{
 		"created_at",
@@ -189,10 +178,36 @@ func (s *NotificationService) GetByStudy(userId, studyId string, po *PageOptions
 		"updated_at",
 		"user_id",
 	}
-	from := "event.notification"
+	from := "notification_master"
 	sql := SQL(selects, from, whereSQL, &args, po)
 
 	psName := preparedName("getNotificationsByStudy", sql)
+
+	return s.getMany(psName, sql, args...)
+}
+
+func (s *NotificationService) GetByUser(
+	userId string,
+	po *PageOptions,
+) ([]*Notification, error) {
+	mylog.Log.WithField("user_id", userId).Info("Notification.GetByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	whereSQL := `notification_master.user_id = ` + args.Append(userId)
+
+	selects := []string{
+		"created_at",
+		"event_id",
+		"id",
+		"last_read_at",
+		"reason",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "notification_master"
+	sql := SQL(selects, from, whereSQL, &args, po)
+
+	psName := preparedName("getNotificationsByUser", sql)
 
 	return s.getMany(psName, sql, args...)
 }
@@ -212,8 +227,8 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 		columns = append(columns, "event_id")
 		values = append(values, args.Append(&row.EventId))
 	}
-	if row.Reason.Status != pgtype.Undefined {
-		columns = append(columns, "reason")
+	if row.ReasonName.Status != pgtype.Undefined {
+		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.Reason))
 	}
 	if row.StudyId.Status != pgtype.Undefined {
@@ -235,7 +250,7 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 	}
 
 	sql := `
-		INSERT INTO event.notification(` + strings.Join(columns, ",") + `)
+		INSERT INTO notification(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -275,7 +290,7 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 }
 
 const deleteNotificationSQl = `
-	DELETE FROM event.notification
+	DELETE FROM notification
 	WHERE id = $1
 `
 
@@ -311,7 +326,7 @@ func (s *NotificationService) Update(row *Notification) (*Notification, error) {
 	}
 
 	sql := `
-		UPDATE event.notification
+		UPDATE notification
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
 	`

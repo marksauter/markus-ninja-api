@@ -287,7 +287,7 @@ func (s *PermService) GetByRoleName(
 
 func (s *PermService) GetQueryPermission(
 	o perm.Operation,
-	roles mytype.RoleNameArray,
+	roles []string,
 ) (*perm.QueryPermission, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"operation": o,
@@ -320,7 +320,7 @@ func (s *PermService) GetQueryPermission(
 		Group By operation
 	`
 	var row *pgx.Row
-	if len(roles.Elements) != 0 {
+	if len(roles) != 0 {
 		row = s.db.QueryRow(
 			permissionSQL+andRoleNameSQL+groupBySQL,
 			o.AccessLevel,

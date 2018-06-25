@@ -37,11 +37,18 @@ func (r *StudyEnrollPermit) CreatedAt() (time.Time, error) {
 	return r.studyEnroll.CreatedAt.Time, nil
 }
 
-func (r *StudyEnrollPermit) StudyId() (*mytype.OID, error) {
+func (r *StudyEnrollPermit) EnrollableId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.studyEnroll.StudyId, nil
+	return &r.studyEnroll.EnrollableId, nil
+}
+
+func (r *StudyEnrollPermit) Manual() (bool, error) {
+	if ok := r.checkFieldPermission("manual"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.studyEnroll.Manual.Bool, nil
 }
 
 func (r *StudyEnrollPermit) UserId() (*mytype.OID, error) {
@@ -93,14 +100,14 @@ func (r *StudyEnrollRepo) CountByStudy(studyId string) (int32, error) {
 	return r.svc.CountByStudy(studyId)
 }
 
-func (r *StudyEnrollRepo) Create(s *data.StudyEnroll) (*StudyEnrollPermit, error) {
+func (r *StudyEnrollRepo) Create(e *data.StudyEnroll) (*StudyEnrollPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, s); err != nil {
+	if _, err := r.perms.Check(perm.Create, e); err != nil {
 		return nil, err
 	}
-	studyEnroll, err := r.svc.Create(s)
+	studyEnroll, err := r.svc.Create(e)
 	if err != nil {
 		return nil, err
 	}
@@ -147,14 +154,32 @@ func (r *StudyEnrollRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*S
 	return studyEnrollPermits, nil
 }
 
-func (r *StudyEnrollRepo) Delete(studyEnroll *data.StudyEnroll) error {
+func (r *StudyEnrollRepo) Delete(e *data.StudyEnroll) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, studyEnroll); err != nil {
+	if _, err := r.perms.Check(perm.Delete, e); err != nil {
 		return err
 	}
-	return r.svc.Delete(studyEnroll.StudyId.String, studyEnroll.UserId.String)
+	return r.svc.Delete(e.EnrollableId.String, e.UserId.String)
+}
+
+func (r *StudyEnrollRepo) Update(e *data.StudyEnroll) (*StudyEnrollPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check(perm.Update, e); err != nil {
+		return nil, err
+	}
+	studyEnroll, err := r.svc.Update(e)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, studyEnroll)
+	if err != nil {
+		return nil, err
+	}
+	return &StudyEnrollPermit{fieldPermFn, studyEnroll}, nil
 }
 
 // Middleware

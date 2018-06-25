@@ -9,7 +9,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -269,14 +268,14 @@ func (r *userResolver) Pupils(
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetByPupil(
+	users, err := r.Repos.User().GetPupils(
 		id.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByPupil(id.String)
+	count, err := r.Repos.User().CountByEnrollable(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -323,14 +322,14 @@ func (r *userResolver) Tutors(
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetByPupil(
+	users, err := r.Repos.User().GetTutors(
 		id.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByTutor(id.String)
+	count, err := r.Repos.User().CountByEnrolled(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +352,7 @@ func (r *userResolver) ID() (graphql.ID, error) {
 
 func (r *userResolver) IsSiteAdmin() bool {
 	for _, role := range r.User.Roles() {
-		if role.Name == mytype.AdminRole {
+		if role == data.AdminRole {
 			return true
 		}
 	}
