@@ -29,7 +29,6 @@ func NewOID(objType string) (*OID, error) {
 		return nil, errors.New("invalid OID: `objType` must not be empty")
 	}
 	id := xid.New()
-	objType = strings.Title(strings.ToLower(objType))
 	n := len(objType)
 	if n > 999 {
 		return nil, errors.New("invalid OID: `objType` too long")

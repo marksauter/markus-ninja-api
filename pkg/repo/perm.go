@@ -120,6 +120,10 @@ func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
 		return vid == node.UserId.String
 	case *data.LessonComment:
 		return vid == node.UserId.String
+	case data.Notification:
+		return vid == node.UserId.String
+	case *data.Notification:
+		return vid == node.UserId.String
 	case data.PRT:
 		return vid == node.UserId.String
 	case *data.PRT:

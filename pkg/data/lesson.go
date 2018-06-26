@@ -3,7 +3,6 @@ package data
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -230,7 +229,7 @@ func (s *LessonService) GetByOwnerStudyAndNumber(
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `lesson_master.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"body",
@@ -246,7 +245,7 @@ func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, er
 		"user_login",
 	}
 	from := "lesson_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByUser", sql)
 
@@ -258,9 +257,10 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 		"study_id", studyId,
 	).Info("Lesson.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `
-		lesson_master.user_id = ` + args.Append(userId) + ` AND
-		lesson_master.study_id = ` + args.Append(studyId)
+	where := []string{
+		`user_id = ` + args.Append(userId),
+		`study_id = ` + args.Append(studyId),
+	}
 
 	selects := []string{
 		"body",
@@ -276,7 +276,7 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 		"user_login",
 	}
 	from := "lesson_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByStudy", sql)
 
@@ -433,6 +433,28 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
+	lessonEnrollSvc := NewLessonEnrollService(tx)
+	lessonEnrolls, err := lessonEnrollSvc.GetByLesson(row.Id.String, nil)
+	if err != nil {
+		return nil, err
+	}
+	enrolls := make([]*Enroll, len(lessonEnrolls))
+	for i, enroll := range lessonEnrolls {
+		mylog.Log.Debug(enroll.ReasonName.String)
+		enrolls[i] = &Enroll{
+			ReasonName: enroll.ReasonName.String,
+			UserId:     enroll.UserId.String,
+		}
+	}
+
+	notificationSvc := NewNotificationService(tx)
+	notification := &Notification{}
+	notification.EventId.Set(&e.Id)
+	notification.StudyId.Set(&row.StudyId)
+	if err := notificationSvc.BatchCreate(notification, enrolls); err != nil {
+		return nil, err
+	}
+
 	lessonSvc := NewLessonService(tx)
 	lesson, err := lessonSvc.Get(row.Id.String)
 	if err != nil {
@@ -445,18 +467,6 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
 		}
-	}
-
-	study := &Study{}
-	study.Id.Set(row.StudyId)
-	err = study.AdvancedAt.Set(time.Now())
-	if err != nil {
-		return nil, err
-	}
-	studySvc := NewStudyService(s.db)
-	_, err = studySvc.Update(study)
-	if err != nil {
-		return nil, err
 	}
 
 	return lesson, nil

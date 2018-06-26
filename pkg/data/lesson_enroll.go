@@ -13,7 +13,8 @@ import (
 type LessonEnroll struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
-	Manual       pgtype.Bool        `db:"manual" permit:"read"`
+	Reason       pgtype.Text        `db:"reason" permit:"read"`
+	ReasonName   pgtype.Varchar     `db:"reason_name" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
@@ -55,6 +56,7 @@ func (s *LessonEnrollService) get(
 	err := prepareQueryRow(s.db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.EnrollableId,
+		&row.ReasonName,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -84,6 +86,7 @@ func (s *LessonEnrollService) getMany(
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.EnrollableId,
+			&row.ReasonName,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -103,6 +106,7 @@ const getLessonEnrollSQL = `
 	SELECT
 		created_at,
 		enrollable_id,
+		reason_name,
 		user_id
 	FROM lesson_enroll
 	WHERE enrollable_id = $1 AND user_id = $2
@@ -122,15 +126,16 @@ func (s *LessonEnrollService) GetByLesson(
 ) ([]*LessonEnroll, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("LessonEnroll.GetByLesson(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `lesson_enroll.enrollable_id = ` + args.Append(enrollableId)
+	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
 	selects := []string{
 		"created_at",
 		"enrollable_id",
+		"reason_name",
 		"user_id",
 	}
 	from := "lesson_enroll"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonEnrollsByEnrollableId", sql)
 
@@ -143,13 +148,12 @@ func (s *LessonEnrollService) Create(row *LessonEnroll) (*LessonEnroll, error) {
 
 	var columns, values []string
 
+	row.ReasonName.Set(ManualReason)
+	columns = append(columns, "reason_name")
+	values = append(values, args.Append(&row.ReasonName))
 	if row.EnrollableId.Status != pgtype.Undefined {
 		columns = append(columns, "enrollable_id")
 		values = append(values, args.Append(&row.EnrollableId))
-	}
-	if row.Manual.Status != pgtype.Undefined {
-		columns = append(columns, "manual")
-		values = append(values, args.Append(&row.Manual))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -230,66 +234,4 @@ func (s *LessonEnrollService) Delete(enrollableId, userId string) error {
 	}
 
 	return nil
-}
-
-func (s *LessonEnrollService) Update(row *LessonEnroll) (*LessonEnroll, error) {
-	mylog.Log.Info("LessonEnroll.Update()")
-	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
-	if row.Manual.Status != pgtype.Undefined {
-		sets = append(sets, `manual`+"="+args.Append(&row.Manual))
-	}
-
-	tx, err, newTx := beginTransaction(s.db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer rollbackTransaction(tx)
-	}
-
-	sql := `
-		UPDATE lesson_enroll
-		SET ` + strings.Join(sets, ",") + `
-		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
-		AND user_id = ` + args.Append(row.UserId.String)
-
-	psName := preparedName("updateLessonEnroll", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update lesson_enroll")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return nil, err
-			}
-		}
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
-	}
-
-	lessonEnrollSvc := NewLessonEnrollService(tx)
-	lessonEnroll, err := lessonEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = commitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return lessonEnroll, nil
 }

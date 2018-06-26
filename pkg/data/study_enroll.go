@@ -13,7 +13,8 @@ import (
 type StudyEnroll struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
-	Manual       pgtype.Bool        `db:"manual" permit:"read"`
+	Reason       pgtype.Text        `db:"reason" permit:"read"`
+	ReasonName   pgtype.Varchar     `db:"reason_name" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
@@ -122,7 +123,7 @@ func (s *StudyEnrollService) GetByStudy(
 ) ([]*StudyEnroll, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("StudyEnroll.GetByStudy(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_enroll.enrollable_id = ` + args.Append(enrollableId)
+	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
 	selects := []string{
 		"created_at",
@@ -130,7 +131,7 @@ func (s *StudyEnrollService) GetByStudy(
 		"user_id",
 	}
 	from := "study_enroll"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudyEnrollsByEnrollableId", sql)
 
@@ -143,13 +144,12 @@ func (s *StudyEnrollService) Create(row *StudyEnroll) (*StudyEnroll, error) {
 
 	var columns, values []string
 
+	row.ReasonName.Set(ManualReason)
+	columns = append(columns, "reason_name")
+	values = append(values, args.Append(&row.ReasonName))
 	if row.EnrollableId.Status != pgtype.Undefined {
 		columns = append(columns, "enrollable_id")
 		values = append(values, args.Append(&row.EnrollableId))
-	}
-	if row.Manual.Status != pgtype.Undefined {
-		columns = append(columns, "manual")
-		values = append(values, args.Append(&row.Manual))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -230,66 +230,4 @@ func (s *StudyEnrollService) Delete(enrollableId, userId string) error {
 	}
 
 	return nil
-}
-
-func (s *StudyEnrollService) Update(row *StudyEnroll) (*StudyEnroll, error) {
-	mylog.Log.Info("StudyEnroll.Update()")
-	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
-	if row.Manual.Status != pgtype.Undefined {
-		sets = append(sets, `manual`+"="+args.Append(&row.Manual))
-	}
-
-	tx, err, newTx := beginTransaction(s.db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer rollbackTransaction(tx)
-	}
-
-	sql := `
-		UPDATE study_enroll
-		SET ` + strings.Join(sets, ",") + `
-		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
-		AND user_id = ` + args.Append(row.UserId.String)
-
-	psName := preparedName("updateStudyEnroll", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update study_enroll")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return nil, err
-			}
-		}
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
-	}
-
-	studyEnrollSvc := NewStudyEnrollService(tx)
-	studyEnroll, err := studyEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = commitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return studyEnroll, nil
 }

@@ -203,10 +203,11 @@ func (s *LessonCommentService) GetByLesson(
 		"lesson_id", lessonId,
 	).Info("LessonComment.GetByLesson(lesson_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `
-		lesson_comment_master.user_id = ` + args.Append(userId) + ` AND
-		lesson_comment_master.study_id = ` + args.Append(studyId) + ` AND
-		lesson_comment_master.lesson_id = ` + args.Append(lessonId)
+	where := []string{
+		`user_id = ` + args.Append(userId),
+		`study_id = ` + args.Append(studyId),
+		`lesson_id = ` + args.Append(lessonId),
+	}
 
 	selects := []string{
 		"body",
@@ -222,7 +223,7 @@ func (s *LessonCommentService) GetByLesson(
 		"user_login",
 	}
 	from := "lesson_comment_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
@@ -238,9 +239,10 @@ func (s *LessonCommentService) GetByStudy(
 		"study_id", studyId,
 	).Info("LessonComment.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `
-		lesson_comment_master.user_id = ` + args.Append(userId) + ` AND
-		lesson_comment_master.study_id = ` + args.Append(studyId)
+	where := []string{
+		`user_id = ` + args.Append(userId),
+		`study_id = ` + args.Append(studyId),
+	}
 
 	selects := []string{
 		"body",
@@ -256,7 +258,7 @@ func (s *LessonCommentService) GetByStudy(
 		"user_login",
 	}
 	from := "lesson_comment_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
@@ -271,7 +273,7 @@ func (s *LessonCommentService) GetByUser(
 		"user_id", userId,
 	).Info("LessonComment.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `lesson_comment_master.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"body",
@@ -287,7 +289,7 @@ func (s *LessonCommentService) GetByUser(
 		"user_login",
 	}
 	from := "lesson_comment_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByUser", sql)
 
@@ -355,6 +357,18 @@ func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error
 				return nil, err
 			}
 		}
+		return nil, err
+	}
+
+	eventSvc := NewEventService(tx)
+	eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	e := &Event{}
+	e.Action.Set(CommentEvent)
+	e.SourceId.Set(&row.Id)
+	e.TargetId.Set(&row.LessonId)
+	e.UserId.Set(&row.UserId)
+	_, err = eventSvc.Create(e)
+	if err != nil {
 		return nil, err
 	}
 

@@ -1,0 +1,8 @@
+# Ways in which notifications can be ordered upon return.
+input NotificationOrder {
+  # The direction in which to order notifications by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order notifications by.
+  field: NotificationOrderField!
+}

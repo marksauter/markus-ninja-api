@@ -206,7 +206,7 @@ func (s *StudyService) GetByAppled(
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByAppled(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `appled_study.actor_id = ` + args.Append(userId)
+	where := []string{`actor_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"advanced_at",
@@ -220,7 +220,7 @@ func (s *StudyService) GetByAppled(
 		"user_login",
 	}
 	from := "appled_study"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudiesByAppled", sql)
 
@@ -263,7 +263,7 @@ func (s *StudyService) GetByEnrolled(
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByEnrolled(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `enrolled_study.actor_id = ` + args.Append(userId)
+	where := []string{`actor_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"advanced_at",
@@ -277,7 +277,7 @@ func (s *StudyService) GetByEnrolled(
 		"user_login",
 	}
 	from := "enrolled_study"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudiesByEnrolled", sql)
 
@@ -320,7 +320,7 @@ func (s *StudyService) GetByUser(
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_master.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"advanced_at",
@@ -333,7 +333,7 @@ func (s *StudyService) GetByUser(
 		"user_login",
 	}
 	from := "study_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudiesByUserId", sql)
 

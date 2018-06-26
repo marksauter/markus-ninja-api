@@ -172,14 +172,18 @@ func (r *lessonResolver) Events(
 	events, err := r.Repos.Event().GetByTarget(
 		lessonId.String,
 		pageOptions,
-		data.OnlyMentionEvents,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
 	)
 	if err != nil {
 		return nil, err
 	}
 	count, err := r.Repos.Event().CountByTarget(
 		lessonId.String,
-		data.OnlyMentionEvents,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
 	)
 	if err != nil {
 		return nil, err

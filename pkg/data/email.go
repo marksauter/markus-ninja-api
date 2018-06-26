@@ -193,10 +193,9 @@ func (s *EmailService) GetByUser(
 	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := append(
-		[]string{`email_master.user_id = ` + args.Append(userId)},
+		[]string{`user_id = ` + args.Append(userId)},
 		ands...,
 	)
-	whereSQL := strings.Join(where, " AND email_master.")
 
 	selects := []string{
 		"created_at",
@@ -210,7 +209,7 @@ func (s *EmailService) GetByUser(
 		"verified_at",
 	}
 	from := "email_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getEmailByUser", sql)
 

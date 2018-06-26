@@ -1,0 +1,30 @@
+# # An item in a lesson timeline.
+# union LessonTimelineItem =
+#   CrossReferencedEvent |
+#   DismissedEvent |
+#   EnrolledEvent |
+#   LessonComment |
+#   ReferencedEvent
+#
+# type LessonTimelineItemEdge implements Edge {
+#   # A curosr for use in pagination.
+#   cursor: String!
+#
+#   # The item at the end of the edge.
+#   node: LessonTimelineItem
+# }
+#
+# # A connection type for LessonTimelineItem.
+# type LessonTimelineConnection implements Connection {
+#   # Information to aid in pagination.
+#   pageInfo: PageInfo!
+#
+#   # A list of edges.
+#   edges: [LessonTimelineItemEdge]
+#
+#   # A list of nodes.
+#   nodes: [LessonTimelineItem]
+#
+#   # The total count of items in the connection.
+#   totalCount: Int!
+# }

@@ -237,6 +237,59 @@ func (r *userResolver) Enrolled(
 	return resolver, nil
 }
 
+func (r *userResolver) Notifications(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*notificationConnectionResolver, error) {
+	userId, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	notificationOrder, err := ParseNotificationOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		notificationOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	notifications, err := r.Repos.Notification().GetByUser(
+		userId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Notification().CountByUser(userId.String)
+	if err != nil {
+		return nil, err
+	}
+	notificationConnectionResolver, err := NewNotificationConnectionResolver(
+		notifications,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return notificationConnectionResolver, nil
+}
+
 func (r *userResolver) Pupils(
 	ctx context.Context,
 	args struct {
