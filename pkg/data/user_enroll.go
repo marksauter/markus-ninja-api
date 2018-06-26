@@ -13,7 +13,8 @@ import (
 type UserEnroll struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
-	Manual       pgtype.Bool        `db:"manual" permit:"read"`
+	Reason       pgtype.Text        `db:"reason" permit:"read"`
+	ReasonName   pgtype.Varchar     `db:"reason_name" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
@@ -143,7 +144,7 @@ func (s *UserEnrollService) GetByPupil(
 ) ([]*UserEnroll, error) {
 	mylog.Log.WithField("user_id", userId).Info("UserEnroll.GetByPupil(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_enroll.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"created_at",
@@ -151,7 +152,7 @@ func (s *UserEnrollService) GetByPupil(
 		"user_id",
 	}
 	from := "user_enroll"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserEnrollsByUserId", sql)
 
@@ -164,7 +165,7 @@ func (s *UserEnrollService) GetByTutor(
 ) ([]*UserEnroll, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("UserEnroll.GetByTutor(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_enroll.enrollable_id = ` + args.Append(enrollableId)
+	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
 	selects := []string{
 		"created_at",
@@ -172,7 +173,7 @@ func (s *UserEnrollService) GetByTutor(
 		"user_id",
 	}
 	from := "user_enroll"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserEnrollsByEnrollableId", sql)
 
@@ -185,13 +186,12 @@ func (s *UserEnrollService) Create(row *UserEnroll) (*UserEnroll, error) {
 
 	var columns, values []string
 
+	row.ReasonName.Set(ManualReason)
+	columns = append(columns, "reason_name")
+	values = append(values, args.Append(&row.ReasonName))
 	if row.EnrollableId.Status != pgtype.Undefined {
 		columns = append(columns, "enrollable_id")
 		values = append(values, args.Append(&row.EnrollableId))
-	}
-	if row.Manual.Status != pgtype.Undefined {
-		columns = append(columns, "manual")
-		values = append(values, args.Append(&row.Manual))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -272,66 +272,4 @@ func (s *UserEnrollService) Delete(enrollableId, userId string) error {
 	}
 
 	return nil
-}
-
-func (s *UserEnrollService) Update(row *UserEnroll) (*UserEnroll, error) {
-	mylog.Log.Info("UserEnroll.Update()")
-	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
-	if row.Manual.Status != pgtype.Undefined {
-		sets = append(sets, `manual`+"="+args.Append(&row.Manual))
-	}
-
-	tx, err, newTx := beginTransaction(s.db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer rollbackTransaction(tx)
-	}
-
-	sql := `
-		UPDATE user_enroll
-		SET ` + strings.Join(sets, ",") + `
-		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
-		AND user_id = ` + args.Append(row.UserId.String)
-
-	psName := preparedName("updateUserEnroll", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update user_enroll")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				return nil, err
-			}
-		}
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
-	}
-
-	userEnrollSvc := NewUserEnrollService(tx)
-	userEnroll, err := userEnrollSvc.Get(row.EnrollableId.String, row.UserId.String)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = commitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return userEnroll, nil
 }

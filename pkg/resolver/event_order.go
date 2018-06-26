@@ -10,13 +10,13 @@ import (
 type EventOrderField int
 
 const (
-	CreatedAt EventOrderField = iota
+	EventCreatedAt EventOrderField = iota
 )
 
 func ParseEventOrderField(s string) (EventOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
-		return CreatedAt, nil
+		return EventCreatedAt, nil
 	default:
 		var f EventOrderField
 		return f, fmt.Errorf("invalid EventOrderField: %q", s)
@@ -25,7 +25,7 @@ func ParseEventOrderField(s string) (EventOrderField, error) {
 
 func (f EventOrderField) String() string {
 	switch f {
-	case CreatedAt:
+	case EventCreatedAt:
 		return "created_at"
 	default:
 		return "unknown"
@@ -61,7 +61,7 @@ func ParseEventOrder(arg *OrderArg) (*EventOrder, error) {
 	if arg == nil {
 		return &EventOrder{
 			direction: data.DESC,
-			field:     CreatedAt,
+			field:     EventCreatedAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

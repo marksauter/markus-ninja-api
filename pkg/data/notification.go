@@ -9,23 +9,16 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-const (
-	AuthorReason   = "author"
-	CommentReason  = "comment"
-	EnrolledReason = "enrolled"
-	MentionReason  = "mention"
-)
-
 type Notification struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EventId    mytype.OID         `db:"event_id" permit:"read"`
-	Id         mytype.OID         `db:"id" permit:"read"`
-	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read"`
-	ReasonName pgtype.Varchar     `db:"reason" permit:"read"`
-	Reason     pgtype.Text        `db:"reason" permit:"read"`
-	StudyId    mytype.OID         `db:"study_id" permit:"read"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId     mytype.OID         `db:"user_id" permit:"read"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at"`
+	EventId    mytype.OID         `db:"event_id"`
+	Id         mytype.OID         `db:"id"`
+	LastReadAt pgtype.Timestamptz `db:"last_read_at"`
+	Reason     pgtype.Text        `db:"reason"`
+	ReasonName pgtype.Varchar     `db:"reason_name"`
+	StudyId    mytype.OID         `db:"study_id"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
+	UserId     mytype.OID         `db:"user_id"`
 }
 
 func NewNotificationService(db Queryer) *NotificationService {
@@ -164,9 +157,10 @@ func (s *NotificationService) GetByStudy(
 		"study_id", studyId,
 	).Info("Notification.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `
-		notification_master.user_id = ` + args.Append(userId) + ` AND
-		notification_master.study_id = ` + args.Append(studyId)
+	where := []string{
+		`user_id = ` + args.Append(userId),
+		`study_id = ` + args.Append(studyId),
+	}
 
 	selects := []string{
 		"created_at",
@@ -179,7 +173,7 @@ func (s *NotificationService) GetByStudy(
 		"user_id",
 	}
 	from := "notification_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getNotificationsByStudy", sql)
 
@@ -192,7 +186,7 @@ func (s *NotificationService) GetByUser(
 ) ([]*Notification, error) {
 	mylog.Log.WithField("user_id", userId).Info("Notification.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `notification_master.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"created_at",
@@ -205,11 +199,75 @@ func (s *NotificationService) GetByUser(
 		"user_id",
 	}
 	from := "notification_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getNotificationsByUser", sql)
 
 	return s.getMany(psName, sql, args...)
+}
+
+type Enroll struct {
+	ReasonName string
+	UserId     string
+}
+
+func (s *NotificationService) BatchCreate(
+	src *Notification,
+	enrolls []*Enroll,
+) error {
+	mylog.Log.Info("Notification.BatchCreate()")
+
+	notifications := make([][]interface{}, len(enrolls))
+	for i, enroll := range enrolls {
+		id, _ := mytype.NewOID("Notification")
+		src.Id.Set(id)
+		notifications[i] = []interface{}{
+			src.EventId.String,
+			src.Id.String,
+			enroll.ReasonName,
+			src.StudyId.String,
+			enroll.UserId,
+		}
+	}
+
+	tx, err, newTx := beginTransaction(s.db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer rollbackTransaction(tx)
+	}
+
+	copyCount, err := tx.CopyFrom(
+		pgx.Identifier{"notification"},
+		[]string{"event_id", "id", "reason_name", "study_id", "user_id"},
+		pgx.CopyFromRows(notifications),
+	)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch PSQLError(pgErr.Code) {
+			default:
+				return err
+			case UniqueViolation:
+				mylog.Log.Warn("notifications already created")
+				return nil
+			}
+		}
+		return err
+	}
+
+	if newTx {
+		err = commitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	mylog.Log.WithField("n", copyCount).Info("created notifications")
+
+	return nil
 }
 
 func (s *NotificationService) Create(row *Notification) (*Notification, error) {

@@ -304,10 +304,10 @@ func (s *UserAssetService) GetByStudy(
 		"study_id", studyId.String,
 	).Info("UserAsset.GetByStudy(studyId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `
-		user_asset_master.user_id = ` + args.Append(userId) + ` AND
-		user_asset_master.study_id = ` + args.Append(studyId)
-
+	where := []string{
+		`user_id = ` + args.Append(userId),
+		`study_id = ` + args.Append(studyId),
+	}
 	selects := []string{
 		"created_at",
 		"id",
@@ -325,7 +325,7 @@ func (s *UserAssetService) GetByStudy(
 		"user_login",
 	}
 	from := "user_asset_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserAssetsByStudy", sql)
 
@@ -341,7 +341,7 @@ func (s *UserAssetService) GetByUser(
 		"user_id", userId.String,
 	).Info("UserAsset.GetByUser(userId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `user_asset.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"created_at",
@@ -360,7 +360,7 @@ func (s *UserAssetService) GetByUser(
 		"user_login",
 	}
 	from := "user_asset_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserAssetsByUser", sql)
 

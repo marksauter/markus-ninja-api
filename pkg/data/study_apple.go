@@ -121,7 +121,7 @@ func (s *StudyAppleService) GetByStudy(
 ) ([]*StudyApple, error) {
 	mylog.Log.WithField("study_id", studyId).Info("StudyApple.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_apple.study_id = ` + args.Append(studyId)
+	where := []string{`study_id = ` + args.Append(studyId)}
 
 	selects := []string{
 		"created_at",
@@ -129,7 +129,7 @@ func (s *StudyAppleService) GetByStudy(
 		"user_id",
 	}
 	from := "study_apple"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudyApplesByStudyId", sql)
 

@@ -232,7 +232,7 @@ func (s *UserService) GetByApple(
 ) ([]*User, error) {
 	mylog.Log.WithField("study_id", studyId).Info("User.GetByApple(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `apple_giver.study_id = ` + args.Append(studyId)
+	where := []string{`study_id = ` + args.Append(studyId)}
 
 	selects := []string{
 		"appled_at",
@@ -245,7 +245,7 @@ func (s *UserService) GetByApple(
 		"updated_at",
 	}
 	from := "apple_giver"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUsersByApple", sql)
 
@@ -291,7 +291,7 @@ func (s *UserService) GetTutors(
 		userId,
 	).Info("User.GetTutors(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `tutor.user_id = ` + args.Append(userId)
+	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"bio",
@@ -304,7 +304,7 @@ func (s *UserService) GetTutors(
 		"updated_at",
 	}
 	from := "tutor"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getTutors", sql)
 
@@ -347,7 +347,7 @@ func (s *UserService) GetStudents(
 ) ([]*User, error) {
 	mylog.Log.WithField("study_id", studyId).Info("User.GetStudents(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `student.study_id = ` + args.Append(studyId)
+	where := []string{`study_id = ` + args.Append(studyId)}
 
 	selects := []string{
 		"bio",
@@ -360,7 +360,7 @@ func (s *UserService) GetStudents(
 		"updated_at",
 	}
 	from := "student"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudents", sql)
 
@@ -403,7 +403,7 @@ func (s *UserService) GetPupils(
 ) ([]*User, error) {
 	mylog.Log.WithField("tutor_id", tutorId).Info("User.GetPupils(tutor_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `pupil.tutor_id = ` + args.Append(tutorId)
+	where := []string{`tutor_id = ` + args.Append(tutorId)}
 
 	selects := []string{
 		"bio",
@@ -416,7 +416,7 @@ func (s *UserService) GetPupils(
 		"updated_at",
 	}
 	from := "pupil"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getPupils", sql)
 

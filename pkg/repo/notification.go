@@ -51,6 +51,13 @@ func (r *NotificationPermit) ID() (*mytype.OID, error) {
 	return &r.notification.Id, nil
 }
 
+func (r *NotificationPermit) LastReadAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("last_read_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.notification.LastReadAt.Time, nil
+}
+
 func (r *NotificationPermit) Reason() (string, error) {
 	if ok := r.checkFieldPermission("reason"); !ok {
 		return "", ErrAccessDenied
@@ -63,6 +70,13 @@ func (r *NotificationPermit) StudyId() (*mytype.OID, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.notification.StudyId, nil
+}
+
+func (r *NotificationPermit) UpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.notification.UpdatedAt.Time, nil
 }
 
 func (r *NotificationPermit) UserId() (*mytype.OID, error) {

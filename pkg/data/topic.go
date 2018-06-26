@@ -179,7 +179,7 @@ func (s *TopicService) GetByStudy(
 ) ([]*Topic, error) {
 	mylog.Log.WithField("study_id", studyId).Info("Topic.GetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	whereSQL := `study_topic_master.study_id = ` + args.Append(studyId)
+	where := []string{`study_id = ` + args.Append(studyId)}
 
 	selects := []string{
 		"created_at",
@@ -190,7 +190,7 @@ func (s *TopicService) GetByStudy(
 		"updated_at",
 	}
 	from := "study_topic_master"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getTopicsByStudyId", sql)
 

@@ -1,0 +1,49 @@
+# Represents a notification of an event.
+type Notification implements Node {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The event that triggered the notification.
+  event: Event!
+
+  id: ID!
+
+  # Identifies the date and time when the object was last read.
+  lastReadAt: Time!
+
+  # The reason for receiving this notification.
+  reason: String!
+
+  # The study from which the event occured.
+  study: Study!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+
+  # The user who performed the notification.
+  user: User!
+}
+
+# An edge type for Notification.
+type NotificationEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Notification
+}
+
+# A connection type for Notification.
+type NotificationConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [NotificationEdge]
+
+  # A list of nodes.
+  nodes: [Notification]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

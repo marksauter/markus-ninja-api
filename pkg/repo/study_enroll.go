@@ -44,13 +44,6 @@ func (r *StudyEnrollPermit) EnrollableId() (*mytype.OID, error) {
 	return &r.studyEnroll.EnrollableId, nil
 }
 
-func (r *StudyEnrollPermit) Manual() (bool, error) {
-	if ok := r.checkFieldPermission("manual"); !ok {
-		return false, ErrAccessDenied
-	}
-	return r.studyEnroll.Manual.Bool, nil
-}
-
 func (r *StudyEnrollPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
@@ -162,24 +155,6 @@ func (r *StudyEnrollRepo) Delete(e *data.StudyEnroll) error {
 		return err
 	}
 	return r.svc.Delete(e.EnrollableId.String, e.UserId.String)
-}
-
-func (r *StudyEnrollRepo) Update(e *data.StudyEnroll) (*StudyEnrollPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	if _, err := r.perms.Check(perm.Update, e); err != nil {
-		return nil, err
-	}
-	studyEnroll, err := r.svc.Update(e)
-	if err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.perms.Check(perm.Read, studyEnroll)
-	if err != nil {
-		return nil, err
-	}
-	return &StudyEnrollPermit{fieldPermFn, studyEnroll}, nil
 }
 
 // Middleware

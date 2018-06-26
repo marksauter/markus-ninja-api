@@ -11,11 +11,13 @@ import (
 )
 
 const (
-	CreateEvent  = "created"
-	DeleteEvent  = "deleted"
-	DismissEvent = "dismissed"
-	EnrollEvent  = "enrolled"
-	MentionEvent = "mentioned"
+	CreateEvent    = "created"
+	CommentEvent   = "commented"
+	DeleteEvent    = "deleted"
+	DismissEvent   = "dismissed"
+	EnrollEvent    = "enrolled"
+	MentionEvent   = "mentioned"
+	ReferenceEvent = "referenced"
 )
 
 type Event struct {
@@ -39,21 +41,27 @@ type EventFilterOption int
 
 const (
 	FilterCreateEvents EventFilterOption = iota
+	FilterCommentEvents
 	FilterDeleteEvents
 	FilterDismissEvents
 	FilterEnrollEvents
 	FilterMentionEvents
-	OnlyCreateEvents
-	OnlyDeleteEvents
-	OnlyDismissEvents
-	OnlyEnrollEvents
-	OnlyMentionEvents
+	FilterReferenceEvents
+	GetCreateEvents
+	GetCommentEvents
+	GetDeleteEvents
+	GetDismissEvents
+	GetEnrollEvents
+	GetMentionEvents
+	GetReferenceEvents
 )
 
 func (src EventFilterOption) String() string {
 	switch src {
 	case FilterCreateEvents:
 		return `action != '` + CreateEvent + `'`
+	case FilterCommentEvents:
+		return `action != '` + CommentEvent + `'`
 	case FilterDeleteEvents:
 		return `action != '` + DeleteEvent + `'`
 	case FilterDismissEvents:
@@ -62,16 +70,22 @@ func (src EventFilterOption) String() string {
 		return `action != '` + EnrollEvent + `'`
 	case FilterMentionEvents:
 		return `action != '` + MentionEvent + `'`
-	case OnlyCreateEvents:
+	case FilterReferenceEvents:
+		return `action != '` + ReferenceEvent + `'`
+	case GetCreateEvents:
 		return `action = '` + CreateEvent + `'`
-	case OnlyDeleteEvents:
+	case GetCommentEvents:
+		return `action = '` + CommentEvent + `'`
+	case GetDeleteEvents:
 		return `action = '` + DeleteEvent + `'`
-	case OnlyDismissEvents:
+	case GetDismissEvents:
 		return `action = '` + DismissEvent + `'`
-	case OnlyEnrollEvents:
+	case GetEnrollEvents:
 		return `action = '` + EnrollEvent + `'`
-	case OnlyMentionEvents:
+	case GetMentionEvents:
 		return `action = '` + MentionEvent + `'`
+	case GetReferenceEvents:
+		return `action = '` + ReferenceEvent + `'`
 	default:
 		return ""
 	}
@@ -166,6 +180,7 @@ func (s *EventService) getMany(
 
 	dbRows, err := prepareQuery(s.db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error("failed to get events")
 		return nil, err
 	}
 
@@ -221,10 +236,9 @@ func (s *EventService) GetBySource(
 	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := append(
-		[]string{`event.event.source_id = ` + args.Append(sourceId)},
+		[]string{`source_id = ` + args.Append(sourceId)},
 		ands...,
 	)
-	whereSQL := strings.Join(where, " AND event.event.")
 
 	selects := []string{
 		"action",
@@ -235,7 +249,7 @@ func (s *EventService) GetBySource(
 		"user_id",
 	}
 	from := "event.event"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getEventsBySource", sql)
 
@@ -254,10 +268,9 @@ func (s *EventService) GetByTarget(
 	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := append(
-		[]string{`event.event.target_id = ` + args.Append(targetId)},
+		[]string{`target_id = ` + args.Append(targetId)},
 		ands...,
 	)
-	whereSQL := strings.Join(where, " AND event.event.")
 
 	selects := []string{
 		"action",
@@ -268,7 +281,9 @@ func (s *EventService) GetByTarget(
 		"user_id",
 	}
 	from := "event.event"
-	sql := SQL(selects, from, whereSQL, &args, po)
+	sql := SQL(selects, from, where, &args, po)
+
+	mylog.Log.Debug(sql)
 
 	psName := preparedName("getEventsByTarget", sql)
 
@@ -570,7 +585,9 @@ func (s *EventService) ParseBodyForEvents(
 	// if err != nil {
 	//   return err
 	// }
-	targetIds := make([]*mytype.OID, 0, len(lessonNumberEvents)+len(userEvents))
+	event := &Event{}
+	event.SourceId.Set(sourceId)
+	event.UserId.Set(userId)
 	if len(lessonNumberEvents) > 0 {
 		lessons, err := lessonSvc.BatchGetByNumber(
 			userId.String,
@@ -580,8 +597,14 @@ func (s *EventService) ParseBodyForEvents(
 		if err != nil {
 			return err
 		}
-		for _, l := range lessons {
-			targetIds = append(targetIds, &l.Id)
+		lessonIds := make([]*mytype.OID, len(lessons))
+		for i, l := range lessons {
+			lessonIds[i] = &l.Id
+		}
+		event.Action.Set(ReferenceEvent)
+		err = eventSvc.BatchCreate(event, lessonIds)
+		if err != nil {
+			return err
 		}
 	}
 	if len(userEvents) > 0 {
@@ -592,18 +615,15 @@ func (s *EventService) ParseBodyForEvents(
 		if err != nil {
 			return err
 		}
-		for _, u := range users {
-			targetIds = append(targetIds, &u.Id)
+		userIds := make([]*mytype.OID, len(users))
+		for i, u := range users {
+			userIds[i] = &u.Id
 		}
-	}
-
-	event := &Event{}
-	event.Action.Set(MentionEvent)
-	event.SourceId.Set(sourceId)
-	event.UserId.Set(userId)
-	err = eventSvc.BatchCreate(event, targetIds)
-	if err != nil {
-		return err
+		event.Action.Set(MentionEvent)
+		err = eventSvc.BatchCreate(event, userIds)
+		if err != nil {
+			return err
+		}
 	}
 
 	if newTx {
@@ -662,7 +682,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 			newEvents[l.Id.String] = struct{}{}
 			if _, prs := oldEvents[l.Id.String]; !prs {
 				event := &Event{}
-				event.Action.Set(MentionEvent)
+				event.Action.Set(ReferenceEvent)
 				event.TargetId.Set(l.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)

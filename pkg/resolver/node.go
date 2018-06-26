@@ -32,6 +32,11 @@ func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToNotification() (*notificationResolver, bool) {
+	resolver, ok := r.node.(*notificationResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
 	resolver, ok := r.node.(*studyResolver)
 	return resolver, ok

@@ -1,0 +1,5 @@
+# Properties by which notification connections can be ordered.
+enum NotificationOrderField {
+  # Order notifications by creation time.
+  CREATED_AT
+}

@@ -211,24 +211,26 @@ func (p *PageOptions) Limit() int32 {
 	return limit
 }
 
-func (p *PageOptions) joins(from string, args *pgx.QueryArgs) []string {
+func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
 	var joins []string
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
-			"JOIN %[1]s %[1]s2 ON %[1]s2.id = "+args.Append(p.After.Value()),
+			"JOIN %[1]s AS %[2]s2 ON %[2]s2.id = "+args.Append(p.After.Value()),
 			from,
+			as,
 		))
 	}
 	if p.Before != nil {
 		joins = append(joins, fmt.Sprintf(
-			"JOIN %[1]s %[1]s3 ON %[1]s3.id = "+args.Append(p.Before.Value()),
+			"JOIN %[1]s AS %[2]s3 ON %[2]s3.id = "+args.Append(p.Before.Value()),
 			from,
+			as,
 		))
 	}
 	return joins
 }
 
-func (p *PageOptions) whereAnds(from string) []string {
+func (p *PageOptions) whereAnds(as string) []string {
 	var whereAnds []string
 	field := p.Order.Field()
 	if p.After != nil {
@@ -240,8 +242,8 @@ func (p *PageOptions) whereAnds(from string) []string {
 			relation = "<="
 		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %s %[1]s2.%[2]s",
-			from,
+			"AND %[1]s.%[2]s %[3]s %[1]s2.%[2]s",
+			as,
 			field,
 			relation,
 		))
@@ -255,8 +257,8 @@ func (p *PageOptions) whereAnds(from string) []string {
 			relation = ">="
 		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %s %[1]s3.%[2]s",
-			from,
+			"AND %[1]s.%[2]s %[3]s %[1]s3.%[2]s",
+			as,
 			field,
 			relation,
 		))
@@ -264,26 +266,38 @@ func (p *PageOptions) whereAnds(from string) []string {
 	return whereAnds
 }
 
-func SQL(selects []string, from, where string, args *pgx.QueryArgs, po *PageOptions) string {
+func SQL(
+	selects []string,
+	from string,
+	where []string,
+	args *pgx.QueryArgs,
+	po *PageOptions,
+) string {
+	as := string(from[0])
 	var joins, whereAnds []string
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, args)
-		whereAnds = po.whereAnds(from)
+		joins = po.joins(from, as, args)
+		whereAnds = po.whereAnds(as)
 		limit = "LIMIT " + args.Append(po.Limit())
 		orderBy = "ORDER BY " +
-			from + "." + po.Order.Field() + " " + po.QueryDirection()
+			as + "." + po.Order.Field() + " " + po.QueryDirection()
 	}
+	selectsCopy := make([]string, len(selects))
 	for i, s := range selects {
-		selects[i] = from + "." + s
+		selectsCopy[i] = as + "." + s
+	}
+	whereCopy := make([]string, len(where))
+	for i, w := range where {
+		whereCopy[i] = as + "." + w
 	}
 
 	sql := `
 		SELECT 
-		` + strings.Join(selects, ",") + `
-		FROM ` + from + `
+		` + strings.Join(selectsCopy, ",") + `
+		FROM ` + from + ` AS ` + as + `
 		` + strings.Join(joins, " ") + `
-		WHERE ` + where + `
+		WHERE ` + strings.Join(whereCopy, " AND ") + `
 		` + strings.Join(whereAnds, " ") + `
 		` + orderBy + `
 		` + limit
@@ -299,17 +313,18 @@ func SearchSQL(
 	po *PageOptions,
 ) (string, pgx.QueryArgs) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	as := string(from[0])
 	var joins, whereAnds []string
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, &args)
-		whereAnds = po.whereAnds(from)
+		joins = po.joins(from, as, &args)
+		whereAnds = po.whereAnds(as)
 		limit = "LIMIT " + args.Append(po.Limit())
 
 		field := po.Order.Field()
 		orderBy := ""
 		if field != "best_match" {
-			orderBy = from + "." + field
+			orderBy = as + "." + field
 		} else {
 			orderBy = "ts_rank(document, query)"
 		}
@@ -319,7 +334,7 @@ func SearchSQL(
 	if within != nil {
 		andIn := fmt.Sprintf(
 			"AND %s.%s = %s",
-			from,
+			as,
 			within.DBVarName(),
 			args.Append(within),
 		)
@@ -330,7 +345,8 @@ func SearchSQL(
 	sql := `
 		SELECT 
 		` + strings.Join(selects, ",") + `
-		FROM ` + from + `, to_tsquery('simple',` + args.Append(tsquery) + `) query
+		FROM ` + from + ` AS ` + as + `,
+			to_tsquery('simple',` + args.Append(tsquery) + `) AS query
 		` + strings.Join(joins, " ") + `
 		WHERE document @@ query
 		` + strings.Join(whereAnds, " ") + `
