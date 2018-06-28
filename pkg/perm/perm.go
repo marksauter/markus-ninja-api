@@ -120,31 +120,38 @@ func (a Audience) Value() (driver.Value, error) {
 type NodeType int
 
 const (
-	EmailType NodeType = iota
+	AppledType NodeType = iota
+	EmailType
+	EnrolledType
 	EventType
 	EVTType
+	LabeledType
 	LessonType
 	LessonCommentType
 	NotificationType
 	PRTType
 	RefType
 	StudyType
-	StudyAppleType
-	StudyEnrollType
 	TopicType
+	TopicedType
 	UserType
 	UserAssetType
-	UserEnrollType
 )
 
 func (nt NodeType) String() string {
 	switch nt {
+	case AppledType:
+		return "Appled"
 	case EmailType:
 		return "Email"
+	case EnrolledType:
+		return "Enrolled"
 	case EventType:
 		return "Event"
 	case EVTType:
 		return "EVT"
+	case LabeledType:
+		return "Labeled"
 	case LessonType:
 		return "Lesson"
 	case LessonCommentType:
@@ -157,18 +164,14 @@ func (nt NodeType) String() string {
 		return "Ref"
 	case StudyType:
 		return "Study"
-	case StudyAppleType:
-		return "StudyApple"
-	case StudyEnrollType:
-		return "StudyEnroll"
 	case TopicType:
 		return "Topic"
+	case TopicedType:
+		return "Topiced"
 	case UserType:
 		return "User"
 	case UserAssetType:
 		return "UserAsset"
-	case UserEnrollType:
-		return "UserEnroll"
 	default:
 		return "unknown"
 	}
@@ -176,12 +179,18 @@ func (nt NodeType) String() string {
 
 func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
+	case "appled":
+		return LabeledType, nil
 	case "email":
 		return EmailType, nil
+	case "enrolled":
+		return LabeledType, nil
 	case "event":
 		return EventType, nil
 	case "evt":
 		return EVTType, nil
+	case "labeled":
+		return LabeledType, nil
 	case "lesson":
 		return LessonType, nil
 	case "lessoncomment":
@@ -194,18 +203,14 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return RefType, nil
 	case "study":
 		return StudyType, nil
-	case "studyapple":
-		return StudyAppleType, nil
-	case "studyenroll":
-		return StudyEnrollType, nil
 	case "topic":
 		return TopicType, nil
+	case "topiced":
+		return LabeledType, nil
 	case "user":
 		return UserType, nil
 	case "userasset":
 		return UserAssetType, nil
-	case "userenroll":
-		return UserEnrollType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)

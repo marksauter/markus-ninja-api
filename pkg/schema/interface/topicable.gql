@@ -1,0 +1,4 @@
+# Things that can be associated with topics.
+interface Topicable {
+  id: ID!
+}

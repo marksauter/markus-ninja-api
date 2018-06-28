@@ -10,17 +10,14 @@ import (
 )
 
 type LessonComment struct {
-	Body         mytype.Markdown    `db:"body" permit:"read"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           mytype.OID         `db:"id" permit:"read"`
-	LessonId     mytype.OID         `db:"lesson_id" permit:"read"`
-	LessonNumber pgtype.Int4        `db:"lesson_number" permit:"read"`
-	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId      mytype.OID         `db:"study_id" permit:"read"`
-	StudyName    pgtype.Text        `db:"study_name" permit:"read"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId       mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin    pgtype.Text        `db:"user_login" permit:"read"`
+	Body        mytype.Markdown    `db:"body" permit:"read"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id          mytype.OID         `db:"id" permit:"read"`
+	LessonId    mytype.OID         `db:"lesson_id" permit:"read"`
+	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
+	StudyId     mytype.OID         `db:"study_id" permit:"read"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {
@@ -117,13 +114,10 @@ func (s *LessonCommentService) get(name string, sql string, args ...interface{})
 		&row.CreatedAt,
 		&row.Id,
 		&row.LessonId,
-		&row.LessonNumber,
 		&row.PublishedAt,
 		&row.StudyId,
-		&row.StudyName,
 		&row.UpdatedAt,
 		&row.UserId,
-		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -150,13 +144,10 @@ func (s *LessonCommentService) getMany(name string, sql string, args ...interfac
 			&row.CreatedAt,
 			&row.Id,
 			&row.LessonId,
-			&row.LessonNumber,
 			&row.PublishedAt,
 			&row.StudyId,
-			&row.StudyName,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -177,14 +168,11 @@ const getLessonCommentByIdSQL = `
 		created_at,
 		id,
 		lesson_id,
-		lesson_number,
 		published_at,
 		study_id,
-		study_name,
 		updated_at,
-		user_id,
-		user_login
-	FROM lesson_comment_master
+		user_id
+	FROM lesson_comment
 	WHERE id = $1
 `
 
@@ -214,15 +202,12 @@ func (s *LessonCommentService) GetByLesson(
 		"created_at",
 		"id",
 		"lesson_id",
-		"lesson_number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "lesson_comment_master"
+	from := "lesson_comment"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
@@ -249,15 +234,12 @@ func (s *LessonCommentService) GetByStudy(
 		"created_at",
 		"id",
 		"lesson_id",
-		"lesson_number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "lesson_comment_master"
+	from := "lesson_comment"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
@@ -280,15 +262,12 @@ func (s *LessonCommentService) GetByUser(
 		"created_at",
 		"id",
 		"lesson_id",
-		"lesson_number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "lesson_comment_master"
+	from := "lesson_comment"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonCommentsByUser", sql)

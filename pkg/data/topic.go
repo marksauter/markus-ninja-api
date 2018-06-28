@@ -17,7 +17,8 @@ type Topic struct {
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
-	StudyId     mytype.OID         `db:"study_id"`
+	TopicableId mytype.OID         `db:"topicable_id"`
+	TopicedAt   pgtype.Timestamptz `db:"topiced_at" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
@@ -29,20 +30,20 @@ type TopicService struct {
 	db Queryer
 }
 
-const countTopicByStudySQL = `
+const countTopicByTopicableSQL = `
 	SELECT COUNT(*)
-	FROM study_topic
-	WHERE study_id = $1
+	FROM topic_master
+	WHERE topicable_id = $1
 `
 
-func (s *TopicService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Topic.CountByStudy(study_id)")
+func (s *TopicService) CountByTopicable(topicableId string) (int32, error) {
+	mylog.Log.WithField("topicable_id", topicableId).Info("Topic.CountByTopicable(topicable_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countTopicByStudy",
-		countTopicByStudySQL,
-		studyId,
+		"countTopicByTopicable",
+		countTopicByTopicableSQL,
+		topicableId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -59,7 +60,7 @@ func (s *TopicService) CountBySearch(within *mytype.OID, query string) (n int32,
 		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
 	`
 	if within != nil {
-		if within.Type != "Study" {
+		if within.Type != "Topicable" {
 			// Only studies 'contain' topics, so return 0 otherwise
 			return
 		}
@@ -136,7 +137,7 @@ const getTopicByIdSQL = `
 		id,
 		name,
 		updated_at
-	FROM topic_master
+	FROM topic
 	WHERE id = $1
 `
 
@@ -145,22 +146,26 @@ func (s *TopicService) Get(id string) (*Topic, error) {
 	return s.get("getTopicById", getTopicByIdSQL, id)
 }
 
-const getTopicNamesByStudySQL = `
+const getTopicNamesByTopicableSQL = `
 	SELECT
 		array_agg(name) topic_names
-	FROM study_topic_master
-	WHERE study_id = $1
-	GROUP BY study_id
+	FROM topic_master
+	WHERE topicable_id = $1
+	GROUP BY topicable_id
 `
 
-func (s *TopicService) GetNamesByStudy(studyId string) (names []string, err error) {
-	mylog.Log.WithField("study_id", studyId).Info("Topic.GetNamesByStudy(study_id)")
+func (s *TopicService) GetNamesByTopicable(
+	topicableId string,
+) (names []string, err error) {
+	mylog.Log.WithField(
+		"topicable_id", topicableId,
+	).Info("Topic.GetNamesByTopicable(topicable_id)")
 	topicNames := pgtype.TextArray{}
 	err = prepareQueryRow(
 		s.db,
-		"getTopicNamesByStudy",
-		getTopicNamesByStudySQL,
-		studyId,
+		"getTopicNamesByTopicable",
+		getTopicNamesByTopicableSQL,
+		topicableId,
 	).Scan(topicNames)
 	if err == pgx.ErrNoRows {
 		return
@@ -173,26 +178,29 @@ func (s *TopicService) GetNamesByStudy(studyId string) (names []string, err erro
 	return
 }
 
-func (s *TopicService) GetByStudy(
-	studyId string,
+func (s *TopicService) GetByTopicable(
+	topicableId string,
 	po *PageOptions,
 ) ([]*Topic, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Topic.GetByStudy(study_id)")
+	mylog.Log.WithField(
+		"topicable_id", topicableId,
+	).Info("Topic.GetByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
+	where := []string{`topicable_id = ` + args.Append(topicableId)}
 
 	selects := []string{
 		"created_at",
 		"description",
 		"id",
 		"name",
-		"study_id",
+		"topicable_id",
+		"topiced_at",
 		"updated_at",
 	}
-	from := "study_topic_master"
+	from := "topic_master"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getTopicsByStudyId", sql)
+	psName := preparedName("getTopicsByTopicableId", sql)
 
 	var rows []*Topic
 
@@ -208,7 +216,8 @@ func (s *TopicService) GetByStudy(
 			&row.Description,
 			&row.Id,
 			&row.Name,
-			&row.StudyId,
+			&row.TopicableId,
+			&row.TopicedAt,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -229,7 +238,7 @@ const getTopicByNameSQL = `
 		id,
 		name,
 		updated_at
-	FROM topic_master
+	FROM topic
 	WHERE LOWER(name) = LOWER($1)
 `
 
@@ -239,11 +248,6 @@ func (s *TopicService) GetByName(name string) (*Topic, error) {
 	}).Info("Topic.GetByName(user_id, name)")
 	return s.get("getTopicByName", getTopicByNameSQL, name)
 }
-
-const createStudyTopicSQL = `
-	INSERT INTO study_topic(study_id, topic_id)
-	VALUES ($1, $2)
-`
 
 func (s *TopicService) Create(row *Topic) (*Topic, error) {
 	mylog.Log.Info("Topic.Create()")
@@ -304,21 +308,14 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		return nil, err
 	}
 
-	if row.StudyId.Status != pgtype.Undefined {
-		commandTag, err := prepareExec(
-			tx,
-			"createStudyTopic",
-			createStudyTopicSQL,
-			row.StudyId.String,
-			row.Id.String,
-		)
+	if row.TopicableId.Status != pgtype.Undefined {
+		topicedSvc := NewTopicedService(tx)
+		topiced := &Topiced{}
+		topiced.TopicId.Set(&row.Id)
+		topiced.TopicableId.Set(&row.TopicableId)
+		_, err := topicedSvc.Create(topiced)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to create study topic")
 			return nil, err
-		}
-		if commandTag.RowsAffected() != 1 {
-			mylog.Log.WithError(err).Error("failed to create study topic")
-			return nil, ErrNotFound
 		}
 	}
 
@@ -337,33 +334,6 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 	}
 
 	return topic, nil
-}
-
-const deleteTopicStudyRelationSQL = `
-	DELETE FROM study_topic
-	WHERE study_id = $1 AND topic_id = $2
-`
-
-func (s *TopicService) DeleteStudyRelation(studyId, topicId string) error {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
-		"topic_id": topicId,
-	}).Info("Topic.DeleteStudyRelation()")
-	commandTag, err := prepareExec(
-		s.db,
-		"deleteTopicStudyRelation",
-		deleteTopicStudyRelationSQL,
-		studyId,
-		topicId,
-	)
-	if err != nil {
-		return err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
-	}
-
-	return nil
 }
 
 const refreshTopicSearchIndexSQL = `

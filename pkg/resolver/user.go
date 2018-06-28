@@ -321,7 +321,7 @@ func (r *userResolver) Pupils(
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetPupils(
+	users, err := r.Repos.User().GetEnrollers(
 		id.String,
 		pageOptions,
 	)
@@ -375,7 +375,7 @@ func (r *userResolver) Tutors(
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetTutors(
+	users, err := r.Repos.User().GetEnrolledUsers(
 		id.String,
 		pageOptions,
 	)
@@ -584,7 +584,10 @@ func (r *userResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if _, err := r.Repos.UserEnroll().Get(userId.String, viewer.Id.String); err != nil {
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(userId)
+	enrolled.UserId.Set(viewer.Id)
+	if _, err := r.Repos.Enrolled().Get(enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

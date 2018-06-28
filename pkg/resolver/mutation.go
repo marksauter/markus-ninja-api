@@ -65,6 +65,36 @@ func (r *RootResolver) AddEmail(
 	return resolver, nil
 }
 
+type AddLabelInput struct {
+	LabelId     string
+	LabelableId string
+}
+
+func (r *RootResolver) AddLabel(
+	ctx context.Context,
+	args struct{ Input AddLabelInput },
+) (*addLabelPayloadResolver, error) {
+	labeled := &data.Labeled{}
+	labeled.LabelId.Set(args.Input.LabelId)
+	labeled.LabelableId.Set(args.Input.LabelableId)
+
+	labeledPermit, err := r.Repos.Labeled().Create(labeled)
+	if err != nil {
+		return nil, err
+	}
+
+	labelPermit, err := r.Repos.Label().Get(labeled.LabelId.String)
+	if err != nil {
+		return nil, err
+	}
+
+	return &addLabelPayloadResolver{
+		Label:   labelPermit,
+		Labeled: labeledPermit,
+		Repos:   r.Repos,
+	}, nil
+}
+
 type AddLessonCommentInput struct {
 	Body     string
 	LessonId string
@@ -423,28 +453,21 @@ func (r *RootResolver) Dismiss(
 	if err != nil {
 		return nil, err
 	}
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(id)
+	enrolled.UserId.Set(viewer.Id)
+	err = r.Repos.Enrolled().Delete(enrolled)
+	if err != nil {
+		return nil, err
+	}
 	switch id.Type {
 	case "Study":
-		studyEnroll := &data.StudyEnroll{}
-		studyEnroll.EnrollableId.Set(id)
-		studyEnroll.UserId.Set(viewer.Id)
-		err := r.Repos.StudyEnroll().Delete(studyEnroll)
-		if err != nil {
-			return nil, err
-		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
-		userEnroll := &data.UserEnroll{}
-		userEnroll.UserId.Set(viewer.Id)
-		userEnroll.EnrollableId.Set(id)
-		err := r.Repos.UserEnroll().Delete(userEnroll)
-		if err != nil {
-			return nil, err
-		}
 		user, err := r.Repos.User().Get(id.String)
 		if err != nil {
 			return nil, err
@@ -472,28 +495,21 @@ func (r *RootResolver) Enroll(
 	if err != nil {
 		return nil, err
 	}
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(id)
+	enrolled.UserId.Set(viewer.Id)
+	_, err = r.Repos.Enrolled().Create(enrolled)
+	if err != nil {
+		return nil, err
+	}
 	switch id.Type {
 	case "Study":
-		studyEnroll := &data.StudyEnroll{}
-		studyEnroll.EnrollableId.Set(id)
-		studyEnroll.UserId.Set(viewer.Id)
-		_, err := r.Repos.StudyEnroll().Create(studyEnroll)
-		if err != nil {
-			return nil, err
-		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
-		userEnroll := &data.UserEnroll{}
-		userEnroll.EnrollableId.Set(id)
-		userEnroll.UserId.Set(viewer.Id)
-		_, err := r.Repos.UserEnroll().Create(userEnroll)
-		if err != nil {
-			return nil, err
-		}
 		user, err := r.Repos.User().Get(id.String)
 		if err != nil {
 			return nil, err
@@ -521,15 +537,15 @@ func (r *RootResolver) GiveApple(
 	if err != nil {
 		return nil, err
 	}
+	appled := &data.Appled{}
+	appled.AppleableId.Set(id)
+	appled.UserId.Set(viewer.Id)
+	_, err = r.Repos.Appled().Create(appled)
+	if err != nil {
+		return nil, err
+	}
 	switch id.Type {
 	case "Study":
-		studyApple := &data.StudyApple{}
-		studyApple.StudyId.Set(id)
-		studyApple.UserId.Set(viewer.Id)
-		_, err := r.Repos.StudyApple().Create(studyApple)
-		if err != nil {
-			return nil, err
-		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err
@@ -634,19 +650,15 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, err
 	}
 
-	value, err := email.Value()
-	if err != nil {
-		return nil, err
-	}
-	userLogin, err := email.UserLogin()
+	to, err := email.Value()
 	if err != nil {
 		return nil, err
 	}
 
 	sendMailInput := &service.SendEmailVerificationMailInput{
 		EmailId:   emailId.Short,
-		To:        value,
-		UserLogin: userLogin,
+		To:        to,
+		UserLogin: viewer.Login.String,
 		Token:     evt.Token.String,
 	}
 	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
@@ -671,6 +683,10 @@ func (r *RootResolver) RequestPasswordReset(
 			return nil, errors.New("`email` not found")
 		}
 		return nil, err
+	}
+	user, err := r.Svcs.User.Get(email.UserId.String)
+	if err != nil {
+		return nil, errors.New("no user with that email was found")
 	}
 
 	requestIp, ok := myctx.RequesterIpFromContext(ctx)
@@ -701,7 +717,7 @@ func (r *RootResolver) RequestPasswordReset(
 
 	sendMailInput := &service.SendPasswordResetInput{
 		To:        args.Input.Email,
-		UserLogin: email.UserLogin.String,
+		UserLogin: user.Login.String,
 		Token:     prt.Token.String,
 	}
 	err = r.Svcs.Mail.SendPasswordResetMail(sendMailInput)
@@ -789,15 +805,15 @@ func (r *RootResolver) TakeApple(
 	if err != nil {
 		return nil, err
 	}
+	appled := &data.Appled{}
+	appled.AppleableId.Set(id)
+	appled.UserId.Set(viewer.Id)
+	err = r.Repos.Appled().Delete(appled)
+	if err != nil {
+		return nil, err
+	}
 	switch id.Type {
 	case "Study":
-		studyApple := &data.StudyApple{}
-		studyApple.StudyId.Set(id)
-		studyApple.UserId.Set(viewer.Id)
-		err := r.Repos.StudyApple().Delete(studyApple)
-		if err != nil {
-			return nil, err
-		}
 		study, err := r.Repos.Study().Get(id.String)
 		if err != nil {
 			return nil, err
@@ -946,7 +962,7 @@ func (r *RootResolver) UpdateStudy(
 
 type UpdateTopicsInput struct {
 	Description *string
-	StudyId     string
+	TopicableId string
 	TopicNames  []string
 }
 
@@ -954,9 +970,13 @@ func (r *RootResolver) UpdateTopics(
 	ctx context.Context,
 	args struct{ Input UpdateTopicsInput },
 ) (*updateTopicsPayloadResolver, error) {
+	topicableId, err := mytype.ParseOID(args.Input.TopicableId)
+	if err != nil {
+		return nil, err
+	}
 	resolver := &updateTopicsPayloadResolver{
-		StudyId: args.Input.StudyId,
-		Repos:   r.Repos,
+		TopicableId: topicableId,
+		Repos:       r.Repos,
 	}
 	newTopics := make(map[string]struct{})
 	oldTopics := make(map[string]struct{})
@@ -965,7 +985,10 @@ func (r *RootResolver) UpdateTopics(
 		resolver.InvalidNames = invalidTopicNames
 		return resolver, nil
 	}
-	topicPermits, err := r.Repos.Topic().GetByStudy(args.Input.StudyId, nil)
+	topicPermits, err := r.Repos.Topic().GetByTopicable(
+		args.Input.TopicableId,
+		nil,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -979,7 +1002,7 @@ func (r *RootResolver) UpdateTopics(
 		if _, prs := oldTopics[name]; !prs {
 			topic := &data.Topic{}
 			topic.Name.Set(name)
-			topic.StudyId.Set(args.Input.StudyId)
+			topic.TopicableId.Set(args.Input.TopicableId)
 			_, err := r.Repos.Topic().Create(topic)
 			if err != nil {
 				return nil, err
@@ -989,7 +1012,10 @@ func (r *RootResolver) UpdateTopics(
 	for _, t := range topics {
 		name := t.Name.String
 		if _, prs := newTopics[name]; !prs {
-			err := r.Repos.Topic().DeleteStudyRelation(t)
+			topiced := &data.Topiced{}
+			topiced.TopicId.Set(&t.Id)
+			topiced.TopicableId.Set(topicableId)
+			err := r.Repos.Topiced().Delete(topiced)
 			if err != nil {
 				return nil, err
 			}

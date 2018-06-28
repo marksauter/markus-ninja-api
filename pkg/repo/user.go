@@ -190,11 +190,14 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
-func (r *UserRepo) GetByApple(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetByApple(
+	appleableId string,
+	po *data.PageOptions,
+) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByApple(studyId, po)
+	users, err := r.svc.GetByApple(appleableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -211,11 +214,14 @@ func (r *UserRepo) GetByApple(studyId string, po *data.PageOptions) ([]*UserPerm
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetPupils(tutorId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetEnrollers(
+	enrollableId string,
+	po *data.PageOptions,
+) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetPupils(tutorId, po)
+	users, err := r.svc.GetEnrollers(enrollableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -232,32 +238,14 @@ func (r *UserRepo) GetPupils(tutorId string, po *data.PageOptions) ([]*UserPermi
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetStudents(studyId string, po *data.PageOptions) ([]*UserPermit, error) {
+func (r *UserRepo) GetEnrolledUsers(
+	userId string,
+	po *data.PageOptions,
+) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetStudents(studyId, po)
-	if err != nil {
-		return nil, err
-	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
-}
-
-func (r *UserRepo) GetTutors(pupilId string, po *data.PageOptions) ([]*UserPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	users, err := r.svc.GetTutors(pupilId, po)
+	users, err := r.svc.GetEnrolledUsers(userId, po)
 	if err != nil {
 		return nil, err
 	}

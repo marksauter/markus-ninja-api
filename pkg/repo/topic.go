@@ -109,8 +109,8 @@ func (r *TopicRepo) CountBySearch(within *mytype.OID, query string) (int32, erro
 	return r.svc.CountBySearch(within, query)
 }
 
-func (r *TopicRepo) CountByStudy(studyId string) (int32, error) {
-	return r.svc.CountByStudy(studyId)
+func (r *TopicRepo) CountByTopicable(topicableId string) (int32, error) {
+	return r.svc.CountByTopicable(topicableId)
 }
 
 func (r *TopicRepo) Create(s *data.Topic) (*TopicPermit, error) {
@@ -151,11 +151,14 @@ func (r *TopicRepo) Get(id string) (*TopicPermit, error) {
 	return &TopicPermit{fieldPermFn, topic}, nil
 }
 
-func (r *TopicRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*TopicPermit, error) {
+func (r *TopicRepo) GetByTopicable(
+	topicableId string,
+	po *data.PageOptions,
+) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topics, err := r.svc.GetByStudy(studyId, po)
+	topics, err := r.svc.GetByTopicable(topicableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -185,16 +188,6 @@ func (r *TopicRepo) GetByName(name string) (*TopicPermit, error) {
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
-}
-
-func (r *TopicRepo) DeleteStudyRelation(topic *data.Topic) error {
-	if err := r.CheckConnection(); err != nil {
-		return err
-	}
-	if _, err := r.perms.Check(perm.Delete, topic); err != nil {
-		return err
-	}
-	return r.svc.DeleteStudyRelation(topic.StudyId.String, topic.Id.String)
 }
 
 func (r *TopicRepo) Search(query string, po *data.PageOptions) ([]*TopicPermit, error) {

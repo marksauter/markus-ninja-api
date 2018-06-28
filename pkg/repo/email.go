@@ -73,13 +73,6 @@ func (r *EmailPermit) UpdatedAt() (time.Time, error) {
 	return r.email.UpdatedAt.Time, nil
 }
 
-func (r *EmailPermit) UserLogin() (string, error) {
-	if ok := r.checkFieldPermission("user_login"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.email.UserLogin.String, nil
-}
-
 func (r *EmailPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied

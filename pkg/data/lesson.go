@@ -16,14 +16,13 @@ type Lesson struct {
 	Body        mytype.Markdown    `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
+	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
 	StudyId     mytype.OID         `db:"study_id" permit:"read"`
-	StudyName   pgtype.Text        `db:"study_name" permit:"read"`
 	Title       pgtype.Text        `db:"title" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
 }
 
 func NewLessonService(db Queryer) *LessonService {
@@ -32,6 +31,26 @@ func NewLessonService(db Queryer) *LessonService {
 
 type LessonService struct {
 	db Queryer
+}
+
+const countLessonByLabelSQL = `
+	SELECT COUNT(*)
+	FROM lesson_labeled
+	WHERE label_id = $1
+`
+
+func (s *LessonService) CountByLabel(labelId string) (n int32, err error) {
+	mylog.Log.WithField("label_id", labelId).Info("Lesson.CountByLabel(label_id)")
+	err = prepareQueryRow(
+		s.db,
+		"countLessonByLabel",
+		countLessonByLabelSQL,
+		labelId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
 }
 
 func (s *LessonService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
@@ -118,11 +137,9 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyId,
-		&row.StudyName,
 		&row.Title,
 		&row.UpdatedAt,
 		&row.UserId,
-		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -151,11 +168,9 @@ func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyId,
-			&row.StudyName,
 			&row.Title,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -178,12 +193,10 @@ const getLessonByIdSQL = `
 		number,
 		published_at,
 		study_id,
-		study_name,
 		title,
 		updated_at,
-		user_id,
-		user_login
-	FROM lesson_master
+		user_id
+	FROM lesson
 	WHERE id = $1
 `
 
@@ -200,11 +213,9 @@ const getLessonByOwnerStudyAndNumberSQL = `
 		lesson.number,
 		lesson.published_at,
 		lesson.study_id,
-		study.name study_name,
 		lesson.title,
 		lesson.updated_at,
-		lesson.user_id,
-		account.login user_login
+		lesson.user_id
 	FROM lesson
 	JOIN account ON lower(account.login) = lower($1)
 	JOIN study ON lower(study.name) = lower($2)
@@ -226,6 +237,67 @@ func (s *LessonService) GetByOwnerStudyAndNumber(
 	)
 }
 
+func (s *LessonService) GetByLabel(
+	labelId string,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	mylog.Log.WithField("label_id", labelId).Info("Lesson.GetByLabel(label_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{
+		`label_id = ` + args.Append(labelId),
+	}
+
+	selects := []string{
+		"body",
+		"created_at",
+		"id",
+		"labeled_at",
+		"number",
+		"published_at",
+		"study_id",
+		"title",
+		"updated_at",
+		"user_id",
+	}
+	from := "labeled_lesson"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getLessonsByLabel", sql)
+
+	var rows []*Lesson
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Lesson
+		dbRows.Scan(
+			&row.Body,
+			&row.CreatedAt,
+			&row.Id,
+			&row.LabeledAt,
+			&row.Number,
+			&row.PublishedAt,
+			&row.StudyId,
+			&row.Title,
+			&row.UpdatedAt,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
 func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
 	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
@@ -238,13 +310,11 @@ func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, er
 		"number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"title",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "lesson_master"
+	from := "lesson"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByUser", sql)
@@ -269,13 +339,11 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 		"number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"title",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "lesson_master"
+	from := "lesson"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByStudy", sql)
@@ -291,12 +359,10 @@ const getLessonByNumberSQL = `
 		number,
 		published_at,
 		study_id,
-		study_name,
 		title,
 		updated_at,
-		user_id,
-		user_login
-	FROM lesson_master
+		user_id
+	FROM lesson
 	WHERE user_id = $1 AND study_id = $2 AND number = $3
 `
 
@@ -322,12 +388,10 @@ const batchGetLessonByNumberSQL = `
 		number,
 		published_at,
 		study_id,
-		study_name,
 		title,
 		updated_at,
-		user_id,
-		user_login
-	FROM lesson_master
+		user_id
+	FROM lesson
 	WHERE user_id = $1 AND study_id = $2 AND number = ANY($3)
 `
 
@@ -433,17 +497,16 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	lessonEnrollSvc := NewLessonEnrollService(tx)
-	lessonEnrolls, err := lessonEnrollSvc.GetByLesson(row.Id.String, nil)
+	enrolledSvc := NewEnrolledService(tx)
+	enrolleds, err := enrolledSvc.GetByEnrollable(row.Id.String, nil)
 	if err != nil {
 		return nil, err
 	}
-	enrolls := make([]*Enroll, len(lessonEnrolls))
-	for i, enroll := range lessonEnrolls {
-		mylog.Log.Debug(enroll.ReasonName.String)
+	enrolls := make([]*Enroll, len(enrolleds))
+	for i, enrolled := range enrolleds {
 		enrolls[i] = &Enroll{
-			ReasonName: enroll.ReasonName.String,
-			UserId:     enroll.UserId.String,
+			ReasonName: enrolled.ReasonName.String,
+			UserId:     enrolled.UserId.String,
 		}
 	}
 
@@ -525,11 +588,9 @@ func (s *LessonService) Search(within *mytype.OID, query string, po *PageOptions
 		"number",
 		"published_at",
 		"study_id",
-		"study_name",
 		"title",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "lesson_search_index"
 	sql, args := SearchSQL(selects, from, within, query, po)

@@ -22,7 +22,6 @@ type Study struct {
 	Name        mytype.URLSafeName `db:"name" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin   pgtype.Text        `db:"user_login" permit:"read"`
 }
 
 func NewStudyService(db Queryer) *StudyService {
@@ -35,7 +34,7 @@ type StudyService struct {
 
 const countStudyByAppledSQL = `
 	SELECT COUNT(*)
-	FROM study_apple
+	FROM study_appled
 	WHERE user_id = $1
 `
 
@@ -136,7 +135,6 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 		&row.Name,
 		&row.UpdatedAt,
 		&row.UserId,
-		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -166,7 +164,6 @@ func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]
 			&row.Name,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -189,9 +186,8 @@ const getStudyByIdSQL = `
 		id,
 		name,
 		updated_at,
-		user_id,
-		user_login
-	FROM study_master
+		user_id
+	FROM study
 	WHERE id = $1
 `
 
@@ -217,7 +213,6 @@ func (s *StudyService) GetByAppled(
 		"name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "appled_study"
 	sql := SQL(selects, from, where, &args, po)
@@ -242,7 +237,6 @@ func (s *StudyService) GetByAppled(
 			&row.Name,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -274,7 +268,6 @@ func (s *StudyService) GetByEnrolled(
 		"name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "enrolled_study"
 	sql := SQL(selects, from, where, &args, po)
@@ -299,7 +292,6 @@ func (s *StudyService) GetByEnrolled(
 			&row.Name,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -330,9 +322,8 @@ func (s *StudyService) GetByUser(
 		"name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
-	from := "study_master"
+	from := "study"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getStudiesByUserId", sql)
@@ -348,9 +339,8 @@ const getStudyByNameSQL = `
 		id,
 		name,
 		updated_at,
-		user_id,
-		user_login
-	FROM study_master
+		user_id
+	FROM study
 	WHERE user_id = $1 AND lower(name) = lower($2)
 `
 
@@ -370,8 +360,7 @@ const getStudyByUserAndNameSQL = `
 		s.id,
 		s.name,
 		s.updated_at,
-		s.user_id,
-		a.login user_login
+		s.user_id
 	FROM study s
 	INNER JOIN account a ON a.login = $1
 	WHERE s.user_id = a.id AND lower(s.name) = lower($2)  
@@ -520,7 +509,6 @@ func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions)
 		"name",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "study_search_index"
 	sql, args := SearchSQL(selects, from, within, query, po)

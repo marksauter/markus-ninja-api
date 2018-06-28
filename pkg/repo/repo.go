@@ -12,22 +12,23 @@ import (
 type key string
 
 const (
+	appledRepoKey        key = "appled"
 	emailRepoKey         key = "email"
+	enrolledRepoKey      key = "enrolled"
 	evtRepoKey           key = "evt"
+	labelRepoKey         key = "label"
+	labeledRepoKey       key = "labeled"
 	lessonRepoKey        key = "lesson"
 	lessonCommentRepoKey key = "lesson_comment"
-	lessonEnrollRepoKey  key = "lesson_enroll"
 	notificationRepoKey  key = "notification"
 	permRepoKey          key = "perm"
 	prtRepoKey           key = "prt"
 	eventRepoKey         key = "event"
 	studyRepoKey         key = "study"
-	studyAppleRepoKey    key = "study_apple"
-	studyEnrollRepoKey   key = "study_enroll"
 	topicRepoKey         key = "topic"
+	topicedRepoKey       key = "topiced"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
-	userEnrollRepoKey    key = "user_enroll"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -54,22 +55,23 @@ func NewRepos(svcs *service.Services) *Repos {
 	permRepo := NewPermRepo(svcs.Perm)
 	return &Repos{
 		lookup: map[key]Repo{
+			appledRepoKey:        NewAppledRepo(permRepo, svcs.Appled),
 			emailRepoKey:         NewEmailRepo(permRepo, svcs.Email),
+			enrolledRepoKey:      NewEnrolledRepo(permRepo, svcs.Enrolled),
 			evtRepoKey:           NewEVTRepo(permRepo, svcs.EVT),
+			labelRepoKey:         NewLabelRepo(permRepo, svcs.Label),
+			labeledRepoKey:       NewLabeledRepo(permRepo, svcs.Labeled),
 			lessonRepoKey:        NewLessonRepo(permRepo, svcs.Lesson),
 			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
-			lessonEnrollRepoKey:  NewLessonEnrollRepo(permRepo, svcs.LessonEnroll),
 			notificationRepoKey:  NewNotificationRepo(permRepo, svcs.Notification),
 			permRepoKey:          permRepo,
 			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
 			eventRepoKey:         NewEventRepo(permRepo, svcs.Event),
 			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
-			studyAppleRepoKey:    NewStudyAppleRepo(permRepo, svcs.StudyApple),
-			studyEnrollRepoKey:   NewStudyEnrollRepo(permRepo, svcs.StudyEnroll),
 			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
+			topicedRepoKey:       NewTopicedRepo(permRepo, svcs.Topiced),
 			userRepoKey:          NewUserRepo(permRepo, svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
-			userEnrollRepoKey:    NewUserEnrollRepo(permRepo, svcs.UserEnroll),
 		},
 	}
 }
@@ -90,8 +92,18 @@ func (r *Repos) CloseAll() {
 	}
 }
 
+func (r *Repos) Appled() *AppledRepo {
+	repo, _ := r.lookup[appledRepoKey].(*AppledRepo)
+	return repo
+}
+
 func (r *Repos) Email() *EmailRepo {
 	repo, _ := r.lookup[emailRepoKey].(*EmailRepo)
+	return repo
+}
+
+func (r *Repos) Enrolled() *EnrolledRepo {
+	repo, _ := r.lookup[enrolledRepoKey].(*EnrolledRepo)
 	return repo
 }
 
@@ -105,6 +117,16 @@ func (r *Repos) EVT() *EVTRepo {
 	return repo
 }
 
+func (r *Repos) Label() *LabelRepo {
+	repo, _ := r.lookup[labelRepoKey].(*LabelRepo)
+	return repo
+}
+
+func (r *Repos) Labeled() *LabeledRepo {
+	repo, _ := r.lookup[labeledRepoKey].(*LabeledRepo)
+	return repo
+}
+
 func (r *Repos) Lesson() *LessonRepo {
 	repo, _ := r.lookup[lessonRepoKey].(*LessonRepo)
 	return repo
@@ -112,11 +134,6 @@ func (r *Repos) Lesson() *LessonRepo {
 
 func (r *Repos) LessonComment() *LessonCommentRepo {
 	repo, _ := r.lookup[lessonCommentRepoKey].(*LessonCommentRepo)
-	return repo
-}
-
-func (r *Repos) LessonEnroll() *LessonEnrollRepo {
-	repo, _ := r.lookup[lessonEnrollRepoKey].(*LessonEnrollRepo)
 	return repo
 }
 
@@ -140,18 +157,13 @@ func (r *Repos) Study() *StudyRepo {
 	return repo
 }
 
-func (r *Repos) StudyApple() *StudyAppleRepo {
-	repo, _ := r.lookup[studyAppleRepoKey].(*StudyAppleRepo)
-	return repo
-}
-
-func (r *Repos) StudyEnroll() *StudyEnrollRepo {
-	repo, _ := r.lookup[studyEnrollRepoKey].(*StudyEnrollRepo)
-	return repo
-}
-
 func (r *Repos) Topic() *TopicRepo {
 	repo, _ := r.lookup[topicRepoKey].(*TopicRepo)
+	return repo
+}
+
+func (r *Repos) Topiced() *TopicedRepo {
+	repo, _ := r.lookup[topicedRepoKey].(*TopicedRepo)
 	return repo
 }
 
@@ -162,11 +174,6 @@ func (r *Repos) User() *UserRepo {
 
 func (r *Repos) UserAsset() *UserAssetRepo {
 	repo, _ := r.lookup[userAssetRepoKey].(*UserAssetRepo)
-	return repo
-}
-
-func (r *Repos) UserEnroll() *UserEnrollRepo {
-	repo, _ := r.lookup[userEnrollRepoKey].(*UserEnrollRepo)
 	return repo
 }
 

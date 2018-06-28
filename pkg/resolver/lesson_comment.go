@@ -86,15 +86,11 @@ func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
 
 func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	userLogin, err := r.LessonComment.UserLogin()
+	lesson, err := r.Lesson()
 	if err != nil {
 		return uri, err
 	}
-	studyName, err := r.LessonComment.StudyName()
-	if err != nil {
-		return uri, err
-	}
-	lessonNumber, err := r.LessonComment.LessonNumber()
+	lessonPath, err := lesson.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
@@ -103,10 +99,8 @@ func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
 		return uri, err
 	}
 	uri = mygql.URI(fmt.Sprintf(
-		"%s/%s/lesson/%d#lesson-comment%d",
-		userLogin,
-		studyName,
-		lessonNumber,
+		"%s/%d#lesson-comment%d",
+		string(lessonPath),
 		createdAt.Unix(),
 	))
 	return uri, nil
