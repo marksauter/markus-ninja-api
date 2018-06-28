@@ -497,6 +497,7 @@ func (r *RootResolver) Enroll(
 	}
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(id)
+	enrolled.ReasonName.Set(data.ManualReason)
 	enrolled.UserId.Set(viewer.Id)
 	_, err = r.Repos.Enrolled().Create(enrolled)
 	if err != nil {

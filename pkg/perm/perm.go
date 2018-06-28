@@ -180,11 +180,11 @@ func (nt NodeType) String() string {
 func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
 	case "appled":
-		return LabeledType, nil
+		return AppledType, nil
 	case "email":
 		return EmailType, nil
 	case "enrolled":
-		return LabeledType, nil
+		return EnrolledType, nil
 	case "event":
 		return EventType, nil
 	case "evt":
@@ -206,7 +206,7 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	case "topic":
 		return TopicType, nil
 	case "topiced":
-		return LabeledType, nil
+		return TopicedType, nil
 	case "user":
 		return UserType, nil
 	case "userasset":
