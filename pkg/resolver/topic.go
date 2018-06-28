@@ -28,15 +28,6 @@ func (r *topicResolver) Description() (string, error) {
 	return r.Topic.Description()
 }
 
-func (r *topicResolver) DescriptionHTML() (mygql.HTML, error) {
-	description, err := r.Description()
-	if err != nil {
-		return "", err
-	}
-	h := mygql.HTML(fmt.Sprintf("<div>%v</div>", description))
-	return h, nil
-}
-
 func (r *topicResolver) ID() (graphql.ID, error) {
 	id, err := r.Topic.ID()
 	return graphql.ID(id.String), err

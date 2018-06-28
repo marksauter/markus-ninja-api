@@ -6,9 +6,6 @@ type Topic implements Node, UniformResourceLocatable {
   # The description of the topic.
   description: String!
 
-  # The description of the topic rendered to HTML.
-  descriptionHTML: HTML!
-
   id: ID!
 
   # The name of the topic.

@@ -22,6 +22,11 @@ func (r *nodeResolver) ToEvent() (*eventResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToLabel() (*labelResolver, bool) {
+	resolver, ok := r.node.(*labelResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.node.(*lessonResolver)
 	return resolver, ok

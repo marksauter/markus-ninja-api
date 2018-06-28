@@ -1,5 +1,5 @@
 # Represents a study.
-type Study implements Appleable, Enrollable, Node, UniformResourceLocatable {
+type Study implements Appleable, Enrollable, Node, Topicable, UniformResourceLocatable {
   # Identifies when the study was advanced at.
   advancedAt: Time
 

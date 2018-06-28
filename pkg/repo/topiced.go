@@ -1,0 +1,235 @@
+package repo
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/perm"
+)
+
+type TopicedPermit struct {
+	checkFieldPermission FieldPermissionFunc
+	topiced              *data.Topiced
+}
+
+func (r *TopicedPermit) Get() *data.Topiced {
+	topiced := r.topiced
+	fields := structs.Fields(topiced)
+	for _, f := range fields {
+		name := f.Tag("db")
+		if ok := r.checkFieldPermission(name); !ok {
+			f.Zero()
+		}
+	}
+	return topiced
+}
+
+func (r *TopicedPermit) CreatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("created_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.topiced.CreatedAt.Time, nil
+}
+
+func (r *TopicedPermit) ID() (n int32, err error) {
+	if ok := r.checkFieldPermission("id"); !ok {
+		err = ErrAccessDenied
+		return
+	}
+	n = r.topiced.Id.Int
+	return
+}
+
+func (r *TopicedPermit) TopicId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("topic_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.topiced.TopicId, nil
+}
+
+func (r *TopicedPermit) TopicableId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("topicable_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.topiced.TopicableId, nil
+}
+
+func NewTopicedRepo(perms *PermRepo, svc *data.TopicedService) *TopicedRepo {
+	return &TopicedRepo{
+		perms: perms,
+		svc:   svc,
+	}
+}
+
+type TopicedRepo struct {
+	load  *loader.TopicedLoader
+	perms *PermRepo
+	svc   *data.TopicedService
+}
+
+func (r *TopicedRepo) Open(ctx context.Context) error {
+	err := r.perms.Open(ctx)
+	if err != nil {
+		return err
+	}
+	if r.load == nil {
+		r.load = loader.NewTopicedLoader(r.svc)
+	}
+	return nil
+}
+
+func (r *TopicedRepo) Close() {
+	r.load = nil
+}
+
+func (r *TopicedRepo) CheckConnection() error {
+	if r.load == nil {
+		mylog.Log.Error("topiced connection closed")
+		return ErrConnClosed
+	}
+	return nil
+}
+
+// Service methods
+
+func (r *TopicedRepo) CountByTopic(
+	topicId string,
+) (int32, error) {
+	return r.svc.CountByTopic(topicId)
+}
+
+func (r *TopicedRepo) CountByTopicable(
+	topicableId string,
+) (int32, error) {
+	return r.svc.CountByTopicable(topicableId)
+}
+
+func (r *TopicedRepo) Create(topiced *data.Topiced) (*TopicedPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	if _, err := r.perms.Check(perm.Create, topiced); err != nil {
+		return nil, err
+	}
+	topiced, err := r.svc.Create(topiced)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, topiced)
+	if err != nil {
+		return nil, err
+	}
+	return &TopicedPermit{fieldPermFn, topiced}, nil
+}
+
+func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	var topiced *data.Topiced
+	var err error
+	if topiced.Id.Status != pgtype.Undefined {
+		topiced, err = r.load.Get(t.Id.Int)
+		if err != nil {
+			return nil, err
+		}
+	} else if topiced.TopicableId.Status != pgtype.Undefined &&
+		topiced.TopicId.Status != pgtype.Undefined {
+		topiced, err = r.load.GetForTopicable(t.TopicableId.String, t.TopicId.String)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New(
+			"must include either topiced `id` or `topicable_id` and `topic_id` to get an topiced",
+		)
+	}
+	fieldPermFn, err := r.perms.Check(perm.Read, topiced)
+	if err != nil {
+		return nil, err
+	}
+	return &TopicedPermit{fieldPermFn, topiced}, nil
+}
+
+func (r *TopicedRepo) GetByTopic(
+	topicId string,
+	po *data.PageOptions,
+) ([]*TopicedPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	topiceds, err := r.svc.GetByTopic(topicId, po)
+	if err != nil {
+		return nil, err
+	}
+	topicedPermits := make([]*TopicedPermit, len(topiceds))
+	if len(topiceds) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, topiceds[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, t := range topiceds {
+			topicedPermits[i] = &TopicedPermit{fieldPermFn, t}
+		}
+	}
+	return topicedPermits, nil
+}
+
+func (r *TopicedRepo) GetByTopicable(
+	topicableId string,
+	po *data.PageOptions,
+) ([]*TopicedPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	topiceds, err := r.svc.GetByTopicable(topicableId, po)
+	if err != nil {
+		return nil, err
+	}
+	topicedPermits := make([]*TopicedPermit, len(topiceds))
+	if len(topiceds) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, topiceds[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, t := range topiceds {
+			topicedPermits[i] = &TopicedPermit{fieldPermFn, t}
+		}
+	}
+	return topicedPermits, nil
+}
+
+func (r *TopicedRepo) Delete(topiced *data.Topiced) error {
+	if err := r.CheckConnection(); err != nil {
+		return err
+	}
+	if _, err := r.perms.Check(perm.Delete, topiced); err != nil {
+		return err
+	}
+	if topiced.Id.Status != pgtype.Undefined {
+		return r.svc.Delete(topiced.Id.Int)
+	} else if topiced.TopicableId.Status != pgtype.Undefined &&
+		topiced.TopicId.Status != pgtype.Undefined {
+		return r.svc.DeleteForTopicable(topiced.TopicableId.String, topiced.TopicId.String)
+	}
+	return errors.New(
+		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",
+	)
+}
+
+// Middleware
+func (r *TopicedRepo) Use(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		r.Open(req.Context())
+		defer r.Close()
+		h.ServeHTTP(rw, req)
+	})
+}

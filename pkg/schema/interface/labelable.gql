@@ -1,0 +1,4 @@
+# Things that can be labeled.
+interface Labelable {
+  id: ID!
+}

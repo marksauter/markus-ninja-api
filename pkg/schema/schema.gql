@@ -68,6 +68,8 @@ type Query {
 type Mutation {
   # Adds an email to the viewer's account.
   addEmail(input: AddEmailInput!): AddEmailPayload
+  # Adds a label to a labelable.
+  addLabel(input: AddLabelInput!): AddLabelPayload
   # Adds a comment to a lesson.
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
 

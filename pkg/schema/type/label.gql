@@ -1,0 +1,73 @@
+# Represents a label.
+type Label implements Node, UniformResourceLocatable {
+  # The color of the label.
+  color: String!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # A brief description of the label.
+  description: String!
+
+  id: ID!
+
+  # Is this a default label?
+  isDefault: Boolean!
+
+  # Returns a list of lessons associated with the label.
+  lessons(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for lessons returned from the connection.
+    orderBy: LessonOrder
+  ): LessonConnection!
+
+  # The name of the label.
+  name: String!
+
+  # The HTTP path for this label.
+  resourcePath: URI!
+
+  # The study associated with this label.
+  study: Study!
+
+  # Identifies when the label was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this label.
+  url: URI!
+}
+
+# An edge type for Label.
+type LabelEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Label
+}
+
+# A connection type for Label.
+type LabelConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [LabelEdge]
+
+  # A list of nodes.
+  nodes: [Label]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

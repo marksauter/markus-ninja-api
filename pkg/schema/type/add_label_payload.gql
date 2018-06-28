@@ -1,0 +1,8 @@
+# Return type for AddLabel.
+type AddLabelPayload {
+  # The edge from the labelable's label connection.
+  labelEdge: LabelEdge!
+
+  # The labelable labeled.
+  labelable: Labelable!
+}

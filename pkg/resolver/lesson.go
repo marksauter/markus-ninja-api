@@ -202,11 +202,11 @@ func (r *lessonResolver) Events(
 
 func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	userLogin, err := r.Lesson.UserLogin()
+	study, err := r.Study()
 	if err != nil {
 		return uri, err
 	}
-	studyName, err := r.Lesson.StudyName()
+	studyPath, err := study.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
@@ -214,7 +214,7 @@ func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s/lesson/%d", userLogin, studyName, number))
+	uri = mygql.URI(fmt.Sprintf("%s/lesson/%d", string(studyPath), number))
 	return uri, nil
 }
 
@@ -277,7 +277,10 @@ func (r *lessonResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if _, err := r.Repos.LessonEnroll().Get(lessonId.String, viewer.Id.String); err != nil {
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(lessonId)
+	enrolled.UserId.Set(viewer.Id)
+	if _, err := r.Repos.Enrolled().Get(enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

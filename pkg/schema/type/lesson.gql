@@ -1,5 +1,5 @@
 # Represents a lesson.
-type Lesson implements Authorable, Enrollable, Node, UniformResourceLocatable, Updateable {
+type Lesson implements Authorable, Enrollable, Labelable, Node, UniformResourceLocatable, Updateable {
   # The user who authored this body. 
   author: User
 

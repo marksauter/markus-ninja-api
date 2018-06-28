@@ -1,0 +1,8 @@
+# Input type for AddLabel.
+input AddLabelInput {
+  # The ID of the label to label with. 
+  labelId: ID!
+
+  # The ID of the labelable to label.
+  labelableId: ID!
+}

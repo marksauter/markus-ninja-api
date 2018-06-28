@@ -359,7 +359,11 @@ func (r *studyResolver) NameWithOwner() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ownerLogin, err := r.Study.UserLogin()
+	owner, err := r.Owner()
+	if err != nil {
+		return "", err
+	}
+	ownerLogin, err := owner.Login()
 	if err != nil {
 		return "", err
 	}
@@ -418,7 +422,7 @@ func (r *studyResolver) Students(
 	if err != nil {
 		return nil, err
 	}
-	users, err := r.Repos.User().GetStudents(
+	users, err := r.Repos.User().GetEnrollers(
 		studyId.String,
 		pageOptions,
 	)
@@ -471,14 +475,14 @@ func (r *studyResolver) Topics(
 		return nil, err
 	}
 
-	topics, err := r.Repos.Topic().GetByStudy(
+	topics, err := r.Repos.Topic().GetByTopicable(
 		studyId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Topic().CountByStudy(studyId.String)
+	count, err := r.Repos.Topic().CountByTopicable(studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +528,10 @@ func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if _, err := r.Repos.StudyApple().Get(studyId.String, viewer.Id.String); err != nil {
+	appled := &data.Appled{}
+	appled.AppleableId.Set(studyId)
+	appled.UserId.Set(viewer.Id)
+	if _, err := r.Repos.Appled().Get(appled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}
@@ -544,7 +551,10 @@ func (r *studyResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if _, err := r.Repos.StudyEnroll().Get(studyId.String, viewer.Id.String); err != nil {
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(studyId)
+	enrolled.UserId.Set(viewer.Id)
+	if _, err := r.Repos.Enrolled().Get(enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

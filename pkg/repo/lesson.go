@@ -73,13 +73,6 @@ func (r *LessonPermit) StudyId() (*mytype.OID, error) {
 	return &r.lesson.StudyId, nil
 }
 
-func (r *LessonPermit) StudyName() (string, error) {
-	if ok := r.checkFieldPermission("study_name"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.lesson.StudyName.String, nil
-}
-
 func (r *LessonPermit) Title() (string, error) {
 	if ok := r.checkFieldPermission("title"); !ok {
 		return "", ErrAccessDenied
@@ -99,13 +92,6 @@ func (r *LessonPermit) UserId() (*mytype.OID, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.lesson.UserId, nil
-}
-
-func (r *LessonPermit) UserLogin() (string, error) {
-	if ok := r.checkFieldPermission("user_login"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.lesson.UserLogin.String, nil
 }
 
 func NewLessonRepo(perms *PermRepo, svc *data.LessonService) *LessonRepo {
@@ -145,6 +131,10 @@ func (r *LessonRepo) CheckConnection() error {
 }
 
 // Service methods
+
+func (r *LessonRepo) CountByLabel(labelId string) (int32, error) {
+	return r.svc.CountByLabel(labelId)
+}
 
 func (r *LessonRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
 	return r.svc.CountBySearch(within, query)
@@ -189,6 +179,30 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) GetByLabel(
+	labelId string,
+	po *data.PageOptions,
+) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	lessons, err := r.svc.GetByLabel(labelId, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	if len(lessons) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessons {
+			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+		}
+	}
+	return lessonPermits, nil
 }
 
 func (r *LessonRepo) GetByStudy(

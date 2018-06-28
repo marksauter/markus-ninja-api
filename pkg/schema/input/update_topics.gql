@@ -1,7 +1,7 @@
-# Input type for AddEmail.
+# Input type for UpdateTopics.
 input UpdateTopicsInput {
-  # ID of the study to update.
-  studyId: ID!
+  # ID of the topicable to update.
+  topicableId: ID!
 
   # An array of topic names.
   topicNames: [String!]!

@@ -7,13 +7,16 @@ import (
 )
 
 type Services struct {
+	Appled        *data.AppledService
 	Auth          *AuthService
 	Email         *data.EmailService
+	Enrolled      *data.EnrolledService
 	Event         *data.EventService
 	EVT           *data.EVTService
+	Label         *data.LabelService
+	Labeled       *data.LabeledService
 	Lesson        *data.LessonService
 	LessonComment *data.LessonCommentService
-	LessonEnroll  *data.LessonEnrollService
 	Mail          *MailService
 	Notification  *data.NotificationService
 	Perm          *data.PermService
@@ -21,12 +24,10 @@ type Services struct {
 	Role          *data.RoleService
 	Storage       *StorageService
 	Study         *data.StudyService
-	StudyApple    *data.StudyAppleService
-	StudyEnroll   *data.StudyEnrollService
 	Topic         *data.TopicService
+	Topiced       *data.TopicedService
 	User          *data.UserService
 	UserAsset     *data.UserAssetService
-	UserEnroll    *data.UserEnrollService
 }
 
 func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
@@ -43,13 +44,16 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		return nil, err
 	}
 	return &Services{
+		Appled:        data.NewAppledService(db),
 		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
 		Email:         data.NewEmailService(db),
+		Enrolled:      data.NewEnrolledService(db),
 		Event:         data.NewEventService(db),
 		EVT:           data.NewEVTService(db),
+		Label:         data.NewLabelService(db),
+		Labeled:       data.NewLabeledService(db),
 		Lesson:        data.NewLessonService(db),
 		LessonComment: data.NewLessonCommentService(db),
-		LessonEnroll:  data.NewLessonEnrollService(db),
 		Mail:          NewMailService(myaws.NewSES(), mailConfig),
 		Notification:  data.NewNotificationService(db),
 		Perm:          data.NewPermService(db),
@@ -57,11 +61,9 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		Role:          data.NewRoleService(db),
 		Storage:       storageSvc,
 		Study:         data.NewStudyService(db),
-		StudyApple:    data.NewStudyAppleService(db),
-		StudyEnroll:   data.NewStudyEnrollService(db),
 		Topic:         data.NewTopicService(db),
+		Topiced:       data.NewTopicedService(db),
 		User:          data.NewUserService(db),
 		UserAsset:     data.NewUserAssetService(db),
-		UserEnroll:    data.NewUserEnrollService(db),
 	}, nil
 }

@@ -15,7 +15,6 @@ type Email struct {
 	Public     pgtype.Bool        `db:"public"`
 	Type       EmailType          `db:"type"`
 	UserId     mytype.OID         `db:"user_id"`
-	UserLogin  pgtype.Varchar     `db:"user_login"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
 	Value      pgtype.Varchar     `db:"value"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
@@ -80,7 +79,6 @@ func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email
 		&row.Public,
 		&row.Type,
 		&row.UserId,
-		&row.UserLogin,
 		&row.UpdatedAt,
 		&row.Value,
 		&row.VerifiedAt,
@@ -115,7 +113,6 @@ func (s *EmailService) getMany(
 			&row.Public,
 			&row.Type,
 			&row.UserId,
-			&row.UserLogin,
 			&row.UpdatedAt,
 			&row.Value,
 			&row.VerifiedAt,
@@ -139,11 +136,10 @@ const getEmailByIdSQL = `
 		public,
 		type,
 		user_id,
-		user_login,
 		updated_at,
 		value,
 		verified_at
-	FROM email_master
+	FROM email
 	WHERE id = $1
 `
 
@@ -159,11 +155,10 @@ const getEmailByValueSQL = `
 		public,
 		type,
 		user_id,
-		user_login,
 		updated_at,
 		value,
 		verified_at
-	FROM email_master
+	FROM email
 	WHERE lower(value) = lower($1)
 `
 
@@ -203,12 +198,11 @@ func (s *EmailService) GetByUser(
 		"public",
 		"type",
 		"user_id",
-		"user_login",
 		"updated_at",
 		"value",
 		"verified_at",
 	}
-	from := "email_master"
+	from := "email"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getEmailByUser", sql)

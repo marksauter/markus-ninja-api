@@ -58,14 +58,6 @@ func (r *LessonCommentPermit) LessonId() (*mytype.OID, error) {
 	return &r.lessonComment.LessonId, nil
 }
 
-func (r *LessonCommentPermit) LessonNumber() (int32, error) {
-	if ok := r.checkFieldPermission("lesson_number"); !ok {
-		var i int32
-		return i, ErrAccessDenied
-	}
-	return r.lessonComment.LessonNumber.Int, nil
-}
-
 func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -80,25 +72,11 @@ func (r *LessonCommentPermit) StudyId() (*mytype.OID, error) {
 	return &r.lessonComment.StudyId, nil
 }
 
-func (r *LessonCommentPermit) StudyName() (string, error) {
-	if ok := r.checkFieldPermission("study_name"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.lessonComment.StudyName.String, nil
-}
-
 func (r *LessonCommentPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.lessonComment.UserId, nil
-}
-
-func (r *LessonCommentPermit) UserLogin() (string, error) {
-	if ok := r.checkFieldPermission("user_login"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.lessonComment.UserLogin.String, nil
 }
 
 func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {

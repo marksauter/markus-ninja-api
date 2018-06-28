@@ -100,20 +100,21 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 
 	modelTypes := []interface{}{
+		new(data.Appled),
 		new(data.Email),
+		new(data.Enrolled),
 		new(data.Event),
 		new(data.EVT),
+		new(data.Labeled),
 		new(data.Lesson),
 		new(data.LessonComment),
 		new(data.Notification),
 		new(data.PRT),
 		new(data.Study),
-		new(data.StudyApple),
-		new(data.StudyEnroll),
 		new(data.Topic),
+		new(data.Topiced),
 		new(data.User),
 		new(data.UserAsset),
-		new(data.UserEnroll),
 	}
 
 	for _, model := range modelTypes {
