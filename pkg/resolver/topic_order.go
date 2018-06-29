@@ -10,14 +10,14 @@ import (
 type TopicOrderField int
 
 const (
-	TopicCreatedAt TopicOrderField = iota
+	TopicTopicedAt TopicOrderField = iota
 	TopicName
 )
 
 func ParseTopicOrderField(s string) (TopicOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "CREATED_AT":
-		return TopicCreatedAt, nil
+	case "TOPICED_AT":
+		return TopicTopicedAt, nil
 	case "NAME":
 		return TopicName, nil
 	default:
@@ -28,10 +28,10 @@ func ParseTopicOrderField(s string) (TopicOrderField, error) {
 
 func (f TopicOrderField) String() string {
 	switch f {
-	case TopicCreatedAt:
+	case TopicTopicedAt:
 		return "created_at"
 	case TopicName:
-		return "number"
+		return "name"
 	default:
 		return "unknown"
 	}
@@ -54,7 +54,7 @@ func ParseTopicOrder(arg *OrderArg) (*TopicOrder, error) {
 	if arg == nil {
 		return &TopicOrder{
 			direction: data.DESC,
-			field:     TopicCreatedAt,
+			field:     TopicTopicedAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

@@ -69,7 +69,11 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 
 	additionalRoles := []string{}
 	if a != perm.Create {
-		if ok := r.viewerCanAdmin(node); ok {
+		ok, err := r.svc.ViewerCanAdmin(r.viewer, node)
+		if err != nil {
+			return checkField, err
+		}
+		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
 		}
 	}
@@ -99,50 +103,6 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 		}
 	}
 	return checkField, nil
-}
-
-func (r *PermRepo) viewerCanAdmin(node interface{}) bool {
-	vid := r.viewer.Id.String
-	switch node := node.(type) {
-	case data.Email:
-		return vid == node.UserId.String
-	case *data.Email:
-		return vid == node.UserId.String
-	case data.EVT:
-		return vid == node.UserId.String
-	case *data.EVT:
-		return vid == node.UserId.String
-	case data.Lesson:
-		return vid == node.UserId.String
-	case *data.Lesson:
-		return vid == node.UserId.String
-	case data.LessonComment:
-		return vid == node.UserId.String
-	case *data.LessonComment:
-		return vid == node.UserId.String
-	case data.Notification:
-		return vid == node.UserId.String
-	case *data.Notification:
-		return vid == node.UserId.String
-	case data.PRT:
-		return vid == node.UserId.String
-	case *data.PRT:
-		return vid == node.UserId.String
-	case data.Study:
-		return vid == node.UserId.String
-	case *data.Study:
-		return vid == node.UserId.String
-	case data.User:
-		return vid == node.Id.String
-	case *data.User:
-		return vid == node.Id.String
-	case data.UserAsset:
-		return vid == node.UserId.String
-	case *data.UserAsset:
-		return vid == node.UserId.String
-	default:
-		return false
-	}
 }
 
 // Middleware

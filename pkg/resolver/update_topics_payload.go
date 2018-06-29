@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -25,14 +25,17 @@ func (r *updateTopicsPayloadResolver) Message() string {
 }
 
 func (r *updateTopicsPayloadResolver) Topicable() (*topicableResolver, error) {
-	switch r.TopicableId.Type {
-	case "Study":
-		study, err := r.Repos.Study().Get(r.TopicableId.String)
-		if err != nil {
-			return nil, err
-		}
-		return &topicableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for topicable id", r.TopicableId.Type)
+	t, err := r.Repos.GetTopicable(r.TopicableId)
+	if err != nil {
+		return nil, err
 	}
+	resolver, err := permitToResolver(t, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	topicable, ok := resolver.(topicable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to topicable")
+	}
+	return &topicableResolver{topicable}, nil
 }

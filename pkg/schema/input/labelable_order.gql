@@ -1,0 +1,8 @@
+# Ways in which labelables can be ordered upon return.
+input LabelableOrder {
+  # The direction in which to order items by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order items by.
+  field: LabelableOrderField!
+}

@@ -20,6 +20,7 @@ type Study struct {
 	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        mytype.URLSafeName `db:"name" permit:"read"`
+	TopicedAt   pgtype.Timestamptz `db:"topiced_at" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
@@ -38,10 +39,9 @@ const countStudyByAppledSQL = `
 	WHERE user_id = $1
 `
 
-func (s *StudyService) CountByAppled(userId string) (int32, error) {
+func (s *StudyService) CountByAppled(userId string) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.CountByAppled(user_id)")
-	var n int32
-	err := prepareQueryRow(
+	err = prepareQueryRow(
 		s.db,
 		"countStudyByAppled",
 		countStudyByAppledSQL,
@@ -50,19 +50,18 @@ func (s *StudyService) CountByAppled(userId string) (int32, error) {
 
 	mylog.Log.WithField("n", n).Info("")
 
-	return n, err
+	return
 }
 
 const countStudyByEnrolledSQL = `
 	SELECT COUNT(*)
-	FROM study_enroll
+	FROM study_enrolled
 	WHERE user_id = $1
 `
 
-func (s *StudyService) CountByEnrolled(userId string) (int32, error) {
+func (s *StudyService) CountByEnrolled(userId string) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.CountByEnrolled(user_id)")
-	var n int32
-	err := prepareQueryRow(
+	err = prepareQueryRow(
 		s.db,
 		"countStudyByEnrolled",
 		countStudyByEnrolledSQL,
@@ -71,7 +70,29 @@ func (s *StudyService) CountByEnrolled(userId string) (int32, error) {
 
 	mylog.Log.WithField("n", n).Info("")
 
-	return n, err
+	return
+}
+
+const countStudyByTopicSQL = `
+	SELECT COUNT(*)
+	FROM topiced_study
+	WHERE topic_id = $1
+`
+
+func (s *StudyService) CountByTopic(topicId string) (n int32, err error) {
+	mylog.Log.WithField(
+		"topic_id", topicId,
+	).Info("Study.CountByTopic(topic_id)")
+	err = prepareQueryRow(
+		s.db,
+		"countStudyByTopic",
+		countStudyByTopicSQL,
+		topicId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
 }
 
 const countStudyByUserSQL = `
@@ -80,10 +101,9 @@ const countStudyByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *StudyService) CountByUser(userId string) (int32, error) {
+func (s *StudyService) CountByUser(userId string) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.CountByUser(user_id)")
-	var n int32
-	err := prepareQueryRow(
+	err = prepareQueryRow(
 		s.db,
 		"countStudyByUser",
 		countStudyByUserSQL,
@@ -92,7 +112,7 @@ func (s *StudyService) CountByUser(userId string) (int32, error) {
 
 	mylog.Log.WithField("n", n).Info("")
 
-	return n, err
+	return
 }
 
 func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
@@ -290,6 +310,61 @@ func (s *StudyService) GetByEnrolled(
 			&row.EnrolledAt,
 			&row.Id,
 			&row.Name,
+			&row.UpdatedAt,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
+}
+
+func (s *StudyService) GetByTopic(
+	topicId string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("topic_id", topicId).Info("Study.GetByTopic(topic_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{`topic_id = ` + args.Append(topicId)}
+
+	selects := []string{
+		"advanced_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"topiced_at",
+		"updated_at",
+		"user_id",
+	}
+	from := "topiced_study"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getStudiesByTopic", sql)
+
+	var rows []*Study
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Study
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.Name,
+			&row.TopicedAt,
 			&row.UpdatedAt,
 			&row.UserId,
 		)

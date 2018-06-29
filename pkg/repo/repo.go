@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -26,6 +27,7 @@ const (
 	eventRepoKey         key = "event"
 	studyRepoKey         key = "study"
 	topicRepoKey         key = "topic"
+	topicableRepoKey     key = "topicable"
 	topicedRepoKey       key = "topiced"
 	userRepoKey          key = "user"
 	userAssetRepoKey     key = "user_asset"
@@ -183,4 +185,24 @@ func (r *Repos) Use(h http.Handler) http.Handler {
 		defer r.CloseAll()
 		h.ServeHTTP(rw, req)
 	})
+}
+
+// Cross repo methods
+
+func (r *Repos) GetLabelable(labelableId *mytype.OID) (Permit, error) {
+	switch labelableId.Type {
+	case "Lesson":
+		return r.Lesson().Get(labelableId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableId.Type)
+	}
+}
+
+func (r *Repos) GetTopicable(topicableId *mytype.OID) (Permit, error) {
+	switch topicableId.Type {
+	case "Study":
+		return r.Study().Get(topicableId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableId.Type)
+	}
 }

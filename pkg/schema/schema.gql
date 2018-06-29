@@ -79,6 +79,8 @@ type Mutation {
   # Adds a comment to a lesson.
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
 
+  # Creates a new label.
+  createLabel(input: CreateLabelInput!): Label
   # Creates a new lesson.
   createLesson(input: CreateLessonInput!): Lesson
   # Creates a new study.

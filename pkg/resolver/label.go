@@ -39,7 +39,7 @@ func (r *labelResolver) IsDefault() (bool, error) {
 	return r.Label.IsDefault()
 }
 
-func (r *labelResolver) Lessons(
+func (r *labelResolver) Labelables(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -47,9 +47,14 @@ func (r *labelResolver) Lessons(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Type    string
 	},
-) (*lessonConnectionResolver, error) {
-	lessonOrder, err := ParseLessonOrder(args.OrderBy)
+) (*labelableConnectionResolver, error) {
+	labelableType, err := ParseLabelableType(args.Type)
+	if err != nil {
+		return nil, err
+	}
+	labelableOrder, err := ParseLabelableOrder(labelableType, args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -59,39 +64,43 @@ func (r *labelResolver) Lessons(
 		args.Before,
 		args.First,
 		args.Last,
-		lessonOrder,
+		labelableOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	labelId, err := r.Label.ID()
+	id, err := r.Label.ID()
 	if err != nil {
 		return nil, err
 	}
-	users, err := r.Repos.Lesson().GetByLabel(
-		labelId.String,
-		pageOptions,
-	)
+
+	lessonCount, err := r.Repos.Lesson().CountByLabel(id.String)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByLabel(
-		labelId.String,
-	)
-	if err != nil {
-		return nil, err
+	permits := []repo.Permit{}
+
+	switch labelableType {
+	case LabelableTypeLesson:
+		studies, err := r.Repos.Lesson().GetByLabel(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(studies))
+		for i, l := range studies {
+			permits[i] = l
+		}
+	default:
+		return nil, fmt.Errorf("invalid type %s for labelable type", labelableType.String())
 	}
-	lessonConnectionResolver, err := NewLessonConnectionResolver(
-		users,
-		pageOptions,
-		count,
+
+	return NewLabelableConnectionResolver(
 		r.Repos,
+		permits,
+		pageOptions,
+		lessonCount,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return lessonConnectionResolver, nil
 }
 
 func (r *labelResolver) Name() (string, error) {

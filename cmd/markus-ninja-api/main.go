@@ -105,6 +105,7 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		new(data.Enrolled),
 		new(data.Event),
 		new(data.EVT),
+		new(data.Label),
 		new(data.Labeled),
 		new(data.Lesson),
 		new(data.LessonComment),

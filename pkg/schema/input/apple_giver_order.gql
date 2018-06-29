@@ -1,8 +1,8 @@
-# Ways in which apple connections can be ordered.
-input AppleOrder {
+# Ways in which apple giver connections can be ordered.
+input AppleGiverOrder {
   # The direction in which to order nodes.
   direction: OrderDirection!
 
   # The field in which to order nodes by.
-  field: AppleOrderField!
+  field: AppleGiverOrderField!
 }

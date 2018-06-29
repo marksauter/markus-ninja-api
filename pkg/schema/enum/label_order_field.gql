@@ -1,0 +1,8 @@
+# Properties by which label connections can be ordered.
+enum LabelOrderField {
+  # Order labels by creation time.
+  LABELED_AT
+
+  # Order labels by number.
+  NUMBER
+}

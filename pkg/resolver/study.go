@@ -41,7 +41,7 @@ func (r *studyResolver) AppleGivers(
 		OrderBy *OrderArg
 	},
 ) (*appleGiverConnectionResolver, error) {
-	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	appleGiverOrder, err := ParseAppleGiverOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (r *studyResolver) AppleGivers(
 		args.Before,
 		args.First,
 		args.Last,
-		appleOrder,
+		appleGiverOrder,
 	)
 	if err != nil {
 		return nil, err

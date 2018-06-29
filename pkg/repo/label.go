@@ -126,6 +126,10 @@ func (r *LabelRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *LabelRepo) CountByLabelable(labelableId string) (int32, error) {
+	return r.svc.CountByLabelable(labelableId)
+}
+
 func (r *LabelRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
 	return r.svc.CountBySearch(within, query)
 }
@@ -170,6 +174,30 @@ func (r *LabelRepo) Get(id string) (*LabelPermit, error) {
 		return nil, err
 	}
 	return &LabelPermit{fieldPermFn, label}, nil
+}
+
+func (r *LabelRepo) GetByLabelable(
+	labelableId string,
+	po *data.PageOptions,
+) ([]*LabelPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	labels, err := r.svc.GetByLabelable(labelableId, po)
+	if err != nil {
+		return nil, err
+	}
+	labelPermits := make([]*LabelPermit, len(labels))
+	if len(labels) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, labels[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range labels {
+			labelPermits[i] = &LabelPermit{fieldPermFn, l}
+		}
+	}
+	return labelPermits, nil
 }
 
 func (r *LabelRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*LabelPermit, error) {

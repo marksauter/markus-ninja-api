@@ -1,0 +1,5 @@
+# Represents the individual types of appleables to return.
+enum AppleableType {
+  # Returns studies.
+  STUDY
+}

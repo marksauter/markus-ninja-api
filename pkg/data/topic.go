@@ -32,7 +32,7 @@ type TopicService struct {
 
 const countTopicByTopicableSQL = `
 	SELECT COUNT(*)
-	FROM topic_master
+	FROM topicable_topic
 	WHERE topicable_id = $1
 `
 
@@ -149,7 +149,7 @@ func (s *TopicService) Get(id string) (*Topic, error) {
 const getTopicNamesByTopicableSQL = `
 	SELECT
 		array_agg(name) topic_names
-	FROM topic_master
+	FROM topicable_topic
 	WHERE topicable_id = $1
 	GROUP BY topicable_id
 `
@@ -197,7 +197,7 @@ func (s *TopicService) GetByTopicable(
 		"topiced_at",
 		"updated_at",
 	}
-	from := "topic_master"
+	from := "topicable_topic"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getTopicsByTopicableId", sql)

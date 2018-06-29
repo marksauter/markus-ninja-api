@@ -1,0 +1,23 @@
+# An edge in a labelable connection.
+type LabelableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Labelable
+}
+
+# A list of labelables.
+type LabelableConnection {
+  # A list of edges.
+  edges: [LabelableEdge]
+
+  # A list of nodes.
+  nodes: [Labelable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies associated with the label.
+  studyCount: Int!
+}

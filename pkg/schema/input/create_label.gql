@@ -1,0 +1,7 @@
+# Input type for CreateLabel.
+input CreateLabelInput {
+  color:        String!
+  description:  String
+  name:         String!
+  studyId:      ID!
+}

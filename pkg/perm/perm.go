@@ -125,6 +125,7 @@ const (
 	EnrolledType
 	EventType
 	EVTType
+	LabelType
 	LabeledType
 	LessonType
 	LessonCommentType
@@ -150,6 +151,8 @@ func (nt NodeType) String() string {
 		return "Event"
 	case EVTType:
 		return "EVT"
+	case LabelType:
+		return "Label"
 	case LabeledType:
 		return "Labeled"
 	case LessonType:
@@ -189,6 +192,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return EventType, nil
 	case "evt":
 		return EVTType, nil
+	case "label":
+		return LabelType, nil
 	case "labeled":
 		return LabeledType, nil
 	case "lesson":

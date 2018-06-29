@@ -1,0 +1,8 @@
+# Properties by which topic connections can be ordered.
+enum TopicOrderField {
+  # Order topics by topic time.
+  TOPICED_AT
+
+  # Order topics by name.
+  NAME
+}

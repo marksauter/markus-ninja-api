@@ -14,8 +14,8 @@ type Label implements Deleteable, Node, StudyNode, UniformResourceLocatable, Upd
   # Is this a default label?
   isDefault: Boolean!
 
-  # Returns a list of lessons associated with the label.
-  lessons(
+  # Returns a list of labelables associated with the label.
+  labelables(
     # Returns the elements in the list that come after the specified global ID.
     after: String
 
@@ -28,9 +28,13 @@ type Label implements Deleteable, Node, StudyNode, UniformResourceLocatable, Upd
     # Returns the last n elements form the list.
     last: Int
 
-    # Ordering options for lessons returned from the connection.
-    orderBy: LessonOrder
-  ): LessonConnection!
+    # Ordering options for items returned from the connection.
+    orderBy: LabelableOrder
+
+    # The types of labelable items to retrieve.
+    type: LabelableType!
+  ): LabelableConnection!
+
 
   # The name of the label.
   name: String!

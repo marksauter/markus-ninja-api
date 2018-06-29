@@ -27,13 +27,14 @@ func (r *userResolver) Appled(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Type    string
 	},
-) (*appledStudyConnectionResolver, error) {
-	id, err := r.User.ID()
+) (*appleableConnectionResolver, error) {
+	appleableType, err := ParseAppleableType(args.Type)
 	if err != nil {
 		return nil, err
 	}
-	appleOrder, err := ParseAppleOrder(args.OrderBy)
+	appleableOrder, err := ParseAppleableOrder(appleableType, args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -43,30 +44,43 @@ func (r *userResolver) Appled(
 		args.Before,
 		args.First,
 		args.Last,
-		appleOrder,
+		appleableOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByAppled(id.String, pageOptions)
+	id, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Study().CountByAppled(id.String)
+
+	studyCount, err := r.Repos.Study().CountByAppled(id.String)
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := NewAppledStudyConnectionResolver(
-		studies,
-		pageOptions,
-		count,
+	permits := []repo.Permit{}
+
+	switch appleableType {
+	case AppleableTypeStudy:
+		studies, err := r.Repos.Study().GetByAppled(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(studies))
+		for i, l := range studies {
+			permits[i] = l
+		}
+	default:
+		return nil, fmt.Errorf("invalid type %s for appleable type", appleableType.String())
+	}
+
+	return NewAppleableConnectionResolver(
 		r.Repos,
+		permits,
+		pageOptions,
+		studyCount,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
 }
 
 func (r *userResolver) Assets(

@@ -40,8 +40,18 @@ func ParseSearchOrderField(s string) (SearchOrderField, error) {
 
 func (f SearchOrderField) String() string {
 	switch f {
+	case SearchAdvancedAt:
+		return "advanced_at"
 	case SearchBestMatch:
 		return "best_match"
+	case SearchCreatedAt:
+		return "created_at"
+	case SearchName:
+		return "name"
+	case SearchNumber:
+		return "number"
+	case SearchUpdatedAt:
+		return "updated_at"
 	default:
 		return "unknown"
 	}

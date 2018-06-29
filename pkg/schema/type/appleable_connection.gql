@@ -1,0 +1,23 @@
+# An edge in a appleable connection.
+type AppleableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Appleable
+}
+
+# A list of appleables.
+type AppleableConnection {
+  # A list of edges.
+  edges: [AppleableEdge]
+
+  # A list of nodes.
+  nodes: [Appleable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies associated with the apple.
+  studyCount: Int!
+}

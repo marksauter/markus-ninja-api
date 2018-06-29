@@ -1,0 +1,5 @@
+# Properties by which apple giver connections can be ordered.
+enum AppleGiverOrderField {
+  # Order apple givers by apple time.
+  APPLED_AT
+}

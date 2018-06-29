@@ -1,0 +1,8 @@
+# Ways in which labels can be ordered upon return.
+input LabelOrder {
+  # The direction in which to order labels by the specified field.
+  direction: OrderDirection!
+
+  # The field in which to order labels by.
+  field: LabelOrderField!
+}

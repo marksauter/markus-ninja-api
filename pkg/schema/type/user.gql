@@ -15,8 +15,11 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     last: Int
 
     # Ordering options for studies returned from the connection.
-    orderBy: AppleOrder
-  ): AppledStudyConnection!
+    orderBy: AppleableOrder
+
+    # The types of appleable items to retrieve.
+    type: AppleableType!
+  ): AppleableConnection!
 
   # Returns a list of assets that the user owns.
   assets(
@@ -63,7 +66,7 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     last: Int
   ): EmailConnection!
 
-  # A list of studies the user is enrolled in.
+  # A list of enrollables the user is enrolled in.
   enrolled(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -77,9 +80,12 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     # Returns the last n elements form the list.
     last: Int
 
-    # Ordering options for studies returned from the connection.
-    orderBy: StudyOrder
-  ): EnrolledStudyConnection!
+    # Ordering options for enrollables returned from the connection.
+    orderBy: EnrollableOrder
+
+    # The types of enrollables to retrieve
+    type: EnrollableType
+  ): EnrollableConnection!
 
   id: ID!
 
@@ -131,8 +137,8 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     orderBy: NotificationOrder
   ): NotificationConnection!
 
-  # A list of users the user tutors.
-  pupils(
+  # A list of users who have enrolled in this enrollable.
+  enrollees(
     # Returns the elements in the list that come after the specified global ID.
     after: String
 
@@ -146,8 +152,8 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     last: Int
 
     # Ordering options for users returned from the connection.
-    orderBy: PupilOrder
-  ): PupilConnection!
+    orderBy: EnrolleeOrder
+  ): EnrolleeConnection!
 
   # The HTTP path for this user.
   resourcePath: URI!
@@ -176,7 +182,7 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     orderBy: StudyOrder
   ): StudyConnection!
 
-  # A list of users the user is tutored by.
+  # A list of users the user has enrolled in.
   tutors(
     # Returns the elements in the list that come after the specified global ID.
     after: String

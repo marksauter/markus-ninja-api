@@ -1,5 +1,5 @@
 # Properties by which tutor connections can be ordered.
 enum TutorOrderField {
-  # Order tutors by when they tutored.
+  # Order tutors by tutor time.
   TUTORED_AT
 }
