@@ -407,3 +407,62 @@ func (s *PermService) UpdateOperationForFields(
 	}).Info("made permissions public")
 	return nil
 }
+
+func (r *PermService) ViewerCanAdmin(viewer *User, node interface{}) (bool, error) {
+	vid := viewer.Id.String
+	switch node := node.(type) {
+	case Email:
+		return vid == node.UserId.String, nil
+	case *Email:
+		return vid == node.UserId.String, nil
+	case EVT:
+		return vid == node.UserId.String, nil
+	case *EVT:
+		return vid == node.UserId.String, nil
+	case Label:
+		studySvc := NewStudyService(r.db)
+		study, err := studySvc.Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserId.String, nil
+	case *Label:
+		studySvc := NewStudyService(r.db)
+		study, err := studySvc.Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserId.String, nil
+	case Lesson:
+		return vid == node.UserId.String, nil
+	case *Lesson:
+		return vid == node.UserId.String, nil
+	case LessonComment:
+		return vid == node.UserId.String, nil
+	case *LessonComment:
+		return vid == node.UserId.String, nil
+	case Notification:
+		return vid == node.UserId.String, nil
+	case *Notification:
+		return vid == node.UserId.String, nil
+	case PRT:
+		return vid == node.UserId.String, nil
+	case *PRT:
+		return vid == node.UserId.String, nil
+	case Study:
+		return vid == node.UserId.String, nil
+	case *Study:
+		return vid == node.UserId.String, nil
+	case User:
+		return vid == node.Id.String, nil
+	case *User:
+		return vid == node.Id.String, nil
+	case UserAsset:
+		return vid == node.UserId.String, nil
+	case *UserAsset:
+		return vid == node.UserId.String, nil
+	default:
+		return false, nil
+	}
+	return false, nil
+}

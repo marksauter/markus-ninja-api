@@ -1,0 +1,11 @@
+# Properties by which labelable connections can be ordered.
+enum LabelableOrderField {
+  # Order labelables by creation time.
+  CREATED_AT
+
+  # Order labelables by number.
+  NUMBER
+
+  # Order labelables by update time.
+  UPDATED_AT
+}

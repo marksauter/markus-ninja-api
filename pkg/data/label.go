@@ -33,6 +33,29 @@ type LabelService struct {
 	db Queryer
 }
 
+const countLabelByLabelableSQL = `
+	SELECT COUNT(*)
+	FROM labelable_label
+	WHERE labelable_id = $1
+`
+
+func (s *LabelService) CountByLabelable(labelableId string) (int32, error) {
+	mylog.Log.WithField(
+		"labelable_id", labelableId,
+	).Info("Label.CountByLabelable(labelable_id)")
+	var n int32
+	err := prepareQueryRow(
+		s.db,
+		"countLabelByLabelable",
+		countLabelByLabelableSQL,
+		labelableId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
 const countLabelByStudySQL = `
 	SELECT COUNT(*)
 	FROM label
@@ -174,16 +197,15 @@ func (s *LabelService) GetByLabelable(
 		"description",
 		"id",
 		"is_default",
-		"labelable_id",
 		"labeled_at",
 		"name",
 		"study_id",
 		"updated_at",
 	}
-	from := "label_master"
+	from := "labelable_label"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLabelsByStudyId", sql)
+	psName := preparedName("getLabelsByLabelableId", sql)
 
 	var rows []*Label
 
@@ -313,14 +335,11 @@ func (s *LabelService) Create(row *Label) (*Label, error) {
 	sql := `
 		INSERT INTO label(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		ON CONFLICT(lower("name")) DO UPDATE SET name=EXCLUDED.name RETURNING id
 	`
 
 	psName := preparedName("createLabel", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
-	)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create label")
 		if pgErr, ok := err.(pgx.PgError); ok {

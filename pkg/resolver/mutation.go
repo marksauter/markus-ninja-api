@@ -135,6 +135,38 @@ func (r *RootResolver) AddLessonComment(
 	}, nil
 }
 
+type CreateLabelInput struct {
+	Color       string
+	Description *string
+	Name        string
+	StudyId     string
+}
+
+func (r *RootResolver) CreateLabel(
+	ctx context.Context,
+	args struct{ Input CreateLabelInput },
+) (*labelResolver, error) {
+	label := &data.Label{}
+	if err := label.Color.Set(args.Input.Color); err != nil {
+		return nil, err
+	}
+	if err := label.Description.Set(args.Input.Description); err != nil {
+		return nil, err
+	}
+	if err := label.Name.Set(args.Input.Name); err != nil {
+		return nil, err
+	}
+	if err := label.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, err
+	}
+	labelPermit, err := r.Repos.Label().Create(label)
+	if err != nil {
+		return nil, err
+	}
+
+	return &labelResolver{Label: labelPermit, Repos: r.Repos}, nil
+}
+
 type CreateLessonInput struct {
 	Body    *string
 	StudyId string

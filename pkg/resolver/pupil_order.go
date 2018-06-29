@@ -10,13 +10,13 @@ import (
 type PupilOrderField int
 
 const (
-	PupilPupildAt PupilOrderField = iota
+	PupilTutoredAt PupilOrderField = iota
 )
 
 func ParsePupilOrderField(s string) (PupilOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "TUTORED_AT":
-		return PupilPupildAt, nil
+		return PupilTutoredAt, nil
 	default:
 		var f PupilOrderField
 		return f, fmt.Errorf("invalid PupilOrderField: %q", s)
@@ -25,8 +25,8 @@ func ParsePupilOrderField(s string) (PupilOrderField, error) {
 
 func (f PupilOrderField) String() string {
 	switch f {
-	case PupilPupildAt:
-		return "enrolled_at"
+	case PupilTutoredAt:
+		return "tutored_at"
 	default:
 		return "unknown"
 	}
@@ -61,7 +61,7 @@ func ParsePupilOrder(arg *OrderArg) (*PupilOrder, error) {
 	if arg == nil {
 		return &PupilOrder{
 			direction: data.ASC,
-			field:     PupilPupildAt,
+			field:     PupilTutoredAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

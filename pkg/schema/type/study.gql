@@ -26,7 +26,7 @@ type Study implements
     last: Int
 
     # Order for connection.
-    orderBy: AppleOrder
+    orderBy: AppleGiverOrder
   ): AppleGiverConnection!
 
   # Returns a single asset from the current study by name.
@@ -148,6 +148,9 @@ type Study implements
 
     # Returns the last n elements form the list.
     last: Int
+
+    # Ordering options for topics returned from the connection.
+    orderBy: TopicOrder
   ): TopicConnection!
 
   # Identifies when the study was last updated.

@@ -1,0 +1,23 @@
+# An edge in a topicable connection.
+type TopicableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Topicable
+}
+
+# A list of topicables.
+type TopicableConnection {
+  # A list of edges.
+  edges: [TopicableEdge]
+
+  # A list of nodes.
+  nodes: [Topicable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies associated with the topic.
+  studyCount: Int!
+}

@@ -10,14 +10,14 @@ import (
 type LabelOrderField int
 
 const (
-	LabelCreatedAt LabelOrderField = iota
+	LabelLabeledAt LabelOrderField = iota
 	LabelName
 )
 
 func ParseLabelOrderField(s string) (LabelOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "CREATED_AT":
-		return LabelCreatedAt, nil
+	case "LABELED_AT":
+		return LabelLabeledAt, nil
 	case "NAME":
 		return LabelName, nil
 	default:
@@ -28,7 +28,7 @@ func ParseLabelOrderField(s string) (LabelOrderField, error) {
 
 func (f LabelOrderField) String() string {
 	switch f {
-	case LabelCreatedAt:
+	case LabelLabeledAt:
 		return "created_at"
 	case LabelName:
 		return "number"
@@ -54,7 +54,7 @@ func ParseLabelOrder(arg *OrderArg) (*LabelOrder, error) {
 	if arg == nil {
 		return &LabelOrder{
 			direction: data.DESC,
-			field:     LabelCreatedAt,
+			field:     LabelLabeledAt,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)

@@ -1,0 +1,5 @@
+# Represents the individual types of topicables to return.
+enum TopicableType {
+  # Returns studies.
+  STUDY
+}

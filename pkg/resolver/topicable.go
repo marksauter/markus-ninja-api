@@ -1,8 +1,6 @@
 package resolver
 
-import (
-	graphql "github.com/graph-gophers/graphql-go"
-)
+import graphql "github.com/graph-gophers/graphql-go"
 
 type topicable interface {
 	ID() (graphql.ID, error)

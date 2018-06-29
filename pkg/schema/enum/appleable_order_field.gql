@@ -1,0 +1,17 @@
+# Properties by which appleable connections can be ordered.
+enum AppleableOrderField {
+  # Order appleables by advance time.
+  ADVANCED_AT
+
+  # Order appleables by apple time.
+  APPLED_AT
+
+  # Order appleables by creation time.
+  CREATED_AT
+
+  # Order appleables by name.
+  NAME
+
+  # Order appleables by update time.
+  UPDATED_AT
+}

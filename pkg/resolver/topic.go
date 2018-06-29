@@ -47,6 +47,70 @@ func (r *topicResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *topicResolver) Topicables(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+		Type    string
+	},
+) (*topicableConnectionResolver, error) {
+	topicableType, err := ParseTopicableType(args.Type)
+	if err != nil {
+		return nil, err
+	}
+	topicableOrder, err := ParseTopicableOrder(topicableType, args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		topicableOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := r.Topic.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	studyCount, err := r.Repos.Study().CountByTopic(id.String)
+	if err != nil {
+		return nil, err
+	}
+	permits := []repo.Permit{}
+
+	switch topicableType {
+	case TopicableTypeStudy:
+		studies, err := r.Repos.Study().GetByTopic(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(studies))
+		for i, l := range studies {
+			permits[i] = l
+		}
+	default:
+		return nil, fmt.Errorf("invalid type %s for topicable type", topicableType.String())
+	}
+
+	return NewTopicableConnectionResolver(
+		r.Repos,
+		permits,
+		pageOptions,
+		studyCount,
+	)
+}
+
 func (r *topicResolver) UpdatedAt() (graphql.Time, error) {
 	t, err := r.Topic.UpdatedAt()
 	return graphql.Time{t}, err
