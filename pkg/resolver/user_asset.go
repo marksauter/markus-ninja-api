@@ -1,12 +1,9 @@
 package resolver
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -127,15 +124,12 @@ func (r *userAssetResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *userAssetResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.UserAsset.UserId()
-	if err != nil {
-		return false, err
-	}
+func (r *userAssetResolver) ViewerCanDelete() bool {
+	userAsset := r.UserAsset.Get()
+	return r.Repos.UserAsset().ViewerCanDelete(userAsset)
+}
 
-	return viewer.Id.String == userId.String, nil
+func (r *userAssetResolver) ViewerCanUpdate() bool {
+	userAsset := r.UserAsset.Get()
+	return r.Repos.UserAsset().ViewerCanUpdate(userAsset)
 }

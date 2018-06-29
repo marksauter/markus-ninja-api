@@ -1,5 +1,12 @@
 # Represents a lesson comment.
-type LessonComment implements Authorable, Deletable, Node, UniformResourceLocatable, Updateable {
+type LessonComment implements 
+  Authorable,
+  Deleteable,
+  Node,
+  StudyNode,
+  UniformResourceLocatable,
+  Updateable
+{
   # The author of the comment.
   author: User
 

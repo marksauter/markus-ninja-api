@@ -1,5 +1,5 @@
 # Entities that can be deleted.
-interface Deletable {
+interface Deleteable {
   id: ID!
 
   # Can the viewer delete this object.

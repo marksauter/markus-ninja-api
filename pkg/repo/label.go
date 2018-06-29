@@ -257,6 +257,20 @@ func (r *LabelRepo) Update(s *data.Label) (*LabelPermit, error) {
 	return &LabelPermit{fieldPermFn, label}, nil
 }
 
+func (r *LabelRepo) ViewerCanDelete(l *data.Label) bool {
+	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+		return false
+	}
+	return true
+}
+
+func (r *LabelRepo) ViewerCanUpdate(l *data.Label) bool {
+	if _, err := r.perms.Check(perm.Update, l); err != nil {
+		return false
+	}
+	return true
+}
+
 // Middleware
 func (r *LabelRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

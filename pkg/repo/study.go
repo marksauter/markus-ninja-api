@@ -333,6 +333,13 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
+func (r *StudyRepo) ViewerCanDelete(s *data.Study) bool {
+	if _, err := r.perms.Check(perm.Delete, s); err != nil {
+		return false
+	}
+	return true
+}
+
 func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
 	if _, err := r.perms.Check(perm.Update, s); err != nil {
 		return false

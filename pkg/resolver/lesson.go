@@ -130,6 +130,59 @@ func (r *lessonResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *lessonResolver) Labels(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*labelConnectionResolver, error) {
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+	labelOrder, err := ParseLabelOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		labelOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := r.Repos.Label().GetByLabelable(
+		lessonId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Label().CountByLabelable(lessonId.String)
+	if err != nil {
+		return nil, err
+	}
+	labelConnectionResolver, err := NewLabelConnectionResolver(
+		labels,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return labelConnectionResolver, nil
+}
+
 func (r *lessonResolver) Number() (int32, error) {
 	return r.Lesson.Number()
 }
@@ -247,6 +300,11 @@ func (r *lessonResolver) URL() (mygql.URI, error) {
 	}
 	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
 	return uri, nil
+}
+
+func (r *lessonResolver) ViewerCanDelete() bool {
+	lesson := r.Lesson.Get()
+	return r.Repos.Lesson().ViewerCanDelete(lesson)
 }
 
 func (r *lessonResolver) ViewerCanUpdate() bool {

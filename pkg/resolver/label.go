@@ -2,12 +2,10 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -137,15 +135,12 @@ func (r *labelResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *labelResolver) ViewerCanUpdate(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	for _, role := range viewer.Roles.Elements {
-		if role.String == data.AdminRole {
-			return true, nil
-		}
-	}
-	return false, nil
+func (r *labelResolver) ViewerCanDelete() bool {
+	label := r.Label.Get()
+	return r.Repos.Label().ViewerCanDelete(label)
+}
+
+func (r *labelResolver) ViewerCanUpdate() bool {
+	label := r.Label.Get()
+	return r.Repos.Label().ViewerCanUpdate(label)
 }
