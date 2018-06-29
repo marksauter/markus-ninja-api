@@ -56,6 +56,12 @@ type Query {
     owner: String!
   ): Study
 
+  # Lookup a topic by name.
+  topic(
+    # The topic's name.
+    name: String!
+  ): Topic
+
   # Lookup a user by login. 
   user(
     # The login of the user.
@@ -120,7 +126,7 @@ type Mutation {
   updateLessonComment(input: UpdateLessonCommentInput!): LessonComment
   # Updates the description of a study.
   updateStudy(input: UpdateStudyInput!): Study
-  # Replaces the study's topics with the given topics.
+  # Replaces the topicable's topics with the given topics.
   updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
   # Updates the bio, login, and/or name of a user.
   updateUser(input: UpdateUserInput!): User

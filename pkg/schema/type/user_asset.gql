@@ -1,5 +1,11 @@
 # Represents a user.
-type UserAsset implements Node, UniformResourceLocatable {
+type UserAsset implements 
+  Deleteable,
+  Node,
+  StudyNode,
+  UniformResourceLocatable,
+  Updateable 
+{
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
@@ -40,6 +46,12 @@ type UserAsset implements Node, UniformResourceLocatable {
 
   # The HTTP URL for this asset.
   url: URI!
+
+  # Can the viewer delete this object?
+  viewerCanDelete: Boolean!
+
+  # Can the viewer update this object?
+  viewerCanUpdate: Boolean!
 }
 
 # An edge type for UserAsset.

@@ -18,6 +18,8 @@ type Label struct {
 	Description pgtype.Text        `db:"description" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	IsDefault   pgtype.Bool        `db:"is_default" permit:"read"`
+	LabelableId mytype.OID         `db:"labelable_id"`
+	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
 	Name        pgtype.Text        `db:"name" permit:"read"`
 	StudyId     mytype.OID         `db:"study_id" permit:"read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -154,6 +156,66 @@ const getLabelByIdSQL = `
 func (s *LabelService) Get(id string) (*Label, error) {
 	mylog.Log.WithField("id", id).Info("Label.Get(id)")
 	return s.get("getLabelById", getLabelByIdSQL, id)
+}
+
+func (s *LabelService) GetByLabelable(
+	labelableId string,
+	po *PageOptions,
+) ([]*Label, error) {
+	mylog.Log.WithField(
+		"labelable_id", labelableId,
+	).Info("Label.GetByLabelable(labelable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{`labelable_id = ` + args.Append(labelableId)}
+
+	selects := []string{
+		"color",
+		"created_at",
+		"description",
+		"id",
+		"is_default",
+		"labelable_id",
+		"labeled_at",
+		"name",
+		"study_id",
+		"updated_at",
+	}
+	from := "label_master"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getLabelsByStudyId", sql)
+
+	var rows []*Label
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Label
+		dbRows.Scan(
+			&row.Color,
+			&row.CreatedAt,
+			&row.Description,
+			&row.Id,
+			&row.IsDefault,
+			&row.LabeledAt,
+			&row.Name,
+			&row.StudyId,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get labels")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
 }
 
 func (s *LabelService) GetByStudy(

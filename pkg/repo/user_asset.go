@@ -418,6 +418,20 @@ func (r *UserAssetRepo) Upload(
 	return r.Create(userAsset)
 }
 
+func (r *UserAssetRepo) ViewerCanDelete(l *data.UserAsset) bool {
+	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+		return false
+	}
+	return true
+}
+
+func (r *UserAssetRepo) ViewerCanUpdate(l *data.UserAsset) bool {
+	if _, err := r.perms.Check(perm.Update, l); err != nil {
+		return false
+	}
+	return true
+}
+
 // Middleware
 func (r *UserAssetRepo) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

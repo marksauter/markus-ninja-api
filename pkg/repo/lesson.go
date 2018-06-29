@@ -322,6 +322,13 @@ func (r *LessonRepo) Update(l *data.Lesson) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
+func (r *LessonRepo) ViewerCanDelete(l *data.Lesson) bool {
+	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+		return false
+	}
+	return true
+}
+
 func (r *LessonRepo) ViewerCanUpdate(l *data.Lesson) bool {
 	if _, err := r.perms.Check(perm.Update, l); err != nil {
 		return false

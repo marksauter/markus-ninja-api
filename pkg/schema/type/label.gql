@@ -1,5 +1,5 @@
 # Represents a label.
-type Label implements Node, UniformResourceLocatable {
+type Label implements Deleteable, Node, StudyNode, UniformResourceLocatable, Updateable {
   # The color of the label.
   color: String!
 
@@ -46,6 +46,12 @@ type Label implements Node, UniformResourceLocatable {
 
   # The HTTP URL for this label.
   url: URI!
+
+  # Can the viewer delete this object?
+  viewerCanDelete: Boolean!
+
+  # Can the viewer update this object?
+  viewerCanUpdate: Boolean!
 }
 
 # An edge type for Label.

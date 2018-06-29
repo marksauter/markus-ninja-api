@@ -513,6 +513,11 @@ func (r *studyResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *studyResolver) ViewerCanDelete() bool {
+	study := r.Study.Get()
+	return r.Repos.Study().ViewerCanDelete(study)
+}
+
 func (r *studyResolver) ViewerCanUpdate() bool {
 	study := r.Study.Get()
 	return r.Repos.Study().ViewerCanUpdate(study)

@@ -1,4 +1,7 @@
 interface Token {
+  # Identifies the date and time when the object expires.
   expiresAt: Time!
+
+  # Identifies the date and time when the object was issued.
   issuedAt: Time!
 }

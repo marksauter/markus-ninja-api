@@ -217,6 +217,20 @@ func (r *RootResolver) Study(
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
+func (r *RootResolver) Topic(
+	ctx context.Context,
+	args struct {
+		Name  string
+		Owner string
+	},
+) (*topicResolver, error) {
+	topic, err := r.Repos.Topic().GetByName(args.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &topicResolver{Topic: topic, Repos: r.Repos}, nil
+}
+
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
