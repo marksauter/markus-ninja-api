@@ -285,14 +285,14 @@ func (s *UserService) GetByApple(
 	return rows, nil
 }
 
-func (s *UserService) GetEnrolledUsers(
+func (s *UserService) GetByEnrolled(
 	userId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"user_id",
 		userId,
-	).Info("User.GetEnrolledUsers(user_id)")
+	).Info("User.GetByEnrolled(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`actor_id = ` + args.Append(userId)}
 
@@ -309,7 +309,7 @@ func (s *UserService) GetEnrolledUsers(
 	from := "enrolled_user"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getEnrolledUsers", sql)
+	psName := preparedName("getByEnrolled", sql)
 
 	var rows []*User
 

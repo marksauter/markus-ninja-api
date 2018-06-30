@@ -3,6 +3,9 @@ enum LabelableOrderField {
   # Order labelables by creation time.
   CREATED_AT
 
+  # Order labelables by label time.
+  LABELED_AT
+
   # Order labelables by number.
   NUMBER
 

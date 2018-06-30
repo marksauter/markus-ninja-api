@@ -13,6 +13,7 @@ const (
 	TopicableAdvancedAt TopicableOrderField = iota
 	TopicableCreatedAt
 	TopicableName
+	TopicableTopicedAt
 	TopicableUpdatedAt
 )
 
@@ -24,6 +25,8 @@ func ParseTopicableOrderField(s string) (TopicableOrderField, error) {
 		return TopicableCreatedAt, nil
 	case "NAME":
 		return TopicableName, nil
+	case "TOPICED_AT":
+		return TopicableTopicedAt, nil
 	case "UPDATED_AT":
 		return TopicableUpdatedAt, nil
 	default:
@@ -40,6 +43,8 @@ func (f TopicableOrderField) String() string {
 		return "created_at"
 	case TopicableName:
 		return "name"
+	case TopicableTopicedAt:
+		return "topiced_at"
 	case TopicableUpdatedAt:
 		return "updated_at"
 	default:
@@ -63,8 +68,8 @@ func (o *TopicableOrder) Field() string {
 func ParseTopicableOrder(t TopicableType, arg *OrderArg) (data.Order, error) {
 	if arg == nil {
 		return &TopicableOrder{
-			direction: data.ASC,
-			field:     TopicableName,
+			direction: data.DESC,
+			field:     TopicableTopicedAt,
 		}, nil
 	}
 	switch t {

@@ -9,6 +9,9 @@ enum TopicableOrderField {
   # Order topicables by name.
   NAME
 
+  # Order topicables by topic time.
+  TOPICED_AT
+
   # Order topicables by update time.
   UPDATED_AT
 }

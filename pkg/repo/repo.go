@@ -189,6 +189,19 @@ func (r *Repos) Use(h http.Handler) http.Handler {
 
 // Cross repo methods
 
+func (r *Repos) GetEnrollable(enrollableId *mytype.OID) (Permit, error) {
+	switch enrollableId.Type {
+	case "Lesson":
+		return r.Lesson().Get(enrollableId.String)
+	case "Study":
+		return r.Study().Get(enrollableId.String)
+	case "User":
+		return r.User().Get(enrollableId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableId.Type)
+	}
+}
+
 func (r *Repos) GetLabelable(labelableId *mytype.OID) (Permit, error) {
 	switch labelableId.Type {
 	case "Lesson":

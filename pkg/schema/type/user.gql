@@ -182,24 +182,6 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     orderBy: StudyOrder
   ): StudyConnection!
 
-  # A list of users the user has enrolled in.
-  tutors(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for users returned from the connection.
-    orderBy: TutorOrder
-  ): TutorConnection!
-
   # Identifies the date and time when the object was last updated.
   updatedAt: Time!
 
