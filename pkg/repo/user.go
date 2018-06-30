@@ -190,6 +190,30 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
+func (r *UserRepo) GetByEnrolled(
+	userId string,
+	po *data.PageOptions,
+) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	users, err := r.svc.GetByEnrolled(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	userPermits := make([]*UserPermit, len(users))
+	if len(users) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range users {
+			userPermits[i] = &UserPermit{fieldPermFn, l}
+		}
+	}
+	return userPermits, nil
+}
+
 func (r *UserRepo) GetByApple(
 	appleableId string,
 	po *data.PageOptions,
@@ -222,30 +246,6 @@ func (r *UserRepo) GetEnrollers(
 		return nil, err
 	}
 	users, err := r.svc.GetEnrollers(enrollableId, po)
-	if err != nil {
-		return nil, err
-	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
-}
-
-func (r *UserRepo) GetEnrolledUsers(
-	userId string,
-	po *data.PageOptions,
-) ([]*UserPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	users, err := r.svc.GetEnrolledUsers(userId, po)
 	if err != nil {
 		return nil, err
 	}

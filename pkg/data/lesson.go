@@ -15,6 +15,7 @@ import (
 type Lesson struct {
 	Body        mytype.Markdown    `db:"body" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
 	Number      pgtype.Int4        `db:"number" permit:"read"`
@@ -31,6 +32,26 @@ func NewLessonService(db Queryer) *LessonService {
 
 type LessonService struct {
 	db Queryer
+}
+
+const countLessonByEnrolledSQL = `
+	SELECT COUNT(*)
+	FROM lesson_enrolled
+	WHERE user_id = $1
+`
+
+func (s *LessonService) CountByEnrolled(userId string) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByEnrolled(user_id)")
+	err = prepareQueryRow(
+		s.db,
+		"countLessonByEnrolled",
+		countLessonByEnrolledSQL,
+		userId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
 }
 
 const countLessonByLabelSQL = `
@@ -235,6 +256,65 @@ func (s *LessonService) GetByOwnerStudyAndNumber(
 		studyName,
 		number,
 	)
+}
+
+func (s *LessonService) GetByEnrolled(
+	userId string,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByEnrolled(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{`actor_id = ` + args.Append(userId)}
+
+	selects := []string{
+		"body",
+		"created_at",
+		"enrolled_at",
+		"id",
+		"number",
+		"published_at",
+		"study_id",
+		"title",
+		"updated_at",
+		"user_id",
+	}
+	from := "enrolled_lesson"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getStudiesByEnrolled", sql)
+
+	var rows []*Lesson
+
+	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row Lesson
+		dbRows.Scan(
+			&row.Body,
+			&row.CreatedAt,
+			&row.Id,
+			&row.LabeledAt,
+			&row.Number,
+			&row.PublishedAt,
+			&row.StudyId,
+			&row.Title,
+			&row.UpdatedAt,
+			&row.UserId,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get studies")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
 }
 
 func (s *LessonService) GetByLabel(

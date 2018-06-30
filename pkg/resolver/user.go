@@ -209,13 +209,18 @@ func (r *userResolver) Enrolled(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Type    string
 	},
-) (*enrolledStudyConnectionResolver, error) {
+) (*enrollableConnectionResolver, error) {
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
-	studyOrder, err := ParseStudyOrder(args.OrderBy)
+	enrollableType, err := ParseEnrollableType(args.Type)
+	if err != nil {
+		return nil, err
+	}
+	enrollableOrder, err := ParseEnrollableOrder(enrollableType, args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -225,30 +230,63 @@ func (r *userResolver) Enrolled(
 		args.Before,
 		args.First,
 		args.Last,
-		studyOrder,
+		enrollableOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByEnrolled(id.String, pageOptions)
+	lessonCount, err := r.Repos.Lesson().CountByEnrolled(id.String)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Study().CountByEnrolled(id.String)
+	studyCount, err := r.Repos.Study().CountByEnrolled(id.String)
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := NewEnrolledStudyConnectionResolver(
-		studies,
-		pageOptions,
-		count,
+	userCount, err := r.Repos.User().CountByEnrolled(id.String)
+	if err != nil {
+		return nil, err
+	}
+	permits := []repo.Permit{}
+
+	switch enrollableType {
+	case EnrollableTypeLesson:
+		lessons, err := r.Repos.Lesson().GetByEnrolled(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(lessons))
+		for i, l := range lessons {
+			permits[i] = l
+		}
+	case EnrollableTypeStudy:
+		studies, err := r.Repos.Study().GetByEnrolled(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(studies))
+		for i, s := range studies {
+			permits[i] = s
+		}
+	case EnrollableTypeUser:
+		users, err := r.Repos.User().GetByEnrolled(id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.Permit, len(users))
+		for i, u := range users {
+			permits[i] = u
+		}
+	}
+	return NewEnrollableConnectionResolver(
 		r.Repos,
+		permits,
+		pageOptions,
+		lessonCount,
+		studyCount,
+		userCount,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
 }
 
 func (r *userResolver) Notifications(
@@ -304,7 +342,7 @@ func (r *userResolver) Notifications(
 	return notificationConnectionResolver, nil
 }
 
-func (r *userResolver) Pupils(
+func (r *userResolver) Enrollees(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -313,13 +351,13 @@ func (r *userResolver) Pupils(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*pupilConnectionResolver, error) {
+) (*enrolleeConnectionResolver, error) {
 	id, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
 
-	pupilOrder, err := ParsePupilOrder(args.OrderBy)
+	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -329,13 +367,13 @@ func (r *userResolver) Pupils(
 		args.Before,
 		args.First,
 		args.Last,
-		pupilOrder,
+		enrolleeOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetEnrollers(
+	users, err := r.Repos.User().GetEnrollees(
 		id.String,
 		pageOptions,
 	)
@@ -347,60 +385,6 @@ func (r *userResolver) Pupils(
 		return nil, err
 	}
 	resolver, err := NewPupilConnectionResolver(
-		users,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
-}
-
-func (r *userResolver) Tutors(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*tutorConnectionResolver, error) {
-	id, err := r.User.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	tutorOrder, err := ParseTutorOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		tutorOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	users, err := r.Repos.User().GetEnrolledUsers(
-		id.String,
-		pageOptions,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.User().CountByEnrolled(id.String)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := NewTutorConnectionResolver(
 		users,
 		pageOptions,
 		count,

@@ -132,6 +132,10 @@ func (r *LessonRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *LessonRepo) CountByEnrolled(userId string) (int32, error) {
+	return r.svc.CountByEnrolled(userId)
+}
+
 func (r *LessonRepo) CountByLabel(labelId string) (int32, error) {
 	return r.svc.CountByLabel(labelId)
 }
@@ -179,6 +183,30 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) GetByEnrolled(
+	userId string,
+	po *data.PageOptions,
+) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	lessons, err := r.svc.GetByEnrolled(userId, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	if len(lessons) > 0 {
+		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessons {
+			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+		}
+	}
+	return lessonPermits, nil
 }
 
 func (r *LessonRepo) GetByLabel(

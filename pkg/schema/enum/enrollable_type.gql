@@ -1,0 +1,11 @@
+# Represents the individual types of enrollables to return.
+enum EnrollableType {
+  # Returns lessons.
+  LESSON
+
+  # Returns studies.
+  STUDY
+
+  # Returns users.
+  USER
+}
