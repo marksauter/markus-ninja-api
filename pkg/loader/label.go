@@ -31,6 +31,7 @@ func (r *LabelLoader) Clear(id string) {
 
 func (r *LabelLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByName.ClearAll()
 }
 
 func (r *LabelLoader) Get(id string) (*data.Label, error) {

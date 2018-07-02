@@ -11,6 +11,7 @@ type LabelableOrderField int
 
 const (
 	LabelableCreatedAt LabelableOrderField = iota
+	LabelableLabeledAt
 	LabelableNumber
 	LabelableUpdatedAt
 )
@@ -19,6 +20,8 @@ func ParseLabelableOrderField(s string) (LabelableOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
 		return LabelableCreatedAt, nil
+	case "LABELED_AT":
+		return LabelableLabeledAt, nil
 	case "NUMBER":
 		return LabelableNumber, nil
 	case "UPDATED_AT":
@@ -33,6 +36,8 @@ func (f LabelableOrderField) String() string {
 	switch f {
 	case LabelableCreatedAt:
 		return "created_at"
+	case LabelableLabeledAt:
+		return "labeled_at"
 	case LabelableNumber:
 		return "number"
 	case LabelableUpdatedAt:
@@ -58,8 +63,8 @@ func (o *LabelableOrder) Field() string {
 func ParseLabelableOrder(t LabelableType, arg *OrderArg) (data.Order, error) {
 	if arg == nil {
 		return &LabelableOrder{
-			direction: data.ASC,
-			field:     LabelableNumber,
+			direction: data.DESC,
+			field:     LabelableLabeledAt,
 		}, nil
 	}
 	switch t {

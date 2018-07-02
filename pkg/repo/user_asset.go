@@ -1,10 +1,8 @@
 package repo
 
 import (
-	"context"
 	"fmt"
 	"mime/multipart"
-	"net/http"
 	"strings"
 	"time"
 
@@ -150,12 +148,10 @@ func (r *UserAssetPermit) UserLogin() (string, error) {
 }
 
 func NewUserAssetRepo(
-	perms *PermRepo,
 	svc *data.UserAssetService,
 	store *service.StorageService,
 ) *UserAssetRepo {
 	return &UserAssetRepo{
-		perms: perms,
 		svc:   svc,
 		store: store,
 	}
@@ -168,11 +164,8 @@ type UserAssetRepo struct {
 	store *service.StorageService
 }
 
-func (r *UserAssetRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *UserAssetRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewUserAssetLoader(r.svc)
 	}
@@ -180,7 +173,7 @@ func (r *UserAssetRepo) Open(ctx context.Context) error {
 }
 
 func (r *UserAssetRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *UserAssetRepo) CheckConnection() error {
@@ -430,13 +423,4 @@ func (r *UserAssetRepo) ViewerCanUpdate(l *data.UserAsset) bool {
 		return false
 	}
 	return true
-}
-
-// Middleware
-func (r *UserAssetRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

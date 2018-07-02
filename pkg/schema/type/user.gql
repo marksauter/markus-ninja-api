@@ -84,8 +84,26 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     orderBy: EnrollableOrder
 
     # The types of enrollables to retrieve
-    type: EnrollableType
+    type: EnrollableType!
   ): EnrollableConnection!
+
+  # A list of users who have enrolled in this enrollable.
+  enrollees(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for users returned from the connection.
+    orderBy: EnrolleeOrder
+  ): EnrolleeConnection!
 
   id: ID!
 
@@ -136,24 +154,6 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     # Ordering options for notifications returned from the connection.
     orderBy: NotificationOrder
   ): NotificationConnection!
-
-  # A list of users who have enrolled in this enrollable.
-  enrollees(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for users returned from the connection.
-    orderBy: EnrolleeOrder
-  ): EnrolleeConnection!
 
   # The HTTP path for this user.
   resourcePath: URI!

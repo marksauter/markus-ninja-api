@@ -303,6 +303,8 @@ func startRefreshMV(svcs *service.Services) {
 		time.Sleep(10 * time.Second)
 		go svcs.Lesson.RefreshSearchIndex()
 		time.Sleep(10 * time.Second)
+		go svcs.Label.RefreshSearchIndex()
+		time.Sleep(10 * time.Minute)
 		go svcs.Topic.RefreshSearchIndex()
 		time.Sleep(30 * time.Minute)
 	}

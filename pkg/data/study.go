@@ -36,16 +36,16 @@ type StudyService struct {
 const countStudyByAppledSQL = `
 	SELECT COUNT(*)
 	FROM study_appled
-	WHERE user_id = $1
+	WHERE applee_id = $1
 `
 
-func (s *StudyService) CountByAppled(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.CountByAppled(user_id)")
+func (s *StudyService) CountByApplee(appleeId string) (n int32, err error) {
+	mylog.Log.WithField("applee_id", appleeId).Info("Study.CountByAppled(applee_id)")
 	err = prepareQueryRow(
 		s.db,
 		"countStudyByAppled",
 		countStudyByAppledSQL,
-		userId,
+		appleeId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -53,19 +53,19 @@ func (s *StudyService) CountByAppled(userId string) (n int32, err error) {
 	return
 }
 
-const countStudyByEnrolledSQL = `
+const countStudyByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM study_enrolled
-	WHERE user_id = $1
+	WHERE enrollee_id = $1
 `
 
-func (s *StudyService) CountByEnrolled(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.CountByEnrolled(user_id)")
+func (s *StudyService) CountByEnrollee(enrolleeId string) (n int32, err error) {
+	mylog.Log.WithField("enrollee_id", enrolleeId).Info("Study.CountByEnrollee(enrollee_id)")
 	err = prepareQueryRow(
 		s.db,
-		"countStudyByEnrolled",
-		countStudyByEnrolledSQL,
-		userId,
+		"countStudyByEnrollee",
+		countStudyByEnrolleeSQL,
+		enrolleeId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -216,13 +216,13 @@ func (s *StudyService) Get(id string) (*Study, error) {
 	return s.get("getStudyById", getStudyByIdSQL, id)
 }
 
-func (s *StudyService) GetByAppled(
+func (s *StudyService) GetByApplee(
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userId).Info("Study.GetByAppled(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`actor_id = ` + args.Append(userId)}
+	where := []string{`applee_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"advanced_at",
@@ -271,13 +271,13 @@ func (s *StudyService) GetByAppled(
 	return rows, nil
 }
 
-func (s *StudyService) GetByEnrolled(
+func (s *StudyService) GetByEnrollee(
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.GetByEnrolled(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("Study.GetByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`actor_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"advanced_at",
@@ -292,7 +292,7 @@ func (s *StudyService) GetByEnrolled(
 	from := "enrolled_study"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getStudiesByEnrolled", sql)
+	psName := preparedName("getStudiesByEnrollee", sql)
 
 	var rows []*Study
 

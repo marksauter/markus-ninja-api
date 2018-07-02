@@ -31,6 +31,7 @@ func (r *TopicLoader) Clear(id string) {
 
 func (r *TopicLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByName.ClearAll()
 }
 
 func (r *TopicLoader) Get(id string) (*data.Topic, error) {

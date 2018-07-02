@@ -3,6 +3,7 @@ package resolver
 import (
 	"errors"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -43,4 +44,16 @@ func (r *appleableEdgeResolver) Node() (*appleableResolver, error) {
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
 	return &appleableResolver{appleable}, nil
+}
+
+func (r *appleableEdgeResolver) AppledAt() (graphql.Time, error) {
+	appleable, ok := r.node.(repo.AppleablePermit)
+	if !ok {
+		return graphql.Time{}, errors.New("cannot convert permit to appleable")
+	}
+	t, err := appleable.AppledAt()
+	if err != nil {
+		return graphql.Time{}, err
+	}
+	return graphql.Time{t}, err
 }

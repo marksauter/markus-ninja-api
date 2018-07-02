@@ -1,9 +1,7 @@
 package repo
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -62,10 +60,9 @@ func (r *AppledPermit) UserId() (*mytype.OID, error) {
 	return &r.appled.UserId, nil
 }
 
-func NewAppledRepo(perms *PermRepo, svc *data.AppledService) *AppledRepo {
+func NewAppledRepo(svc *data.AppledService) *AppledRepo {
 	return &AppledRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -75,11 +72,8 @@ type AppledRepo struct {
 	svc   *data.AppledService
 }
 
-func (r *AppledRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *AppledRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewAppledLoader(r.svc)
 	}
@@ -87,7 +81,7 @@ func (r *AppledRepo) Open(ctx context.Context) error {
 }
 
 func (r *AppledRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *AppledRepo) CheckConnection() error {
@@ -223,13 +217,4 @@ func (r *AppledRepo) Delete(a *data.Appled) error {
 	return errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",
 	)
-}
-
-// Middleware
-func (r *AppledRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -40,48 +41,50 @@ type FieldPermissionFunc = func(field string) bool
 
 var AdminPermissionFunc = func(field string) bool { return true }
 
-type Permit interface {
-	ID() (*mytype.OID, error)
-}
-
 type Repo interface {
-	Open(context.Context) error
+	Open(*PermRepo) error
 	Close()
 }
 
 type Repos struct {
-	lookup map[key]Repo
+	lookup  map[key]Repo
+	permSvc *data.PermService
 }
 
 func NewRepos(svcs *service.Services) *Repos {
-	permRepo := NewPermRepo(svcs.Perm)
 	return &Repos{
 		lookup: map[key]Repo{
-			appledRepoKey:        NewAppledRepo(permRepo, svcs.Appled),
-			emailRepoKey:         NewEmailRepo(permRepo, svcs.Email),
-			enrolledRepoKey:      NewEnrolledRepo(permRepo, svcs.Enrolled),
-			evtRepoKey:           NewEVTRepo(permRepo, svcs.EVT),
-			labelRepoKey:         NewLabelRepo(permRepo, svcs.Label),
-			labeledRepoKey:       NewLabeledRepo(permRepo, svcs.Labeled),
-			lessonRepoKey:        NewLessonRepo(permRepo, svcs.Lesson),
-			lessonCommentRepoKey: NewLessonCommentRepo(permRepo, svcs.LessonComment),
-			notificationRepoKey:  NewNotificationRepo(permRepo, svcs.Notification),
-			permRepoKey:          permRepo,
-			prtRepoKey:           NewPRTRepo(permRepo, svcs.PRT),
-			eventRepoKey:         NewEventRepo(permRepo, svcs.Event),
-			studyRepoKey:         NewStudyRepo(permRepo, svcs.Study),
-			topicRepoKey:         NewTopicRepo(permRepo, svcs.Topic),
-			topicedRepoKey:       NewTopicedRepo(permRepo, svcs.Topiced),
-			userRepoKey:          NewUserRepo(permRepo, svcs.User),
-			userAssetRepoKey:     NewUserAssetRepo(permRepo, svcs.UserAsset, svcs.Storage),
+			appledRepoKey:        NewAppledRepo(svcs.Appled),
+			emailRepoKey:         NewEmailRepo(svcs.Email),
+			enrolledRepoKey:      NewEnrolledRepo(svcs.Enrolled),
+			evtRepoKey:           NewEVTRepo(svcs.EVT),
+			labelRepoKey:         NewLabelRepo(svcs.Label),
+			labeledRepoKey:       NewLabeledRepo(svcs.Labeled),
+			lessonRepoKey:        NewLessonRepo(svcs.Lesson),
+			lessonCommentRepoKey: NewLessonCommentRepo(svcs.LessonComment),
+			notificationRepoKey:  NewNotificationRepo(svcs.Notification),
+			prtRepoKey:           NewPRTRepo(svcs.PRT),
+			eventRepoKey:         NewEventRepo(svcs.Event),
+			studyRepoKey:         NewStudyRepo(svcs.Study),
+			topicRepoKey:         NewTopicRepo(svcs.Topic),
+			topicedRepoKey:       NewTopicedRepo(svcs.Topiced),
+			userRepoKey:          NewUserRepo(svcs.User),
+			userAssetRepoKey:     NewUserAssetRepo(svcs.UserAsset, svcs.Storage),
 		},
+		permSvc: svcs.Perm,
 	}
 }
 
 func (r *Repos) OpenAll(ctx context.Context) error {
+	permitter, ok := PermitterFromContext(ctx)
+	if !ok {
+		return errors.New("permitter not found")
+	}
+	if err := permitter.Open(ctx); err != nil {
+		return err
+	}
 	for _, repo := range r.lookup {
-		err := repo.Open(ctx)
-		if err != nil {
+		if err := repo.Open(permitter); err != nil {
 			return err
 		}
 	}
@@ -144,11 +147,6 @@ func (r *Repos) Notification() *NotificationRepo {
 	return repo
 }
 
-func (r *Repos) Perm() *PermRepo {
-	repo, _ := r.lookup[permRepoKey].(*PermRepo)
-	return repo
-}
-
 func (r *Repos) PRT() *PRTRepo {
 	repo, _ := r.lookup[prtRepoKey].(*PRTRepo)
 	return repo
@@ -181,7 +179,9 @@ func (r *Repos) UserAsset() *UserAssetRepo {
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.OpenAll(req.Context())
+		permitter := NewPermRepo(r.permSvc, r)
+		ctx := NewPermitterContext(req.Context(), permitter)
+		r.OpenAll(ctx)
 		defer r.CloseAll()
 		h.ServeHTTP(rw, req)
 	})

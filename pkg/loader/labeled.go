@@ -32,6 +32,7 @@ func (r *LabeledLoader) Clear(id string) {
 
 func (r *LabeledLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetForLabelable.ClearAll()
 }
 
 func (r *LabeledLoader) Get(id int32) (*data.Labeled, error) {

@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -86,13 +84,9 @@ func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	return r.lessonComment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentRepo(
-	perms *PermRepo,
-	svc *data.LessonCommentService,
-) *LessonCommentRepo {
+func NewLessonCommentRepo(svc *data.LessonCommentService) *LessonCommentRepo {
 	return &LessonCommentRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -102,11 +96,8 @@ type LessonCommentRepo struct {
 	svc   *data.LessonCommentService
 }
 
-func (r *LessonCommentRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *LessonCommentRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLessonCommentLoader(r.svc)
 	}
@@ -114,7 +105,7 @@ func (r *LessonCommentRepo) Open(ctx context.Context) error {
 }
 
 func (r *LessonCommentRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *LessonCommentRepo) CheckConnection() error {
@@ -284,13 +275,4 @@ func (r *LessonCommentRepo) ViewerCanUpdate(l *data.LessonComment) bool {
 		return false
 	}
 	return true
-}
-
-// Middleware
-func (r *LessonCommentRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

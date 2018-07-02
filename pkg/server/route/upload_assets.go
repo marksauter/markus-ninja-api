@@ -20,7 +20,7 @@ func UploadAssets(svcs *service.Services, repos *repo.Repos) http.Handler {
 	uploadAssetsHandler := UploadAssetsHandler{Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,
-		repos.UserAsset().Use,
+		repos.Use,
 	).Then(uploadAssetsHandler)
 }
 

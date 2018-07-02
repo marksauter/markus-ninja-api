@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -72,13 +70,9 @@ func (r *PRTPermit) EndedAt() (time.Time, error) {
 	return r.prt.EndedAt.Time, nil
 }
 
-func NewPRTRepo(
-	perms *PermRepo,
-	svc *data.PRTService,
-) *PRTRepo {
+func NewPRTRepo(svc *data.PRTService) *PRTRepo {
 	return &PRTRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -88,11 +82,8 @@ type PRTRepo struct {
 	svc   *data.PRTService
 }
 
-func (r *PRTRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *PRTRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewPRTLoader(r.svc)
 	}
@@ -100,7 +91,7 @@ func (r *PRTRepo) Open(ctx context.Context) error {
 }
 
 func (r *PRTRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *PRTRepo) CheckConnection() error {
@@ -144,13 +135,4 @@ func (r *PRTRepo) Get(userId, token string) (*PRTPermit, error) {
 		return nil, err
 	}
 	return &PRTPermit{fieldPermFn, prt}, nil
-}
-
-// Middleware
-func (r *PRTRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

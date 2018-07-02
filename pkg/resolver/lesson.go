@@ -125,6 +125,59 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonResolver) Enrollees(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*enrolleeConnectionResolver, error) {
+	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		enrolleeOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+	users, err := r.Repos.User().GetEnrollees(
+		lessonId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByEnrollable(lessonId.String)
+	if err != nil {
+		return nil, err
+	}
+	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return enrolleeConnectionResolver, nil
+}
+
 func (r *lessonResolver) ID() (graphql.ID, error) {
 	id, err := r.Lesson.ID()
 	return graphql.ID(id.String), err

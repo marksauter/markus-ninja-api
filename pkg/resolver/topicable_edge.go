@@ -3,6 +3,7 @@ package resolver
 import (
 	"errors"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -43,4 +44,16 @@ func (r *topicableEdgeResolver) Node() (*topicableResolver, error) {
 		return nil, errors.New("cannot convert resolver to topicable")
 	}
 	return &topicableResolver{topicable}, nil
+}
+
+func (r *topicableEdgeResolver) TopicedAt() (graphql.Time, error) {
+	topicable, ok := r.node.(repo.TopicablePermit)
+	if !ok {
+		return graphql.Time{}, errors.New("cannot convert permit to topicable")
+	}
+	t, err := topicable.TopicedAt()
+	if err != nil {
+		return graphql.Time{}, err
+	}
+	return graphql.Time{t}, err
 }

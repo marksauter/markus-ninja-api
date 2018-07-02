@@ -61,7 +61,43 @@ type Study implements
   # The description of the study rendered to HTML.
   descriptionHTML: HTML!
 
+  # Returns a list users who have enrolled in this enrollable.
+  enrollees(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Order for connection.
+    orderBy: EnrolleeOrder
+  ): EnrolleeConnection!
+
   id: ID!
+
+  # Returns a list of labels from the current study.
+  labels(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # If provided, search labels by name and description.
+    query: String
+  ): LabelConnection!
 
   # Returns a single lesson from the current study by number.
   lesson(
@@ -115,25 +151,6 @@ type Study implements
 
   # The HTTP path for this study.
   resourcePath: URI!
-
-  # Returns a list users who have enrolled in this enrollable.
-  students(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Order for connection.
-    orderBy: StudentOrder
-  ): StudentConnection!
-
 
   # Returns a list of topics from the current study.
   topics(

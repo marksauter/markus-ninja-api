@@ -34,22 +34,22 @@ type UserService struct {
 	db Queryer
 }
 
-const countUserByAppleSQL = `
+const countUserByAppleableSQL = `
 	SELECT COUNT(*)
 	FROM apple_giver
 	WHERE appleable_id = $1
 `
 
-func (s *UserService) CountByApple(appleableId string) (int32, error) {
+func (s *UserService) CountByAppleable(appleableId string) (int32, error) {
 	mylog.Log.WithField(
 		"appleable_id",
 		appleableId,
-	).Info("User.CountByApple(appleable_id)")
+	).Info("User.CountByAppleable(appleable_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserByApple",
-		countUserByAppleSQL,
+		"countUserByAppleable",
+		countUserByAppleableSQL,
 		appleableId,
 	).Scan(&n)
 
@@ -60,7 +60,7 @@ func (s *UserService) CountByApple(appleableId string) (int32, error) {
 
 const countUserByEnrollableSQL = `
 	SELECT COUNT(*)
-	FROM enroller
+	FROM enrollee
 	WHERE enrollable_id = $1
 `
 
@@ -82,19 +82,19 @@ func (s *UserService) CountByEnrollable(enrollableId string) (int32, error) {
 	return n, err
 }
 
-const countUserByEnrolledSQL = `
+const countUserByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM enrolled_user
-	AND actor_id = $1
+	AND enrollee_id = $1
 `
 
-func (s *UserService) CountByEnrolled(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("User.CountByEnrolled(user_id)")
+func (s *UserService) CountByEnrollee(userId string) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("User.CountByEnrollee(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		s.db,
-		"countUserByEnrolled",
-		countUserByEnrolledSQL,
+		"countUserByEnrollee",
+		countUserByEnrolleeSQL,
 		userId,
 	).Scan(&n)
 
@@ -227,14 +227,14 @@ func (s *UserService) Get(id string) (*User, error) {
 	return s.get("getUserById", getUserByIdSQL, id)
 }
 
-func (s *UserService) GetByApple(
+func (s *UserService) GetByAppleable(
 	appleableId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"appleabled_id",
 		appleableId,
-	).Info("User.GetByApple(appleabled_id)")
+	).Info("User.GetByAppleable(appleabled_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`appleable_id = ` + args.Append(appleableId)}
 
@@ -251,7 +251,7 @@ func (s *UserService) GetByApple(
 	from := "apple_giver"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getUsersByApple", sql)
+	psName := preparedName("getUsersByAppleable", sql)
 
 	var rows []*User
 
@@ -285,16 +285,16 @@ func (s *UserService) GetByApple(
 	return rows, nil
 }
 
-func (s *UserService) GetByEnrolled(
+func (s *UserService) GetByEnrollee(
 	userId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"user_id",
 		userId,
-	).Info("User.GetByEnrolled(user_id)")
+	).Info("User.GetByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`actor_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"bio",
@@ -309,7 +309,7 @@ func (s *UserService) GetByEnrolled(
 	from := "enrolled_user"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getByEnrolled", sql)
+	psName := preparedName("getByEnrollee", sql)
 
 	var rows []*User
 
@@ -343,13 +343,13 @@ func (s *UserService) GetByEnrolled(
 	return rows, nil
 }
 
-func (s *UserService) GetEnrollers(
+func (s *UserService) GetEnrollees(
 	enrollableId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"enrollable_id", enrollableId,
-	).Info("User.GetEnrollers(enrollable_id)")
+	).Info("User.GetEnrollees(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
@@ -363,10 +363,10 @@ func (s *UserService) GetEnrollers(
 		"public_email",
 		"updated_at",
 	}
-	from := "enroller"
+	from := "enrollee"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getEnrollers", sql)
+	psName := preparedName("getEnrollees", sql)
 
 	var rows []*User
 

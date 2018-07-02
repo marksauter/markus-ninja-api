@@ -34,18 +34,18 @@ type LessonService struct {
 	db Queryer
 }
 
-const countLessonByEnrolledSQL = `
+const countLessonByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM lesson_enrolled
-	WHERE user_id = $1
+	WHERE enrollee_id = $1
 `
 
-func (s *LessonService) CountByEnrolled(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByEnrolled(user_id)")
+func (s *LessonService) CountByEnrollee(userId string) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByEnrollee(user_id)")
 	err = prepareQueryRow(
 		s.db,
-		"countLessonByEnrolled",
-		countLessonByEnrolledSQL,
+		"countLessonByEnrollee",
+		countLessonByEnrolleeSQL,
 		userId,
 	).Scan(&n)
 
@@ -258,13 +258,13 @@ func (s *LessonService) GetByOwnerStudyAndNumber(
 	)
 }
 
-func (s *LessonService) GetByEnrolled(
+func (s *LessonService) GetByEnrollee(
 	userId string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByEnrolled(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`actor_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(userId)}
 
 	selects := []string{
 		"body",
@@ -281,7 +281,7 @@ func (s *LessonService) GetByEnrolled(
 	from := "enrolled_lesson"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getStudiesByEnrolled", sql)
+	psName := preparedName("getStudiesByEnrollee", sql)
 
 	var rows []*Lesson
 

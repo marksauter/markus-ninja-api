@@ -61,14 +61,14 @@ func (r *studyResolver) AppleGivers(
 	if err != nil {
 		return nil, err
 	}
-	users, err := r.Repos.User().GetByApple(
+	users, err := r.Repos.User().GetByAppleable(
 		studyId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByApple(studyId.String)
+	count, err := r.Repos.User().CountByAppleable(studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -187,9 +187,121 @@ func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
 	return gqlHTML, nil
 }
 
+func (r *studyResolver) Enrollees(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*enrolleeConnectionResolver, error) {
+	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		enrolleeOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	users, err := r.Repos.User().GetEnrollees(
+		studyId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByEnrollable(studyId.String)
+	if err != nil {
+		return nil, err
+	}
+	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return enrolleeConnectionResolver, nil
+}
+
 func (r *studyResolver) ID() (graphql.ID, error) {
 	id, err := r.Study.ID()
 	return graphql.ID(id.String), err
+}
+
+func (r *studyResolver) Labels(
+	ctx context.Context,
+	args struct {
+		After  *string
+		Before *string
+		First  *int32
+		Last   *int32
+		Query  *string
+	},
+) (*labelConnectionResolver, error) {
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		&LabelOrder{data.ASC, LabelName},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var count int32
+	var labels []*repo.LabelPermit
+	if args.Query != nil {
+		count, err = r.Repos.Label().CountBySearch(studyId, *args.Query)
+		if err != nil {
+			return nil, err
+		}
+		labels, err = r.Repos.Label().Search(*args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		count, err = r.Repos.Label().CountByStudy(studyId.String)
+		if err != nil {
+			return nil, err
+		}
+		labels, err = r.Repos.Label().GetByStudy(studyId.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+	}
+	labelConnectionResolver, err := NewLabelConnectionResolver(
+		labels,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return labelConnectionResolver, nil
 }
 
 func (r *studyResolver) Lesson(
@@ -390,59 +502,6 @@ func (r *studyResolver) ResourcePath() (mygql.URI, error) {
 	}
 	uri = mygql.URI(fmt.Sprintf("/%s", nameWithOwner))
 	return uri, nil
-}
-
-func (r *studyResolver) Students(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*studentConnectionResolver, error) {
-	studentOrder, err := ParseStudentOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		studentOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	studyId, err := r.Study.ID()
-	if err != nil {
-		return nil, err
-	}
-	users, err := r.Repos.User().GetEnrollers(
-		studyId.String,
-		pageOptions,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.User().CountByEnrollable(studyId.String)
-	if err != nil {
-		return nil, err
-	}
-	studentConnectionResolver, err := NewStudentConnectionResolver(
-		users,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return studentConnectionResolver, nil
 }
 
 func (r *studyResolver) Topics(

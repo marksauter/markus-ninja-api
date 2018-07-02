@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -72,10 +70,9 @@ func (r *EventPermit) UserId() (*mytype.OID, error) {
 	return &r.event.UserId, nil
 }
 
-func NewEventRepo(perms *PermRepo, svc *data.EventService) *EventRepo {
+func NewEventRepo(svc *data.EventService) *EventRepo {
 	return &EventRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -85,11 +82,8 @@ type EventRepo struct {
 	svc   *data.EventService
 }
 
-func (r *EventRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *EventRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEventLoader(r.svc)
 	}
@@ -97,7 +91,7 @@ func (r *EventRepo) Open(ctx context.Context) error {
 }
 
 func (r *EventRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *EventRepo) CheckConnection() error {
@@ -228,13 +222,4 @@ func (r *EventRepo) Delete(event *data.Event) error {
 		return err
 	}
 	return r.svc.Delete(&event.Id)
-}
-
-// Middleware
-func (r *EventRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

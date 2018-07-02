@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -85,6 +83,13 @@ func (r *StudyPermit) Name() (string, error) {
 	return r.study.Name.String, nil
 }
 
+func (r *StudyPermit) TopicedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("topiced_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.study.TopicedAt.Time, nil
+}
+
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -99,10 +104,9 @@ func (r *StudyPermit) UserId() (*mytype.OID, error) {
 	return &r.study.UserId, nil
 }
 
-func NewStudyRepo(perms *PermRepo, svc *data.StudyService) *StudyRepo {
+func NewStudyRepo(svc *data.StudyService) *StudyRepo {
 	return &StudyRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -112,11 +116,8 @@ type StudyRepo struct {
 	svc   *data.StudyService
 }
 
-func (r *StudyRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *StudyRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewStudyLoader(r.svc)
 	}
@@ -124,7 +125,7 @@ func (r *StudyRepo) Open(ctx context.Context) error {
 }
 
 func (r *StudyRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *StudyRepo) CheckConnection() error {
@@ -137,12 +138,12 @@ func (r *StudyRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *StudyRepo) CountByAppled(userId string) (int32, error) {
-	return r.svc.CountByAppled(userId)
+func (r *StudyRepo) CountByApplee(appleeId string) (int32, error) {
+	return r.svc.CountByApplee(appleeId)
 }
 
-func (r *StudyRepo) CountByEnrolled(userId string) (int32, error) {
-	return r.svc.CountByEnrolled(userId)
+func (r *StudyRepo) CountByEnrollee(enrolleeId string) (int32, error) {
+	return r.svc.CountByEnrollee(enrolleeId)
 }
 
 func (r *StudyRepo) CountByTopic(topicId string) (int32, error) {
@@ -195,11 +196,11 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByAppled(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByApplee(appleeId string, po *data.PageOptions) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByAppled(userId, po)
+	studies, err := r.svc.GetByApplee(appleeId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -216,11 +217,11 @@ func (r *StudyRepo) GetByAppled(userId string, po *data.PageOptions) ([]*StudyPe
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByEnrolled(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByEnrollee(enrolleeId string, po *data.PageOptions) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByEnrolled(userId, po)
+	studies, err := r.svc.GetByEnrollee(enrolleeId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -370,13 +371,4 @@ func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
 		return false
 	}
 	return true
-}
-
-// Middleware
-func (r *StudyRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

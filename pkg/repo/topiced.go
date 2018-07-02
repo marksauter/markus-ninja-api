@@ -1,9 +1,7 @@
 package repo
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -62,10 +60,9 @@ func (r *TopicedPermit) TopicableId() (*mytype.OID, error) {
 	return &r.topiced.TopicableId, nil
 }
 
-func NewTopicedRepo(perms *PermRepo, svc *data.TopicedService) *TopicedRepo {
+func NewTopicedRepo(svc *data.TopicedService) *TopicedRepo {
 	return &TopicedRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -75,11 +72,8 @@ type TopicedRepo struct {
 	svc   *data.TopicedService
 }
 
-func (r *TopicedRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *TopicedRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewTopicedLoader(r.svc)
 	}
@@ -87,7 +81,7 @@ func (r *TopicedRepo) Open(ctx context.Context) error {
 }
 
 func (r *TopicedRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *TopicedRepo) CheckConnection() error {
@@ -223,13 +217,4 @@ func (r *TopicedRepo) Delete(topiced *data.Topiced) error {
 	return errors.New(
 		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",
 	)
-}
-
-// Middleware
-func (r *TopicedRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

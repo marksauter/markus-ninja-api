@@ -32,6 +32,7 @@ func (r *TopicedLoader) Clear(id string) {
 
 func (r *TopicedLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetForTopicable.ClearAll()
 }
 
 func (r *TopicedLoader) Get(id int32) (*data.Topiced, error) {

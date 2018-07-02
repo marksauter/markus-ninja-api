@@ -1,8 +1,8 @@
-# Ways in which student connections can be ordered.
-input StudentOrder {
+# Ways in which enrollee connections can be ordered.
+input EnrolleeOrder {
   # The direction in which to order nodes.
   direction: OrderDirection!
 
   # The field in which to order nodes by.
-  field: StudentOrderField!
+  field: EnrolleeOrderField!
 }

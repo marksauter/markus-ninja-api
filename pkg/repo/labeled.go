@@ -1,9 +1,7 @@
 package repo
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -62,10 +60,9 @@ func (r *LabeledPermit) LabelableId() (*mytype.OID, error) {
 	return &r.labeled.LabelableId, nil
 }
 
-func NewLabeledRepo(perms *PermRepo, svc *data.LabeledService) *LabeledRepo {
+func NewLabeledRepo(svc *data.LabeledService) *LabeledRepo {
 	return &LabeledRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -75,11 +72,8 @@ type LabeledRepo struct {
 	svc   *data.LabeledService
 }
 
-func (r *LabeledRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *LabeledRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLabeledLoader(r.svc)
 	}
@@ -87,7 +81,7 @@ func (r *LabeledRepo) Open(ctx context.Context) error {
 }
 
 func (r *LabeledRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *LabeledRepo) CheckConnection() error {
@@ -236,13 +230,4 @@ func (r *LabeledRepo) Delete(l *data.Labeled) error {
 	return errors.New(
 		"must include either labeled `id` or `labelable_id` and `label_id` to delete a labeled",
 	)
-}
-
-// Middleware
-func (r *LabeledRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

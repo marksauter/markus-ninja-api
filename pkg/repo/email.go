@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -97,13 +95,9 @@ func (r *EmailPermit) VerifiedAt() (*time.Time, error) {
 	return &r.email.VerifiedAt.Time, nil
 }
 
-func NewEmailRepo(
-	perms *PermRepo,
-	svc *data.EmailService,
-) *EmailRepo {
+func NewEmailRepo(svc *data.EmailService) *EmailRepo {
 	return &EmailRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -113,11 +107,8 @@ type EmailRepo struct {
 	svc   *data.EmailService
 }
 
-func (r *EmailRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *EmailRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEmailLoader(r.svc)
 	}
@@ -125,7 +116,7 @@ func (r *EmailRepo) Open(ctx context.Context) error {
 }
 
 func (r *EmailRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *EmailRepo) CheckConnection() error {
@@ -244,13 +235,4 @@ func (r *EmailRepo) Update(e *data.Email) (*EmailPermit, error) {
 		return nil, err
 	}
 	return &EmailPermit{fieldPermFn, email}, nil
-}
-
-// Middleware
-func (r *EmailRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }
