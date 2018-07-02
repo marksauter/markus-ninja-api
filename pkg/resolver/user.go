@@ -55,7 +55,7 @@ func (r *userResolver) Appled(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByAppled(id.String)
+	studyCount, err := r.Repos.Study().CountByApplee(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (r *userResolver) Appled(
 
 	switch appleableType {
 	case AppleableTypeStudy:
-		studies, err := r.Repos.Study().GetByAppled(id.String, pageOptions)
+		studies, err := r.Repos.Study().GetByApplee(id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -236,15 +236,15 @@ func (r *userResolver) Enrolled(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByEnrolled(id.String)
+	lessonCount, err := r.Repos.Lesson().CountByEnrollee(id.String)
 	if err != nil {
 		return nil, err
 	}
-	studyCount, err := r.Repos.Study().CountByEnrolled(id.String)
+	studyCount, err := r.Repos.Study().CountByEnrollee(id.String)
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountByEnrolled(id.String)
+	userCount, err := r.Repos.User().CountByEnrollee(id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (r *userResolver) Enrolled(
 
 	switch enrollableType {
 	case EnrollableTypeLesson:
-		lessons, err := r.Repos.Lesson().GetByEnrolled(id.String, pageOptions)
+		lessons, err := r.Repos.Lesson().GetByEnrollee(id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -261,7 +261,7 @@ func (r *userResolver) Enrolled(
 			permits[i] = l
 		}
 	case EnrollableTypeStudy:
-		studies, err := r.Repos.Study().GetByEnrolled(id.String, pageOptions)
+		studies, err := r.Repos.Study().GetByEnrollee(id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +270,7 @@ func (r *userResolver) Enrolled(
 			permits[i] = s
 		}
 	case EnrollableTypeUser:
-		users, err := r.Repos.User().GetByEnrolled(id.String, pageOptions)
+		users, err := r.Repos.User().GetByEnrollee(id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -287,6 +287,60 @@ func (r *userResolver) Enrolled(
 		studyCount,
 		userCount,
 	)
+}
+
+func (r *userResolver) Enrollees(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*enrolleeConnectionResolver, error) {
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		enrolleeOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	users, err := r.Repos.User().GetEnrollees(
+		id.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.User().CountByEnrollable(id.String)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewEnrolleeConnectionResolver(
+		users,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *userResolver) Notifications(
@@ -340,60 +394,6 @@ func (r *userResolver) Notifications(
 		return nil, err
 	}
 	return notificationConnectionResolver, nil
-}
-
-func (r *userResolver) Enrollees(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*enrolleeConnectionResolver, error) {
-	id, err := r.User.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		enrolleeOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	users, err := r.Repos.User().GetEnrollees(
-		id.String,
-		pageOptions,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.User().CountByEnrollable(id.String)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := NewPupilConnectionResolver(
-		users,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
 }
 
 func (r *userResolver) ID() (graphql.ID, error) {

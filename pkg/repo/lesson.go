@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -94,10 +92,9 @@ func (r *LessonPermit) UserId() (*mytype.OID, error) {
 	return &r.lesson.UserId, nil
 }
 
-func NewLessonRepo(perms *PermRepo, svc *data.LessonService) *LessonRepo {
+func NewLessonRepo(svc *data.LessonService) *LessonRepo {
 	return &LessonRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -107,11 +104,8 @@ type LessonRepo struct {
 	svc   *data.LessonService
 }
 
-func (r *LessonRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *LessonRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLessonLoader(r.svc)
 	}
@@ -119,7 +113,7 @@ func (r *LessonRepo) Open(ctx context.Context) error {
 }
 
 func (r *LessonRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *LessonRepo) CheckConnection() error {
@@ -132,8 +126,8 @@ func (r *LessonRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonRepo) CountByEnrolled(userId string) (int32, error) {
-	return r.svc.CountByEnrolled(userId)
+func (r *LessonRepo) CountByEnrollee(userId string) (int32, error) {
+	return r.svc.CountByEnrollee(userId)
 }
 
 func (r *LessonRepo) CountByLabel(labelId string) (int32, error) {
@@ -185,14 +179,14 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
-func (r *LessonRepo) GetByEnrolled(
+func (r *LessonRepo) GetByEnrollee(
 	userId string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessons, err := r.svc.GetByEnrolled(userId, po)
+	lessons, err := r.svc.GetByEnrollee(userId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -362,13 +356,4 @@ func (r *LessonRepo) ViewerCanUpdate(l *data.Lesson) bool {
 		return false
 	}
 	return true
-}
-
-// Middleware
-func (r *LessonRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

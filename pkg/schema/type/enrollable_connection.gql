@@ -1,0 +1,26 @@
+# An edge in a enrollable connection.
+type EnrollableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Enrollable
+
+  # When was the item enrolled in?
+  enrolledAt: Time!
+}
+
+# A list of enrollables.
+type EnrollableConnection {
+  # A list of edges.
+  edges: [EnrollableEdge]
+
+  # A list of nodes.
+  nodes: [Enrollable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies associated with the enroll.
+  studyCount: Int!
+}

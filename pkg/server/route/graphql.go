@@ -22,6 +22,7 @@ func GraphQL(schema *graphql.Schema, svcs *service.Services, repos *repo.Repos) 
 	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,
+		repos.Use,
 	).Then(graphQLHandler)
 }
 
@@ -31,9 +32,6 @@ type GraphQLHandler struct {
 }
 
 func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	h.Repos.OpenAll(req.Context())
-	defer h.Repos.CloseAll()
-
 	if req.Method != http.MethodPost && req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

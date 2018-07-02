@@ -31,6 +31,7 @@ func (r *EmailLoader) Clear(id string) {
 
 func (r *EmailLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByValue.ClearAll()
 }
 
 func (r *EmailLoader) Get(id string) (*data.Email, error) {

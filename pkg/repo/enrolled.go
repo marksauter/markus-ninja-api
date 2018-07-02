@@ -1,9 +1,7 @@
 package repo
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -62,10 +60,9 @@ func (r *EnrolledPermit) UserId() (*mytype.OID, error) {
 	return &r.enrolled.UserId, nil
 }
 
-func NewEnrolledRepo(perms *PermRepo, svc *data.EnrolledService) *EnrolledRepo {
+func NewEnrolledRepo(svc *data.EnrolledService) *EnrolledRepo {
 	return &EnrolledRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -75,11 +72,8 @@ type EnrolledRepo struct {
 	svc   *data.EnrolledService
 }
 
-func (r *EnrolledRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *EnrolledRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEnrolledLoader(r.svc)
 	}
@@ -87,7 +81,7 @@ func (r *EnrolledRepo) Open(ctx context.Context) error {
 }
 
 func (r *EnrolledRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *EnrolledRepo) CheckConnection() error {
@@ -221,13 +215,4 @@ func (r *EnrolledRepo) Delete(enrolled *data.Enrolled) error {
 		return r.svc.DeleteForEnrollable(enrolled.EnrollableId.String, enrolled.UserId.String)
 	}
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
-}
-
-// Middleware
-func (r *EnrolledRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

@@ -5,6 +5,9 @@ type AppleableEdge {
 
   # The item at the end of the edge.
   node: Appleable
+
+  # When was the item appled?
+  appledAt: Time!
 }
 
 # A list of appleables.

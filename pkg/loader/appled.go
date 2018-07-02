@@ -32,6 +32,7 @@ func (r *AppledLoader) Clear(id string) {
 
 func (r *AppledLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetForAppleable.ClearAll()
 }
 
 func (r *AppledLoader) Get(id int32) (*data.Appled, error) {

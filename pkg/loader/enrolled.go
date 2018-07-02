@@ -32,6 +32,7 @@ func (r *EnrolledLoader) Clear(id string) {
 
 func (r *EnrolledLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetForEnrollable.ClearAll()
 }
 
 func (r *EnrolledLoader) Get(id int32) (*data.Enrolled, error) {

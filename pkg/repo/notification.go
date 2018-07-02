@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -86,10 +84,9 @@ func (r *NotificationPermit) UserId() (*mytype.OID, error) {
 	return &r.notification.UserId, nil
 }
 
-func NewNotificationRepo(perms *PermRepo, svc *data.NotificationService) *NotificationRepo {
+func NewNotificationRepo(svc *data.NotificationService) *NotificationRepo {
 	return &NotificationRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -99,11 +96,8 @@ type NotificationRepo struct {
 	svc   *data.NotificationService
 }
 
-func (r *NotificationRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *NotificationRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewNotificationLoader(r.svc)
 	}
@@ -111,7 +105,7 @@ func (r *NotificationRepo) Open(ctx context.Context) error {
 }
 
 func (r *NotificationRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *NotificationRepo) CheckConnection() error {
@@ -242,13 +236,4 @@ func (r *NotificationRepo) Update(n *data.Notification) (*NotificationPermit, er
 		return nil, err
 	}
 	return &NotificationPermit{fieldPermFn, study}, nil
-}
-
-// Middleware
-func (r *NotificationRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

@@ -5,6 +5,9 @@ type TopicableEdge {
 
   # The item at the end of the edge.
   node: Topicable
+
+  # When was the item topiced in?
+  topicedAt: Time!
 }
 
 # A list of topicables.

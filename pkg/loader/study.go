@@ -31,6 +31,7 @@ func (r *StudyLoader) Clear(id string) {
 
 func (r *StudyLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByUserAndName.ClearAll()
 }
 
 func (r *StudyLoader) Get(id string) (*data.Study, error) {

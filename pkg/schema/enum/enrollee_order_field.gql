@@ -1,0 +1,5 @@
+# Properties by which enrollee connections can be ordered.
+enum EnrolleeOrderField {
+  # Order enrollees by when they enrolled.
+  ENROLLED_AT
+}

@@ -1,14 +1,11 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
-	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
@@ -102,10 +99,9 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	return r.user.UpdatedAt.Time, nil
 }
 
-func NewUserRepo(perms *PermRepo, svc *data.UserService) *UserRepo {
+func NewUserRepo(svc *data.UserService) *UserRepo {
 	return &UserRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -115,11 +111,8 @@ type UserRepo struct {
 	svc   *data.UserService
 }
 
-func (r *UserRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *UserRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewUserLoader(r.svc)
 	}
@@ -127,7 +120,7 @@ func (r *UserRepo) Open(ctx context.Context) error {
 }
 
 func (r *UserRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *UserRepo) CheckConnection() error {
@@ -140,16 +133,16 @@ func (r *UserRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserRepo) CountByApple(studyId string) (int32, error) {
-	return r.svc.CountByApple(studyId)
+func (r *UserRepo) CountByAppleable(studyId string) (int32, error) {
+	return r.svc.CountByAppleable(studyId)
 }
 
 func (r *UserRepo) CountByEnrollable(enrollableId string) (int32, error) {
 	return r.svc.CountByEnrollable(enrollableId)
 }
 
-func (r *UserRepo) CountByEnrolled(userId string) (int32, error) {
-	return r.svc.CountByEnrolled(userId)
+func (r *UserRepo) CountByEnrollee(userId string) (int32, error) {
+	return r.svc.CountByEnrollee(userId)
 }
 
 func (r *UserRepo) CountBySearch(query string) (int32, error) {
@@ -190,14 +183,14 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
-func (r *UserRepo) GetByEnrolled(
+func (r *UserRepo) GetByEnrollee(
 	userId string,
 	po *data.PageOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByEnrolled(userId, po)
+	users, err := r.svc.GetByEnrollee(userId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -214,14 +207,14 @@ func (r *UserRepo) GetByEnrolled(
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetByApple(
+func (r *UserRepo) GetByAppleable(
 	appleableId string,
 	po *data.PageOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetByApple(appleableId, po)
+	users, err := r.svc.GetByAppleable(appleableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -238,14 +231,14 @@ func (r *UserRepo) GetByApple(
 	return userPermits, nil
 }
 
-func (r *UserRepo) GetEnrollers(
+func (r *UserRepo) GetEnrollees(
 	enrollableId string,
 	po *data.PageOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	users, err := r.svc.GetEnrollers(enrollableId, po)
+	users, err := r.svc.GetEnrollees(enrollableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -324,18 +317,4 @@ func (r *UserRepo) Update(u *data.User) (*UserPermit, error) {
 		return nil, err
 	}
 	return &UserPermit{fieldPermFn, user}, nil
-}
-
-// Middleware
-func (r *UserRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		err := r.Open(req.Context())
-		if err != nil {
-			response := myhttp.InternalServerErrorResponse(err.Error())
-			myhttp.WriteResponseTo(rw, response)
-			return
-		}
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

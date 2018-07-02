@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -88,10 +86,9 @@ func (r *LabelPermit) UpdatedAt() (time.Time, error) {
 	return r.label.UpdatedAt.Time, nil
 }
 
-func NewLabelRepo(perms *PermRepo, svc *data.LabelService) *LabelRepo {
+func NewLabelRepo(svc *data.LabelService) *LabelRepo {
 	return &LabelRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -101,11 +98,8 @@ type LabelRepo struct {
 	svc   *data.LabelService
 }
 
-func (r *LabelRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *LabelRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLabelLoader(r.svc)
 	}
@@ -113,7 +107,7 @@ func (r *LabelRepo) Open(ctx context.Context) error {
 }
 
 func (r *LabelRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *LabelRepo) CheckConnection() error {
@@ -297,13 +291,4 @@ func (r *LabelRepo) ViewerCanUpdate(l *data.Label) bool {
 		return false
 	}
 	return true
-}
-
-// Middleware
-func (r *LabelRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

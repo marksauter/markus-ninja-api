@@ -31,6 +31,7 @@ func (r *UserLoader) Clear(id string) {
 
 func (r *UserLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByLogin.ClearAll()
 }
 
 func (r *UserLoader) Get(id string) (*data.User, error) {

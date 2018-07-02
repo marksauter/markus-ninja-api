@@ -3,6 +3,7 @@ package resolver
 import (
 	"errors"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -43,4 +44,16 @@ func (r *labelableEdgeResolver) Node() (*labelableResolver, error) {
 		return nil, errors.New("cannot convert resolver to labelable")
 	}
 	return &labelableResolver{labelable}, nil
+}
+
+func (r *labelableEdgeResolver) LabeledAt() (graphql.Time, error) {
+	labelable, ok := r.node.(repo.LabelablePermit)
+	if !ok {
+		return graphql.Time{}, errors.New("cannot convert permit to labelable")
+	}
+	t, err := labelable.LabeledAt()
+	if err != nil {
+		return graphql.Time{}, err
+	}
+	return graphql.Time{t}, err
 }

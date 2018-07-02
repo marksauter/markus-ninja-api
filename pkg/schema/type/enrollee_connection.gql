@@ -1,22 +1,22 @@
 # An edge type for User.
-type StudentEdge implements Edge {
+type EnrolleeEdge implements Edge {
   # A cursor for use in pagination.
   cursor: String!
 
   # The item at the end of the edge.
   node: User!
 
-  # When was the item enrolled?
+  # When was the item enrolled in?
   enrolledAt: Time!
 }
 
 # A connection type for User.
-type StudentConnection implements Connection {
+type EnrolleeConnection implements Connection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [StudentEdge]
+  edges: [EnrolleeEdge]
 
   # A list of nodes.
   nodes: [User]

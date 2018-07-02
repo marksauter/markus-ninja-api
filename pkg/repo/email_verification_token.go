@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -72,13 +70,9 @@ func (r *EVTPermit) VerifiedAt() (time.Time, error) {
 	return r.evt.VerifiedAt.Time, nil
 }
 
-func NewEVTRepo(
-	perms *PermRepo,
-	svc *data.EVTService,
-) *EVTRepo {
+func NewEVTRepo(svc *data.EVTService) *EVTRepo {
 	return &EVTRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -88,11 +82,8 @@ type EVTRepo struct {
 	svc   *data.EVTService
 }
 
-func (r *EVTRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *EVTRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEVTLoader(r.svc)
 	}
@@ -100,7 +91,7 @@ func (r *EVTRepo) Open(ctx context.Context) error {
 }
 
 func (r *EVTRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *EVTRepo) CheckConnection() error {
@@ -144,13 +135,4 @@ func (r *EVTRepo) Get(emailId, token string) (*EVTPermit, error) {
 		return nil, err
 	}
 	return &EVTPermit{fieldPermFn, evt}, nil
-}
-
-// Middleware
-func (r *EVTRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

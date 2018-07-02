@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/fatih/structs"
 	"github.com/iancoleman/strcase"
@@ -14,12 +13,27 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
-func NewPermRepo(svc *data.PermService) *PermRepo {
-	return &PermRepo{svc: svc}
+func NewPermRepo(svc *data.PermService, repos *Repos) *PermRepo {
+	return &PermRepo{
+		repos: repos,
+		svc:   svc,
+	}
+}
+
+var permitterContextKey key = "permitter"
+
+func NewPermitterContext(ctx context.Context, v *PermRepo) context.Context {
+	return context.WithValue(ctx, permitterContextKey, v)
+}
+
+func PermitterFromContext(ctx context.Context) (*PermRepo, bool) {
+	v, ok := ctx.Value(permitterContextKey).(*PermRepo)
+	return v, ok
 }
 
 type PermRepo struct {
 	load   *loader.QueryPermLoader
+	repos  *Repos
 	svc    *data.PermService
 	viewer *data.User
 }
@@ -69,7 +83,7 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 
 	additionalRoles := []string{}
 	if a != perm.Create {
-		ok, err := r.svc.ViewerCanAdmin(r.viewer, node)
+		ok, err := r.ViewerCanAdmin(node)
 		if err != nil {
 			return checkField, err
 		}
@@ -105,11 +119,67 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 	return checkField, nil
 }
 
-// Middleware
-func (r *PermRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
+func (r *PermRepo) ViewerCanAdmin(node interface{}) (bool, error) {
+	vid := r.viewer.Id.String
+	switch node := node.(type) {
+	case data.Email:
+		return vid == node.UserId.String, nil
+	case *data.Email:
+		return vid == node.UserId.String, nil
+	case data.EVT:
+		return vid == node.UserId.String, nil
+	case *data.EVT:
+		return vid == node.UserId.String, nil
+	case data.Label:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
+	case *data.Label:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
+	case data.Lesson:
+		return vid == node.UserId.String, nil
+	case *data.Lesson:
+		return vid == node.UserId.String, nil
+	case data.LessonComment:
+		return vid == node.UserId.String, nil
+	case *data.LessonComment:
+		return vid == node.UserId.String, nil
+	case data.Notification:
+		return vid == node.UserId.String, nil
+	case *data.Notification:
+		return vid == node.UserId.String, nil
+	case data.PRT:
+		return vid == node.UserId.String, nil
+	case *data.PRT:
+		return vid == node.UserId.String, nil
+	case data.Study:
+		return vid == node.UserId.String, nil
+	case *data.Study:
+		return vid == node.UserId.String, nil
+	case data.User:
+		return vid == node.Id.String, nil
+	case *data.User:
+		return vid == node.Id.String, nil
+	case data.UserAsset:
+		return vid == node.UserId.String, nil
+	case *data.UserAsset:
+		return vid == node.UserId.String, nil
+	default:
+		return false, nil
+	}
+	return false, nil
 }

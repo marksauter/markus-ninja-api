@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"context"
-	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -67,10 +65,9 @@ func (r *TopicPermit) UpdatedAt() (time.Time, error) {
 	return r.topic.UpdatedAt.Time, nil
 }
 
-func NewTopicRepo(perms *PermRepo, svc *data.TopicService) *TopicRepo {
+func NewTopicRepo(svc *data.TopicService) *TopicRepo {
 	return &TopicRepo{
-		perms: perms,
-		svc:   svc,
+		svc: svc,
 	}
 }
 
@@ -80,11 +77,8 @@ type TopicRepo struct {
 	svc   *data.TopicService
 }
 
-func (r *TopicRepo) Open(ctx context.Context) error {
-	err := r.perms.Open(ctx)
-	if err != nil {
-		return err
-	}
+func (r *TopicRepo) Open(p *PermRepo) error {
+	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewTopicLoader(r.svc)
 	}
@@ -92,7 +86,7 @@ func (r *TopicRepo) Open(ctx context.Context) error {
 }
 
 func (r *TopicRepo) Close() {
-	r.load = nil
+	r.load.ClearAll()
 }
 
 func (r *TopicRepo) CheckConnection() error {
@@ -227,13 +221,4 @@ func (r *TopicRepo) Update(s *data.Topic) (*TopicPermit, error) {
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
-}
-
-// Middleware
-func (r *TopicRepo) Use(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		r.Open(req.Context())
-		defer r.Close()
-		h.ServeHTTP(rw, req)
-	})
 }

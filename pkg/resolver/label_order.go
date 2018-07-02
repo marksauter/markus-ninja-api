@@ -29,9 +29,9 @@ func ParseLabelOrderField(s string) (LabelOrderField, error) {
 func (f LabelOrderField) String() string {
 	switch f {
 	case LabelLabeledAt:
-		return "created_at"
+		return "labeled_at"
 	case LabelName:
-		return "number"
+		return "name"
 	default:
 		return "unknown"
 	}
@@ -53,8 +53,8 @@ func (o *LabelOrder) Field() string {
 func ParseLabelOrder(arg *OrderArg) (*LabelOrder, error) {
 	if arg == nil {
 		return &LabelOrder{
-			direction: data.DESC,
-			field:     LabelLabeledAt,
+			direction: data.ASC,
+			field:     LabelName,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
