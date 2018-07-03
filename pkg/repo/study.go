@@ -112,11 +112,11 @@ func NewStudyRepo(svc *data.StudyService) *StudyRepo {
 
 type StudyRepo struct {
 	load  *loader.StudyLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.StudyService
 }
 
-func (r *StudyRepo) Open(p *PermRepo) error {
+func (r *StudyRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewStudyLoader(r.svc)

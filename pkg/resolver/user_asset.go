@@ -68,11 +68,11 @@ func (r *userAssetResolver) PublishedAt() (*graphql.Time, error) {
 
 func (r *userAssetResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
-	userLogin, err := r.UserAsset.UserLogin()
+	study, err := r.Study()
 	if err != nil {
 		return uri, err
 	}
-	studyName, err := r.UserAsset.StudyName()
+	studyResourcePath, err := study.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
@@ -80,7 +80,7 @@ func (r *userAssetResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s/asset/%s", userLogin, studyName, name))
+	uri = mygql.URI(fmt.Sprintf("%s/asset/%s", studyResourcePath, name))
 	return uri, nil
 }
 

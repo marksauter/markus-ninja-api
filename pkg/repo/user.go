@@ -106,12 +106,12 @@ func NewUserRepo(svc *data.UserService) *UserRepo {
 }
 
 type UserRepo struct {
-	perms *PermRepo
+	perms *Permitter
 	load  *loader.UserLoader
 	svc   *data.UserService
 }
 
-func (r *UserRepo) Open(p *PermRepo) error {
+func (r *UserRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewUserLoader(r.svc)

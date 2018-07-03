@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
-	"github.com/iancoleman/strcase"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -13,32 +12,21 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
-func NewPermRepo(svc *data.PermService, repos *Repos) *PermRepo {
-	return &PermRepo{
+func NewPermitter(svc *data.PermissionService, repos *Repos) *Permitter {
+	return &Permitter{
 		repos: repos,
 		svc:   svc,
 	}
 }
 
-var permitterContextKey key = "permitter"
-
-func NewPermitterContext(ctx context.Context, v *PermRepo) context.Context {
-	return context.WithValue(ctx, permitterContextKey, v)
-}
-
-func PermitterFromContext(ctx context.Context) (*PermRepo, bool) {
-	v, ok := ctx.Value(permitterContextKey).(*PermRepo)
-	return v, ok
-}
-
-type PermRepo struct {
+type Permitter struct {
 	load   *loader.QueryPermLoader
 	repos  *Repos
-	svc    *data.PermService
+	svc    *data.PermissionService
 	viewer *data.User
 }
 
-func (r *PermRepo) Open(ctx context.Context) error {
+func (r *Permitter) Begin(ctx context.Context) error {
 	if r.load == nil {
 		var ok bool
 		r.viewer, ok = myctx.UserFromContext(ctx)
@@ -50,11 +38,11 @@ func (r *PermRepo) Open(ctx context.Context) error {
 	return nil
 }
 
-func (r *PermRepo) Close() {
-	r.load = nil
+func (r *Permitter) End() {
+	r.load.ClearAll()
 }
 
-func (r *PermRepo) CheckConnection() error {
+func (r *Permitter) CheckConnection() error {
 	if r.load == nil {
 		mylog.Log.Error("permission connection closed")
 		return ErrConnClosed
@@ -62,15 +50,15 @@ func (r *PermRepo) CheckConnection() error {
 	return nil
 }
 
-func (r *PermRepo) Clear(o perm.Operation) {
+func (r *Permitter) Clear(o perm.Operation) {
 	r.load.Clear(o)
 }
 
-func (r *PermRepo) ClearAll() {
+func (r *Permitter) ClearAll() {
 	r.load.ClearAll()
 }
 
-func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
+func (r *Permitter) Check(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
 	var checkField FieldPermissionFunc
 	if err := r.CheckConnection(); err != nil {
 		return checkField, err
@@ -110,7 +98,8 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 	if a == perm.Create || a == perm.Update {
 		for _, f := range structs.Fields(node) {
 			if !f.IsZero() {
-				if ok := checkField(strcase.ToSnake(f.Name())); !ok {
+				dbField := f.Tag("db")
+				if ok := checkField(dbField); !ok {
 					return checkField, ErrAccessDenied
 				}
 			}
@@ -119,7 +108,7 @@ func (r *PermRepo) Check(a perm.AccessLevel, node interface{}) (FieldPermissionF
 	return checkField, nil
 }
 
-func (r *PermRepo) ViewerCanAdmin(node interface{}) (bool, error) {
+func (r *Permitter) ViewerCanAdmin(node interface{}) (bool, error) {
 	vid := r.viewer.Id.String
 	switch node := node.(type) {
 	case data.Email:

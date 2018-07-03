@@ -1,12 +1,10 @@
 package repo
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -42,13 +40,13 @@ type FieldPermissionFunc = func(field string) bool
 var AdminPermissionFunc = func(field string) bool { return true }
 
 type Repo interface {
-	Open(*PermRepo) error
+	Open(*Permitter) error
 	Close()
 }
 
 type Repos struct {
-	lookup  map[key]Repo
-	permSvc *data.PermService
+	lookup map[key]Repo
+	svcs   *service.Services
 }
 
 func NewRepos(svcs *service.Services) *Repos {
@@ -71,20 +69,13 @@ func NewRepos(svcs *service.Services) *Repos {
 			userRepoKey:          NewUserRepo(svcs.User),
 			userAssetRepoKey:     NewUserAssetRepo(svcs.UserAsset, svcs.Storage),
 		},
-		permSvc: svcs.Perm,
+		svcs: svcs,
 	}
 }
 
-func (r *Repos) OpenAll(ctx context.Context) error {
-	permitter, ok := PermitterFromContext(ctx)
-	if !ok {
-		return errors.New("permitter not found")
-	}
-	if err := permitter.Open(ctx); err != nil {
-		return err
-	}
+func (r *Repos) OpenAll(p *Permitter) error {
 	for _, repo := range r.lookup {
-		if err := repo.Open(permitter); err != nil {
+		if err := repo.Open(p); err != nil {
 			return err
 		}
 	}
@@ -179,9 +170,10 @@ func (r *Repos) UserAsset() *UserAssetRepo {
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		permitter := NewPermRepo(r.permSvc, r)
-		ctx := NewPermitterContext(req.Context(), permitter)
-		r.OpenAll(ctx)
+		permitter := NewPermitter(r.svcs.Perm, r)
+		permitter.Begin(req.Context())
+		defer permitter.End()
+		r.OpenAll(permitter)
 		defer r.CloseAll()
 		h.ServeHTTP(rw, req)
 	})

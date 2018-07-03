@@ -103,11 +103,11 @@ func NewEmailRepo(svc *data.EmailService) *EmailRepo {
 
 type EmailRepo struct {
 	load  *loader.EmailLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.EmailService
 }
 
-func (r *EmailRepo) Open(p *PermRepo) error {
+func (r *EmailRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEmailLoader(r.svc)

@@ -68,11 +68,11 @@ func NewAppledRepo(svc *data.AppledService) *AppledRepo {
 
 type AppledRepo struct {
 	load  *loader.AppledLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.AppledService
 }
 
-func (r *AppledRepo) Open(p *PermRepo) error {
+func (r *AppledRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewAppledLoader(r.svc)

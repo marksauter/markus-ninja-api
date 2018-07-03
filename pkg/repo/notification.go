@@ -92,11 +92,11 @@ func NewNotificationRepo(svc *data.NotificationService) *NotificationRepo {
 
 type NotificationRepo struct {
 	load  *loader.NotificationLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.NotificationService
 }
 
-func (r *NotificationRepo) Open(p *PermRepo) error {
+func (r *NotificationRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewNotificationLoader(r.svc)

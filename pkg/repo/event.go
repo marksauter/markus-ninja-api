@@ -78,11 +78,11 @@ func NewEventRepo(svc *data.EventService) *EventRepo {
 
 type EventRepo struct {
 	load  *loader.EventLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.EventService
 }
 
-func (r *EventRepo) Open(p *PermRepo) error {
+func (r *EventRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEventLoader(r.svc)

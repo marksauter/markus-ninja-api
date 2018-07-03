@@ -68,11 +68,11 @@ func NewTopicedRepo(svc *data.TopicedService) *TopicedRepo {
 
 type TopicedRepo struct {
 	load  *loader.TopicedLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.TopicedService
 }
 
-func (r *TopicedRepo) Open(p *PermRepo) error {
+func (r *TopicedRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewTopicedLoader(r.svc)

@@ -19,7 +19,7 @@ type Services struct {
 	LessonComment *data.LessonCommentService
 	Mail          *MailService
 	Notification  *data.NotificationService
-	Perm          *data.PermService
+	Perm          *data.PermissionService
 	PRT           *data.PRTService
 	Role          *data.RoleService
 	Storage       *StorageService
@@ -56,7 +56,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		LessonComment: data.NewLessonCommentService(db),
 		Mail:          NewMailService(myaws.NewSES(), mailConfig),
 		Notification:  data.NewNotificationService(db),
-		Perm:          data.NewPermService(db),
+		Perm:          data.NewPermissionService(db),
 		PRT:           data.NewPRTService(db),
 		Role:          data.NewRoleService(db),
 		Storage:       storageSvc,

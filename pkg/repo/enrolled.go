@@ -68,11 +68,11 @@ func NewEnrolledRepo(svc *data.EnrolledService) *EnrolledRepo {
 
 type EnrolledRepo struct {
 	load  *loader.EnrolledLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.EnrolledService
 }
 
-func (r *EnrolledRepo) Open(p *PermRepo) error {
+func (r *EnrolledRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEnrolledLoader(r.svc)
