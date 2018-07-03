@@ -20,12 +20,10 @@ type UserAsset struct {
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"read"`
 	StudyId      mytype.OID         `db:"study_id" permit:"read"`
-	StudyName    pgtype.Text        `db:"study_name"`
 	Subtype      pgtype.Text        `db:"subtype" permit:"read"`
 	Type         pgtype.Text        `db:"type" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
-	UserLogin    pgtype.Text        `db:"user_login"`
 }
 
 func NewUserAssetService(db Queryer) *UserAssetService {
@@ -139,12 +137,10 @@ func (s *UserAssetService) get(
 		&row.PublishedAt,
 		&row.Size,
 		&row.StudyId,
-		&row.StudyName,
 		&row.Subtype,
 		&row.Type,
 		&row.UpdatedAt,
 		&row.UserId,
-		&row.UserLogin,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -179,12 +175,10 @@ func (s *UserAssetService) getMany(
 			&row.PublishedAt,
 			&row.Size,
 			&row.StudyId,
-			&row.StudyName,
 			&row.Subtype,
 			&row.Type,
 			&row.UpdatedAt,
 			&row.UserId,
-			&row.UserLogin,
 		)
 		rows = append(rows, &row)
 	}
@@ -209,12 +203,10 @@ const getUserAssetByIdSQL = `
 		published_at,
 		size,
 		study_id,
-		study_name,
 		subtype,
 		type,
 		updated_at,
-		user_id,
-		user_login
+		user_id
 	FROM user_asset_master
 	WHERE id = $1
 `
@@ -234,12 +226,10 @@ const getUserAssetByNameSQL = `
 		published_at,
 		size,
 		study_id,
-		study_name,
 		subtype,
 		type,
 		updated_at,
-		user_id,
-		user_login
+		user_id
 	FROM user_asset_master
 	WHERE user_id = $1 AND study_id = $2 AND lower(name) = lower($3)
 `
@@ -265,12 +255,10 @@ const getAssetByUserStudyAndNameSQL = `
 		ua.published_at,
 		ua.size,
 		ua.study_id,
-		s.name study_name,
 		ua.subtype,
 		ua.type,
 		ua.updated_at,
-		ua.user_id,
-		a.login user_login
+		ua.user_id
 	FROM user_asset ua
 	JOIN account a ON lower(a.login) = lower($1)
 	JOIN study s ON s.user_id = a.id AND lower(s.name) = lower($2)
@@ -317,12 +305,10 @@ func (s *UserAssetService) GetByStudy(
 		"published_at",
 		"size",
 		"study_id",
-		"study_name",
 		"subtype",
 		"type",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "user_asset_master"
 	sql := SQL(selects, from, where, &args, po)
@@ -352,12 +338,10 @@ func (s *UserAssetService) GetByUser(
 		"published_at",
 		"size",
 		"study_id",
-		"study_name",
 		"subtype",
 		"type",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "user_asset_master"
 	sql := SQL(selects, from, where, &args, po)
@@ -517,12 +501,10 @@ func (s *UserAssetService) Search(within *mytype.OID, query string, po *PageOpti
 		"published_at",
 		"size",
 		"study_id",
-		"study_name",
 		"subtype",
 		"type",
 		"updated_at",
 		"user_id",
-		"user_login",
 	}
 	from := "user_asset_search_index"
 	sql, args := SearchSQL(selects, from, within, query, po)

@@ -100,11 +100,11 @@ func NewLessonRepo(svc *data.LessonService) *LessonRepo {
 
 type LessonRepo struct {
 	load  *loader.LessonLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.LessonService
 }
 
-func (r *LessonRepo) Open(p *PermRepo) error {
+func (r *LessonRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLessonLoader(r.svc)

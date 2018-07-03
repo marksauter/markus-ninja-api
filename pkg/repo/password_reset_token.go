@@ -78,11 +78,11 @@ func NewPRTRepo(svc *data.PRTService) *PRTRepo {
 
 type PRTRepo struct {
 	load  *loader.PRTLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.PRTService
 }
 
-func (r *PRTRepo) Open(p *PermRepo) error {
+func (r *PRTRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewPRTLoader(r.svc)

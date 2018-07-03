@@ -105,13 +105,6 @@ func (r *UserAssetPermit) StudyId() (*mytype.OID, error) {
 	return &r.userAsset.StudyId, nil
 }
 
-func (r *UserAssetPermit) StudyName() (string, error) {
-	if ok := r.checkFieldPermission("study_name"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.userAsset.StudyName.String, nil
-}
-
 func (r *UserAssetPermit) Subtype() (string, error) {
 	if ok := r.checkFieldPermission("subtype"); !ok {
 		return "", ErrAccessDenied
@@ -140,13 +133,6 @@ func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
 	return &r.userAsset.UserId, nil
 }
 
-func (r *UserAssetPermit) UserLogin() (string, error) {
-	if ok := r.checkFieldPermission("user_login"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.userAsset.UserLogin.String, nil
-}
-
 func NewUserAssetRepo(
 	svc *data.UserAssetService,
 	store *service.StorageService,
@@ -159,12 +145,12 @@ func NewUserAssetRepo(
 
 type UserAssetRepo struct {
 	load  *loader.UserAssetLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.UserAssetService
 	store *service.StorageService
 }
 
-func (r *UserAssetRepo) Open(p *PermRepo) error {
+func (r *UserAssetRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewUserAssetLoader(r.svc)

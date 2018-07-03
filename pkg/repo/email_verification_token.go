@@ -78,11 +78,11 @@ func NewEVTRepo(svc *data.EVTService) *EVTRepo {
 
 type EVTRepo struct {
 	load  *loader.EVTLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.EVTService
 }
 
-func (r *EVTRepo) Open(p *PermRepo) error {
+func (r *EVTRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewEVTLoader(r.svc)

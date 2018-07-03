@@ -10,7 +10,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
-func NewQueryPermLoader(svc *data.PermService, viewer *data.User) *QueryPermLoader {
+func NewQueryPermLoader(svc *data.PermissionService, viewer *data.User) *QueryPermLoader {
 	loader := &QueryPermLoader{
 		svc:    svc,
 		viewer: viewer,
@@ -51,7 +51,7 @@ func NewQueryPermLoader(svc *data.PermService, viewer *data.User) *QueryPermLoad
 }
 
 type QueryPermLoader struct {
-	svc    *data.PermService
+	svc    *data.PermissionService
 	viewer *data.User
 
 	batchGet *dataloader.Loader

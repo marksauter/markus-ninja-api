@@ -11,14 +11,14 @@ import (
 )
 
 type User struct {
-	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"read"`
-	BackupEmail  mytype.Email       `db:"backup_email"`
-	Bio          pgtype.Text        `db:"bio" permit:"read"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
-	Id           mytype.OID         `db:"id" permit:"read"`
-	Login        pgtype.Varchar     `db:"login" permit:"read/create"`
-	Name         pgtype.Text        `db:"name" permit:"read"`
+	AppledAt     pgtype.Timestamptz `db:"appled_at" permit:"all" access:"read"`
+	BackupEmail  mytype.Email       `db:"backup_email" permit:"owner" access:"create|read|update"`
+	Bio          pgtype.Text        `db:"bio" permit:"all/owner" access:"read/update"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"all" access:"read"`
+	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at" permit:"all" access:"read"`
+	Id           mytype.OID         `db:"id" permit:"all" access:"read"`
+	Login        pgtype.Varchar     `db:"login" permit:"all/owner" access:"read|create/update"`
+	Name         pgtype.Text        `db:"name" permit:"all" access:"`
 	Password     mytype.Password    `db:"password" permit:"create"`
 	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
 	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read"`

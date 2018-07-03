@@ -1,0 +1,145 @@
+permissions:
+  # Only authenticated users can perform CRUD operations for emails.
+  - operation: Email.create
+    authenticated: true
+  - operation: Email.read
+    authenticated: true
+  - operation: Email.update
+    authenticated: true
+    fields:
+      - public
+      - type
+  - operation: Email.delete
+    authenticated: true
+
+
+
+  # Everyone can create email verification tokens.
+  - operation: EVT.create
+
+
+
+  # Everyone can read events.
+  - operation: Event.read
+
+  # Only authenticated users can create events.
+  - operation: Event.create
+    authenticated: true
+
+
+
+  # Everyone can read labels.
+  - operation: Label.read
+
+  # Only authenticated users can create/update/delete labels.
+  - operation: Label.create
+    authenticated: true
+  - operation: Label.update
+    authenticated: true
+    fields:
+      - color
+      - description
+  - operation: Label.delete
+    authenticated: true
+
+
+
+  # Everyone can read lessons.
+  - operation: Lesson.read
+
+  # Only authenticated users can create/update/delete lessons.
+  - operation: Lesson.create
+    authenticated: true
+  - operation: Lesson.update
+    authenticated: true
+    fields:
+      - body
+      - number
+      - title
+  - operation: Lesson.delete
+    authenticated: true
+
+
+
+  # Everyone can read lesson comments.
+  - operation: LessonComment.read
+
+  # Only authenticated users can create/update/delete lesson comments.
+  - operation: LessonComment.create
+    authenticated: true
+  - operation: LessonComment.update
+    authenticated: true
+    fields:
+      - body
+  - operation: LessonComment.delete
+    authenticated: true
+
+
+
+  # Only authenticated users can read/delete notifications.
+  - operation: Notification.read
+    authenticated: true
+  - operation: Notification.delete
+    authenticated: true
+
+
+
+  # Everyone can create password reset tokens.
+  - operation: PRT.create
+
+
+
+  # Everyone can read studies.
+  - operation: Study.read
+
+  # Only authenticated users can create/update/delete studies.
+  - operation: Study.create
+    authenticated: true
+  - operation: Study.update
+    authenticated: true
+    fields:
+      - description
+  - operation: Study.delete
+    authenticated: true
+
+
+
+  # Only authenticated users can create/update topics.
+  - operation: Topic.create
+    authenticated: true
+  - operation: Topic.update
+    authenticated: true
+    fields:
+      - description
+
+
+
+  # Everyone can read/create a user.
+  - operation: User.read
+  - operation: User.create
+    
+  # Only authenticated users can update/delete users. 
+  - operation: User.update
+    authenticated: true
+    fields:
+      - bio
+      - login
+      - name
+      - password
+  - operation: User.delete
+    authenticated: true
+
+
+
+  # Everyone can read a user asset.
+  - operation: UserAsset.read
+    
+  # Only authenticated users can create/delete/update user assets. 
+  - operation: UserAsset.create
+    authenticated: true
+  - operation: UserAsset.delete
+    authenticated: true
+  - operation: UserAsset.update
+    authenticated: true
+    fields:
+      - name

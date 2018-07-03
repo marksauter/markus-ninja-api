@@ -92,11 +92,11 @@ func NewLessonCommentRepo(svc *data.LessonCommentService) *LessonCommentRepo {
 
 type LessonCommentRepo struct {
 	load  *loader.LessonCommentLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.LessonCommentService
 }
 
-func (r *LessonCommentRepo) Open(p *PermRepo) error {
+func (r *LessonCommentRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLessonCommentLoader(r.svc)

@@ -68,11 +68,11 @@ func NewLabeledRepo(svc *data.LabeledService) *LabeledRepo {
 
 type LabeledRepo struct {
 	load  *loader.LabeledLoader
-	perms *PermRepo
+	perms *Permitter
 	svc   *data.LabeledService
 }
 
-func (r *LabeledRepo) Open(p *PermRepo) error {
+func (r *LabeledRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
 		r.load = loader.NewLabeledLoader(r.svc)
