@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type TopicPermit struct {
@@ -111,7 +110,7 @@ func (r *TopicRepo) Create(s *data.Topic) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, s); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -123,7 +122,7 @@ func (r *TopicRepo) Create(s *data.Topic) (*TopicPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topic)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +137,7 @@ func (r *TopicRepo) Get(id string) (*TopicPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topic)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +157,7 @@ func (r *TopicRepo) GetByTopicable(
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, topics[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topics[0])
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +176,7 @@ func (r *TopicRepo) GetByName(name string) (*TopicPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topic)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +193,7 @@ func (r *TopicRepo) Search(query string, po *data.PageOptions) ([]*TopicPermit, 
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, topics[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topics[0])
 		if err != nil {
 			return nil, err
 		}
@@ -209,14 +208,14 @@ func (r *TopicRepo) Update(s *data.Topic) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, s); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
 	topic, err := r.svc.Update(s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topic)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}

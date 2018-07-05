@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type NotificationPermit struct {
@@ -132,14 +131,14 @@ func (r *NotificationRepo) Create(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, notification); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, notification); err != nil {
 		return nil, err
 	}
 	notification, err := r.svc.Create(notification)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, notification)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +153,7 @@ func (r *NotificationRepo) Get(id string) (*NotificationPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, notification)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +174,7 @@ func (r *NotificationRepo) GetByStudy(
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, notifications[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +198,7 @@ func (r *NotificationRepo) GetByUser(
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, notifications[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +213,7 @@ func (r *NotificationRepo) Delete(n *data.Notification) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, n); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, n); err != nil {
 		return err
 	}
 	return r.svc.Delete(n.Id.String)
@@ -224,14 +223,14 @@ func (r *NotificationRepo) Update(n *data.Notification) (*NotificationPermit, er
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, n); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, n); err != nil {
 		return nil, err
 	}
 	study, err := r.svc.Update(n)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}

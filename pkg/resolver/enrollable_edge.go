@@ -51,9 +51,5 @@ func (r *enrollableEdgeResolver) EnrolledAt() (graphql.Time, error) {
 	if !ok {
 		return graphql.Time{}, errors.New("cannot convert permit to enrollable")
 	}
-	t, err := enrollable.EnrolledAt()
-	if err != nil {
-		return graphql.Time{}, err
-	}
-	return graphql.Time{t}, err
+	return graphql.Time{enrollable.EnrolledAt()}, nil
 }

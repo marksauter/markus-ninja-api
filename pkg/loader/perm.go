@@ -7,7 +7,7 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 func NewQueryPermLoader(svc *data.PermissionService, viewer *data.User) *QueryPermLoader {
@@ -32,7 +32,7 @@ func NewQueryPermLoader(svc *data.PermissionService, viewer *data.User) *QueryPe
 				go func(i int, key dataloader.Key) {
 					defer wg.Done()
 					ks := splitCompositeKey(key)
-					operation, err := perm.ParseOperation(ks[0])
+					operation, err := mytype.ParseOperation(ks[0])
 					if err != nil {
 						results[i] = &dataloader.Result{Data: nil, Error: err}
 						return
@@ -57,7 +57,7 @@ type QueryPermLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (l *QueryPermLoader) Clear(o perm.Operation) {
+func (l *QueryPermLoader) Clear(o mytype.Operation) {
 	ctx := context.Background()
 	l.batchGet.Clear(ctx, dataloader.StringKey(o.String()))
 }
@@ -67,9 +67,9 @@ func (l *QueryPermLoader) ClearAll() {
 }
 
 func (l *QueryPermLoader) Get(
-	o perm.Operation,
+	o *mytype.Operation,
 	roles []string,
-) (*perm.QueryPermission, error) {
+) (*data.QueryPermission, error) {
 	ctx := context.Background()
 	for _, role := range l.viewer.Roles.Elements {
 		roles = append(roles, role.String)
@@ -80,7 +80,7 @@ func (l *QueryPermLoader) Get(
 	if err != nil {
 		return nil, err
 	}
-	perm, ok := permData.(*perm.QueryPermission)
+	perm, ok := permData.(*data.QueryPermission)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
@@ -88,7 +88,7 @@ func (l *QueryPermLoader) Get(
 	return perm, nil
 }
 
-func (l *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission, []error) {
+func (l *QueryPermLoader) GetMany(os []mytype.Operation) ([]*data.QueryPermission, []error) {
 	ctx := context.Background()
 	keys := make(dataloader.Keys, len(os))
 	for i, o := range os {
@@ -98,10 +98,10 @@ func (l *QueryPermLoader) GetMany(os []perm.Operation) ([]*perm.QueryPermission,
 	if errs != nil {
 		return nil, errs
 	}
-	perms := make([]*perm.QueryPermission, len(permData))
+	perms := make([]*data.QueryPermission, len(permData))
 	for i, d := range permData {
 		var ok bool
-		perms[i], ok = d.(*perm.QueryPermission)
+		perms[i], ok = d.(*data.QueryPermission)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
@@ -125,7 +125,7 @@ func (l *QueryPermLoader) batchGetFunc(
 	for i, key := range keys {
 		go func(i int, key dataloader.Key) {
 			defer wg.Done()
-			operation, err := perm.ParseOperation(key.String())
+			operation, err := mytype.ParseOperation(key.String())
 			if err != nil {
 				results[i] = &dataloader.Result{Data: nil, Error: err}
 				return

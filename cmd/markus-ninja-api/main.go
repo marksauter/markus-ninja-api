@@ -125,6 +125,11 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 
+	// permissions, err := myconf.LoadPermissions()
+	// if err != nil {
+	//   panic(err)
+	// }
+
 	adminPermissionsSQL := `
 		SELECT
 			r.name,

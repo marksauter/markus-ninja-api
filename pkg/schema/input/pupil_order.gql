@@ -1,8 +1,0 @@
-# Ways in which pupil connections can be ordered.
-input PupilOrder {
-  # The direction in which to order nodes.
-  direction: OrderDirection!
-
-  # The field in which to order nodes by.
-  field: PupilOrderField!
-}

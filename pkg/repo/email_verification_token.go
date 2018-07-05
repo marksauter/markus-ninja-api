@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type EVTPermit struct {
@@ -108,14 +107,14 @@ func (r *EVTRepo) Create(t *data.EVT) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, t); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, t); err != nil {
 		return nil, err
 	}
 	evt, err := r.svc.Create(t)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, evt)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, evt)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +129,7 @@ func (r *EVTRepo) Get(emailId, token string) (*EVTPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, evt)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, evt)
 	if err != nil {
 		return nil, err
 	}

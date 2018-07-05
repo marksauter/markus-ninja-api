@@ -1,8 +1,0 @@
-# Ways in which tutor connections can be ordered.
-input TutorOrder {
-  # The direction in which to order nodes.
-  direction: OrderDirection!
-
-  # The field in which to order nodes by.
-  field: TutorOrderField!
-}

@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type PRTPermit struct {
@@ -108,14 +107,14 @@ func (r *PRTRepo) Create(t *data.PRT) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, t); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, t); err != nil {
 		return nil, err
 	}
 	prt, err := r.svc.Create(t)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, prt)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +129,7 @@ func (r *PRTRepo) Get(userId, token string) (*PRTPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, prt)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}

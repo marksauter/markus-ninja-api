@@ -14,15 +14,15 @@ import (
 
 type Study struct {
 	AdvancedAt  pgtype.Timestamptz `db:"advanced_at" permit:"read"`
-	AppledAt    pgtype.Timestamptz `db:"appled_at" permit:"read"`
+	AppledAt    pgtype.Timestamptz `db:"appled_at"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Description pgtype.Text        `db:"description" permit:"read"`
-	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
+	Description pgtype.Text        `db:"description" permit:"create/read/update"`
+	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	Name        mytype.URLSafeName `db:"name" permit:"read"`
-	TopicedAt   pgtype.Timestamptz `db:"topiced_at" permit:"read"`
+	Name        mytype.URLSafeName `db:"name" permit:"create/read"`
+	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewStudyService(db Queryer) *StudyService {

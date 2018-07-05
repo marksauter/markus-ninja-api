@@ -51,9 +51,5 @@ func (r *labelableEdgeResolver) LabeledAt() (graphql.Time, error) {
 	if !ok {
 		return graphql.Time{}, errors.New("cannot convert permit to labelable")
 	}
-	t, err := labelable.LabeledAt()
-	if err != nil {
-		return graphql.Time{}, err
-	}
-	return graphql.Time{t}, err
+	return graphql.Time{labelable.LabeledAt()}, nil
 }

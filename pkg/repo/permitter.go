@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
 func NewPermitter(svc *data.PermissionService, repos *Repos) *Permitter {
@@ -50,7 +51,7 @@ func (r *Permitter) CheckConnection() error {
 	return nil
 }
 
-func (r *Permitter) Clear(o perm.Operation) {
+func (r *Permitter) Clear(o mytype.Operation) {
 	r.load.Clear(o)
 }
 
@@ -58,19 +59,21 @@ func (r *Permitter) ClearAll() {
 	r.load.ClearAll()
 }
 
-func (r *Permitter) Check(a perm.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
+func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
 	var checkField FieldPermissionFunc
 	if err := r.CheckConnection(); err != nil {
 		return checkField, err
 	}
-	nt, err := perm.ParseNodeType(structs.Name(node))
+	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
 		return checkField, err
 	}
-	o := perm.Operation{a, nt}
+	o := mytype.NewOperation(a, nt)
 
 	additionalRoles := []string{}
-	if a != perm.Create {
+	// If we are not creating, then check if the viewer can admin the object. If
+	// yes, then grant the owner role to the user.
+	if a != mytype.CreateAccess {
 		ok, err := r.ViewerCanAdmin(node)
 		if err != nil {
 			return checkField, err
@@ -78,7 +81,18 @@ func (r *Permitter) Check(a perm.AccessLevel, node interface{}) (FieldPermission
 		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
 		}
+	} else {
+		// If we are creating, then check if viewer can create the object.  If yes,
+		// then grant the owner role to the user.
+		ok, err := r.ViewerCanCreate(node)
+		if err != nil {
+			return checkField, err
+		}
+		if ok {
+			additionalRoles = append(additionalRoles, data.OwnerRole)
+		}
 	}
+	// Get the query permissions.
 	queryPerm, err := r.load.Get(o, additionalRoles)
 	if err != nil {
 		if err == data.ErrNotFound {
@@ -87,15 +101,25 @@ func (r *Permitter) Check(a perm.AccessLevel, node interface{}) (FieldPermission
 			return checkField, err
 		}
 	}
+	// Set field permission function for the fields returned by the query
+	// permission.
 	checkField = func(field string) bool {
-		for _, f := range queryPerm.Fields {
-			if f == field {
+		// If the returned query permission has a null value for fields, then return
+		// true for all fields.
+		// NOTE: checkField only makes sense in respect to create/read/update
+		// operations.
+		if queryPerm.Fields.Status == pgtype.Null {
+			return true
+		}
+		for _, f := range queryPerm.Fields.Elements {
+			if f.String == field {
 				return true
 			}
 		}
 		return false
 	}
-	if a == perm.Create || a == perm.Update {
+	// If creating/updating, then check if fields provided are permitted.
+	if a == mytype.CreateAccess || a == mytype.UpdateAccess {
 		for _, f := range structs.Fields(node) {
 			if !f.IsZero() {
 				dbField := f.Tag("db")
@@ -108,6 +132,7 @@ func (r *Permitter) Check(a perm.AccessLevel, node interface{}) (FieldPermission
 	return checkField, nil
 }
 
+// Can the viewer admin the node, i.e. is the viewer the owner of the object?
 func (r *Permitter) ViewerCanAdmin(node interface{}) (bool, error) {
 	vid := r.viewer.Id.String
 	switch node := node.(type) {
@@ -167,6 +192,58 @@ func (r *Permitter) ViewerCanAdmin(node interface{}) (bool, error) {
 		return vid == node.UserId.String, nil
 	case *data.UserAsset:
 		return vid == node.UserId.String, nil
+	default:
+		return false, nil
+	}
+	return false, nil
+}
+
+// Can the viewer create the passed node? Mainly used for objects that have
+// parent objects, and the viewer must be the owner of the parent object to
+// create a child object.
+func (r *Permitter) ViewerCanCreate(node interface{}) (bool, error) {
+	vid := r.viewer.Id.String
+	switch node := node.(type) {
+	case data.Label:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
+	case *data.Label:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
+	case data.Lesson:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
+	case *data.Lesson:
+		study, err := r.repos.Study().Get(node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		userId, err := study.UserId()
+		if err != nil {
+			return false, err
+		}
+		return vid == userId.String, nil
 	default:
 		return false, nil
 	}

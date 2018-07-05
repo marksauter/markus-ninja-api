@@ -9,7 +9,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type EmailPermit struct {
@@ -140,14 +139,14 @@ func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, e); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, e); err != nil {
 		return nil, err
 	}
 	email, err := r.svc.Create(e)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +157,7 @@ func (r *EmailRepo) Delete(email *data.Email) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, email); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, email); err != nil {
 		return err
 	}
 	return r.svc.Delete(email.Id.String)
@@ -172,7 +171,7 @@ func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +186,7 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +207,7 @@ func (r *EmailRepo) GetByUser(
 	}
 	emailPermits := make([]*EmailPermit, len(emails))
 	if len(emails) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, emails[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, emails[0])
 		if err != nil {
 			return nil, err
 		}
@@ -223,14 +222,14 @@ func (r *EmailRepo) Update(e *data.Email) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, e); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, e); err != nil {
 		return nil, err
 	}
 	email, err := r.svc.Update(e)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, email)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}

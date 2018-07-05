@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LabelPermit struct {
@@ -136,7 +135,7 @@ func (r *LabelRepo) Create(s *data.Label) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, s); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -148,7 +147,7 @@ func (r *LabelRepo) Create(s *data.Label) (*LabelPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, label)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +162,7 @@ func (r *LabelRepo) Get(id string) (*LabelPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, label)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +182,7 @@ func (r *LabelRepo) GetByLabelable(
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, labels[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +203,7 @@ func (r *LabelRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*LabelPe
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, labels[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +222,7 @@ func (r *LabelRepo) GetByName(name string) (*LabelPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, label)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +233,7 @@ func (r *LabelRepo) Delete(label *data.Label) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, label); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, label); err != nil {
 		return err
 	}
 	return r.svc.Delete(label.Id.String)
@@ -250,7 +249,7 @@ func (r *LabelRepo) Search(query string, po *data.PageOptions) ([]*LabelPermit, 
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, labels[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -265,14 +264,14 @@ func (r *LabelRepo) Update(s *data.Label) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, s); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
 	label, err := r.svc.Update(s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, label)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
@@ -280,14 +279,14 @@ func (r *LabelRepo) Update(s *data.Label) (*LabelPermit, error) {
 }
 
 func (r *LabelRepo) ViewerCanDelete(l *data.Label) bool {
-	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *LabelRepo) ViewerCanUpdate(l *data.Label) bool {
-	if _, err := r.perms.Check(perm.Update, l); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

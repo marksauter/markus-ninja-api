@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LessonCommentPermit struct {
@@ -134,14 +133,14 @@ func (r *LessonCommentRepo) Create(lc *data.LessonComment) (*LessonCommentPermit
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, lc); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, lc); err != nil {
 		return nil, err
 	}
 	lessonComment, err := r.svc.Create(lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +155,7 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func (r *LessonCommentRepo) GetByLesson(
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +202,7 @@ func (r *LessonCommentRepo) GetByStudy(
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +223,7 @@ func (r *LessonCommentRepo) GetByUser(userId string, po *data.PageOptions) ([]*L
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessonComments[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -239,7 +238,7 @@ func (r *LessonCommentRepo) Delete(lessonComment *data.LessonComment) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, lessonComment); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, lessonComment); err != nil {
 		return err
 	}
 	return r.svc.Delete(lessonComment.Id.String)
@@ -249,14 +248,14 @@ func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, lc); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, lc); err != nil {
 		return nil, err
 	}
 	lessonComment, err := r.svc.Update(lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lessonComment)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -264,14 +263,14 @@ func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit
 }
 
 func (r *LessonCommentRepo) ViewerCanDelete(l *data.LessonComment) bool {
-	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *LessonCommentRepo) ViewerCanUpdate(l *data.LessonComment) bool {
-	if _, err := r.perms.Check(perm.Update, l); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

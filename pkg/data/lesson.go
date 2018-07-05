@@ -13,17 +13,17 @@ import (
 )
 
 type Lesson struct {
-	Body        mytype.Markdown    `db:"body" permit:"read"`
+	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at" permit:"read"`
+	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
-	Number      pgtype.Int4        `db:"number" permit:"read"`
-	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId     mytype.OID         `db:"study_id" permit:"read"`
-	Title       pgtype.Text        `db:"title" permit:"read"`
+	LabeledAt   pgtype.Timestamptz `db:"labeled_at"`
+	Number      pgtype.Int4        `db:"number" permit:"read/update"`
+	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
+	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
+	Title       pgtype.Text        `db:"title" permit:"create/read/update"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"create/read/update"`
 }
 
 func NewLessonService(db Queryer) *LessonService {

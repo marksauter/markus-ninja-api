@@ -14,11 +14,11 @@ import (
 
 type Topic struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Description pgtype.Text        `db:"description" permit:"read"`
+	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"read"`
+	Name        pgtype.Text        `db:"name" permit:"create/read"`
 	TopicableId mytype.OID         `db:"topicable_id"`
-	TopicedAt   pgtype.Timestamptz `db:"topiced_at" permit:"read"`
+	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 

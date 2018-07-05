@@ -51,9 +51,5 @@ func (r *topicableEdgeResolver) TopicedAt() (graphql.Time, error) {
 	if !ok {
 		return graphql.Time{}, errors.New("cannot convert permit to topicable")
 	}
-	t, err := topicable.TopicedAt()
-	if err != nil {
-		return graphql.Time{}, err
-	}
-	return graphql.Time{t}, err
+	return graphql.Time{topicable.TopicedAt()}, nil
 }

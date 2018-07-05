@@ -1,24 +1,25 @@
 package data
 
 import (
+	"strings"
+
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/sirupsen/logrus"
 )
 
-var accessLevelsWithFields = []perm.AccessLevel{
-	perm.Create,
-	perm.Read,
-	perm.Update,
+var accessLevelsWithFields = []mytype.AccessLevel{
+	mytype.CreateAccess,
+	mytype.ReadAccess,
+	mytype.UpdateAccess,
 }
-var accessLevelsWithoutFields = []perm.AccessLevel{
-	perm.Connect,
-	perm.Delete,
-	perm.Disconnect,
+var accessLevelsWithoutFields = []mytype.AccessLevel{
+	mytype.ConnectAccess,
+	mytype.DeleteAccess,
+	mytype.DisconnectAccess,
 }
 
 type Permission struct {
@@ -47,7 +48,7 @@ const countPermissionByTypeSQL = `
 `
 
 func (s *PermissionService) CountByType(nodeType interface{}) (n int32, err error) {
-	mType, err := perm.ParseNodeType(structs.Name(nodeType))
+	mType, err := mytype.ParseNodeType(structs.Name(nodeType))
 	if err != nil {
 		return
 	}
@@ -68,7 +69,7 @@ func (s *PermissionService) CountByType(nodeType interface{}) (n int32, err erro
 //  - permissions for Connect/Disconnect/Delete.
 // Defaults audience to "AUTHENTICATED"
 func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
-	mType, err := perm.ParseNodeType(structs.Name(model))
+	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
 	}
@@ -79,32 +80,34 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 
 	fields := structs.Fields(model)
 	n := len(fields)*len(accessLevelsWithFields) + len(accessLevelsWithoutFields)
-	permissions := make([][]interface{}, n)
-	i := 0
+	permissions := make([][]interface{}, 0, n)
 	for _, al := range accessLevelsWithFields {
 		for _, f := range fields {
 			id, _ := mytype.NewOID("Permission")
 			field := f.Tag("db")
-			permissions[i] = []interface{}{
-				id,
-				al,
-				mType,
-				perm.Authenticated,
-				field,
+			permits := strings.Split(f.Tag("permit"), "/")
+			for _, p := range permits {
+				if strings.ToLower(p) == strings.ToLower(al.String()) {
+					permissions = append(permissions, []interface{}{
+						id,
+						al,
+						mType,
+						mytype.Authenticated,
+						field,
+					})
+				}
 			}
-			i += 1
 		}
 	}
 	for _, al := range accessLevelsWithoutFields {
 		id, _ := mytype.NewOID("Permission")
-		permissions[i] = []interface{}{
+		permissions = append(permissions, []interface{}{
 			id,
 			al,
 			mType,
-			perm.Authenticated,
+			mytype.Authenticated,
 			nil,
-		}
-		i += 1
+		})
 	}
 
 	tx, err, newTx := beginTransaction(s.db)
@@ -139,13 +142,6 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		return err
 	}
 
-	mylog.Log.Infof("created %v permissions for type %s", copyCount, mType)
-
-	err = permSvc.UpdatePermissionSuite(model)
-	if err != nil {
-		return err
-	}
-
 	if newTx {
 		err = commitTransaction(tx)
 		if err != nil {
@@ -153,6 +149,8 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 			return err
 		}
 	}
+
+	mylog.Log.Infof("created %v permissions for type %s", copyCount, mType)
 
 	return nil
 }
@@ -163,7 +161,7 @@ const deletePermissionSuiteSQL = `
 `
 
 func (s *PermissionService) DeletePermissionSuite(model interface{}) error {
-	mType, err := perm.ParseNodeType(structs.Name(model))
+	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
 	}
@@ -183,7 +181,7 @@ func (s *PermissionService) DeletePermissionSuite(model interface{}) error {
 }
 
 func (s *PermissionService) UpdatePermissionSuite(model interface{}) error {
-	mType, err := perm.ParseNodeType(structs.Name(model))
+	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
 	}
@@ -191,15 +189,15 @@ func (s *PermissionService) UpdatePermissionSuite(model interface{}) error {
 		"model",
 		mType,
 	).Info("UpdatePermissionSuite(model)")
-	permissableUserFields, err := perm.GetPermissableFields(model)
+	permissableUserFields, err := GetPermissableFields(model)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("failed to get user field permissions")
 		return err
 	}
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.Read, NodeType: mType},
-		permissableUserFields.Filter(perm.Read).Names(),
-		perm.Everyone,
+		mytype.Operation{AccessLevel: mytype.ReadAccess, NodeType: mType},
+		permissableUserFields.Filter(mytype.ReadAccess).Names(),
+		mytype.Everyone,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("error during permission update")
@@ -207,9 +205,9 @@ func (s *PermissionService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.Create, NodeType: mType},
-		permissableUserFields.Filter(perm.Create).Names(),
-		perm.Everyone,
+		mytype.Operation{AccessLevel: mytype.CreateAccess, NodeType: mType},
+		permissableUserFields.Filter(mytype.CreateAccess).Names(),
+		mytype.Everyone,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("error during permission update")
@@ -217,9 +215,9 @@ func (s *PermissionService) UpdatePermissionSuite(model interface{}) error {
 	}
 
 	err = s.UpdateOperationForFields(
-		perm.Operation{AccessLevel: perm.Update, NodeType: mType},
-		permissableUserFields.Filter(perm.Update).Names(),
-		perm.Everyone,
+		mytype.Operation{AccessLevel: mytype.UpdateAccess, NodeType: mType},
+		permissableUserFields.Filter(mytype.UpdateAccess).Names(),
+		mytype.Everyone,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal("error during permission update")
@@ -282,30 +280,31 @@ func (s *PermissionService) GetByRole(
 }
 
 func (s *PermissionService) GetQueryPermission(
-	o perm.Operation,
+	o *mytype.Operation,
 	roles []string,
-) (*perm.QueryPermission, error) {
+) (*QueryPermission, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"operation": o,
 		"roles":     roles,
 	}).Info("GetQueryPermission(operation, roles)")
-	p := new(perm.QueryPermission)
+	p := &QueryPermission{}
 
 	permissionSQL := `
 		SELECT
-			p.access_level || ' ' || p.type operation,
-			array_agg(p.field) fields
+			access_level || ' ' || type AS operation,
+			audience,
+			array_agg(field) AS fields
 		FROM
-			permission p
-		WHERE p.access_level = $1
-			AND p.type = $2
+			permission
+		WHERE access_level = $1
+			AND type = $2
 	`
 	andAudienceSQL := `
-		AND p.audience = 'EVERYONE'
+		AND audience = 'EVERYONE'
 	`
 	andRoleNameSQL := `
-		AND (p.audience = 'EVERYONE'
-			OR p.id IN (
+		AND (audience = 'EVERYONE'
+			OR id IN (
 				SELECT permission_id
 				FROM role_permission
 				WHERE role = ANY($3)
@@ -330,23 +329,13 @@ func (s *PermissionService) GetQueryPermission(
 			o.NodeType,
 		)
 	}
-	var operation pgtype.Text
-	var fields pgtype.TextArray
-	err := row.Scan(&operation, &fields)
+
+	err := row.Scan(&p.Operation, &p.Audience, &p.Fields)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
 		mylog.Log.WithError(err).Error("error during scan")
 		return nil, err
-	}
-	p.Operation, err = perm.ParseOperation(operation.String)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error during parse operation")
-		return nil, err
-	}
-	p.Fields = make([]string, len(fields.Elements))
-	for i, f := range fields.Elements {
-		p.Fields[i] = f.String
 	}
 
 	mylog.Log.WithField("fields", p.Fields).Info("query granted permission")
@@ -359,7 +348,7 @@ const updatePermissionSQL = `
 	WHERE id = $2
 `
 
-func (s *PermissionService) Update(id string, a perm.Audience) error {
+func (s *PermissionService) Update(id string, a mytype.Audience) error {
 	_, err := s.db.Exec(updatePermissionSQL, a, id)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during execution")
@@ -379,9 +368,9 @@ const updateOperationForFieldsSQL = `
 `
 
 func (s *PermissionService) UpdateOperationForFields(
-	o perm.Operation,
+	o mytype.Operation,
 	fields []string,
-	a perm.Audience,
+	a mytype.Audience,
 ) error {
 	if len(fields) == 0 {
 		return nil
