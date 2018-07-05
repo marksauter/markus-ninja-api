@@ -10,14 +10,14 @@ import (
 )
 
 type LessonComment struct {
-	Body        mytype.Markdown    `db:"body" permit:"read"`
+	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	LessonId    mytype.OID         `db:"lesson_id" permit:"read"`
-	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read"`
-	StudyId     mytype.OID         `db:"study_id" permit:"read"`
+	LessonId    mytype.OID         `db:"lesson_id" permit:"create/read"`
+	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
+	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewLessonCommentService(db Queryer) *LessonCommentService {

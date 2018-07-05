@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LabeledPermit struct {
@@ -110,14 +109,14 @@ func (r *LabeledRepo) Create(labeled *data.Labeled) (*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, labeled); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, labeled); err != nil {
 		return nil, err
 	}
 	labeled, err := r.svc.Create(labeled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, labeled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func (r *LabeledRepo) BatchCreate(
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Create, labeled); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, labeled); err != nil {
 		return err
 	}
 	return r.svc.BatchCreate(labeled, labelableIds)
@@ -159,7 +158,7 @@ func (r *LabeledRepo) Get(l *data.Labeled) (*LabeledPermit, error) {
 			"must include either labeled `id` or `labelable_id` and `label_id` to get an labeled",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, labeled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +178,7 @@ func (r *LabeledRepo) GetByLabel(
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, labeleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +202,7 @@ func (r *LabeledRepo) GetByLabelable(
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, labeleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +217,7 @@ func (r *LabeledRepo) Delete(l *data.Labeled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
 		return err
 	}
 	if l.Id.Status != pgtype.Undefined {

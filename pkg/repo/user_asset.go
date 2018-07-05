@@ -12,7 +12,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -188,14 +187,14 @@ func (r *UserAssetRepo) Create(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, a); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, a); err != nil {
 		return nil, err
 	}
 	userAsset, err := r.svc.Create(a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +205,7 @@ func (r *UserAssetRepo) Delete(userAsset *data.UserAsset) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, userAsset); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, userAsset); err != nil {
 		return err
 	}
 	return r.svc.Delete(userAsset.Id.String)
@@ -220,7 +219,7 @@ func (r *UserAssetRepo) Get(id string) (*UserAssetPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +234,7 @@ func (r *UserAssetRepo) GetByName(userId, studyId, name string) (*UserAssetPermi
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +249,7 @@ func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +271,7 @@ func (r *UserAssetRepo) GetByStudy(
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, userAssets[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +296,7 @@ func (r *UserAssetRepo) GetByUser(
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, userAssets[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +317,7 @@ func (r *UserAssetRepo) Search(within *mytype.OID, query string, po *data.PageOp
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, userAssets[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -333,14 +332,14 @@ func (r *UserAssetRepo) Update(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, a); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, a); err != nil {
 		return nil, err
 	}
 	userAsset, err := r.svc.Update(a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, userAsset)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -357,11 +356,6 @@ func (r *UserAssetRepo) Upload(
 		return nil, err
 	}
 
-	userAsset := &data.UserAsset{}
-	if _, err := r.perms.Check(perm.Create, userAsset); err != nil {
-		return nil, err
-	}
-
 	key, err := r.store.Upload(userId, file, header)
 	if err != nil {
 		return nil, err
@@ -369,6 +363,8 @@ func (r *UserAssetRepo) Upload(
 
 	contentType := header.Header.Get("Content-Type")
 	types := strings.SplitN(contentType, "/", 2)
+
+	userAsset := &data.UserAsset{}
 	if err := userAsset.Key.Set(key); err != nil {
 		return nil, err
 	}
@@ -394,18 +390,22 @@ func (r *UserAssetRepo) Upload(
 		return nil, err
 	}
 
+	if _, err := r.perms.Check(mytype.CreateAccess, userAsset); err != nil {
+		return nil, err
+	}
+
 	return r.Create(userAsset)
 }
 
 func (r *UserAssetRepo) ViewerCanDelete(l *data.UserAsset) bool {
-	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *UserAssetRepo) ViewerCanUpdate(l *data.UserAsset) bool {
-	if _, err := r.perms.Check(perm.Update, l); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

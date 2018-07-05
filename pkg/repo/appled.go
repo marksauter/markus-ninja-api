@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type AppledPermit struct {
@@ -110,14 +109,14 @@ func (r *AppledRepo) Create(appled *data.Appled) (*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, appled); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, appled); err != nil {
 		return nil, err
 	}
 	appled, err := r.svc.Create(appled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, appled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +145,7 @@ func (r *AppledRepo) Get(a *data.Appled) (*AppledPermit, error) {
 			"must include either appled `id` or `appleable_id` and `user_id` to get an appled",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, appled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +165,7 @@ func (r *AppledRepo) GetByAppleable(
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, appleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, appleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +189,7 @@ func (r *AppledRepo) GetByUser(
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, appleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, appleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +204,7 @@ func (r *AppledRepo) Delete(a *data.Appled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, a); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, a); err != nil {
 		return err
 	}
 	if a.Id.Status != pgtype.Undefined {

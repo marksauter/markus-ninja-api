@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type EventPermit struct {
@@ -122,14 +121,14 @@ func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, event); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, event); err != nil {
 		return nil, err
 	}
 	event, err := r.svc.Create(event)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, event)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +142,7 @@ func (r *EventRepo) BatchCreate(
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Create, event); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, event); err != nil {
 		return err
 	}
 	return r.svc.BatchCreate(event, targetIds)
@@ -157,7 +156,7 @@ func (r *EventRepo) Get(id string) (*EventPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, event)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func (r *EventRepo) GetBySource(
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, events[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +202,7 @@ func (r *EventRepo) GetByTarget(
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, events[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +217,7 @@ func (r *EventRepo) Delete(event *data.Event) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, event); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, event); err != nil {
 		return err
 	}
 	return r.svc.Delete(&event.Id)

@@ -13,14 +13,14 @@ import (
 )
 
 type PRT struct {
-	EmailId   mytype.OID         `db:"email_id" permit:"create"`
-	EndedAt   pgtype.Timestamptz `db:"ended_at"`
-	EndIP     pgtype.Inet        `db:"end_ip"`
-	ExpiresAt pgtype.Timestamptz `db:"expires_at" permit:"read"`
-	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"read"`
-	RequestIP pgtype.Inet        `db:"request_ip" permit:"create"`
-	UserId    mytype.OID         `db:"user_id" permit:"create"`
-	Token     pgtype.Varchar     `db:"token"`
+	EmailId   mytype.OID         `db:"email_id" permit:"create/read"`
+	EndedAt   pgtype.Timestamptz `db:"ended_at" permit:"read/update"`
+	EndIP     pgtype.Inet        `db:"end_ip" permit:"read/update"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at" permit:"create/read"`
+	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"create/read"`
+	RequestIP pgtype.Inet        `db:"request_ip" permit:"create/read"`
+	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
+	Token     pgtype.Varchar     `db:"token" permit:"create"`
 }
 
 func NewPRTService(q Queryer) *PRTService {
@@ -82,7 +82,7 @@ func (s *PRTService) Get(userId, token string) (*PRT, error) {
 func (s *PRTService) Create(row *PRT) (*PRT, error) {
 	mylog.Log.Info("PRT.Create()")
 
-	args := pgx.QueryArgs(make([]interface{}, 0, 8))
+	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 	var columns, values []string
 
 	token := xid.New()
@@ -96,29 +96,21 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 		columns = append(columns, `email_id`)
 		values = append(values, args.Append(&row.EmailId))
 	}
-	if row.UserId.Status != pgtype.Undefined {
-		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
-	}
-	if row.RequestIP.Status != pgtype.Undefined {
-		columns = append(columns, `request_ip`)
-		values = append(values, args.Append(&row.RequestIP))
+	if row.ExpiresAt.Status != pgtype.Undefined {
+		columns = append(columns, `expires_at`)
+		values = append(values, args.Append(&row.ExpiresAt))
 	}
 	if row.IssuedAt.Status != pgtype.Undefined {
 		columns = append(columns, `issued_at`)
 		values = append(values, args.Append(&row.IssuedAt))
 	}
-	if row.ExpiresAt.Status != pgtype.Undefined {
-		columns = append(columns, `expires_at`)
-		values = append(values, args.Append(&row.ExpiresAt))
+	if row.RequestIP.Status != pgtype.Undefined {
+		columns = append(columns, `request_ip`)
+		values = append(values, args.Append(&row.RequestIP))
 	}
-	if row.EndIP.Status != pgtype.Undefined {
-		columns = append(columns, `end_ip`)
-		values = append(values, args.Append(&row.EndIP))
-	}
-	if row.EndedAt.Status != pgtype.Undefined {
-		columns = append(columns, `ended_at`)
-		values = append(values, args.Append(&row.EndedAt))
+	if row.UserId.Status != pgtype.Undefined {
+		columns = append(columns, `user_id`)
+		values = append(values, args.Append(&row.UserId))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)
@@ -180,11 +172,11 @@ func (s *PRTService) Update(row *PRT) (*PRT, error) {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
-	if row.EndIP.Status != pgtype.Undefined {
-		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
-	}
 	if row.EndedAt.Status != pgtype.Undefined {
 		sets = append(sets, `ended_at`+"="+args.Append(&row.EndedAt))
+	}
+	if row.EndIP.Status != pgtype.Undefined {
+		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)

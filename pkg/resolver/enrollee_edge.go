@@ -27,9 +27,8 @@ func (r *enrolleeEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *enrolleeEdgeResolver) EnrolledAt() (graphql.Time, error) {
-	t, err := r.node.EnrolledAt()
-	return graphql.Time{t}, err
+func (r *enrolleeEdgeResolver) EnrolledAt() graphql.Time {
+	return graphql.Time{r.node.EnrolledAt()}
 }
 
 func (r *enrolleeEdgeResolver) Node() *userResolver {

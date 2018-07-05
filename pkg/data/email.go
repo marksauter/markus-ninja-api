@@ -10,14 +10,14 @@ import (
 )
 
 type Email struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at"`
-	Id         mytype.OID         `db:"id"`
-	Public     pgtype.Bool        `db:"public"`
-	Type       EmailType          `db:"type"`
-	UserId     mytype.OID         `db:"user_id"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
-	Value      pgtype.Varchar     `db:"value"`
-	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Id         mytype.OID         `db:"id" permit:"read"`
+	Public     pgtype.Bool        `db:"public" permit:"read/update"`
+	Type       EmailType          `db:"type" permit:"create/read/update"`
+	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	Value      pgtype.Varchar     `db:"value" permit:"create/read"`
+	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
 func NewEmailService(q Queryer) *EmailService {
@@ -222,10 +222,6 @@ func (s *EmailService) Create(row *Email) (*Email, error) {
 	columns = append(columns, `id`)
 	values = append(values, args.Append(&row.Id))
 
-	if row.Public.Status != pgtype.Undefined {
-		columns = append(columns, `public`)
-		values = append(values, args.Append(&row.Public))
-	}
 	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
 		values = append(values, args.Append(&row.Type))

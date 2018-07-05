@@ -10,15 +10,15 @@ import (
 )
 
 type Notification struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at"`
-	EventId    mytype.OID         `db:"event_id"`
-	Id         mytype.OID         `db:"id"`
-	LastReadAt pgtype.Timestamptz `db:"last_read_at"`
-	Reason     pgtype.Text        `db:"reason"`
-	ReasonName pgtype.Varchar     `db:"reason_name"`
-	StudyId    mytype.OID         `db:"study_id"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at"`
-	UserId     mytype.OID         `db:"user_id"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EventId    mytype.OID         `db:"event_id" permit:"create/read"`
+	Id         mytype.OID         `db:"id" permit:"read"`
+	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read/update"`
+	Reason     pgtype.Text        `db:"reason" permit:"read"`
+	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
+	StudyId    mytype.OID         `db:"study_id" permit:"create/read"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewNotificationService(db Queryer) *NotificationService {

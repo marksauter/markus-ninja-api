@@ -13,15 +13,15 @@ import (
 )
 
 type Label struct {
-	Color       pgtype.Text        `db:"color" permit:"read"`
+	Color       pgtype.Text        `db:"color" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Description pgtype.Text        `db:"description" permit:"read"`
+	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	IsDefault   pgtype.Bool        `db:"is_default" permit:"read"`
 	LabelableId mytype.OID         `db:"labelable_id"`
-	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"read"`
-	StudyId     mytype.OID         `db:"study_id" permit:"read"`
+	LabeledAt   pgtype.Timestamptz `db:"labeled_at"`
+	Name        pgtype.Text        `db:"name" permit:"create/read"`
+	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 

@@ -24,9 +24,9 @@ type Event struct {
 	Action    pgtype.Text        `db:"action" permit:"read"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id        mytype.OID         `db:"id" permit:"read"`
-	SourceId  mytype.OID         `db:"source_id" permit:"read"`
-	TargetId  mytype.OID         `db:"target_id" permit:"read"`
-	UserId    mytype.OID         `db:"user_id" permit:"read"`
+	SourceId  mytype.OID         `db:"source_id" permit:"create/read"`
+	TargetId  mytype.OID         `db:"target_id" permit:"create/read"`
+	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewEventService(db Queryer) *EventService {

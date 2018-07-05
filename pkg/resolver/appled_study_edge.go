@@ -23,9 +23,8 @@ type appledStudyEdgeResolver struct {
 	repos  *repo.Repos
 }
 
-func (r *appledStudyEdgeResolver) AppledAt() (graphql.Time, error) {
-	t, err := r.node.AppledAt()
-	return graphql.Time{t}, err
+func (r *appledStudyEdgeResolver) AppledAt() graphql.Time {
+	return graphql.Time{r.node.AppledAt()}
 }
 
 func (r *appledStudyEdgeResolver) Cursor() string {

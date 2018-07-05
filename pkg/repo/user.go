@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type UserPermit struct {
@@ -28,11 +27,15 @@ func (r *UserPermit) Get() *data.User {
 	return user
 }
 
-func (r *UserPermit) AppledAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("appled_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+func (r *UserPermit) AppledAt() time.Time {
+	return r.user.AppledAt.Time
+}
+
+func (r *UserPermit) Bio() (string, error) {
+	if ok := r.checkFieldPermission("bio"); !ok {
+		return "", ErrAccessDenied
 	}
-	return r.user.AppledAt.Time, nil
+	return r.user.Bio.String, nil
 }
 
 func (r *UserPermit) CreatedAt() (time.Time, error) {
@@ -42,11 +45,8 @@ func (r *UserPermit) CreatedAt() (time.Time, error) {
 	return r.user.CreatedAt.Time, nil
 }
 
-func (r *UserPermit) EnrolledAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("enrolled_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.user.EnrolledAt.Time, nil
+func (r *UserPermit) EnrolledAt() time.Time {
+	return r.user.EnrolledAt.Time
 }
 
 func (r *UserPermit) ID() (*mytype.OID, error) {
@@ -68,28 +68,13 @@ func (r *UserPermit) Name() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.user.Name.String, nil
-}
 
-func (r *UserPermit) Profile() (string, error) {
-	if ok := r.checkFieldPermission("profile"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.user.Bio.String, nil
 }
-
 func (r *UserPermit) PublicEmail() (string, error) {
 	if ok := r.checkFieldPermission("public_email"); !ok {
 		return "", ErrAccessDenied
 	}
 	return r.user.PublicEmail.String, nil
-}
-
-func (r *UserPermit) Roles() []string {
-	roles := make([]string, len(r.user.Roles.Elements))
-	for i, role := range r.user.Roles.Elements {
-		roles[i] = role.String
-	}
-	return roles
 }
 
 func (r *UserPermit) UpdatedAt() (time.Time, error) {
@@ -153,14 +138,14 @@ func (r *UserRepo) Create(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, u); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, u); err != nil {
 		return nil, err
 	}
 	user, err := r.svc.Create(u)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +161,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +181,7 @@ func (r *UserRepo) GetByEnrollee(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +205,7 @@ func (r *UserRepo) GetByAppleable(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +229,7 @@ func (r *UserRepo) GetEnrollees(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -263,7 +248,7 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +259,7 @@ func (r *UserRepo) Delete(user *data.User) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, user); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, user); err != nil {
 		return err
 	}
 	return r.svc.Delete(user.Id.String)
@@ -290,7 +275,7 @@ func (r *UserRepo) Search(query string, po *data.PageOptions) ([]*UserPermit, er
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, users[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -305,14 +290,14 @@ func (r *UserRepo) Update(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, u); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, u); err != nil {
 		return nil, err
 	}
 	user, err := r.svc.Update(u)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, user)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}

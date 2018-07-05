@@ -8,7 +8,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type LessonPermit struct {
@@ -150,14 +149,14 @@ func (r *LessonRepo) Create(l *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, l); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, l); err != nil {
 		return nil, err
 	}
 	lesson, err := r.svc.Create(l)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +171,7 @@ func (r *LessonRepo) Get(id string) (*LessonPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +191,7 @@ func (r *LessonRepo) GetByEnrollee(
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +215,7 @@ func (r *LessonRepo) GetByLabel(
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +240,7 @@ func (r *LessonRepo) GetByStudy(
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -265,7 +264,7 @@ func (r *LessonRepo) GetByUser(
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -288,7 +287,7 @@ func (r *LessonRepo) GetByNumber(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +298,7 @@ func (r *LessonRepo) Delete(lesson *data.Lesson) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, lesson); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, lesson); err != nil {
 		return err
 	}
 	return r.svc.Delete(lesson.Id.String)
@@ -315,7 +314,7 @@ func (r *LessonRepo) Search(within *mytype.OID, query string, po *data.PageOptio
 	}
 	lessonPermits := make([]*LessonPermit, len(lessons))
 	if len(lessons) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, lessons[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessons[0])
 		if err != nil {
 			return nil, err
 		}
@@ -330,14 +329,14 @@ func (r *LessonRepo) Update(l *data.Lesson) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, l); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return nil, err
 	}
 	lesson, err := r.svc.Update(l)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, lesson)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -345,14 +344,14 @@ func (r *LessonRepo) Update(l *data.Lesson) (*LessonPermit, error) {
 }
 
 func (r *LessonRepo) ViewerCanDelete(l *data.Lesson) bool {
-	if _, err := r.perms.Check(perm.Delete, l); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *LessonRepo) ViewerCanUpdate(l *data.Lesson) bool {
-	if _, err := r.perms.Check(perm.Update, l); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

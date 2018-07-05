@@ -51,9 +51,5 @@ func (r *appleableEdgeResolver) AppledAt() (graphql.Time, error) {
 	if !ok {
 		return graphql.Time{}, errors.New("cannot convert permit to appleable")
 	}
-	t, err := appleable.AppledAt()
-	if err != nil {
-		return graphql.Time{}, err
-	}
-	return graphql.Time{t}, err
+	return graphql.Time{appleable.AppledAt()}, nil
 }

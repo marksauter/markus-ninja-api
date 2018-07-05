@@ -11,21 +11,21 @@ type Permit interface {
 }
 
 type AppleablePermit interface {
-	AppledAt() (time.Time, error)
+	AppledAt() time.Time
 	ID() (*mytype.OID, error)
 }
 
 type EnrollablePermit interface {
-	EnrolledAt() (time.Time, error)
+	EnrolledAt() time.Time
 	ID() (*mytype.OID, error)
 }
 
 type LabelablePermit interface {
 	ID() (*mytype.OID, error)
-	LabeledAt() (time.Time, error)
+	LabeledAt() time.Time
 }
 
 type TopicablePermit interface {
 	ID() (*mytype.OID, error)
-	TopicedAt() (time.Time, error)
+	TopicedAt() time.Time
 }

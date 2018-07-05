@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type EnrolledPermit struct {
@@ -110,14 +109,14 @@ func (r *EnrolledRepo) Create(enrolled *data.Enrolled) (*EnrolledPermit, error) 
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, enrolled); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, enrolled); err != nil {
 		return nil, err
 	}
 	enrolled, err := r.svc.Create(enrolled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, enrolled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +145,7 @@ func (r *EnrolledRepo) Get(e *data.Enrolled) (*EnrolledPermit, error) {
 			"must include either enrolled `id` or `enrollable_id` and `user_id` to get an enrolled",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, enrolled)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +165,7 @@ func (r *EnrolledRepo) GetByEnrollable(
 	}
 	enrolledPermits := make([]*EnrolledPermit, len(enrolleds))
 	if len(enrolleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, enrolleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +189,7 @@ func (r *EnrolledRepo) GetByUser(
 	}
 	enrolledPermits := make([]*EnrolledPermit, len(enrolleds))
 	if len(enrolleds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, enrolleds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +204,7 @@ func (r *EnrolledRepo) Delete(enrolled *data.Enrolled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, enrolled); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, enrolled); err != nil {
 		return err
 	}
 	if enrolled.Id.Status != pgtype.Undefined {

@@ -10,7 +10,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type TopicedPermit struct {
@@ -110,14 +109,14 @@ func (r *TopicedRepo) Create(topiced *data.Topiced) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, topiced); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, topiced); err != nil {
 		return nil, err
 	}
 	topiced, err := r.svc.Create(topiced)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topiced)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +145,7 @@ func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
 			"must include either topiced `id` or `topicable_id` and `topic_id` to get an topiced",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, topiced)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +165,7 @@ func (r *TopicedRepo) GetByTopic(
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, topiceds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +189,7 @@ func (r *TopicedRepo) GetByTopicable(
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, topiceds[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +204,7 @@ func (r *TopicedRepo) Delete(topiced *data.Topiced) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, topiced); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, topiced); err != nil {
 		return err
 	}
 	if topiced.Id.Status != pgtype.Undefined {

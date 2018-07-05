@@ -11,7 +11,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/perm"
 )
 
 type StudyPermit struct {
@@ -41,11 +40,8 @@ func (r *StudyPermit) AdvancedAt() (*time.Time, error) {
 	return &r.study.AdvancedAt.Time, nil
 }
 
-func (r *StudyPermit) AppledAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("appled_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.study.AppledAt.Time, nil
+func (r *StudyPermit) AppledAt() time.Time {
+	return r.study.AppledAt.Time
 }
 
 func (r *StudyPermit) CreatedAt() (time.Time, error) {
@@ -62,11 +58,8 @@ func (r *StudyPermit) Description() (string, error) {
 	return r.study.Description.String, nil
 }
 
-func (r *StudyPermit) EnrolledAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("enrolled_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.study.EnrolledAt.Time, nil
+func (r *StudyPermit) EnrolledAt() time.Time {
+	return r.study.EnrolledAt.Time
 }
 
 func (r *StudyPermit) ID() (*mytype.OID, error) {
@@ -83,11 +76,8 @@ func (r *StudyPermit) Name() (string, error) {
 	return r.study.Name.String, nil
 }
 
-func (r *StudyPermit) TopicedAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("topiced_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.study.TopicedAt.Time, nil
+func (r *StudyPermit) TopicedAt() time.Time {
+	return r.study.TopicedAt.Time
 }
 
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
@@ -162,7 +152,7 @@ func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Create, s); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -174,7 +164,7 @@ func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +179,7 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +196,7 @@ func (r *StudyRepo) GetByApplee(appleeId string, po *data.PageOptions) ([]*Study
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -227,7 +217,7 @@ func (r *StudyRepo) GetByEnrollee(enrolleeId string, po *data.PageOptions) ([]*S
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -248,7 +238,7 @@ func (r *StudyRepo) GetByTopic(topicId string, po *data.PageOptions) ([]*StudyPe
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +259,7 @@ func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPerm
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -288,7 +278,7 @@ func (r *StudyRepo) GetByName(userId, name string) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +293,7 @@ func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, e
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +304,7 @@ func (r *StudyRepo) Delete(study *data.Study) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(perm.Delete, study); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, study); err != nil {
 		return err
 	}
 	return r.svc.Delete(study.Id.String)
@@ -330,7 +320,7 @@ func (r *StudyRepo) Search(within *mytype.OID, query string, po *data.PageOption
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(perm.Read, studies[0])
+		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -345,14 +335,14 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(perm.Update, s); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
 	study, err := r.svc.Update(s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(perm.Read, study)
+	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -360,14 +350,14 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 }
 
 func (r *StudyRepo) ViewerCanDelete(s *data.Study) bool {
-	if _, err := r.perms.Check(perm.Delete, s); err != nil {
+	if _, err := r.perms.Check(mytype.DeleteAccess, s); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
-	if _, err := r.perms.Check(perm.Update, s); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
 		return false
 	}
 	return true

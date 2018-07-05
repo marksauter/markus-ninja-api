@@ -12,12 +12,12 @@ import (
 )
 
 type EVT struct {
-	EmailId    mytype.OID         `db:"email_id"`
-	ExpiresAt  pgtype.Timestamptz `db:"expires_at"`
-	IssuedAt   pgtype.Timestamptz `db:"issued_at"`
-	Token      pgtype.Varchar     `db:"token"`
-	UserId     mytype.OID         `db:"user_id"`
-	VerifiedAt pgtype.Timestamptz `db:"verified_at"`
+	EmailId    mytype.OID         `db:"email_id" permit:"create/read"`
+	ExpiresAt  pgtype.Timestamptz `db:"expires_at" permit:"read"`
+	IssuedAt   pgtype.Timestamptz `db:"issued_at" permit:"read"`
+	Token      pgtype.Varchar     `db:"token" permit:"read"`
+	UserId     mytype.OID         `db:"user_id" permit:"read"`
+	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
 func NewEVTService(q Queryer) *EVTService {
@@ -97,18 +97,6 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
 		values = append(values, args.Append(&row.UserId))
-	}
-	if row.IssuedAt.Status != pgtype.Undefined {
-		columns = append(columns, `issued_at`)
-		values = append(values, args.Append(&row.IssuedAt))
-	}
-	if row.ExpiresAt.Status != pgtype.Undefined {
-		columns = append(columns, `expires_at`)
-		values = append(values, args.Append(&row.ExpiresAt))
-	}
-	if row.VerifiedAt.Status != pgtype.Undefined {
-		columns = append(columns, `verified_at`)
-		values = append(values, args.Append(&row.VerifiedAt))
 	}
 
 	tx, err, newTx := beginTransaction(s.db)

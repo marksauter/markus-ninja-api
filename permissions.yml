@@ -1,145 +1,369 @@
 permissions:
-  # Only authenticated users can perform CRUD operations for emails.
-  - operation: Email.create
+  # Only authenticated users can create emails.
+  - operation: Create Email
     authenticated: true
-  - operation: Email.read
+    roles:
+      - user
+    fields:
+      - type
+      - user_id
+      - value
+  # Only owners can read/update/delete emails.
+  - operation: Read Email
     authenticated: true
-  - operation: Email.update
+    roles:
+      - owner
+  - operation: Update Email
     authenticated: true
+    roles:
+      - owner
     fields:
       - public
       - type
-  - operation: Email.delete
+      - verified_at
+  - operation: Delete Email
     authenticated: true
+    roles:
+      - owner
 
 
 
   # Everyone can create email verification tokens.
-  - operation: EVT.create
+  - operation: Create EVT
+    fields:
+      - email_id
+      - user_id
+  # Only owners can update email verification tokens.
+  - operation: Update EVT
+    roles:
+      - owner
+    fields:
+      - verified_at
+  # Admins can read the following fields for an email verification token.
+  - operation: Read EVT
+    roles:
+      - admin
+    fields:
+      - email_id
+      - expires_at
+      - issued_at
+      - user_id
+      - verified_at
 
 
 
-  # Everyone can read events.
-  - operation: Event.read
-
+  # Everyone can read the following fields for an event.
+  - operation: Read Event
+    fields:
+      - action
+      - created_at
+      - id
+      - source_id
+      - target_id
+      - user_id
+  # Owners can read the whole event.
+  - operation: Read Event
+    authenticated: true
+    roles:
+      - owner
   # Only authenticated users can create events.
-  - operation: Event.create
+  - operation: Create Event
     authenticated: true
+    roles:
+      - user
+    fields:
+      - source_id
+      - target_id
+      - user_id
 
 
 
-  # Everyone can read labels.
-  - operation: Label.read
-
-  # Only authenticated users can create/update/delete labels.
-  - operation: Label.create
-    authenticated: true
-  - operation: Label.update
-    authenticated: true
+  # Everyone can read the following fields for a label.
+  - operation: Read Label
     fields:
       - color
       - description
-  - operation: Label.delete
+      - id
+      - is_default
+      - name
+      - study_id
+      - updated_at
+  # Owners can read the whole label.
+  - operation: Read Label
     authenticated: true
-
-
-
-  # Everyone can read lessons.
-  - operation: Lesson.read
-
-  # Only authenticated users can create/update/delete lessons.
-  - operation: Lesson.create
+    roles:
+      - owner
+  # Only owners can create/update/delete labels.
+  - operation: Create Label
     authenticated: true
-  - operation: Lesson.update
+    roles:
+      - owner
+    fields:
+      - color
+      - description
+      - name
+      - study_id
+  - operation: Update Label
     authenticated: true
+    roles:
+      - owner
+    fields:
+      - color
+      - description
+  - operation: Delete Label
+    authenticated: true
+    roles:
+      - owner
+
+
+
+  # Everyone can read the following fields for a lesson.
+  - operation: Read Lesson
+    fields:
+      - body
+      - created_at
+      - id
+      - number
+      - published_at
+      - study_id
+      - title
+      - updated_at
+      - user_id
+  # Owners can read the whole lesson.
+  - operation: Read Lesson
+    authenticated: true
+    roles:
+      - owner
+  # Only owners can create/update/delete lessons.
+  - operation: Create Lesson
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - body
+      - study_id
+      - title
+      - user_id
+  - operation: Update Lesson
+    authenticated: true
+    roles:
+      - owner
     fields:
       - body
       - number
+      - published_at
       - title
-  - operation: Lesson.delete
+  - operation: Delete Lesson
     authenticated: true
+    roles:
+      - owner
 
 
 
   # Everyone can read lesson comments.
-  - operation: LessonComment.read
-
-  # Only authenticated users can create/update/delete lesson comments.
-  - operation: LessonComment.create
-    authenticated: true
-  - operation: LessonComment.update
-    authenticated: true
+  - operation: Read LessonComment
     fields:
       - body
-  - operation: LessonComment.delete
+      - created_at
+      - id
+      - lesson_id
+      - published_at
+      - study_id
+      - updated_at
+      - user_id
+  # Owners can read the whole lesson comment.
+  - operation: Read LessonComment
     authenticated: true
+    roles:
+      - owner
+  # Only authenticated users can create lesson comments.
+  - operation: Create LessonComment
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - body
+      - lesson_id
+      - study_id
+      - user_id
+  # Only owners can update/delete lesson comments. 
+  - operation: Update LessonComment
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - body
+      - published_at
+  - operation: Delete LessonComment
+    authenticated: true
+    roles:
+      - owner
 
 
 
-  # Only authenticated users can read/delete notifications.
-  - operation: Notification.read
+  # Only owners can read/update/delete notifications.
+  - operation: Read Notification
     authenticated: true
-  - operation: Notification.delete
+    roles:
+      - owner
+  - operation: Update Notification
     authenticated: true
+    roles:
+      - owner
+    fields:
+      - last_read_at
+  - operation: Delete Notification
+    authenticated: true
+    roles:
+      - owner
 
 
 
   # Everyone can create password reset tokens.
-  - operation: PRT.create
+  - operation: Create PRT
+    fields:
+      - email_id
+      - expires_at
+      - issued_at
+      - request_ip
+      - user_id
+  # Only owners can update password reset tokens.
+  - operation: Update PRT
+    roles:
+      - owner
+    fields:
+      - end_ip
+      - ended_at
+  # Admins can read the following fields for a password reset token.
+  - operation: Read PRT
+    roles:
+      - admin
+    fields:
+      - email_id
+      - end_ip
+      - ended_at
+      - expires_at
+      - issued_at
+      - request_ip
+      - user_id
 
 
 
   # Everyone can read studies.
-  - operation: Study.read
+  - operation: Read Study
 
-  # Only authenticated users can create/update/delete studies.
-  - operation: Study.create
+  # Only authenticated users can create studies.
+  - operation: Create Study
     authenticated: true
-  - operation: Study.update
-    authenticated: true
+    roles:
+      - user
     fields:
       - description
-  - operation: Study.delete
+      - name
+      - user_id
+  # Only owners can update/delete studies.
+  - operation: Update Study
     authenticated: true
+    roles:
+      - owner
+    fields:
+      - description
+  - operation: Delete Study
+    authenticated: true
+    roles:
+      - owner
 
 
 
-  # Only authenticated users can create/update topics.
-  - operation: Topic.create
+  # Only authenticated users can create topics.
+  - operation: Create Topic
     authenticated: true
-  - operation: Topic.update
+    roles:
+      - user
+    fields:
+      - name
+  # Only admins can update topics.
+  - operation: Update Topic
     authenticated: true
+    roles:
+      - admin
     fields:
       - description
 
 
 
-  # Everyone can read/create a user.
-  - operation: User.read
-  - operation: User.create
-    
-  # Only authenticated users can update/delete users. 
-  - operation: User.update
+  # Everyone can read the following fields for a user.
+  - operation: Read User
+    fields:
+      - bio
+      - created_at
+      - id
+      - login
+      - name
+      - public_email
+      - updated_at
+  # Owners can read the whole user.
+  - operation: Read User
     authenticated: true
+    roles:
+      - owner
+  # Everyone can create a user with the following fields.
+  - operation: Create User
+    fields:
+      - login
+      - password
+      - primary_email
+  # Only owners can update/delete users. 
+  - operation: Update User
+    authenticated: true
+    roles:
+      - owner
     fields:
       - bio
       - login
       - name
       - password
-  - operation: User.delete
+      - public_email
+  - operation: Delete User
     authenticated: true
+    roles:
+      - owner
 
 
 
-  # Everyone can read a user asset.
-  - operation: UserAsset.read
-    
-  # Only authenticated users can create/delete/update user assets. 
-  - operation: UserAsset.create
+  # Everyone can read the following fields for a user asset.
+  - operation: Read UserAsset
+    fields:
+      - created_at
+      - id
+      - key
+      - name
+      - published_at
+      - size
+      - study_id
+      - subtype
+      - type
+      - updated_at
+      - user_id 
+  # Owners can read the whole user asset.
+  - operation: Read UserAsset
     authenticated: true
-  - operation: UserAsset.delete
+    roles:
+      - owner
+  # Only authenticated users can create user assets. 
+  - operation: Create UserAsset
     authenticated: true
-  - operation: UserAsset.update
+    roles:
+      - user
+  # Only owners can update/delete user assets. 
+  - operation: Update UserAsset
     authenticated: true
+    roles:
+      - owner
     fields:
       - name
+  - operation: Delete UserAsset
+    authenticated: true
+    roles:
+      - owner
+

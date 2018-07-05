@@ -1033,10 +1033,20 @@ func (r *RootResolver) UpdateTopics(
 	for _, name := range args.Input.TopicNames {
 		newTopics[name] = struct{}{}
 		if _, prs := oldTopics[name]; !prs {
-			topic := &data.Topic{}
-			topic.Name.Set(name)
-			topic.TopicableId.Set(args.Input.TopicableId)
-			_, err := r.Repos.Topic().Create(topic)
+			t := &data.Topic{}
+			t.Name.Set(name)
+			topic, err := r.Repos.Topic().Create(t)
+			if err != nil {
+				return nil, err
+			}
+			topicId, err := topic.ID()
+			if err != nil {
+				return nil, err
+			}
+			topiced := &data.Topiced{}
+			topiced.TopicId.Set(topicId)
+			topiced.TopicableId.Set(args.Input.TopicableId)
+			_, err = r.Repos.Topiced().Create(topiced)
 			if err != nil {
 				return nil, err
 			}
