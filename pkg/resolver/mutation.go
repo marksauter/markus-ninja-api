@@ -78,7 +78,7 @@ func (r *RootResolver) AddLabel(
 	labeled.LabelId.Set(args.Input.LabelId)
 	labeled.LabelableId.Set(args.Input.LabelableId)
 
-	labeledPermit, err := r.Repos.Labeled().Create(labeled)
+	labeledPermit, err := r.Repos.Labeled().Connect(labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +488,7 @@ func (r *RootResolver) Dismiss(
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(id)
 	enrolled.UserId.Set(viewer.Id)
-	err = r.Repos.Enrolled().Delete(enrolled)
+	err = r.Repos.Enrolled().Disconnect(enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -531,7 +531,7 @@ func (r *RootResolver) Enroll(
 	enrolled.EnrollableId.Set(id)
 	enrolled.ReasonName.Set(data.ManualReason)
 	enrolled.UserId.Set(viewer.Id)
-	_, err = r.Repos.Enrolled().Create(enrolled)
+	_, err = r.Repos.Enrolled().Connect(enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +573,7 @@ func (r *RootResolver) GiveApple(
 	appled := &data.Appled{}
 	appled.AppleableId.Set(id)
 	appled.UserId.Set(viewer.Id)
-	_, err = r.Repos.Appled().Create(appled)
+	_, err = r.Repos.Appled().Connect(appled)
 	if err != nil {
 		return nil, err
 	}
@@ -841,7 +841,7 @@ func (r *RootResolver) TakeApple(
 	appled := &data.Appled{}
 	appled.AppleableId.Set(id)
 	appled.UserId.Set(viewer.Id)
-	err = r.Repos.Appled().Delete(appled)
+	err = r.Repos.Appled().Disconnect(appled)
 	if err != nil {
 		return nil, err
 	}
@@ -1046,7 +1046,7 @@ func (r *RootResolver) UpdateTopics(
 			topiced := &data.Topiced{}
 			topiced.TopicId.Set(topicId)
 			topiced.TopicableId.Set(args.Input.TopicableId)
-			_, err = r.Repos.Topiced().Create(topiced)
+			_, err = r.Repos.Topiced().Connect(topiced)
 			if err != nil {
 				return nil, err
 			}
@@ -1058,7 +1058,7 @@ func (r *RootResolver) UpdateTopics(
 			topiced := &data.Topiced{}
 			topiced.TopicId.Set(&t.Id)
 			topiced.TopicableId.Set(topicableId)
-			err := r.Repos.Topiced().Delete(topiced)
+			err := r.Repos.Topiced().Disconnect(topiced)
 			if err != nil {
 				return nil, err
 			}

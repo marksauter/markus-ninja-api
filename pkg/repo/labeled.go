@@ -105,14 +105,14 @@ func (r *LabeledRepo) CountByLabelable(
 	return r.svc.CountByLabelable(labelableId)
 }
 
-func (r *LabeledRepo) Create(labeled *data.Labeled) (*LabeledPermit, error) {
+func (r *LabeledRepo) Connect(labeled *data.Labeled) (*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, labeled); err != nil {
+	if _, err := r.perms.Check(mytype.ConnectAccess, labeled); err != nil {
 		return nil, err
 	}
-	labeled, err := r.svc.Create(labeled)
+	labeled, err := r.svc.Connect(labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -123,14 +123,14 @@ func (r *LabeledRepo) Create(labeled *data.Labeled) (*LabeledPermit, error) {
 	return &LabeledPermit{fieldPermFn, labeled}, nil
 }
 
-func (r *LabeledRepo) BatchCreate(
+func (r *LabeledRepo) BatchConnect(
 	labeled *data.Labeled,
 	labelableIds []*mytype.OID,
 ) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, labeled); err != nil {
+	if _, err := r.perms.Check(mytype.ConnectAccess, labeled); err != nil {
 		return err
 	}
 	return r.svc.BatchCreate(labeled, labelableIds)
@@ -213,18 +213,18 @@ func (r *LabeledRepo) GetByLabelable(
 	return labeledPermits, nil
 }
 
-func (r *LabeledRepo) Delete(l *data.Labeled) error {
+func (r *LabeledRepo) Disconnect(l *data.Labeled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
+	if _, err := r.perms.Check(mytype.DisconnectAccess, l); err != nil {
 		return err
 	}
 	if l.Id.Status != pgtype.Undefined {
-		return r.svc.Delete(l.Id.Int)
+		return r.svc.Disconnect(l.Id.Int)
 	} else if l.LabelableId.Status != pgtype.Undefined &&
 		l.LabelId.Status != pgtype.Undefined {
-		return r.svc.DeleteForLabelable(l.LabelableId.String, l.LabelId.String)
+		return r.svc.DisconnectFromLabelable(l.LabelableId.String, l.LabelId.String)
 	}
 	return errors.New(
 		"must include either labeled `id` or `labelable_id` and `label_id` to delete a labeled",

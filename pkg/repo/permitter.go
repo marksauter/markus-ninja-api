@@ -105,7 +105,7 @@ func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissi
 	// permission.
 	checkField = func(field string) bool {
 		// If the returned query permission has a null value for fields, then return
-		// true for all fields.
+		// true for all checks.
 		// NOTE: checkField only makes sense in respect to create/read/update
 		// operations.
 		if queryPerm.Fields.Status == pgtype.Null {

@@ -105,14 +105,14 @@ func (r *EnrolledRepo) CountByUser(
 	return r.svc.CountByUser(userId)
 }
 
-func (r *EnrolledRepo) Create(enrolled *data.Enrolled) (*EnrolledPermit, error) {
+func (r *EnrolledRepo) Connect(enrolled *data.Enrolled) (*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, enrolled); err != nil {
+	if _, err := r.perms.Check(mytype.ConnectAccess, enrolled); err != nil {
 		return nil, err
 	}
-	enrolled, err := r.svc.Create(enrolled)
+	enrolled, err := r.svc.Connect(enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -200,18 +200,18 @@ func (r *EnrolledRepo) GetByUser(
 	return enrolledPermits, nil
 }
 
-func (r *EnrolledRepo) Delete(enrolled *data.Enrolled) error {
+func (r *EnrolledRepo) Disconnect(enrolled *data.Enrolled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, enrolled); err != nil {
+	if _, err := r.perms.Check(mytype.DisconnectAccess, enrolled); err != nil {
 		return err
 	}
 	if enrolled.Id.Status != pgtype.Undefined {
-		return r.svc.Delete(enrolled.Id.Int)
+		return r.svc.Disconnect(enrolled.Id.Int)
 	} else if enrolled.EnrollableId.Status != pgtype.Undefined &&
 		enrolled.UserId.Status != pgtype.Undefined {
-		return r.svc.DeleteForEnrollable(enrolled.EnrollableId.String, enrolled.UserId.String)
+		return r.svc.DisconnectFromEnrollable(enrolled.EnrollableId.String, enrolled.UserId.String)
 	}
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
 }

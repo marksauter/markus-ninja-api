@@ -566,7 +566,10 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 	}
 
 	eventSvc := NewEventService(tx)
-	eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	err = eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	if err != nil {
+		return nil, err
+	}
 	e := &Event{}
 	e.Action.Set(CreateEvent)
 	e.SourceId.Set(&row.StudyId)
@@ -634,7 +637,7 @@ func (s *LessonService) Delete(id string) error {
 }
 
 const refreshLessonSearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_search_index
+	SELECT refresh_mv_xxx('lesson_search_index')
 `
 
 func (s *LessonService) RefreshSearchIndex() error {

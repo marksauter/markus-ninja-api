@@ -204,8 +204,8 @@ func (s *TopicedService) GetByTopicable(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *TopicedService) Create(row *Topiced) (*Topiced, error) {
-	mylog.Log.Info("Topiced.Create()")
+func (s *TopicedService) Connect(row *Topiced) (*Topiced, error) {
+	mylog.Log.Info("Topiced.Connect()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -283,17 +283,17 @@ func (s *TopicedService) Create(row *Topiced) (*Topiced, error) {
 	return topiced, nil
 }
 
-const deleteTopicedSQL = `
+const disconnectTopicedSQL = `
 	DELETE FROM topiced
 	WHERE id = $1
 `
 
-func (s *TopicedService) Delete(id int32) error {
-	mylog.Log.WithField("id", id).Info("Topiced.Delete(id)")
+func (s *TopicedService) Disconnect(id int32) error {
+	mylog.Log.WithField("id", id).Info("Topiced.Disconnect(id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteTopiced",
-		deleteTopicedSQL,
+		"disconnectTopiced",
+		disconnectTopicedSQL,
 		id,
 	)
 	if err != nil {
@@ -306,17 +306,17 @@ func (s *TopicedService) Delete(id int32) error {
 	return nil
 }
 
-const deleteTopicedForTopicableSQL = `
+const disconnectTopicedFromTopicableSQL = `
 	DELETE FROM topiced
 	WHERE topicable_id = $1 AND topic_id = $2
 `
 
-func (s *TopicedService) DeleteForTopicable(topicable_id, topic_id string) error {
-	mylog.Log.Info("Topiced.Delete()")
+func (s *TopicedService) DisconnectFromTopicable(topicable_id, topic_id string) error {
+	mylog.Log.Info("Topiced.DisconnectFromTopicable()")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteTopicedForTopicable",
-		deleteTopicedForTopicableSQL,
+		"disconnectTopicedFromTopicable",
+		disconnectTopicedFromTopicableSQL,
 		topicable_id,
 		topic_id,
 	)

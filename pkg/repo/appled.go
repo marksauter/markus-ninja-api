@@ -105,14 +105,14 @@ func (r *AppledRepo) CountByUser(
 	return r.svc.CountByUser(userId)
 }
 
-func (r *AppledRepo) Create(appled *data.Appled) (*AppledPermit, error) {
+func (r *AppledRepo) Connect(appled *data.Appled) (*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, appled); err != nil {
+	if _, err := r.perms.Check(mytype.ConnectAccess, appled); err != nil {
 		return nil, err
 	}
-	appled, err := r.svc.Create(appled)
+	appled, err := r.svc.Connect(appled)
 	if err != nil {
 		return nil, err
 	}
@@ -200,18 +200,18 @@ func (r *AppledRepo) GetByUser(
 	return appledPermits, nil
 }
 
-func (r *AppledRepo) Delete(a *data.Appled) error {
+func (r *AppledRepo) Disconnect(a *data.Appled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, a); err != nil {
+	if _, err := r.perms.Check(mytype.DisconnectAccess, a); err != nil {
 		return err
 	}
 	if a.Id.Status != pgtype.Undefined {
-		return r.svc.Delete(a.Id.Int)
+		return r.svc.Diconnect(a.Id.Int)
 	} else if a.AppleableId.Status != pgtype.Undefined &&
 		a.UserId.Status != pgtype.Undefined {
-		return r.svc.DeleteForAppleable(a.AppleableId.String, a.UserId.String)
+		return r.svc.DisconnectFromAppleable(a.AppleableId.String, a.UserId.String)
 	}
 	return errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",

@@ -131,19 +131,19 @@ func (r *LabelRepo) CountByStudy(studyId string) (int32, error) {
 	return r.svc.CountByStudy(studyId)
 }
 
-func (r *LabelRepo) Create(s *data.Label) (*LabelPermit, error) {
+func (r *LabelRepo) Create(l *data.Label) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, s); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, l); err != nil {
 		return nil, err
 	}
-	name := strings.TrimSpace(s.Name.String)
+	name := strings.TrimSpace(l.Name.String)
 	innerSpace := regexp.MustCompile(`\s+`)
-	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
+	if err := l.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
-	label, err := r.svc.Create(s)
+	label, err := r.svc.Create(l)
 	if err != nil {
 		return nil, err
 	}
@@ -260,14 +260,14 @@ func (r *LabelRepo) Search(query string, po *data.PageOptions) ([]*LabelPermit, 
 	return labelPermits, nil
 }
 
-func (r *LabelRepo) Update(s *data.Label) (*LabelPermit, error) {
+func (r *LabelRepo) Update(l *data.Label) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
+	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
 		return nil, err
 	}
-	label, err := r.svc.Update(s)
+	label, err := r.svc.Update(l)
 	if err != nil {
 		return nil, err
 	}
