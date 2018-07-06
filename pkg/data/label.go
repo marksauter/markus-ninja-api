@@ -391,7 +391,7 @@ func (s *LabelService) Delete(id string) error {
 }
 
 const refreshLabelSearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY label_search_index
+	SELECT refresh_mv_xxx('label_search_index')
 `
 
 func (s *LabelService) RefreshSearchIndex() error {

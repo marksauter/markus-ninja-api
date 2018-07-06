@@ -204,8 +204,8 @@ func (s *AppledService) GetByAppleable(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *AppledService) Create(row *Appled) (*Appled, error) {
-	mylog.Log.Info("Appled.Create()")
+func (s *AppledService) Connect(row *Appled) (*Appled, error) {
+	mylog.Log.Info("Appled.Connect()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -283,17 +283,17 @@ func (s *AppledService) Create(row *Appled) (*Appled, error) {
 	return appled, nil
 }
 
-const deleteAppledSQL = `
+const disconnectAppledSQL = `
 	DELETE FROM appled
 	WHERE id = $1
 `
 
-func (s *AppledService) Delete(id int32) error {
-	mylog.Log.WithField("id", id).Info("Appled.Delete(id)")
+func (s *AppledService) Diconnect(id int32) error {
+	mylog.Log.WithField("id", id).Info("Appled.Disconnect(id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteAppled",
-		deleteAppledSQL,
+		"disconnectAppled",
+		disconnectAppledSQL,
 		id,
 	)
 	if err != nil {
@@ -306,17 +306,17 @@ func (s *AppledService) Delete(id int32) error {
 	return nil
 }
 
-const deleteAppledForAppleableSQL = `
+const disconnectAppledFromAppleableSQL = `
 	DELETE FROM appled
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func (s *AppledService) DeleteForAppleable(appleable_id, user_id string) error {
-	mylog.Log.Info("Appled.Delete()")
+func (s *AppledService) DisconnectFromAppleable(appleable_id, user_id string) error {
+	mylog.Log.Info("Appled.DisconnectFromAppleable()")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteAppledForAppleable",
-		deleteAppledForAppleableSQL,
+		"disconnectAppledFromAppleable",
+		disconnectAppledFromAppleableSQL,
 		appleable_id,
 		user_id,
 	)

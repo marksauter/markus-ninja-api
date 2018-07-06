@@ -204,8 +204,8 @@ func (s *LabeledService) GetByLabelable(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *LabeledService) Create(row *Labeled) (*Labeled, error) {
-	mylog.Log.Info("Labeled.Create()")
+func (s *LabeledService) Connect(row *Labeled) (*Labeled, error) {
+	mylog.Log.Info("Labeled.Connect()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -353,17 +353,17 @@ func (s *LabeledService) BatchCreate(
 	return nil
 }
 
-const deleteLabeledSQL = `
+const disconnectLabeledSQL = `
 	DELETE FROM labeled
 	WHERE id = $1
 `
 
-func (s *LabeledService) Delete(id int32) error {
-	mylog.Log.WithField("id", id).Info("Labeled.Delete(id)")
+func (s *LabeledService) Disconnect(id int32) error {
+	mylog.Log.WithField("id", id).Info("Labeled.Disconnect(id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteLabeled",
-		deleteLabeledSQL,
+		"disconnectLabeled",
+		disconnectLabeledSQL,
 		id,
 	)
 	if err != nil {
@@ -376,17 +376,17 @@ func (s *LabeledService) Delete(id int32) error {
 	return nil
 }
 
-const deleteLabeledForLabelableSQL = `
+const disconnectLabeledFromLabelableSQL = `
 	DELETE FROM labeled
 	WHERE labelable_id = $1 AND label_id = $2
 `
 
-func (s *LabeledService) DeleteForLabelable(labelable_id, label_id string) error {
-	mylog.Log.Info("Labeled.Delete()")
+func (s *LabeledService) DisconnectFromLabelable(labelable_id, label_id string) error {
+	mylog.Log.Info("Labeled.DisconnectFromLabelable()")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteLabeledForLabelable",
-		deleteLabeledForLabelableSQL,
+		"disconnectLabeledFromLabelable",
+		disconnectLabeledFromLabelableSQL,
 		labelable_id,
 		label_id,
 	)

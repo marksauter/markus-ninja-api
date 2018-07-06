@@ -601,7 +601,7 @@ func (s *UserService) Delete(id string) error {
 }
 
 const refreshUserSearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY user_search_index
+	SELECT refresh_mv_xxx('user_search_index')
 `
 
 func (s *UserService) RefreshSearchIndex() error {

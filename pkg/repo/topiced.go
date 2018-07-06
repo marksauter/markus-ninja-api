@@ -105,14 +105,14 @@ func (r *TopicedRepo) CountByTopicable(
 	return r.svc.CountByTopicable(topicableId)
 }
 
-func (r *TopicedRepo) Create(topiced *data.Topiced) (*TopicedPermit, error) {
+func (r *TopicedRepo) Connect(topiced *data.Topiced) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, topiced); err != nil {
+	if _, err := r.perms.Check(mytype.ConnectAccess, topiced); err != nil {
 		return nil, err
 	}
-	topiced, err := r.svc.Create(topiced)
+	topiced, err := r.svc.Connect(topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -200,18 +200,18 @@ func (r *TopicedRepo) GetByTopicable(
 	return topicedPermits, nil
 }
 
-func (r *TopicedRepo) Delete(topiced *data.Topiced) error {
+func (r *TopicedRepo) Disconnect(topiced *data.Topiced) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, topiced); err != nil {
+	if _, err := r.perms.Check(mytype.DisconnectAccess, topiced); err != nil {
 		return err
 	}
 	if topiced.Id.Status != pgtype.Undefined {
-		return r.svc.Delete(topiced.Id.Int)
+		return r.svc.Disconnect(topiced.Id.Int)
 	} else if topiced.TopicableId.Status != pgtype.Undefined &&
 		topiced.TopicId.Status != pgtype.Undefined {
-		return r.svc.DeleteForTopicable(topiced.TopicableId.String, topiced.TopicId.String)
+		return r.svc.DisconnectFromTopicable(topiced.TopicableId.String, topiced.TopicId.String)
 	}
 	return errors.New(
 		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",

@@ -209,8 +209,8 @@ func (s *EnrolledService) GetByEnrollable(
 	return s.getMany(psName, sql, args...)
 }
 
-func (s *EnrolledService) Create(row *Enrolled) (*Enrolled, error) {
-	mylog.Log.Info("Enrolled.Create()")
+func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
+	mylog.Log.Info("Enrolled.Connect()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -296,17 +296,17 @@ func (s *EnrolledService) Create(row *Enrolled) (*Enrolled, error) {
 	return enrolled, nil
 }
 
-const deleteEnrolledSQL = `
+const disconnectEnrolledSQL = `
 	DELETE FROM enrolled
 	WHERE id = $1
 `
 
-func (s *EnrolledService) Delete(id int32) error {
-	mylog.Log.WithField("id", id).Info("Enrolled.Delete(id)")
+func (s *EnrolledService) Disconnect(id int32) error {
+	mylog.Log.WithField("id", id).Info("Enrolled.Disconnect(id)")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteEnrolled",
-		deleteEnrolledSQL,
+		"disconnectEnrolled",
+		disconnectEnrolledSQL,
 		id,
 	)
 	if err != nil {
@@ -319,17 +319,17 @@ func (s *EnrolledService) Delete(id int32) error {
 	return nil
 }
 
-const deleteEnrolledForEnrollableSQL = `
+const disconnectEnrolledFromEnrollableSQL = `
 	DELETE FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *EnrolledService) DeleteForEnrollable(enrollable_id, user_id string) error {
-	mylog.Log.Info("Enrolled.Delete()")
+func (s *EnrolledService) DisconnectFromEnrollable(enrollable_id, user_id string) error {
+	mylog.Log.Info("Enrolled.DisconnectFromEnrollable()")
 	commandTag, err := prepareExec(
 		s.db,
-		"deleteEnrolledForEnrollable",
-		deleteEnrolledForEnrollableSQL,
+		"disconnectEnrolledFromEnrollable",
+		disconnectEnrolledFromEnrollableSQL,
 		enrollable_id,
 		user_id,
 	)

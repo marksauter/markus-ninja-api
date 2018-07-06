@@ -549,7 +549,7 @@ func (s *StudyService) Delete(id string) error {
 }
 
 const refreshStudySearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY study_search_index
+	SELECT refresh_mv_xxx('study_search_index')
 `
 
 func (s *StudyService) RefreshSearchIndex() error {

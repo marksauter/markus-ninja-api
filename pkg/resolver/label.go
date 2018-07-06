@@ -32,7 +32,11 @@ func (r *labelResolver) Description() (string, error) {
 
 func (r *labelResolver) ID() (graphql.ID, error) {
 	id, err := r.Label.ID()
-	return graphql.ID(id.String), err
+	idStr := ""
+	if id != nil {
+		idStr = id.String
+	}
+	return graphql.ID(idStr), err
 }
 
 func (r *labelResolver) IsDefault() (bool, error) {

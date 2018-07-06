@@ -27,9 +27,14 @@ func main() {
 	branch := util.GetRequiredEnv("BRANCH")
 	confFilename := fmt.Sprintf("config.%s", branch)
 	conf := myconf.Load(confFilename)
+
+	if err := initDB(conf); err != nil {
+		mylog.Log.WithField("error", err).Fatal("error initializing database")
+	}
+
 	dbConfig := pgx.ConnConfig{
-		User:     conf.DBUser,
-		Password: conf.DBPassword,
+		User: "client",
+		// Password: conf.DBPassword,
 		Host:     conf.DBHost,
 		Port:     conf.DBPort,
 		Database: conf.DBName,
@@ -43,10 +48,6 @@ func main() {
 	svcs, err := service.NewServices(conf, db)
 	if err != nil {
 		panic(err)
-	}
-
-	if err := initDB(svcs, db); err != nil {
-		mylog.Log.WithField("error", err).Fatal("error initializing database")
 	}
 
 	repos := repo.NewRepos(svcs)
@@ -93,8 +94,25 @@ func main() {
 	mylog.Log.Fatal(http.ListenAndServe(address, r))
 }
 
-func initDB(svcs *service.Services, db *mydb.DB) error {
-	err := data.Initialize(db)
+func initDB(conf *myconf.Config) error {
+	dbConfig := pgx.ConnConfig{
+		User:     conf.DBUser,
+		Password: conf.DBPassword,
+		Host:     conf.DBHost,
+		Port:     conf.DBPort,
+		Database: conf.DBName,
+	}
+	db, err := mydb.Open(dbConfig)
+	if err != nil {
+		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
+	}
+	defer db.Close()
+
+	svcs, err := service.NewServices(conf, db)
+	if err != nil {
+		panic(err)
+	}
+	err = data.Initialize(db)
 	if err != nil {
 		return err
 	}
@@ -125,69 +143,59 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 		}
 	}
 
-	// permissions, err := myconf.LoadPermissions()
-	// if err != nil {
-	//   panic(err)
-	// }
+	permissions, err := myconf.LoadPermissions()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, p := range permissions.Permissions {
+		if !p.Authenticated {
+			err := svcs.Perm.UpdateOperationAudience(&p.Operation, mytype.Everyone, p.Fields)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := svcs.Perm.ConnectRoles(&p.Operation, p.Fields, p.Roles)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	adminPermissionsSQL := `
-		SELECT
-			r.name,
-			p.id permission_id
-		FROM
-			role r
-		JOIN permission p ON true
-		WHERE r.name = ANY('{"ADMIN", "OWNER"}')
+		INSERT INTO role_permission(permission_id, role) (
+			SELECT
+				permission.id,
+				role.name
+			FROM role
+			JOIN permission ON true
+			WHERE role.name = 'ADMIN'
+		) ON CONFLICT ON CONSTRAINT role_permission_pkey DO NOTHING
 	`
-	rows, err := db.Query(adminPermissionsSQL)
+	commandTag, err := db.Exec(adminPermissionsSQL)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("Unexpected: no permissions found")
-		}
 		return err
 	}
-	adminPermissionsCount, err := db.CopyFrom(
-		pgx.Identifier{"role_permission"},
-		[]string{"role", "permission_id"},
-		rows,
-	)
-	if pgErr, ok := err.(pgx.PgError); ok {
-		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
-			return err
-		}
-	}
 	mylog.Log.WithFields(logrus.Fields{
-		"n": adminPermissionsCount,
+		"n": commandTag.RowsAffected(),
 	}).Infof("role permissions created for ADMIN")
 
 	userPermissionsSQL := `
-		SELECT
-			r.name,
-			p.id permission_id
-		FROM
-			role r
-		JOIN permission p ON p.audience = 'EVERYONE'
-		WHERE r.name = 'USER'
+		INSERT INTO role_permission(permission_id, role) (
+			SELECT
+				permission.id,
+				role.name
+			FROM role
+			JOIN permission ON permission.audience = 'EVERYONE'
+			WHERE role.name = 'USER'
+		) ON CONFLICT ON CONSTRAINT role_permission_pkey DO NOTHING
 	`
-	rows, err = db.Query(userPermissionsSQL)
+	commandTag, err = db.Exec(userPermissionsSQL)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("Unexpected: no permissions found")
-		}
 		return err
 	}
-	userPermissionsCount, err := db.CopyFrom(
-		pgx.Identifier{"role_permission"},
-		[]string{"role", "permission_id"},
-		rows,
-	)
-	if pgErr, ok := err.(pgx.PgError); ok {
-		if data.PSQLError(pgErr.Code) != data.UniqueViolation {
-			return err
-		}
-	}
 	mylog.Log.WithFields(logrus.Fields{
-		"n": userPermissionsCount,
+		"n": commandTag.RowsAffected(),
 	}).Infof("role permissions created for USER")
 
 	guestId, _ := mytype.NewOID("User")
@@ -278,12 +286,12 @@ func initDB(svcs *service.Services, db *mydb.DB) error {
 	}
 	testUserIsUser := false
 	for _, r := range testUser.Roles.Elements {
-		if r.String == data.AdminRole {
+		if r.String == data.UserRole {
 			testUserIsUser = true
 		}
 	}
 	if !testUserIsUser {
-		if err := svcs.Role.GrantUser(testUser.Id.String, data.AdminRole); err != nil {
+		if err := svcs.Role.GrantUser(testUser.Id.String, data.UserRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")

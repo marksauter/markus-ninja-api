@@ -155,6 +155,53 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 	return nil
 }
 
+func (s *PermissionService) ConnectRoles(o *mytype.Operation, fields, roles []string) error {
+	mylog.Log.Info("Permission.ConnectRoles()")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+
+	andFieldsSQL := ""
+	if len(fields) != 0 {
+		for i, f := range fields {
+			fields[i] = strings.ToLower(f)
+		}
+		andFieldsSQL = `AND permission.field = ANY(` + args.Append(fields) + `)`
+	}
+	joinRolesOnSQL := "true"
+	if len(roles) != 0 {
+		for i, f := range roles {
+			roles[i] = strings.ToUpper(f)
+		}
+		joinRolesOnSQL = `role.name = ANY(` + args.Append(roles) + `)`
+	}
+
+	sql := `
+		INSERT INTO role_permission(permission_id, role) (
+			SELECT
+				permission.id,
+				role.name
+			FROM permission
+			JOIN role ON ` + joinRolesOnSQL + `
+			WHERE permission.access_level = ` + args.Append(o.AccessLevel) + `
+				AND permission.type = ` + args.Append(o.NodeType) + `
+	` + andFieldsSQL + `
+		) ON CONFLICT ON CONSTRAINT role_permission_pkey DO NOTHING
+	`
+
+	psName := preparedName("connectRoles", sql)
+
+	_, err := prepareExec(s.db, psName, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	mylog.Log.WithFields(logrus.Fields{
+		"operation": o,
+		"fields":    fields,
+		"roles":     roles,
+	}).Info("granted permissions to roles")
+	return nil
+}
+
 const deletePermissionSuiteSQL = `
 	DELETE FROM permission
 	WHERE type = $1
@@ -180,53 +227,6 @@ func (s *PermissionService) DeletePermissionSuite(model interface{}) error {
 	return nil
 }
 
-func (s *PermissionService) UpdatePermissionSuite(model interface{}) error {
-	mType, err := mytype.ParseNodeType(structs.Name(model))
-	if err != nil {
-		return err
-	}
-	mylog.Log.WithField(
-		"model",
-		mType,
-	).Info("UpdatePermissionSuite(model)")
-	permissableUserFields, err := GetPermissableFields(model)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("failed to get user field permissions")
-		return err
-	}
-	err = s.UpdateOperationForFields(
-		mytype.Operation{AccessLevel: mytype.ReadAccess, NodeType: mType},
-		permissableUserFields.Filter(mytype.ReadAccess).Names(),
-		mytype.Everyone,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("error during permission update")
-		return err
-	}
-
-	err = s.UpdateOperationForFields(
-		mytype.Operation{AccessLevel: mytype.CreateAccess, NodeType: mType},
-		permissableUserFields.Filter(mytype.CreateAccess).Names(),
-		mytype.Everyone,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("error during permission update")
-		return err
-	}
-
-	err = s.UpdateOperationForFields(
-		mytype.Operation{AccessLevel: mytype.UpdateAccess, NodeType: mType},
-		permissableUserFields.Filter(mytype.UpdateAccess).Names(),
-		mytype.Everyone,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal("error during permission update")
-		return err
-	}
-
-	return nil
-}
-
 const getPermissionByRoleSQL = `
 	SELECT
 		access_level,
@@ -244,6 +244,7 @@ const getPermissionByRoleSQL = `
 func (s *PermissionService) GetByRole(
 	role string,
 ) ([]Permission, error) {
+	mylog.Log.Info("Permission.GetByRole()")
 	permissions := make([]Permission, 0)
 
 	rows, err := s.db.Query(getPermissionByRoleSQL, role)
@@ -292,7 +293,6 @@ func (s *PermissionService) GetQueryPermission(
 	permissionSQL := `
 		SELECT
 			access_level || ' ' || type AS operation,
-			audience,
 			array_agg(field) AS fields
 		FROM
 			permission
@@ -330,7 +330,7 @@ func (s *PermissionService) GetQueryPermission(
 		)
 	}
 
-	err := row.Scan(&p.Operation, &p.Audience, &p.Fields)
+	err := row.Scan(&p.Operation, &p.Fields)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
@@ -338,7 +338,11 @@ func (s *PermissionService) GetQueryPermission(
 		return nil, err
 	}
 
-	mylog.Log.WithField("fields", p.Fields).Info("query granted permission")
+	fields := make([]string, len(p.Fields.Elements))
+	for i, f := range p.Fields.Elements {
+		fields[i] = f.String
+	}
+	mylog.Log.WithField("fields", fields).Info("query granted permission")
 	return p, nil
 }
 
@@ -358,7 +362,7 @@ func (s *PermissionService) Update(id string, a mytype.Audience) error {
 	return nil
 }
 
-const updateOperationForFieldsSQL = `
+const updateOperationAudienceSQL = `
 	UPDATE permission
 	SET audience = $1
 	WHERE access_level = $2
@@ -367,29 +371,42 @@ const updateOperationForFieldsSQL = `
 		AND field = ANY($4)
 `
 
-func (s *PermissionService) UpdateOperationForFields(
-	o mytype.Operation,
-	fields []string,
+func (s *PermissionService) UpdateOperationAudience(
+	o *mytype.Operation,
 	a mytype.Audience,
+	fields []string,
 ) error {
-	if len(fields) == 0 {
-		return nil
+	mylog.Log.Info("Permission.UpdateOperationAudience()")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+
+	andFieldsSQL := ""
+	if len(fields) != 0 {
+		for i, f := range fields {
+			fields[i] = strings.ToLower(f)
+		}
+		andFieldsSQL = `AND field = ANY(` + args.Append(fields) + `)`
 	}
-	_, err := s.db.Exec(
-		updateOperationForFieldsSQL,
-		a,
-		o.AccessLevel,
-		o.NodeType,
-		fields,
-	)
+
+	sql := `
+		UPDATE permission
+		SET audience = ` + args.Append(a) + `
+		WHERE access_level = ` + args.Append(o.AccessLevel) + `
+			AND audience != ` + args.Append(a) + `
+			AND type = ` + args.Append(o.NodeType) + `
+	` + andFieldsSQL
+
+	psName := preparedName("updateOperationAudience", sql)
+
+	_, err := prepareExec(s.db, psName, sql, args...)
 	if err != nil {
 		return err
 	}
 
 	mylog.Log.WithFields(logrus.Fields{
-		"operation": o,
+		"operation": o.String(),
+		"audience":  a.String(),
 		"fields":    fields,
-	}).Info("made permissions public")
+	}).Info("updated operation audience")
 	return nil
 }
 

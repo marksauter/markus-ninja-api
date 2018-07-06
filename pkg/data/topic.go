@@ -313,7 +313,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		topiced := &Topiced{}
 		topiced.TopicId.Set(&row.Id)
 		topiced.TopicableId.Set(&row.TopicableId)
-		_, err := topicedSvc.Create(topiced)
+		_, err := topicedSvc.Connect(topiced)
 		if err != nil {
 			return nil, err
 		}
@@ -337,7 +337,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 }
 
 const refreshTopicSearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY topic_search_index
+	SELECT refresh_mv_xxx('topic_search_index')
 `
 
 func (s *TopicService) RefreshSearchIndex() error {
