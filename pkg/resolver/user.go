@@ -402,11 +402,11 @@ func (r *userResolver) ID() (graphql.ID, error) {
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
-	// for _, role := range r.User.Roles() {
-	//   if role == data.AdminRole {
-	//     return true
-	//   }
-	// }
+	for _, role := range r.User.Roles() {
+		if role == data.AdminRole {
+			return true
+		}
+	}
 	return false
 }
 

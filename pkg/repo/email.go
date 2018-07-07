@@ -142,6 +142,7 @@ func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
 	if _, err := r.perms.Check(mytype.CreateAccess, e); err != nil {
 		return nil, err
 	}
+	// email, err := data.CreateEmail(r.db, e)
 	email, err := r.svc.Create(e)
 	if err != nil {
 		return nil, err
