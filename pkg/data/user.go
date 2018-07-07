@@ -127,6 +127,7 @@ const batchGetUserSQL = `
 		login,
 		name,
 		public_email,
+		roles,
 		updated_at
 	FROM user_master
 	WHERE id = ANY($1)
@@ -145,6 +146,7 @@ const batchGetUserByLoginSQL = `
 		login,
 		name,
 		public_email,
+		roles,
 		updated_at
 	FROM user_master
 	WHERE lower(login) = any($1)
@@ -164,6 +166,7 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*User, erro
 		&row.Login,
 		&row.Name,
 		&row.PublicEmail,
+		&row.Roles,
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -193,6 +196,7 @@ func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
+			&row.Roles,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -216,6 +220,7 @@ const getUserByIdSQL = `
 		login,
 		name,
 		public_email,
+		roles,
 		updated_at
 	FROM user_master
 	WHERE id = $1
@@ -245,6 +250,7 @@ func (s *UserService) GetByAppleable(
 		"login",
 		"name",
 		"public_email",
+		"roles",
 		"updated_at",
 	}
 	from := "apple_giver"
@@ -303,6 +309,7 @@ func (s *UserService) GetByEnrollee(
 		"login",
 		"name",
 		"public_email",
+		"roles",
 		"updated_at",
 	}
 	from := "enrolled_user"
@@ -327,6 +334,7 @@ func (s *UserService) GetByEnrollee(
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
+			&row.Roles,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -360,6 +368,7 @@ func (s *UserService) GetEnrollees(
 		"login",
 		"name",
 		"public_email",
+		"roles",
 		"updated_at",
 	}
 	from := "enrollee"
@@ -384,6 +393,7 @@ func (s *UserService) GetEnrollees(
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
+			&row.Roles,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -407,6 +417,7 @@ const getUserByLoginSQL = `
 		login,
 		name,
 		public_email,
+		roles,
 		updated_at
 	FROM user_master
 	WHERE LOWER(login) = LOWER($1)

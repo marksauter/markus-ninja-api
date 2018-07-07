@@ -16,7 +16,7 @@ type EVT struct {
 	ExpiresAt  pgtype.Timestamptz `db:"expires_at" permit:"read"`
 	IssuedAt   pgtype.Timestamptz `db:"issued_at" permit:"read"`
 	Token      pgtype.Varchar     `db:"token" permit:"read"`
-	UserId     mytype.OID         `db:"user_id" permit:"read"`
+	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 

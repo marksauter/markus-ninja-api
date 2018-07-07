@@ -70,11 +70,20 @@ func (r *UserPermit) Name() (string, error) {
 	return r.user.Name.String, nil
 
 }
+
 func (r *UserPermit) PublicEmail() (string, error) {
 	if ok := r.checkFieldPermission("public_email"); !ok {
 		return "", ErrAccessDenied
 	}
 	return r.user.PublicEmail.String, nil
+}
+
+func (r *UserPermit) Roles() []string {
+	roles := make([]string, len(r.user.Roles.Elements))
+	for i, r := range r.user.Roles.Elements {
+		roles[i] = r.String
+	}
+	return roles
 }
 
 func (r *UserPermit) UpdatedAt() (time.Time, error) {

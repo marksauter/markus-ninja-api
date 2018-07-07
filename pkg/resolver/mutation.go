@@ -29,6 +29,9 @@ func (r *RootResolver) AddEmail(
 		return nil, errors.New("viewer not found")
 	}
 
+	// r.Repos.Begin()
+	// defer r.Repos.Rollback()
+
 	email := &data.Email{}
 	email.Value.Set(args.Input.Email)
 	email.UserId.Set(viewer.Id)
@@ -61,6 +64,8 @@ func (r *RootResolver) AddEmail(
 	if err := r.Svcs.Mail.SendEmailVerificationMail(sendMailInput); err != nil {
 		return resolver, err
 	}
+
+	// err := r.Repos.Commit()
 
 	return resolver, nil
 }
