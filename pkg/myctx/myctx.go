@@ -9,14 +9,14 @@ import (
 
 type key string
 
-var userContextKey key = "user"
+var queryerContextKey key = "queryer"
 
-func NewUserContext(ctx context.Context, v *data.User) context.Context {
-	return context.WithValue(ctx, userContextKey, v)
+func NewQueryerContext(ctx context.Context, v data.Queryer) context.Context {
+	return context.WithValue(ctx, queryerContextKey, v)
 }
 
-func UserFromContext(ctx context.Context) (*data.User, bool) {
-	v, ok := ctx.Value(userContextKey).(*data.User)
+func QueryerFromContext(ctx context.Context) (data.Queryer, bool) {
+	v, ok := ctx.Value(userContextKey).(data.Queryer)
 	return v, ok
 }
 
@@ -28,5 +28,16 @@ func NewRequesterIpContext(ctx context.Context, v *net.IPNet) context.Context {
 
 func RequesterIpFromContext(ctx context.Context) (*net.IPNet, bool) {
 	v, ok := ctx.Value(requesterIpContextKey).(*net.IPNet)
+	return v, ok
+}
+
+var userContextKey key = "user"
+
+func NewUserContext(ctx context.Context, v *data.User) context.Context {
+	return context.WithValue(ctx, userContextKey, v)
+}
+
+func UserFromContext(ctx context.Context) (*data.User, bool) {
+	v, ok := ctx.Value(userContextKey).(*data.User)
 	return v, ok
 }

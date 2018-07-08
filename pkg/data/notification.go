@@ -230,13 +230,13 @@ func (s *NotificationService) BatchCreate(
 		}
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	copyCount, err := tx.CopyFrom(
@@ -258,7 +258,7 @@ func (s *NotificationService) BatchCreate(
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return err
@@ -298,13 +298,13 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -337,7 +337,7 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -374,13 +374,13 @@ func (s *NotificationService) Update(row *Notification) (*Notification, error) {
 		sets = append(sets, `last_read_at`+"="+args.Append(&row.LastReadAt))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -406,7 +406,7 @@ func (s *NotificationService) Update(row *Notification) (*Notification, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

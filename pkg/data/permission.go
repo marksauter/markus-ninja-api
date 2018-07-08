@@ -110,13 +110,13 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		})
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	permSvc := NewPermissionService(tx)
@@ -143,7 +143,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return err

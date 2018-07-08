@@ -13,6 +13,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -29,14 +30,19 @@ func (r *RootResolver) AddEmail(
 		return nil, errors.New("viewer not found")
 	}
 
-	// r.Repos.Begin()
-	// defer r.Repos.Rollback()
+	reposTx, err, newTx := r.Repos.Begin()
+	defer reposTx.Rollback()
+	permitter := repo.NewPermitter(r.Svcs.Perm, reposTx)
+	permitter.Begin(ctx)
+	defer permitter.End()
+	reposTx.OpenAll(permitter)
+	defer reposTx.CloseAll()
 
 	email := &data.Email{}
 	email.Value.Set(args.Input.Email)
 	email.UserId.Set(viewer.Id)
 
-	emailPermit, err := r.Repos.Email().Create(email)
+	emailPermit, err := reposTx.Email().Create(email)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +51,7 @@ func (r *RootResolver) AddEmail(
 	evt.EmailId.Set(email.Id)
 	evt.UserId.Set(viewer.Id)
 
-	evtPermit, err := r.Repos.EVT().Create(evt)
+	evtPermit, err := reposTx.EVT().Create(evt)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +71,12 @@ func (r *RootResolver) AddEmail(
 		return resolver, err
 	}
 
-	// err := r.Repos.Commit()
+	if newTx {
+		err := reposTx.Commit()
+		if err != nil {
+			return resolver, err
+		}
+	}
 
 	return resolver, nil
 }
@@ -715,7 +726,7 @@ func (r *RootResolver) RequestPasswordReset(
 	ctx context.Context,
 	args struct{ Input RequestPasswordResetInput },
 ) (*prtResolver, error) {
-	email, err := r.Svcs.Email.GetByValue(args.Input.Email)
+	email, err := data.GetEmailByValue(r.Db, args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return nil, errors.New("`email` not found")

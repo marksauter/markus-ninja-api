@@ -50,10 +50,11 @@ func main() {
 		panic(err)
 	}
 
-	repos := repo.NewRepos(svcs)
+	repos := repo.NewRepos(svcs, db, conf)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
+			Db:    db,
 			Repos: repos,
 			Svcs:  svcs,
 		},
@@ -71,7 +72,7 @@ func main() {
 	r.Handle("/upload", route.Upload())
 	r.Handle("/upload/assets", route.UploadAssets(svcs, repos))
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
-		route.ConfirmVerification(svcs),
+		route.ConfirmVerification(svcs, db),
 	)
 	r.Handle("/user/assets/{user_id}/{key}",
 		route.UserAssets(svcs),

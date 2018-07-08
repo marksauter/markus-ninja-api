@@ -17,25 +17,17 @@ type Appled struct {
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
-func NewAppledService(db Queryer) *AppledService {
-	return &AppledService{db}
-}
-
-type AppledService struct {
-	db Queryer
-}
-
 const countAppledByUserSQL = `
 	SELECT COUNT(*)
 	FROM appled
 	WHERE user_id = $1
 `
 
-func (s *AppledService) CountByUser(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Appled.CountByUser()")
+func CountAppledByUser(db Queryer, userId string) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("CountAppledByUser()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countAppledByUser",
 		countAppledByUserSQL,
 		userId,
@@ -52,11 +44,11 @@ const countAppledByAppleableSQL = `
 	WHERE appleable_id = $1
 `
 
-func (s *AppledService) CountByAppleable(appleableId string) (n int32, err error) {
-	mylog.Log.WithField("appleable_id", appleableId).Info("Appled.CountByAppleable()")
+func CountAppledByAppleable(db Queryer, appleableId string) (n int32, err error) {
+	mylog.Log.WithField("appleable_id", appleableId).Info("CountAppledByAppleable()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countAppledByAppleable",
 		countAppledByAppleableSQL,
 		appleableId,
@@ -67,13 +59,14 @@ func (s *AppledService) CountByAppleable(appleableId string) (n int32, err error
 	return
 }
 
-func (s *AppledService) get(
+func getAppled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*Appled, error) {
 	var row Appled
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.AppleableId,
 		&row.CreatedAt,
 		&row.Id,
@@ -89,14 +82,15 @@ func (s *AppledService) get(
 	return &row, nil
 }
 
-func (s *AppledService) getMany(
+func getManyAppled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Appled, error) {
 	var rows []*Appled
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get appleds")
 		return nil, err
@@ -133,9 +127,9 @@ const getAppledSQL = `
 	WHERE id = $1
 `
 
-func (s *AppledService) Get(id int32) (*Appled, error) {
-	mylog.Log.WithField("id", id).Info("Appled.Get(id)")
-	return s.get("getAppled", getAppledSQL, id)
+func GetAppled(db Queryer, id int32) (*Appled, error) {
+	mylog.Log.WithField("id", id).Info("GetAppled(id)")
+	return getAppled(db, "getAppled", getAppledSQL, id)
 }
 
 const getAppledForAppleableSQL = `
@@ -148,9 +142,10 @@ const getAppledForAppleableSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func (s *AppledService) GetForAppleable(appleableId, userId string) (*Appled, error) {
-	mylog.Log.Info("Appled.GetForAppleable()")
-	return s.get(
+func GetAppledForAppleable(db Queryer, appleableId, userId string) (*Appled, error) {
+	mylog.Log.Info("GetAppledForAppleable()")
+	return getAppled(
+		db,
 		"getAppledForAppleable",
 		getAppledForAppleableSQL,
 		appleableId,
@@ -158,11 +153,12 @@ func (s *AppledService) GetForAppleable(appleableId, userId string) (*Appled, er
 	)
 }
 
-func (s *AppledService) GetByUser(
+func GetAppledByUser(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("user_id", userId).Info("Appled.GetByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetAppledByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -177,14 +173,15 @@ func (s *AppledService) GetByUser(
 
 	psName := preparedName("getAppledsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyAppled(db, psName, sql, args...)
 }
 
-func (s *AppledService) GetByAppleable(
+func GetAppledByAppleable(
+	db Queryer,
 	appleableId string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("appleable_id", appleableId).Info("Appled.GetByAppleable(appleable_id)")
+	mylog.Log.WithField("appleable_id", appleableId).Info("GetAppledByAppleable(appleable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`appleable_id = ` + args.Append(appleableId)}
 
@@ -201,11 +198,11 @@ func (s *AppledService) GetByAppleable(
 
 	psName := preparedName("getAppledsByAppleable", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyAppled(db, psName, sql, args...)
 }
 
-func (s *AppledService) Connect(row *Appled) (*Appled, error) {
-	mylog.Log.Info("Appled.Connect()")
+func ConnectAppled(db Queryer, row *Appled) (*Appled, error) {
+	mylog.Log.Info("ConnectAppled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -219,13 +216,13 @@ func (s *AppledService) Connect(row *Appled) (*Appled, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	var appleable string
@@ -266,14 +263,13 @@ func (s *AppledService) Connect(row *Appled) (*Appled, error) {
 		return nil, err
 	}
 
-	appledSvc := NewAppledService(tx)
-	appled, err := appledSvc.Get(row.Id.Int)
+	appled, err := GetAppled(tx, row.Id.Int)
 	if err != nil {
 		return nil, err
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -288,10 +284,10 @@ const disconnectAppledSQL = `
 	WHERE id = $1
 `
 
-func (s *AppledService) Diconnect(id int32) error {
-	mylog.Log.WithField("id", id).Info("Appled.Disconnect(id)")
+func DisconnectAppled(db Queryer, id int32) error {
+	mylog.Log.WithField("id", id).Info("DisconnectAppled(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectAppled",
 		disconnectAppledSQL,
 		id,
@@ -311,10 +307,10 @@ const disconnectAppledFromAppleableSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func (s *AppledService) DisconnectFromAppleable(appleable_id, user_id string) error {
-	mylog.Log.Info("Appled.DisconnectFromAppleable()")
+func DisconnectAppledFromAppleable(db Queryer, appleable_id, user_id string) error {
+	mylog.Log.Info("DisconnectAppledFromAppleable()")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectAppledFromAppleable",
 		disconnectAppledFromAppleableSQL,
 		appleable_id,

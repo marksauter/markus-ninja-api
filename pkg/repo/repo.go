@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -47,13 +49,15 @@ type Repo interface {
 type Repos struct {
 	lookup map[key]Repo
 	svcs   *service.Services
+	db     data.Queryer
+	conf   *myconf.Config
 }
 
-func NewRepos(svcs *service.Services) *Repos {
+func NewRepos(svcs *service.Services, db data.Queryer, conf *myconf.Config) *Repos {
 	return &Repos{
 		lookup: map[key]Repo{
-			appledRepoKey:        NewAppledRepo(svcs.Appled),
-			emailRepoKey:         NewEmailRepo(svcs.Email),
+			appledRepoKey:        NewAppledRepo(db),
+			emailRepoKey:         NewEmailRepo(db),
 			enrolledRepoKey:      NewEnrolledRepo(svcs.Enrolled),
 			evtRepoKey:           NewEVTRepo(svcs.EVT),
 			labelRepoKey:         NewLabelRepo(svcs.Label),
@@ -70,7 +74,32 @@ func NewRepos(svcs *service.Services) *Repos {
 			userAssetRepoKey:     NewUserAssetRepo(svcs.UserAsset, svcs.Storage),
 		},
 		svcs: svcs,
+		db:   db,
+		conf: conf,
 	}
+}
+
+func (r *Repos) Begin() (reposTx *Repos, err error, newTx bool) {
+	// copier.Copy(reposTx, r)
+	tx, err, newTx := data.BeginTransaction(r.db)
+	if err != nil {
+		return
+	}
+	// reposTx.db = tx
+	svcs, err := service.NewServices(r.conf, tx)
+	if err != nil {
+		return
+	}
+	reposTx = NewRepos(svcs, tx, r.conf)
+	return
+}
+
+func (r *Repos) Rollback() error {
+	return data.RollbackTransaction(r.db)
+}
+
+func (r *Repos) Commit() error {
+	return data.CommitTransaction(r.db)
 }
 
 func (r *Repos) OpenAll(p *Permitter) error {

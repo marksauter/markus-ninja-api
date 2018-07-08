@@ -99,13 +99,13 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -139,7 +139,7 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -163,13 +163,13 @@ func (s *EVTService) Update(
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -195,7 +195,7 @@ func (s *EVTService) Update(
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

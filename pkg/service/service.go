@@ -7,9 +7,7 @@ import (
 )
 
 type Services struct {
-	Appled        *data.AppledService
 	Auth          *AuthService
-	Email         *data.EmailService
 	Enrolled      *data.EnrolledService
 	Event         *data.EventService
 	EVT           *data.EVTService
@@ -44,9 +42,7 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		return nil, err
 	}
 	return &Services{
-		Appled:        data.NewAppledService(db),
 		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
-		Email:         data.NewEmailService(db),
 		Enrolled:      data.NewEnrolledService(db),
 		Event:         data.NewEventService(db),
 		EVT:           data.NewEVTService(db),
