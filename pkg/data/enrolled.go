@@ -228,13 +228,13 @@ func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	var enrollable string
@@ -286,7 +286,7 @@ func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

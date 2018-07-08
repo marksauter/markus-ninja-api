@@ -94,23 +94,21 @@ func (r *EmailPermit) VerifiedAt() (*time.Time, error) {
 	return &r.email.VerifiedAt.Time, nil
 }
 
-func NewEmailRepo(svc *data.EmailService) *EmailRepo {
+func NewEmailRepo(db data.Queryer) *EmailRepo {
 	return &EmailRepo{
-		svc: svc,
+		db:   db,
+		load: loader.NewEmailLoader(),
 	}
 }
 
 type EmailRepo struct {
+	db    data.Queryer
 	load  *loader.EmailLoader
 	perms *Permitter
-	svc   *data.EmailService
 }
 
 func (r *EmailRepo) Open(p *Permitter) error {
 	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewEmailLoader(r.svc)
-	}
 	return nil
 }
 
@@ -120,7 +118,7 @@ func (r *EmailRepo) Close() {
 
 func (r *EmailRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("user_email connection closed")
+		mylog.Log.Error("email connection closed")
 		return ErrConnClosed
 	}
 	return nil
@@ -132,7 +130,7 @@ func (r *EmailRepo) CountByUser(
 	userId string,
 	opts ...data.EmailFilterOption,
 ) (int32, error) {
-	return r.svc.CountByUser(userId)
+	return data.CountEmailByUser(r.db, userId)
 }
 
 func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
@@ -142,8 +140,7 @@ func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
 	if _, err := r.perms.Check(mytype.CreateAccess, e); err != nil {
 		return nil, err
 	}
-	// email, err := data.CreateEmail(r.db, e)
-	email, err := r.svc.Create(e)
+	email, err := data.CreateEmail(r.db, e)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +158,7 @@ func (r *EmailRepo) Delete(email *data.Email) error {
 	if _, err := r.perms.Check(mytype.DeleteAccess, email); err != nil {
 		return err
 	}
-	return r.svc.Delete(email.Id.String)
+	return data.DeleteEmail(r.db, email.Id.String)
 }
 
 func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
@@ -202,7 +199,7 @@ func (r *EmailRepo) GetByUser(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	emails, err := r.svc.GetByUser(userId, po, opts...)
+	emails, err := data.GetEmailByUser(r.db, userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +223,7 @@ func (r *EmailRepo) Update(e *data.Email) (*EmailPermit, error) {
 	if _, err := r.perms.Check(mytype.UpdateAccess, e); err != nil {
 		return nil, err
 	}
-	email, err := r.svc.Update(e)
+	email, err := data.UpdateEmail(r.db, e)
 	if err != nil {
 		return nil, err
 	}

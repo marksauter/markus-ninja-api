@@ -537,12 +537,12 @@ func (s *UserService) Create(row *User) (*User, error) {
 		values = append(values, args.Append(&row.Password))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	createUserSQL := `
@@ -571,8 +571,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 	primaryEmail.Type.Set(PrimaryEmail)
 	primaryEmail.UserId.Set(row.Id)
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
-	emailSvc := NewEmailService(tx)
-	_, err = emailSvc.Create(primaryEmail)
+	_, err = CreateEmail(s.db, primaryEmail)
 	if err != nil {
 		return nil, err
 	}
@@ -584,7 +583,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			return nil, err
 		}
@@ -667,13 +666,13 @@ func (s *UserService) Update(row *User) (*User, error) {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -705,8 +704,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 	}
 
 	if row.PublicEmail.Status != pgtype.Undefined {
-		emailSvc := NewEmailService(tx)
-		publicEmail, err := emailSvc.GetByValue(row.PublicEmail.String)
+		publicEmail, err := GetEmailByValue(s.db, row.PublicEmail.String)
 		if err != nil {
 			return nil, err
 		}
@@ -714,7 +712,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 			return nil, errors.New("cannot set unverified email to public")
 		}
 		publicEmail.Public.Set(true)
-		_, err = emailSvc.Update(publicEmail)
+		_, err = UpdateEmail(s.db, publicEmail)
 		if err != nil {
 			return nil, err
 		}
@@ -727,7 +725,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

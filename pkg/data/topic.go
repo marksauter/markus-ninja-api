@@ -273,13 +273,13 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		values = append(values, args.Append(nameTokens))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -326,7 +326,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -380,13 +380,13 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -412,7 +412,7 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

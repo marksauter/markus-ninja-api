@@ -314,13 +314,13 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	var source string
@@ -382,7 +382,7 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -423,13 +423,13 @@ func (s *EventService) BatchCreate(
 		}
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	var source string
@@ -519,7 +519,7 @@ func (s *EventService) BatchCreate(
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return err
@@ -563,13 +563,13 @@ func (s *EventService) ParseBodyForEvents(
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	lessonSvc := NewLessonService(tx)
@@ -627,7 +627,7 @@ func (s *EventService) ParseBodyForEvents(
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return err
@@ -643,13 +643,13 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(s.db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	lessonSvc := NewLessonService(tx)
@@ -732,7 +732,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return err

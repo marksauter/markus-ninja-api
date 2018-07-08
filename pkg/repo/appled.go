@@ -59,22 +59,22 @@ func (r *AppledPermit) UserId() (*mytype.OID, error) {
 	return &r.appled.UserId, nil
 }
 
-func NewAppledRepo(svc *data.AppledService) *AppledRepo {
+func NewAppledRepo(db data.Queryer) *AppledRepo {
 	return &AppledRepo{
-		svc: svc,
+		db: db,
 	}
 }
 
 type AppledRepo struct {
 	load  *loader.AppledLoader
 	perms *Permitter
-	svc   *data.AppledService
+	db    data.Queryer
 }
 
 func (r *AppledRepo) Open(p *Permitter) error {
 	r.perms = p
 	if r.load == nil {
-		r.load = loader.NewAppledLoader(r.svc)
+		r.load = loader.NewAppledLoader(r.db)
 	}
 	return nil
 }
@@ -96,13 +96,13 @@ func (r *AppledRepo) CheckConnection() error {
 func (r *AppledRepo) CountByAppleable(
 	appleableId string,
 ) (int32, error) {
-	return r.svc.CountByAppleable(appleableId)
+	return data.CountAppledByAppleable(r.db, appleableId)
 }
 
 func (r *AppledRepo) CountByUser(
 	userId string,
 ) (int32, error) {
-	return r.svc.CountByUser(userId)
+	return data.CountAppledByUser(r.db, userId)
 }
 
 func (r *AppledRepo) Connect(appled *data.Appled) (*AppledPermit, error) {
@@ -112,7 +112,7 @@ func (r *AppledRepo) Connect(appled *data.Appled) (*AppledPermit, error) {
 	if _, err := r.perms.Check(mytype.ConnectAccess, appled); err != nil {
 		return nil, err
 	}
-	appled, err := r.svc.Connect(appled)
+	appled, err := data.ConnectAppled(r.db, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +129,12 @@ func (r *AppledRepo) Get(a *data.Appled) (*AppledPermit, error) {
 	}
 	var appled *data.Appled
 	var err error
-	if appled.Id.Status != pgtype.Undefined {
+	if a.Id.Status != pgtype.Undefined {
 		appled, err = r.load.Get(a.Id.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if appled.AppleableId.Status != pgtype.Undefined &&
+	} else if a.AppleableId.Status != pgtype.Undefined &&
 		appled.UserId.Status != pgtype.Undefined {
 		appled, err = r.load.GetForAppleable(a.AppleableId.String, a.UserId.String)
 		if err != nil {
@@ -159,7 +159,7 @@ func (r *AppledRepo) GetByAppleable(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	appleds, err := r.svc.GetByAppleable(appleableId, po)
+	appleds, err := data.GetAppledByAppleable(r.db, appleableId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (r *AppledRepo) GetByUser(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	appleds, err := r.svc.GetByUser(userId, po)
+	appleds, err := data.GetAppledByUser(r.db, userId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -208,10 +208,10 @@ func (r *AppledRepo) Disconnect(a *data.Appled) error {
 		return err
 	}
 	if a.Id.Status != pgtype.Undefined {
-		return r.svc.Diconnect(a.Id.Int)
+		return data.DisconnectAppled(r.db, a.Id.Int)
 	} else if a.AppleableId.Status != pgtype.Undefined &&
 		a.UserId.Status != pgtype.Undefined {
-		return r.svc.DisconnectFromAppleable(a.AppleableId.String, a.UserId.String)
+		return data.DisconnectAppledFromAppleable(r.db, a.AppleableId.String, a.UserId.String)
 	}
 	return errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",

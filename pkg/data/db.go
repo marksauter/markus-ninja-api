@@ -46,7 +46,7 @@ type preparer interface {
 	Deallocate(name string) error
 }
 
-func beginTransaction(db Queryer) (Queryer, error, bool) {
+func BeginTransaction(db Queryer) (Queryer, error, bool) {
 	if transactor, ok := db.(transactor); ok {
 		tx, err := transactor.Begin()
 		return tx, err, true
@@ -54,14 +54,14 @@ func beginTransaction(db Queryer) (Queryer, error, bool) {
 	return db, nil, false
 }
 
-func commitTransaction(db Queryer) error {
+func CommitTransaction(db Queryer) error {
 	if committer, ok := db.(committer); ok {
 		return committer.Commit()
 	}
 	return nil
 }
 
-func rollbackTransaction(db Queryer) error {
+func RollbackTransaction(db Queryer) error {
 	if committer, ok := db.(committer); ok {
 		return committer.Rollback()
 	}

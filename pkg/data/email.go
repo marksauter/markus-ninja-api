@@ -20,14 +20,6 @@ type Email struct {
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
-func NewEmailService(q Queryer) *EmailService {
-	return &EmailService{q}
-}
-
-type EmailService struct {
-	db Queryer
-}
-
 type EmailFilterOption int
 
 const (
@@ -49,7 +41,8 @@ const countEmailByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *EmailService) CountByUser(
+func CountEmailByUser(
+	db Queryer,
 	userId string,
 	opts ...EmailFilterOption,
 ) (n int32, err error) {
@@ -64,16 +57,16 @@ func (s *EmailService) CountByUser(
 
 	psName := preparedName("countEmailByUser", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, userId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
 
-func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email, error) {
+func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email, error) {
 	var row Email
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
 		&row.Public,
@@ -93,14 +86,15 @@ func (s *EmailService) get(name string, sql string, args ...interface{}) (*Email
 	return &row, nil
 }
 
-func (s *EmailService) getMany(
+func getManyEmail(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Email, error) {
 	var rows []*Email
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +137,9 @@ const getEmailByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *EmailService) Get(id string) (*Email, error) {
+func GetEmail(db Queryer, id string) (*Email, error) {
 	mylog.Log.WithField("id", id).Info("Email.Get(id)")
-	return s.get("getEmailById", getEmailByIdSQL, id)
+	return getEmail(db, "getEmailById", getEmailByIdSQL, id)
 }
 
 const getEmailByValueSQL = `
@@ -162,18 +156,20 @@ const getEmailByValueSQL = `
 	WHERE lower(value) = lower($1)
 `
 
-func (s *EmailService) GetByValue(email string) (*Email, error) {
+func GetEmailByValue(db Queryer, email string) (*Email, error) {
 	mylog.Log.WithField(
 		"email", email,
 	).Info("Email.GetByValue(email)")
-	return s.get(
+	return getEmail(
+		db,
 		"getEmailByValue",
 		getEmailByValueSQL,
 		email,
 	)
 }
 
-func (s *EmailService) GetByUser(
+func GetEmailByUser(
+	db Queryer,
 	userId *mytype.OID,
 	po *PageOptions,
 	opts ...EmailFilterOption,
@@ -207,10 +203,10 @@ func (s *EmailService) GetByUser(
 
 	psName := preparedName("getEmailByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyEmail(db, psName, sql, args...)
 }
 
-func (s *EmailService) Create(row *Email) (*Email, error) {
+func CreateEmail(db Queryer, row *Email) (*Email, error) {
 	mylog.Log.Info("Email.Create()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
@@ -235,13 +231,13 @@ func (s *EmailService) Create(row *Email) (*Email, error) {
 		values = append(values, args.Append(&row.Value))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -268,14 +264,13 @@ func (s *EmailService) Create(row *Email) (*Email, error) {
 		return nil, err
 	}
 
-	emailSvc := NewEmailService(tx)
-	email, err := emailSvc.Get(row.Id.String)
+	email, err := GetEmail(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err
@@ -290,11 +285,11 @@ const deleteEmailSQL = `
 	WHERE id = $1
 `
 
-func (s *EmailService) Delete(id string) error {
+func DeleteEmail(db Queryer, id string) error {
 	mylog.Log.WithField("id", id).Info("Email.Delete(id)")
 
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"deleteEmail",
 		deleteEmailSQL,
 		id,
@@ -310,7 +305,7 @@ func (s *EmailService) Delete(id string) error {
 	return nil
 }
 
-func (s *EmailService) Update(row *Email) (*Email, error) {
+func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	mylog.Log.Info("Email.Update()")
 
 	sets := make([]string, 0, 4)
@@ -326,13 +321,13 @@ func (s *EmailService) Update(row *Email) (*Email, error) {
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
-	tx, err, newTx := beginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
-		defer rollbackTransaction(tx)
+		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -351,14 +346,13 @@ func (s *EmailService) Update(row *Email) (*Email, error) {
 		return nil, ErrNotFound
 	}
 
-	emailSvc := NewEmailService(tx)
-	email, err := emailSvc.Get(row.Id.String)
+	email, err := GetEmail(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
 
 	if newTx {
-		err = commitTransaction(tx)
+		err = CommitTransaction(tx)
 		if err != nil {
 			mylog.Log.WithError(err).Error("error during transaction")
 			return nil, err

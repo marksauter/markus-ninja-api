@@ -15,9 +15,10 @@ import (
 	"github.com/rs/cors"
 )
 
-func ConfirmVerification(svcs *service.Services) http.Handler {
+func ConfirmVerification(svcs *service.Services, db data.Queryer) http.Handler {
 	verifyAcccountHandler := ConfirmVerificationHandler{
 		Svcs: svcs,
+		db:   db,
 	}
 	return middleware.CommonMiddleware.Append(
 		confirmVerificationCors.Handler,
@@ -32,6 +33,7 @@ var confirmVerificationCors = cors.New(cors.Options{
 
 type ConfirmVerificationHandler struct {
 	Svcs *service.Services
+	db   data.Queryer
 }
 
 func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -110,7 +112,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	email, err := h.Svcs.Email.Get(evt.EmailId.String)
+	email, err := data.GetEmail(h.db, evt.EmailId.String)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -122,7 +124,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	if _, err := h.Svcs.Email.Update(email); err != nil {
+	if _, err := data.UpdateEmail(h.db, email); err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
