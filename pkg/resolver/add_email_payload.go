@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -20,12 +22,12 @@ func (r *addEmailPayloadResolver) Token() *evtResolver {
 	return &evtResolver{EVT: r.EVT, Repos: r.Repos}
 }
 
-func (r *addEmailPayloadResolver) User() (*userResolver, error) {
+func (r *addEmailPayloadResolver) User(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Email.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}

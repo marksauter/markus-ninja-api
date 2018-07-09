@@ -14,10 +14,8 @@ import (
 	"github.com/rs/cors"
 )
 
-func Token(svcs *service.Services) http.Handler {
-	tokenHandler := TokenHandler{
-		Svcs: svcs,
-	}
+func Token(db data.Queryer, svcs *service.Services) http.Handler {
+	tokenHandler := TokenHandler{db, svcs}
 	return middleware.CommonMiddleware.Append(
 		tokenCors.Handler,
 	).Then(tokenHandler)
@@ -30,7 +28,8 @@ var tokenCors = cors.New(cors.Options{
 })
 
 type TokenHandler struct {
-	Svcs *service.Services
+	db   data.Queryer
+	svcs *service.Services
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -58,14 +57,14 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var user *data.User
 	err = checkmail.ValidateFormat(creds.Login)
 	if err != nil {
-		user, err = h.Svcs.User.GetCredentialsByLogin(creds.Login)
+		user, err = data.GetUserCredentialsByLogin(h.db, creds.Login)
 		if err != nil {
 			response := myhttp.InvalidCredentialsErrorResponse()
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 	} else {
-		user, err = h.Svcs.User.GetCredentialsByEmail(creds.Login)
+		user, err = data.GetUserCredentialsByEmail(h.db, creds.Login)
 		if err != nil {
 			response := myhttp.InvalidCredentialsErrorResponse()
 			myhttp.WriteResponseTo(rw, response)
@@ -82,7 +81,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.Svcs.Auth.SignJWT(&payload)
+	jwt, err := h.svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

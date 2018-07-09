@@ -7,18 +7,43 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewEventLoader(svc *data.EventService) *EventLoader {
+func NewEventLoader() *EventLoader {
 	return &EventLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetEventFn(svc.Get)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						event, err := data.GetEvent(db, key.String())
+						results[i] = &dataloader.Result{Data: event, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type EventLoader struct {
-	svc *data.EventService
-
 	batchGet *dataloader.Loader
 }
 
@@ -31,8 +56,10 @@ func (r *EventLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *EventLoader) Get(id string) (*data.Event, error) {
-	ctx := context.Background()
+func (r *EventLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Event, error) {
 	eventData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -45,8 +72,10 @@ func (r *EventLoader) Get(id string) (*data.Event, error) {
 	return event, nil
 }
 
-func (r *EventLoader) GetMany(ids *[]string) ([]*data.Event, []error) {
-	ctx := context.Background()
+func (r *EventLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Event, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -65,30 +94,4 @@ func (r *EventLoader) GetMany(ids *[]string) ([]*data.Event, []error) {
 	}
 
 	return events, nil
-}
-
-func newBatchGetEventFn(
-	getter func(string) (*data.Event, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				event, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: event, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

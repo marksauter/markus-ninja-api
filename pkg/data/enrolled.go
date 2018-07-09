@@ -18,25 +18,20 @@ type Enrolled struct {
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
-func NewEnrolledService(db Queryer) *EnrolledService {
-	return &EnrolledService{db}
-}
-
-type EnrolledService struct {
-	db Queryer
-}
-
 const countEnrolledByUserSQL = `
 	SELECT COUNT(*)
 	FROM enrolled
 	WHERE user_id = $1
 `
 
-func (s *EnrolledService) CountByUser(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Enrolled.CountByUser()")
+func CountEnrolledByUser(
+	db Queryer,
+	userId string,
+) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("CountEnrolledByUser()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countEnrolledByUser",
 		countEnrolledByUserSQL,
 		userId,
@@ -53,11 +48,14 @@ const countEnrolledByEnrollableSQL = `
 	WHERE enrollable_id = $1
 `
 
-func (s *EnrolledService) CountByEnrollable(enrollableId string) (n int32, err error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("Enrolled.CountByEnrollable()")
+func CountEnrolledByEnrollable(
+	db Queryer,
+	enrollableId string,
+) (n int32, err error) {
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("CountEnrolledByEnrollable()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countEnrolledByEnrollable",
 		countEnrolledByEnrollableSQL,
 		enrollableId,
@@ -68,13 +66,14 @@ func (s *EnrolledService) CountByEnrollable(enrollableId string) (n int32, err e
 	return
 }
 
-func (s *EnrolledService) get(
+func getEnrolled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*Enrolled, error) {
 	var row Enrolled
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
 		&row.EnrollableId,
@@ -91,14 +90,15 @@ func (s *EnrolledService) get(
 	return &row, nil
 }
 
-func (s *EnrolledService) getMany(
+func getManyEnrolled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Enrolled, error) {
 	var rows []*Enrolled
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get enrolleds")
 		return nil, err
@@ -137,12 +137,15 @@ const getEnrolledSQL = `
 	WHERE id = $1
 `
 
-func (s *EnrolledService) Get(id int32) (*Enrolled, error) {
-	mylog.Log.WithField("id", id).Info("Enrolled.Get(id)")
-	return s.get("getEnrolled", getEnrolledSQL, id)
+func GetEnrolled(
+	db Queryer,
+	id int32,
+) (*Enrolled, error) {
+	mylog.Log.WithField("id", id).Info("GetEnrolled(id)")
+	return getEnrolled(db, "getEnrolled", getEnrolledSQL, id)
 }
 
-const getEnrolledForEnrollableSQL = `
+const getEnrolledByEnrollableAndUserSQL = `
 	SELECT
 		created_at,
 		id,
@@ -153,21 +156,26 @@ const getEnrolledForEnrollableSQL = `
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *EnrolledService) GetForEnrollable(enrollableId, userId string) (*Enrolled, error) {
-	mylog.Log.Info("Enrolled.GetForEnrollable()")
-	return s.get(
-		"getEnrolledForEnrollable",
-		getEnrolledForEnrollableSQL,
+func GetEnrolledByEnrollableAndUser(
+	db Queryer,
+	enrollableId, userId string,
+) (*Enrolled, error) {
+	mylog.Log.Info("GetEnrolledByEnrollableAndUser()")
+	return getEnrolled(
+		db,
+		"getEnrolledByEnrollableAndUser",
+		getEnrolledByEnrollableAndUserSQL,
 		enrollableId,
 		userId,
 	)
 }
 
-func (s *EnrolledService) GetByUser(
+func GetEnrolledByUser(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Enrolled, error) {
-	mylog.Log.WithField("user_id", userId).Info("Enrolled.GetByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetEnrolledByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -183,14 +191,15 @@ func (s *EnrolledService) GetByUser(
 
 	psName := preparedName("getEnrolledsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyEnrolled(db, psName, sql, args...)
 }
 
-func (s *EnrolledService) GetByEnrollable(
+func GetEnrolledByEnrollable(
+	db Queryer,
 	enrollableId string,
 	po *PageOptions,
 ) ([]*Enrolled, error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("Enrolled.GetByEnrollable(enrollable_id)")
+	mylog.Log.WithField("enrollable_id", enrollableId).Info("GetEnrolledByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
@@ -206,11 +215,14 @@ func (s *EnrolledService) GetByEnrollable(
 
 	psName := preparedName("getEnrolledsByEnrollable", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyEnrolled(db, psName, sql, args...)
 }
 
-func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
-	mylog.Log.Info("Enrolled.Connect()")
+func ConnectEnrolled(
+	db Queryer,
+	row *Enrolled,
+) (*Enrolled, error) {
+	mylog.Log.Info("ConnectEnrolled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -228,7 +240,7 @@ func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -279,8 +291,7 @@ func (s *EnrolledService) Connect(row *Enrolled) (*Enrolled, error) {
 		return nil, err
 	}
 
-	enrolledSvc := NewEnrolledService(tx)
-	enrolled, err := enrolledSvc.Get(row.Id.Int)
+	enrolled, err := GetEnrolled(db, row.Id.Int)
 	if err != nil {
 		return nil, err
 	}
@@ -301,10 +312,13 @@ const disconnectEnrolledSQL = `
 	WHERE id = $1
 `
 
-func (s *EnrolledService) Disconnect(id int32) error {
-	mylog.Log.WithField("id", id).Info("Enrolled.Disconnect(id)")
+func DisconnectEnrolled(
+	db Queryer,
+	id int32,
+) error {
+	mylog.Log.WithField("id", id).Info("DisconnectEnrolled(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectEnrolled",
 		disconnectEnrolledSQL,
 		id,
@@ -324,10 +338,14 @@ const disconnectEnrolledFromEnrollableSQL = `
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func (s *EnrolledService) DisconnectFromEnrollable(enrollable_id, user_id string) error {
-	mylog.Log.Info("Enrolled.DisconnectFromEnrollable()")
+func DisconnectEnrolledFromEnrollable(
+	db Queryer,
+	enrollable_id,
+	user_id string,
+) error {
+	mylog.Log.Info("DisconnectEnrolledFromEnrollable()")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectEnrolledFromEnrollable",
 		disconnectEnrolledFromEnrollableSQL,
 		enrollable_id,

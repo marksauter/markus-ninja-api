@@ -25,27 +25,22 @@ type Label struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-func NewLabelService(db Queryer) *LabelService {
-	return &LabelService{db}
-}
-
-type LabelService struct {
-	db Queryer
-}
-
 const countLabelByLabelableSQL = `
 	SELECT COUNT(*)
 	FROM labelable_label
 	WHERE labelable_id = $1
 `
 
-func (s *LabelService) CountByLabelable(labelableId string) (int32, error) {
+func CountLabelByLabelable(
+	db Queryer,
+	labelableId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"labelable_id", labelableId,
-	).Info("Label.CountByLabelable(labelable_id)")
+	).Info("CountLabelByLabelable(labelable_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLabelByLabelable",
 		countLabelByLabelableSQL,
 		labelableId,
@@ -62,11 +57,14 @@ const countLabelByStudySQL = `
 	WHERE study_id = $1
 `
 
-func (s *LabelService) CountByStudy(studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Label.CountByStudy(study_id)")
+func CountLabelByStudy(
+	db Queryer,
+	studyId string,
+) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountLabelByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLabelByStudy",
 		countLabelByStudySQL,
 		studyId,
@@ -77,8 +75,12 @@ func (s *LabelService) CountByStudy(studyId string) (int32, error) {
 	return n, err
 }
 
-func (s *LabelService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("Label.CountBySearch(query)")
+func CountLabelBySearch(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountLabelBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -100,16 +102,21 @@ func (s *LabelService) CountBySearch(within *mytype.OID, query string) (n int32,
 
 	psName := preparedName("countLabelBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
 
-func (s *LabelService) get(name string, sql string, args ...interface{}) (*Label, error) {
+func getLabel(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Label, error) {
 	var row Label
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Color,
 		&row.CreatedAt,
 		&row.Description,
@@ -129,10 +136,15 @@ func (s *LabelService) get(name string, sql string, args ...interface{}) (*Label
 	return &row, nil
 }
 
-func (s *LabelService) getMany(name string, sql string, args ...interface{}) ([]*Label, error) {
+func getManyLabel(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Label, error) {
 	var rows []*Label
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,18 +188,22 @@ const getLabelByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *LabelService) Get(id string) (*Label, error) {
-	mylog.Log.WithField("id", id).Info("Label.Get(id)")
-	return s.get("getLabelById", getLabelByIdSQL, id)
+func GetLabel(
+	db Queryer,
+	id string,
+) (*Label, error) {
+	mylog.Log.WithField("id", id).Info("GetLabel(id)")
+	return getLabel(db, "getLabelById", getLabelByIdSQL, id)
 }
 
-func (s *LabelService) GetByLabelable(
+func GetLabelByLabelable(
+	db Queryer,
 	labelableId string,
 	po *PageOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField(
 		"labelable_id", labelableId,
-	).Info("Label.GetByLabelable(labelable_id)")
+	).Info("GetLabelByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`labelable_id = ` + args.Append(labelableId)}
 
@@ -209,7 +225,7 @@ func (s *LabelService) GetByLabelable(
 
 	var rows []*Label
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,11 +256,12 @@ func (s *LabelService) GetByLabelable(
 	return rows, nil
 }
 
-func (s *LabelService) GetByStudy(
+func GetLabelByStudy(
+	db Queryer,
 	studyId string,
 	po *PageOptions,
 ) ([]*Label, error) {
-	mylog.Log.WithField("study_id", studyId).Info("Label.GetByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyId).Info("GetLabelByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`study_id = ` + args.Append(studyId)}
 
@@ -263,7 +280,7 @@ func (s *LabelService) GetByStudy(
 
 	psName := preparedName("getLabelsByStudyId", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLabel(db, psName, sql, args...)
 }
 
 const getLabelByNameSQL = `
@@ -280,15 +297,21 @@ const getLabelByNameSQL = `
 	WHERE lower(name) = lower($1)
 `
 
-func (s *LabelService) GetByName(name string) (*Label, error) {
+func GetLabelByName(
+	db Queryer,
+	name string,
+) (*Label, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"name": name,
-	}).Info("Label.GetByName(name)")
-	return s.get("getLabelByName", getLabelByNameSQL, name)
+	}).Info("GetLabelByName(name)")
+	return getLabel(db, "getLabelByName", getLabelByNameSQL, name)
 }
 
-func (s *LabelService) Create(row *Label) (*Label, error) {
-	mylog.Log.Info("Label.Create()")
+func CreateLabel(
+	db Queryer,
+	row *Label,
+) (*Label, error) {
+	mylog.Log.Info("CreateLabel()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -323,7 +346,7 @@ func (s *LabelService) Create(row *Label) (*Label, error) {
 		values = append(values, args.Append(&row.StudyId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -355,8 +378,7 @@ func (s *LabelService) Create(row *Label) (*Label, error) {
 		return nil, err
 	}
 
-	labelSvc := NewLabelService(tx)
-	label, err := labelSvc.Get(row.Id.String)
+	label, err := GetLabel(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -377,9 +399,12 @@ const deleteLabelSQl = `
 	WHERE id = $1
 `
 
-func (s *LabelService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Label.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteLabel", deleteLabelSQl, id)
+func DeleteLabel(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteLabel(id)")
+	commandTag, err := prepareExec(db, "deleteLabel", deleteLabelSQl, id)
 	if err != nil {
 		return err
 	}
@@ -394,10 +419,12 @@ const refreshLabelSearchIndexSQL = `
 	SELECT refresh_mv_xxx('label_search_index')
 `
 
-func (s *LabelService) RefreshSearchIndex() error {
-	mylog.Log.Info("Label.RefreshSearchIndex()")
+func RefreshLabelSearchIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshLabelSearchIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshLabelSearchIndex",
 		refreshLabelSearchIndexSQL,
 	)
@@ -408,8 +435,12 @@ func (s *LabelService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *LabelService) Search(query string, po *PageOptions) ([]*Label, error) {
-	mylog.Log.WithField("query", query).Info("Label.Search(query)")
+func Search(
+	db Queryer,
+	query string,
+	po *PageOptions,
+) ([]*Label, error) {
+	mylog.Log.WithField("query", query).Info("Search(query)")
 	selects := []string{
 		"color",
 		"created_at",
@@ -425,11 +456,14 @@ func (s *LabelService) Search(query string, po *PageOptions) ([]*Label, error) {
 
 	psName := preparedName("searchLabelIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLabel(db, psName, sql, args...)
 }
 
-func (s *LabelService) Update(row *Label) (*Label, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Label.Update(id)")
+func UpdateLabel(
+	db Queryer,
+	row *Label,
+) (*Label, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateLabel(id)")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -437,7 +471,7 @@ func (s *LabelService) Update(row *Label) (*Label, error) {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -462,8 +496,7 @@ func (s *LabelService) Update(row *Label) (*Label, error) {
 		return nil, ErrNotFound
 	}
 
-	labelSvc := NewLabelService(tx)
-	label, err := labelSvc.Get(row.Id.String)
+	label, err := GetLabel(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

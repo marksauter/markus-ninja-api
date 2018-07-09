@@ -1,11 +1,14 @@
 package repo
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -69,23 +72,22 @@ func (r *EVTPermit) VerifiedAt() (time.Time, error) {
 	return r.evt.VerifiedAt.Time, nil
 }
 
-func NewEVTRepo(svc *data.EVTService) *EVTRepo {
+func NewEVTRepo() *EVTRepo {
 	return &EVTRepo{
-		svc: svc,
+		load: loader.NewEVTLoader(),
 	}
 }
 
 type EVTRepo struct {
 	load  *loader.EVTLoader
 	perms *Permitter
-	svc   *data.EVTService
 }
 
 func (r *EVTRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewEVTLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.perms = p
 	return nil
 }
 
@@ -103,14 +105,21 @@ func (r *EVTRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *EVTRepo) Create(t *data.EVT) (*EVTPermit, error) {
+func (r *EVTRepo) Create(
+	ctx context.Context,
+	token *data.EVT,
+) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, t); err != nil {
+	if _, err := r.perms.Check(mytype.CreateAccess, token); err != nil {
 		return nil, err
 	}
-	evt, err := r.svc.Create(t)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	evt, err := data.CreateEVT(db, token)
 	if err != nil {
 		return nil, err
 	}
@@ -121,11 +130,15 @@ func (r *EVTRepo) Create(t *data.EVT) (*EVTPermit, error) {
 	return &EVTPermit{fieldPermFn, evt}, nil
 }
 
-func (r *EVTRepo) Get(emailId, token string) (*EVTPermit, error) {
+func (r *EVTRepo) Get(
+	ctx context.Context,
+	emailId,
+	token string,
+) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	evt, err := r.load.Get(emailId, token)
+	evt, err := r.load.Get(ctx, emailId, token)
 	if err != nil {
 		return nil, err
 	}

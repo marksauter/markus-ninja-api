@@ -13,11 +13,13 @@ import (
 )
 
 func UserAssets(svcs *service.Services) http.Handler {
-	userAssetsHandler := UserAssetsHandler{}
+	userAssetsHandler := UserAssetsHandler{svcs}
 	return middleware.CommonMiddleware.Then(userAssetsHandler)
 }
 
-type UserAssetsHandler struct{}
+type UserAssetsHandler struct {
+	svcs *service.Services
+}
 
 func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
@@ -37,16 +39,8 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	svc, err := service.NewStorageService()
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to start asset service")
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
 	key := routeVars["key"]
-	asset, err := svc.Get(uid, key)
+	asset, err := h.svcs.Storage.Get(uid, key)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get file")
 		response := myhttp.InternalServerErrorResponse(err.Error())

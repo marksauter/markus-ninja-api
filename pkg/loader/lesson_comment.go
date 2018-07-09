@@ -7,20 +7,44 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewLessonCommentLoader(svc *data.LessonCommentService) *LessonCommentLoader {
+func NewLessonCommentLoader() *LessonCommentLoader {
 	return &LessonCommentLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetLessonCommentFn(svc.Get)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						lessonComment, err := data.GetLessonComment(db, key.String())
+						results[i] = &dataloader.Result{Data: lessonComment, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type LessonCommentLoader struct {
-	svc *data.LessonCommentService
-
-	batchGet        *dataloader.Loader
-	batchGetByLogin *dataloader.Loader
+	batchGet *dataloader.Loader
 }
 
 func (r *LessonCommentLoader) Clear(id string) {
@@ -32,8 +56,10 @@ func (r *LessonCommentLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *LessonCommentLoader) Get(id string) (*data.LessonComment, error) {
-	ctx := context.Background()
+func (r *LessonCommentLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.LessonComment, error) {
 	lessonCommentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -46,8 +72,10 @@ func (r *LessonCommentLoader) Get(id string) (*data.LessonComment, error) {
 	return lessonComment, nil
 }
 
-func (r *LessonCommentLoader) GetMany(ids *[]string) ([]*data.LessonComment, []error) {
-	ctx := context.Background()
+func (r *LessonCommentLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.LessonComment, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -66,30 +94,4 @@ func (r *LessonCommentLoader) GetMany(ids *[]string) ([]*data.LessonComment, []e
 	}
 
 	return lessonComments, nil
-}
-
-func newBatchGetLessonCommentFn(
-	getter func(string) (*data.LessonComment, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				lessonComment, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: lessonComment, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

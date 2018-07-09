@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -18,8 +20,8 @@ func (r *deleteEmailPayloadResolver) DeletedEmailId() graphql.ID {
 	return graphql.ID(r.EmailId.String)
 }
 
-func (r *deleteEmailPayloadResolver) User() (*userResolver, error) {
-	user, err := r.Repos.User().Get(r.UserId.String)
+func (r *deleteEmailPayloadResolver) User(ctx context.Context) (*userResolver, error) {
+	user, err := r.Repos.User().Get(ctx, r.UserId.String)
 	if err != nil {
 		return nil, err
 	}

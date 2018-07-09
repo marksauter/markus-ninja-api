@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -83,23 +84,22 @@ func (r *NotificationPermit) UserId() (*mytype.OID, error) {
 	return &r.notification.UserId, nil
 }
 
-func NewNotificationRepo(svc *data.NotificationService) *NotificationRepo {
+func NewNotificationRepo() *NotificationRepo {
 	return &NotificationRepo{
-		svc: svc,
+		load: loader.NewNotificationLoader(),
 	}
 }
 
 type NotificationRepo struct {
-	load  *loader.NotificationLoader
-	perms *Permitter
-	svc   *data.NotificationService
+	load   *loader.NotificationLoader
+	permit *Permitter
 }
 
 func (r *NotificationRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewNotificationLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -131,14 +131,14 @@ func (r *NotificationRepo) Create(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, notification); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, notification); err != nil {
 		return nil, err
 	}
 	notification, err := r.svc.Create(notification)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notification)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (r *NotificationRepo) Get(id string) (*NotificationPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notification)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (r *NotificationRepo) GetByStudy(
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notifications[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +198,7 @@ func (r *NotificationRepo) GetByUser(
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, notifications[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +213,7 @@ func (r *NotificationRepo) Delete(n *data.Notification) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, n); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, n); err != nil {
 		return err
 	}
 	return r.svc.Delete(n.Id.String)
@@ -223,14 +223,14 @@ func (r *NotificationRepo) Update(n *data.Notification) (*NotificationPermit, er
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, n); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, n); err != nil {
 		return nil, err
 	}
 	study, err := r.svc.Update(n)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}

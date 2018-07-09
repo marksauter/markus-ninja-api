@@ -34,7 +34,7 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	Svcs *service.Services
+	Svc *service.AuthService
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
@@ -46,14 +46,14 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		payload, err := a.Svcs.Auth.ValidateJWT(token)
+		payload, err := a.Svc.ValidateJWT(token)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 
-		user, err := a.Svcs.User.GetCredentials(payload.Sub)
+		user, err := data.GetUserCredentials(db, payload.Sub)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)

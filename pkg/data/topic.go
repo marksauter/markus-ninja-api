@@ -22,25 +22,20 @@ type Topic struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-func NewTopicService(db Queryer) *TopicService {
-	return &TopicService{db}
-}
-
-type TopicService struct {
-	db Queryer
-}
-
 const countTopicByTopicableSQL = `
 	SELECT COUNT(*)
 	FROM topicable_topic
 	WHERE topicable_id = $1
 `
 
-func (s *TopicService) CountByTopicable(topicableId string) (int32, error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("Topic.CountByTopicable(topicable_id)")
+func CountTopicByTopicable(
+	db Queryer,
+	topicableId string,
+) (int32, error) {
+	mylog.Log.WithField("topicable_id", topicableId).Info("CountTopicByTopicable(topicable_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countTopicByTopicable",
 		countTopicByTopicableSQL,
 		topicableId,
@@ -51,8 +46,12 @@ func (s *TopicService) CountByTopicable(topicableId string) (int32, error) {
 	return n, err
 }
 
-func (s *TopicService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("Topic.CountBySearch(query)")
+func CountTopicBySearch(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountTopicBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -74,16 +73,21 @@ func (s *TopicService) CountBySearch(within *mytype.OID, query string) (n int32,
 
 	psName := preparedName("countTopicBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
 
-func (s *TopicService) get(name string, sql string, args ...interface{}) (*Topic, error) {
+func getTopic(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Topic, error) {
 	var row Topic
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Description,
 		&row.Id,
@@ -100,10 +104,15 @@ func (s *TopicService) get(name string, sql string, args ...interface{}) (*Topic
 	return &row, nil
 }
 
-func (s *TopicService) getMany(name string, sql string, args ...interface{}) ([]*Topic, error) {
+func getManyTopic(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Topic, error) {
 	var rows []*Topic
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -141,9 +150,12 @@ const getTopicByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *TopicService) Get(id string) (*Topic, error) {
-	mylog.Log.WithField("id", id).Info("Topic.Get(id)")
-	return s.get("getTopicById", getTopicByIdSQL, id)
+func GetTopic(
+	db Queryer,
+	id string,
+) (*Topic, error) {
+	mylog.Log.WithField("id", id).Info("GetTopic(id)")
+	return getTopic(db, "getTopicById", getTopicByIdSQL, id)
 }
 
 const getTopicNamesByTopicableSQL = `
@@ -154,15 +166,16 @@ const getTopicNamesByTopicableSQL = `
 	GROUP BY topicable_id
 `
 
-func (s *TopicService) GetNamesByTopicable(
+func GetNamesByTopicable(
+	db Queryer,
 	topicableId string,
 ) (names []string, err error) {
 	mylog.Log.WithField(
 		"topicable_id", topicableId,
-	).Info("Topic.GetNamesByTopicable(topicable_id)")
+	).Info("GetNamesByTopicable(topicable_id)")
 	topicNames := pgtype.TextArray{}
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"getTopicNamesByTopicable",
 		getTopicNamesByTopicableSQL,
 		topicableId,
@@ -178,13 +191,14 @@ func (s *TopicService) GetNamesByTopicable(
 	return
 }
 
-func (s *TopicService) GetByTopicable(
+func GetTopicByTopicable(
+	db Queryer,
 	topicableId string,
 	po *PageOptions,
 ) ([]*Topic, error) {
 	mylog.Log.WithField(
 		"topicable_id", topicableId,
-	).Info("Topic.GetByTopicable(topicable_id)")
+	).Info("GetTopicByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`topicable_id = ` + args.Append(topicableId)}
 
@@ -204,7 +218,7 @@ func (s *TopicService) GetByTopicable(
 
 	var rows []*Topic
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -242,15 +256,21 @@ const getTopicByNameSQL = `
 	WHERE LOWER(name) = LOWER($1)
 `
 
-func (s *TopicService) GetByName(name string) (*Topic, error) {
+func GetTopicByName(
+	db Queryer,
+	name string,
+) (*Topic, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"name": name,
-	}).Info("Topic.GetByName(user_id, name)")
-	return s.get("getTopicByName", getTopicByNameSQL, name)
+	}).Info("GetTopicByName(user_id, name)")
+	return getTopic(db, "getTopicByName", getTopicByNameSQL, name)
 }
 
-func (s *TopicService) Create(row *Topic) (*Topic, error) {
-	mylog.Log.Info("Topic.Create()")
+func CreateTopic(
+	db Queryer,
+	row *Topic,
+) (*Topic, error) {
+	mylog.Log.Info("CreateTopic()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -273,7 +293,7 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 		values = append(values, args.Append(nameTokens))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -309,18 +329,16 @@ func (s *TopicService) Create(row *Topic) (*Topic, error) {
 	}
 
 	if row.TopicableId.Status != pgtype.Undefined {
-		topicedSvc := NewTopicedService(tx)
 		topiced := &Topiced{}
 		topiced.TopicId.Set(&row.Id)
 		topiced.TopicableId.Set(&row.TopicableId)
-		_, err := topicedSvc.Connect(topiced)
+		_, err := ConnectTopiced(db, topiced)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	topicSvc := NewTopicService(tx)
-	topic, err := topicSvc.Get(row.Id.String)
+	topic, err := GetTopic(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -340,10 +358,12 @@ const refreshTopicSearchIndexSQL = `
 	SELECT refresh_mv_xxx('topic_search_index')
 `
 
-func (s *TopicService) RefreshSearchIndex() error {
-	mylog.Log.Info("Topic.RefreshSearchIndex()")
+func RefreshTopicSearchIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshTopicSearchIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshTopicSearchIndex",
 		refreshTopicSearchIndexSQL,
 	)
@@ -354,8 +374,12 @@ func (s *TopicService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *TopicService) Search(query string, po *PageOptions) ([]*Topic, error) {
-	mylog.Log.WithField("query", query).Info("Topic.Search(query)")
+func SearchTopic(
+	db Queryer,
+	query string,
+	po *PageOptions,
+) ([]*Topic, error) {
+	mylog.Log.WithField("query", query).Info("SearchTopic(query)")
 	selects := []string{
 		"created_at",
 		"description",
@@ -368,11 +392,14 @@ func (s *TopicService) Search(query string, po *PageOptions) ([]*Topic, error) {
 
 	psName := preparedName("searchTopicIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyTopic(db, psName, sql, args...)
 }
 
-func (s *TopicService) Update(row *Topic) (*Topic, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Topic.Update(id)")
+func UpdateTopic(
+	db Queryer,
+	row *Topic,
+) (*Topic, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateTopic(id)")
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -380,7 +407,7 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -405,8 +432,7 @@ func (s *TopicService) Update(row *Topic) (*Topic, error) {
 		return nil, ErrNotFound
 	}
 
-	topicSvc := NewTopicService(tx)
-	topic, err := topicSvc.Get(row.Id.String)
+	topic, err := GetTopic(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

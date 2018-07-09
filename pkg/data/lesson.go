@@ -26,24 +26,19 @@ type Lesson struct {
 	UserId      mytype.OID         `db:"user_id" permit:"create/read/update"`
 }
 
-func NewLessonService(db Queryer) *LessonService {
-	return &LessonService{db}
-}
-
-type LessonService struct {
-	db Queryer
-}
-
 const countLessonByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM lesson_enrolled
 	WHERE enrollee_id = $1
 `
 
-func (s *LessonService) CountByEnrollee(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByEnrollee(user_id)")
+func CountLessonByEnrollee(
+	db Queryer,
+	userId string,
+) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("CountLessonByEnrollee(user_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countLessonByEnrollee",
 		countLessonByEnrolleeSQL,
 		userId,
@@ -60,10 +55,13 @@ const countLessonByLabelSQL = `
 	WHERE label_id = $1
 `
 
-func (s *LessonService) CountByLabel(labelId string) (n int32, err error) {
-	mylog.Log.WithField("label_id", labelId).Info("Lesson.CountByLabel(label_id)")
+func CountLessonByLabel(
+	db Queryer,
+	labelId string,
+) (n int32, err error) {
+	mylog.Log.WithField("label_id", labelId).Info("CountLessonByLabel(label_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countLessonByLabel",
 		countLessonByLabelSQL,
 		labelId,
@@ -74,8 +72,12 @@ func (s *LessonService) CountByLabel(labelId string) (n int32, err error) {
 	return
 }
 
-func (s *LessonService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("Lesson.CountBySearch(query)")
+func CountLessonBySearch(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountLessonBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -97,7 +99,7 @@ func (s *LessonService) CountBySearch(within *mytype.OID, query string) (n int32
 
 	psName := preparedName("countLessonBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -110,13 +112,17 @@ const countLessonByStudySQL = `
 	WHERE user_id = $1 AND study_id = $2
 `
 
-func (s *LessonService) CountByStudy(userId, studyId string) (int32, error) {
+func CountLessonByStudy(
+	db Queryer,
+	userId,
+	studyId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("Lesson.CountByStudy(study_id)")
+	).Info("CountLessonByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLessonByStudy",
 		countLessonByStudySQL,
 		userId,
@@ -134,11 +140,14 @@ const countLessonByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *LessonService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.CountByUser(user_id)")
+func CountLessonByUser(
+	db Queryer,
+	userId string,
+) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountLessonByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLessonByUser",
 		countLessonByUserSQL,
 		userId,
@@ -149,9 +158,14 @@ func (s *LessonService) CountByUser(userId string) (int32, error) {
 	return n, err
 }
 
-func (s *LessonService) get(name string, sql string, args ...interface{}) (*Lesson, error) {
+func getLesson(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Lesson, error) {
 	var row Lesson
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,
@@ -172,10 +186,15 @@ func (s *LessonService) get(name string, sql string, args ...interface{}) (*Less
 	return &row, nil
 }
 
-func (s *LessonService) getMany(name string, sql string, args ...interface{}) ([]*Lesson, error) {
+func getManyLesson(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Lesson, error) {
 	var rows []*Lesson
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +240,12 @@ const getLessonByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonService) Get(id string) (*Lesson, error) {
-	mylog.Log.WithField("id", id).Info("Lesson.Get(id)")
-	return s.get("getLessonById", getLessonByIdSQL, id)
+func GetLesson(
+	db Queryer,
+	id string,
+) (*Lesson, error) {
+	mylog.Log.WithField("id", id).Info("GetLesson(id)")
+	return getLesson(db, "getLessonById", getLessonByIdSQL, id)
 }
 
 const getLessonByOwnerStudyAndNumberSQL = `
@@ -243,13 +265,15 @@ const getLessonByOwnerStudyAndNumberSQL = `
 	WHERE lesson.number = $3
 `
 
-func (s *LessonService) GetByOwnerStudyAndNumber(
+func GetLessonByOwnerStudyAndNumber(
+	db Queryer,
 	ownerLogin,
 	studyName string,
 	number int32,
 ) (*Lesson, error) {
-	mylog.Log.Info("Lesson.GetByOwnerStudyAndNumber()")
-	return s.get(
+	mylog.Log.Info("GetLessonByOwnerStudyAndNumber()")
+	return getLesson(
+		db,
 		"getLessonByOwnerStudyAndNumber",
 		getLessonByOwnerStudyAndNumberSQL,
 		ownerLogin,
@@ -258,11 +282,12 @@ func (s *LessonService) GetByOwnerStudyAndNumber(
 	)
 }
 
-func (s *LessonService) GetByEnrollee(
+func GetLessonByEnrollee(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetLessonByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollee_id = ` + args.Append(userId)}
 
@@ -285,7 +310,7 @@ func (s *LessonService) GetByEnrollee(
 
 	var rows []*Lesson
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -317,11 +342,12 @@ func (s *LessonService) GetByEnrollee(
 	return rows, nil
 }
 
-func (s *LessonService) GetByLabel(
+func GetLessonByLabel(
+	db Queryer,
 	labelId string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("label_id", labelId).Info("Lesson.GetByLabel(label_id)")
+	mylog.Log.WithField("label_id", labelId).Info("GetLessonByLabel(label_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`label_id = ` + args.Append(labelId),
@@ -346,7 +372,7 @@ func (s *LessonService) GetByLabel(
 
 	var rows []*Lesson
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -378,8 +404,12 @@ func (s *LessonService) GetByLabel(
 	return rows, nil
 }
 
-func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("Lesson.GetByUser(user_id)")
+func GetLessonByUser(
+	db Queryer,
+	userId string,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	mylog.Log.WithField("user_id", userId).Info("GetLessonByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -399,13 +429,18 @@ func (s *LessonService) GetByUser(userId string, po *PageOptions) ([]*Lesson, er
 
 	psName := preparedName("getLessonsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLesson(db, psName, sql, args...)
 }
 
-func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*Lesson, error) {
+func GetLessonByStudy(
+	db Queryer,
+	userId,
+	studyId string,
+	po *PageOptions,
+) ([]*Lesson, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("Lesson.GetByStudy(study_id)")
+	).Info("GetLessonByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`user_id = ` + args.Append(userId),
@@ -428,7 +463,7 @@ func (s *LessonService) GetByStudy(userId, studyId string, po *PageOptions) ([]*
 
 	psName := preparedName("getLessonsByStudy", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLesson(db, psName, sql, args...)
 }
 
 const getLessonByNumberSQL = `
@@ -446,12 +481,18 @@ const getLessonByNumberSQL = `
 	WHERE user_id = $1 AND study_id = $2 AND number = $3
 `
 
-func (s *LessonService) GetByNumber(userId, studyId string, number int32) (*Lesson, error) {
+func GetLessonByNumber(
+	db Queryer,
+	userId,
+	studyId string,
+	number int32,
+) (*Lesson, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"study_id": studyId,
 		"number":   number,
-	}).Info("Lesson.GetByNumber(studyId, number)")
-	return s.get(
+	}).Info("GetLessonByNumber(studyId, number)")
+	return getLesson(
+		db,
 		"getLessonByNumber",
 		getLessonByNumberSQL,
 		userId,
@@ -475,7 +516,8 @@ const batchGetLessonByNumberSQL = `
 	WHERE user_id = $1 AND study_id = $2 AND number = ANY($3)
 `
 
-func (s *LessonService) BatchGetByNumber(
+func BatchGetLessonByNumber(
+	db Queryer,
 	userId,
 	studyId string,
 	numbers []int32,
@@ -483,8 +525,9 @@ func (s *LessonService) BatchGetByNumber(
 	mylog.Log.WithFields(logrus.Fields{
 		"study_id": studyId,
 		"numbers":  numbers,
-	}).Info("Lesson.BatchGetByNumber(studyId, numbers)")
-	return s.getMany(
+	}).Info("BatchGetLessonByNumber(studyId, numbers)")
+	return getManyLesson(
+		db,
 		"batchGetLessonByNumber",
 		batchGetLessonByNumberSQL,
 		userId,
@@ -493,8 +536,11 @@ func (s *LessonService) BatchGetByNumber(
 	)
 }
 
-func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
-	mylog.Log.Info("Lesson.Create()")
+func CreateLesson(
+	db Queryer,
+	row *Lesson,
+) (*Lesson, error) {
+	mylog.Log.Info("CreateLesson()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
 	var columns, values []string
@@ -533,7 +579,7 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -565,8 +611,7 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		return nil, err
 	}
 
-	eventSvc := NewEventService(tx)
-	err = eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	err = ParseBodyForEvents(db, &row.UserId, &row.StudyId, &row.Id, &row.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -575,13 +620,12 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 	e.SourceId.Set(&row.StudyId)
 	e.TargetId.Set(&row.Id)
 	e.UserId.Set(&row.UserId)
-	_, err = eventSvc.Create(e)
+	_, err = CreateEvent(db, e)
 	if err != nil {
 		return nil, err
 	}
 
-	enrolledSvc := NewEnrolledService(tx)
-	enrolleds, err := enrolledSvc.GetByEnrollable(row.Id.String, nil)
+	enrolleds, err := GetEnrolledByEnrollable(db, row.Id.String, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -593,16 +637,14 @@ func (s *LessonService) Create(row *Lesson) (*Lesson, error) {
 		}
 	}
 
-	notificationSvc := NewNotificationService(tx)
 	notification := &Notification{}
 	notification.EventId.Set(&e.Id)
 	notification.StudyId.Set(&row.StudyId)
-	if err := notificationSvc.BatchCreate(notification, enrolls); err != nil {
+	if err := BatchCreateNotification(db, notification, enrolls); err != nil {
 		return nil, err
 	}
 
-	lessonSvc := NewLessonService(tx)
-	lesson, err := lessonSvc.Get(row.Id.String)
+	lesson, err := GetLesson(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -623,9 +665,12 @@ const deleteLessonSQl = `
 	WHERE id = $1
 `
 
-func (s *LessonService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Lesson.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteLesson", deleteLessonSQl, id)
+func DeleteLesson(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteLesson(id)")
+	commandTag, err := prepareExec(db, "deleteLesson", deleteLessonSQl, id)
 	if err != nil {
 		return err
 	}
@@ -640,10 +685,12 @@ const refreshLessonSearchIndexSQL = `
 	SELECT refresh_mv_xxx('lesson_search_index')
 `
 
-func (s *LessonService) RefreshSearchIndex() error {
-	mylog.Log.Info("Lesson.RefreshSearchIndex()")
+func RefreshLessonSearchIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshLessonSearchIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshLessonSearchIndex",
 		refreshLessonSearchIndexSQL,
 	)
@@ -654,8 +701,13 @@ func (s *LessonService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *LessonService) Search(within *mytype.OID, query string, po *PageOptions) ([]*Lesson, error) {
-	mylog.Log.WithField("query", query).Info("Lesson.Search(query)")
+func SearchLesson(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	mylog.Log.WithField("query", query).Info("SearchLesson(query)")
 	if within != nil {
 		if within.Type != "User" && within.Type != "Study" {
 			return nil, fmt.Errorf(
@@ -680,11 +732,14 @@ func (s *LessonService) Search(within *mytype.OID, query string, po *PageOptions
 
 	psName := preparedName("searchLessonIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLesson(db, psName, sql, args...)
 }
 
-func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Lesson.Update(id)")
+func UpdateLesson(
+	db Queryer,
+	row *Lesson,
+) (*Lesson, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateLesson(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
@@ -704,7 +759,7 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -729,16 +784,15 @@ func (s *LessonService) Update(row *Lesson) (*Lesson, error) {
 		return nil, ErrNotFound
 	}
 
-	eventSvc := NewEventService(tx)
-	eventSvc.ParseUpdatedBodyForEvents(
+	ParseUpdatedBodyForEvents(
+		db,
 		&row.UserId,
 		&row.StudyId,
 		&row.Id,
 		&row.Body,
 	)
 
-	lessonSvc := NewLessonService(tx)
-	lesson, err := lessonSvc.Get(row.Id.String)
+	lesson, err := GetLesson(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

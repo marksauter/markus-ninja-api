@@ -17,25 +17,20 @@ type Topiced struct {
 	TopicableId mytype.OID         `db:"topicable_id" permit:"read"`
 }
 
-func NewTopicedService(db Queryer) *TopicedService {
-	return &TopicedService{db}
-}
-
-type TopicedService struct {
-	db Queryer
-}
-
 const countTopicedByTopicSQL = `
 	SELECT COUNT(*)
 	FROM topiced
 	WHERE topic_id = $1
 `
 
-func (s *TopicedService) CountByTopic(topicId string) (n int32, err error) {
-	mylog.Log.WithField("topic_id", topicId).Info("Topiced.CountByTopic()")
+func CountTopicedByTopic(
+	db Queryer,
+	topicId string,
+) (n int32, err error) {
+	mylog.Log.WithField("topic_id", topicId).Info("CountTopicedByTopic()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countTopicedByTopic",
 		countTopicedByTopicSQL,
 		topicId,
@@ -52,11 +47,14 @@ const countTopicedByTopicableSQL = `
 	WHERE topicable_id = $1
 `
 
-func (s *TopicedService) CountByTopicable(topicableId string) (n int32, err error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("Topiced.CountByTopicable()")
+func CountTopicedByTopicable(
+	db Queryer,
+	topicableId string,
+) (n int32, err error) {
+	mylog.Log.WithField("topicable_id", topicableId).Info("CountTopicedByTopicable()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countTopicedByTopicable",
 		countTopicedByTopicableSQL,
 		topicableId,
@@ -67,13 +65,14 @@ func (s *TopicedService) CountByTopicable(topicableId string) (n int32, err erro
 	return
 }
 
-func (s *TopicedService) get(
+func getTopiced(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*Topiced, error) {
 	var row Topiced
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
 		&row.TopicId,
@@ -89,14 +88,15 @@ func (s *TopicedService) get(
 	return &row, nil
 }
 
-func (s *TopicedService) getMany(
+func getManyTopiced(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Topiced, error) {
 	var rows []*Topiced
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get topiceds")
 		return nil, err
@@ -133,12 +133,15 @@ const getTopicedSQL = `
 	WHERE id = $1
 `
 
-func (s *TopicedService) Get(id int32) (*Topiced, error) {
-	mylog.Log.WithField("id", id).Info("Topiced.Get(id)")
-	return s.get("getTopiced", getTopicedSQL, id)
+func GetTopiced(
+	db Queryer,
+	id int32,
+) (*Topiced, error) {
+	mylog.Log.WithField("id", id).Info("GetTopiced(id)")
+	return getTopiced(db, "getTopiced", getTopicedSQL, id)
 }
 
-const getTopicedForTopicableSQL = `
+const getTopicedByTopicableAndTopicSQL = `
 	SELECT
 		created_at,
 		id,
@@ -148,21 +151,27 @@ const getTopicedForTopicableSQL = `
 	WHERE topicable_id = $1 AND topic_id = $2
 `
 
-func (s *TopicedService) GetForTopicable(topicableId, topicId string) (*Topiced, error) {
-	mylog.Log.Info("Topiced.GetForTopicable()")
-	return s.get(
-		"getTopicedForTopicable",
-		getTopicedForTopicableSQL,
+func GetTopicedByTopicableAndTopic(
+	db Queryer,
+	topicableId,
+	topicId string,
+) (*Topiced, error) {
+	mylog.Log.Info("GetTopicedByTopicableAndTopic()")
+	return getTopiced(
+		db,
+		"getTopicedByTopicableAndTopic",
+		getTopicedByTopicableAndTopicSQL,
 		topicableId,
 		topicId,
 	)
 }
 
-func (s *TopicedService) GetByTopic(
+func GetTopicedByTopic(
+	db Queryer,
 	topicId string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("Topiced.GetByTopic(topic_id)")
+	mylog.Log.WithField("topic_id", topicId).Info("GetTopicedByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`topic_id = ` + args.Append(topicId)}
 
@@ -177,14 +186,15 @@ func (s *TopicedService) GetByTopic(
 
 	psName := preparedName("getTopicedsByTopic", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyTopiced(db, psName, sql, args...)
 }
 
-func (s *TopicedService) GetByTopicable(
+func GetTopicedByTopicable(
+	db Queryer,
 	topicableId string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("Topiced.GetByTopicable(topicable_id)")
+	mylog.Log.WithField("topicable_id", topicableId).Info("GetTopicedByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`topicable_id = ` + args.Append(topicableId)}
 
@@ -201,11 +211,14 @@ func (s *TopicedService) GetByTopicable(
 
 	psName := preparedName("getTopicedsByTopicable", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyTopiced(db, psName, sql, args...)
 }
 
-func (s *TopicedService) Connect(row *Topiced) (*Topiced, error) {
-	mylog.Log.Info("Topiced.Connect()")
+func ConnectTopiced(
+	db Queryer,
+	row *Topiced,
+) (*Topiced, error) {
+	mylog.Log.Info("ConnectTopiced()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -219,7 +232,7 @@ func (s *TopicedService) Connect(row *Topiced) (*Topiced, error) {
 		values = append(values, args.Append(&row.TopicableId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -266,8 +279,7 @@ func (s *TopicedService) Connect(row *Topiced) (*Topiced, error) {
 		return nil, err
 	}
 
-	topicedSvc := NewTopicedService(tx)
-	topiced, err := topicedSvc.Get(row.Id.Int)
+	topiced, err := GetTopiced(db, row.Id.Int)
 	if err != nil {
 		return nil, err
 	}
@@ -288,10 +300,13 @@ const disconnectTopicedSQL = `
 	WHERE id = $1
 `
 
-func (s *TopicedService) Disconnect(id int32) error {
-	mylog.Log.WithField("id", id).Info("Topiced.Disconnect(id)")
+func DisconnectTopiced(
+	db Queryer,
+	id int32,
+) error {
+	mylog.Log.WithField("id", id).Info("DisconnectTopiced(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectTopiced",
 		disconnectTopicedSQL,
 		id,
@@ -311,10 +326,14 @@ const disconnectTopicedFromTopicableSQL = `
 	WHERE topicable_id = $1 AND topic_id = $2
 `
 
-func (s *TopicedService) DisconnectFromTopicable(topicable_id, topic_id string) error {
-	mylog.Log.Info("Topiced.DisconnectFromTopicable()")
+func DisconnectTopicedFromTopicable(
+	db Queryer,
+	topicable_id,
+	topic_id string,
+) error {
+	mylog.Log.Info("DisconnectTopicedFromTopicable()")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectTopicedFromTopicable",
 		disconnectTopicedFromTopicableSQL,
 		topicable_id,

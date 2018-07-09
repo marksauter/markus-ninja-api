@@ -15,10 +15,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-func GraphQL(schema *graphql.Schema, svcs *service.Services, repos *repo.Repos) http.Handler {
-	authMiddleware := middleware.Authenticate{
-		Svcs: svcs,
-	}
+func GraphQL(schema *graphql.Schema, repos *repo.Repos, svcs *service.Services) http.Handler {
+	authMiddleware := middleware.Authenticate{svcs.Auth}
 	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,

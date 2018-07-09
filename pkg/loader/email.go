@@ -2,71 +2,12 @@ package loader
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
-)
-
-var GetEmail = createLoader(
-	func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				db, ok := myctx.QueryerFromContext(ctx)
-				if !ok {
-					results[i] = &dataloader.Result{Error: errors.New("queryer not found")}
-					return
-				}
-				email, err := data.GetEmail(db, key.String())
-				results[i] = &dataloader.Result{Data: email, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	},
-)
-
-var GetEmailByValue = createLoader(
-	func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				db, ok := myctx.QueryerFromContext(ctx)
-				if !ok {
-					results[i] = &dataloader.Result{Error: errors.New("queryer not found")}
-					return
-				}
-				email, err := data.GetEmailByValue(db, key.String())
-				results[i] = &dataloader.Result{Data: email, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	},
 )
 
 func NewEmailLoader() *EmailLoader {
@@ -86,7 +27,7 @@ func NewEmailLoader() *EmailLoader {
 						defer wg.Done()
 						db, ok := myctx.QueryerFromContext(ctx)
 						if !ok {
-							results[i] = &dataloader.Result{Error: errors.New("queryer not found")}
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
 						email, err := data.GetEmail(db, key.String())
@@ -114,7 +55,7 @@ func NewEmailLoader() *EmailLoader {
 						defer wg.Done()
 						db, ok := myctx.QueryerFromContext(ctx)
 						if !ok {
-							results[i] = &dataloader.Result{Error: errors.New("queryer not found")}
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
 						email, err := data.GetEmailByValue(db, key.String())
@@ -145,8 +86,10 @@ func (r *EmailLoader) ClearAll() {
 	r.batchGetByValue.ClearAll()
 }
 
-func (r *EmailLoader) Get(id string) (*data.Email, error) {
-	ctx := context.Background()
+func (r *EmailLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Email, error) {
 	emailData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -161,8 +104,10 @@ func (r *EmailLoader) Get(id string) (*data.Email, error) {
 	return email, nil
 }
 
-func (r *EmailLoader) GetByValue(value string) (*data.Email, error) {
-	ctx := context.Background()
+func (r *EmailLoader) GetByValue(
+	ctx context.Context,
+	value string,
+) (*data.Email, error) {
 	emailData, err := r.batchGetByValue.Load(ctx, dataloader.StringKey(value))()
 	if err != nil {
 		return nil, err

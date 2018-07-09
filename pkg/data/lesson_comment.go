@@ -20,31 +20,24 @@ type LessonComment struct {
 	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func NewLessonCommentService(db Queryer) *LessonCommentService {
-	return &LessonCommentService{db}
-}
-
-type LessonCommentService struct {
-	db Queryer
-}
-
 const countLessonCommentByLessonSQL = `
 	SELECT COUNT(*)
 	FROM lesson_comment
 	WHERE user_id = $1 AND study_id = $2 AND lesson_id = $3
 `
 
-func (s *LessonCommentService) CountByLesson(
+func CountLessonCommentByLesson(
+	db Queryer,
 	userId,
 	studyId,
 	lessonId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"lesson_id", lessonId,
-	).Info("LessonComment.CountByLesson(user_id, study_id, lesson_id)")
+	).Info("CountLessonCommentByLesson(user_id, study_id, lesson_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLessonCommentByLesson",
 		countLessonCommentByLessonSQL,
 		userId,
@@ -63,16 +56,17 @@ const countLessonCommentByStudySQL = `
 	WHERE user_id = $1 AND study_id = $2
 `
 
-func (s *LessonCommentService) CountByStudy(
+func CountLessonCommentByStudy(
+	db Queryer,
 	userId,
 	studyId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("LessonComment.CountByStudy(user_id, study_id)")
+	).Info("CountLessonCommentByStudy(user_id, study_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLessonCommentByStudy",
 		countLessonCommentByStudySQL,
 		userId,
@@ -90,13 +84,16 @@ const countLessonCommentByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *LessonCommentService) CountByUser(userId string) (int32, error) {
+func CountLessonCommentByUser(
+	db Queryer,
+	userId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"user_id", userId,
-	).Info("LessonComment.CountByUser(user_id)")
+	).Info("CountLessonCommentByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countLessonCommentByUser",
 		countLessonCommentByUserSQL,
 		userId,
@@ -107,9 +104,14 @@ func (s *LessonCommentService) CountByUser(userId string) (int32, error) {
 	return n, err
 }
 
-func (s *LessonCommentService) get(name string, sql string, args ...interface{}) (*LessonComment, error) {
+func getLessonComment(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*LessonComment, error) {
 	var row LessonComment
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,
@@ -129,10 +131,15 @@ func (s *LessonCommentService) get(name string, sql string, args ...interface{})
 	return &row, nil
 }
 
-func (s *LessonCommentService) getMany(name string, sql string, args ...interface{}) ([]*LessonComment, error) {
+func getManyLessonComment(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*LessonComment, error) {
 	var rows []*LessonComment
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,12 +183,16 @@ const getLessonCommentByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonCommentService) Get(id string) (*LessonComment, error) {
-	mylog.Log.WithField("id", id).Info("LessonComment.Get(id)")
-	return s.get("getLessonCommentById", getLessonCommentByIdSQL, id)
+func GetLessonComment(
+	db Queryer,
+	id string,
+) (*LessonComment, error) {
+	mylog.Log.WithField("id", id).Info("GetLessonComment(id)")
+	return getLessonComment(db, "getLessonCommentById", getLessonCommentByIdSQL, id)
 }
 
-func (s *LessonCommentService) GetByLesson(
+func GetLessonCommentByLesson(
+	db Queryer,
 	userId,
 	studyId,
 	lessonId string,
@@ -189,7 +200,7 @@ func (s *LessonCommentService) GetByLesson(
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"lesson_id", lessonId,
-	).Info("LessonComment.GetByLesson(lesson_id)")
+	).Info("GetLessonCommentByLesson(lesson_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`user_id = ` + args.Append(userId),
@@ -212,17 +223,18 @@ func (s *LessonCommentService) GetByLesson(
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLessonComment(db, psName, sql, args...)
 }
 
-func (s *LessonCommentService) GetByStudy(
+func GetLessonCommentByStudy(
+	db Queryer,
 	userId,
 	studyId string,
 	po *PageOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("LessonComment.GetByStudy(study_id)")
+	).Info("GetLessonCommentByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`user_id = ` + args.Append(userId),
@@ -244,16 +256,17 @@ func (s *LessonCommentService) GetByStudy(
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLessonComment(db, psName, sql, args...)
 }
 
-func (s *LessonCommentService) GetByUser(
+func GetLessonCommentByUser(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"user_id", userId,
-	).Info("LessonComment.GetByUser(user_id)")
+	).Info("GetLessonCommentByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -272,11 +285,14 @@ func (s *LessonCommentService) GetByUser(
 
 	psName := preparedName("getLessonCommentsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLessonComment(db, psName, sql, args...)
 }
 
-func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error) {
-	mylog.Log.Info("LessonComment.Create()")
+func CreateLessonComment(
+	db Queryer,
+	row *LessonComment,
+) (*LessonComment, error) {
+	mylog.Log.Info("CreateLessonComment()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -307,7 +323,7 @@ func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -339,20 +355,21 @@ func (s *LessonCommentService) Create(row *LessonComment) (*LessonComment, error
 		return nil, err
 	}
 
-	eventSvc := NewEventService(tx)
-	eventSvc.ParseBodyForEvents(&row.UserId, &row.StudyId, &row.Id, &row.Body)
+	err = ParseBodyForEvents(db, &row.UserId, &row.StudyId, &row.Id, &row.Body)
+	if err != nil {
+		return nil, err
+	}
 	e := &Event{}
-	e.Action.Set(CommentEvent)
+	e.Action.Set(CommentedEvent)
 	e.SourceId.Set(&row.Id)
 	e.TargetId.Set(&row.LessonId)
 	e.UserId.Set(&row.UserId)
-	_, err = eventSvc.Create(e)
+	_, err = CreateEvent(db, e)
 	if err != nil {
 		return nil, err
 	}
 
-	lessonCommentSvc := NewLessonCommentService(tx)
-	lessonComment, err := lessonCommentSvc.Get(row.Id.String)
+	lessonComment, err := GetLessonComment(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -373,10 +390,13 @@ const deleteLessonCommentSQL = `
 	WHERE id = $1
 `
 
-func (s *LessonCommentService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("LessonComment.Delete(id)")
+func DeleteLessonComment(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteLessonComment(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"deleteLessonComment",
 		deleteLessonCommentSQL,
 		id,
@@ -391,8 +411,11 @@ func (s *LessonCommentService) Delete(id string) error {
 	return nil
 }
 
-func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("LessonComment.Update(id)")
+func UpdateLessonComment(
+	db Queryer,
+	row *LessonComment,
+) (*LessonComment, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateLessonComment(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -403,7 +426,7 @@ func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -427,8 +450,7 @@ func (s *LessonCommentService) Update(row *LessonComment) (*LessonComment, error
 		return nil, ErrNotFound
 	}
 
-	lessonCommentSvc := NewLessonCommentService(tx)
-	lessonComment, err := lessonCommentSvc.Get(row.Id.String)
+	lessonComment, err := GetLessonComment(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

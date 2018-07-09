@@ -17,25 +17,20 @@ type Labeled struct {
 	LabelableId mytype.OID         `db:"labelable_id" permit:"read"`
 }
 
-func NewLabeledService(db Queryer) *LabeledService {
-	return &LabeledService{db}
-}
-
-type LabeledService struct {
-	db Queryer
-}
-
 const countLabeledByLabelSQL = `
 	SELECT COUNT(*)
 	FROM labeled
 	WHERE label_id = $1
 `
 
-func (s *LabeledService) CountByLabel(labelId string) (n int32, err error) {
-	mylog.Log.WithField("label_id", labelId).Info("Labeled.CountByLabel()")
+func CountLabeledByLabel(
+	db Queryer,
+	labelId string,
+) (n int32, err error) {
+	mylog.Log.WithField("label_id", labelId).Info("CountLabeledByLabel()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countLabeledByLabel",
 		countLabeledByLabelSQL,
 		labelId,
@@ -52,11 +47,14 @@ const countLabeledByLabelableSQL = `
 	WHERE labelable_id = $1
 `
 
-func (s *LabeledService) CountByLabelable(labelableId string) (n int32, err error) {
-	mylog.Log.WithField("labelable_id", labelableId).Info("Labeled.CountByLabelable()")
+func CountLabeledByLabelable(
+	db Queryer,
+	labelableId string,
+) (n int32, err error) {
+	mylog.Log.WithField("labelable_id", labelableId).Info("CountLabeledByLabelable()")
 
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countLabeledByLabelable",
 		countLabeledByLabelableSQL,
 		labelableId,
@@ -67,13 +65,14 @@ func (s *LabeledService) CountByLabelable(labelableId string) (n int32, err erro
 	return
 }
 
-func (s *LabeledService) get(
+func getLabeled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*Labeled, error) {
 	var row Labeled
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
 		&row.LabelId,
@@ -89,14 +88,15 @@ func (s *LabeledService) get(
 	return &row, nil
 }
 
-func (s *LabeledService) getMany(
+func getManyLabeled(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Labeled, error) {
 	var rows []*Labeled
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get labeleds")
 		return nil, err
@@ -133,12 +133,15 @@ const getLabeledSQL = `
 	WHERE id = $1
 `
 
-func (s *LabeledService) Get(id int32) (*Labeled, error) {
-	mylog.Log.WithField("id", id).Info("Labeled.Get(id)")
-	return s.get("getLabeled", getLabeledSQL, id)
+func GetLabeled(
+	db Queryer,
+	id int32,
+) (*Labeled, error) {
+	mylog.Log.WithField("id", id).Info("GetLabeled(id)")
+	return getLabeled(db, "getLabeled", getLabeledSQL, id)
 }
 
-const getLabeledForLabelableSQL = `
+const getLabeledByLabelableAndLabelSQL = `
 	SELECT
 		created_at,
 		id,
@@ -148,21 +151,27 @@ const getLabeledForLabelableSQL = `
 	WHERE labelable_id = $1 AND label_id = $2
 `
 
-func (s *LabeledService) GetForLabelable(labelableId, labelId string) (*Labeled, error) {
-	mylog.Log.Info("Labeled.GetForLabelable()")
-	return s.get(
-		"getLabeledForLabelable",
-		getLabeledForLabelableSQL,
+func GetLabeledByLabelableAndLabel(
+	db Queryer,
+	labelableId,
+	labelId string,
+) (*Labeled, error) {
+	mylog.Log.Info("GetLabeledByLabelableAndLabel()")
+	return getLabeled(
+		db,
+		"getLabeledByLabelableAndLabel",
+		getLabeledByLabelableAndLabelSQL,
 		labelableId,
 		labelId,
 	)
 }
 
-func (s *LabeledService) GetByLabel(
+func GetLabeledByLabel(
+	db Queryer,
 	labelId string,
 	po *PageOptions,
 ) ([]*Labeled, error) {
-	mylog.Log.WithField("label_id", labelId).Info("Labeled.GetByLabel(label_id)")
+	mylog.Log.WithField("label_id", labelId).Info("GetLabeledByLabel(label_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`label_id = ` + args.Append(labelId)}
 
@@ -177,14 +186,15 @@ func (s *LabeledService) GetByLabel(
 
 	psName := preparedName("getLabeledsByLabel", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLabeled(db, psName, sql, args...)
 }
 
-func (s *LabeledService) GetByLabelable(
+func GetLabeledByLabelable(
+	db Queryer,
 	labelableId string,
 	po *PageOptions,
 ) ([]*Labeled, error) {
-	mylog.Log.WithField("labelable_id", labelableId).Info("Labeled.GetByLabelable(labelable_id)")
+	mylog.Log.WithField("labelable_id", labelableId).Info("GetLabeledByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`labelable_id = ` + args.Append(labelableId)}
 
@@ -201,11 +211,14 @@ func (s *LabeledService) GetByLabelable(
 
 	psName := preparedName("getLabeledsByLabelable", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyLabeled(db, psName, sql, args...)
 }
 
-func (s *LabeledService) Connect(row *Labeled) (*Labeled, error) {
-	mylog.Log.Info("Labeled.Connect()")
+func ConnectLabeled(
+	db Queryer,
+	row *Labeled,
+) (*Labeled, error) {
+	mylog.Log.Info("ConnectLabeled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -219,7 +232,7 @@ func (s *LabeledService) Connect(row *Labeled) (*Labeled, error) {
 		values = append(values, args.Append(&row.LabelableId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -266,8 +279,7 @@ func (s *LabeledService) Connect(row *Labeled) (*Labeled, error) {
 		return nil, err
 	}
 
-	labeledSvc := NewLabeledService(tx)
-	labeled, err := labeledSvc.Get(row.Id.Int)
+	labeled, err := GetLabeled(db, row.Id.Int)
 	if err != nil {
 		return nil, err
 	}
@@ -283,11 +295,12 @@ func (s *LabeledService) Connect(row *Labeled) (*Labeled, error) {
 	return labeled, nil
 }
 
-func (s *LabeledService) BatchCreate(
+func BatchConnectLabeled(
+	db Queryer,
 	src *Labeled,
 	labelableIds []*mytype.OID,
 ) error {
-	mylog.Log.Info("Labeled.BatchCreate()")
+	mylog.Log.Info("BatchConnectLabeled()")
 
 	n := len(labelableIds)
 	lessonLabeleds := make([][]interface{}, 0, n)
@@ -307,7 +320,7 @@ func (s *LabeledService) BatchCreate(
 		}
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -358,10 +371,13 @@ const disconnectLabeledSQL = `
 	WHERE id = $1
 `
 
-func (s *LabeledService) Disconnect(id int32) error {
-	mylog.Log.WithField("id", id).Info("Labeled.Disconnect(id)")
+func DisconnectLabeled(
+	db Queryer,
+	id int32,
+) error {
+	mylog.Log.WithField("id", id).Info("DisconnectLabeled(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectLabeled",
 		disconnectLabeledSQL,
 		id,
@@ -381,10 +397,14 @@ const disconnectLabeledFromLabelableSQL = `
 	WHERE labelable_id = $1 AND label_id = $2
 `
 
-func (s *LabeledService) DisconnectFromLabelable(labelable_id, label_id string) error {
-	mylog.Log.Info("Labeled.DisconnectFromLabelable()")
+func DisconnectLabeledFromLabelable(
+	db Queryer,
+	labelable_id,
+	label_id string,
+) error {
+	mylog.Log.Info("DisconnectLabeledFromLabelable()")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"disconnectLabeledFromLabelable",
 		disconnectLabeledFromLabelableSQL,
 		labelable_id,

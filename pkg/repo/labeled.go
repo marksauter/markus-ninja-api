@@ -59,23 +59,22 @@ func (r *LabeledPermit) LabelableId() (*mytype.OID, error) {
 	return &r.labeled.LabelableId, nil
 }
 
-func NewLabeledRepo(svc *data.LabeledService) *LabeledRepo {
+func NewLabeledRepo() *LabeledRepo {
 	return &LabeledRepo{
-		svc: svc,
+		load: loader.NewLabeledLoader(),
 	}
 }
 
 type LabeledRepo struct {
-	load  *loader.LabeledLoader
-	perms *Permitter
-	svc   *data.LabeledService
+	load   *loader.LabeledLoader
+	permit *Permitter
 }
 
 func (r *LabeledRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewLabeledLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -109,14 +108,14 @@ func (r *LabeledRepo) Connect(labeled *data.Labeled) (*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.ConnectAccess, labeled); err != nil {
+	if _, err := r.permit.Check(mytype.ConnectAccess, labeled); err != nil {
 		return nil, err
 	}
 	labeled, err := r.svc.Connect(labeled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeled)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +129,7 @@ func (r *LabeledRepo) BatchConnect(
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.ConnectAccess, labeled); err != nil {
+	if _, err := r.permit.Check(mytype.ConnectAccess, labeled); err != nil {
 		return err
 	}
 	return r.svc.BatchCreate(labeled, labelableIds)
@@ -158,7 +157,7 @@ func (r *LabeledRepo) Get(l *data.Labeled) (*LabeledPermit, error) {
 			"must include either labeled `id` or `labelable_id` and `label_id` to get an labeled",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeled)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, labeled)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func (r *LabeledRepo) GetByLabel(
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeleds[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, labeleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +201,7 @@ func (r *LabeledRepo) GetByLabelable(
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labeleds[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, labeleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +216,7 @@ func (r *LabeledRepo) Disconnect(l *data.Labeled) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DisconnectAccess, l); err != nil {
+	if _, err := r.permit.Check(mytype.DisconnectAccess, l); err != nil {
 		return err
 	}
 	if l.Id.Status != pgtype.Undefined {

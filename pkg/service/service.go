@@ -1,34 +1,17 @@
 package service
 
 import (
-	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 )
 
 type Services struct {
-	Auth          *AuthService
-	Enrolled      *data.EnrolledService
-	Event         *data.EventService
-	EVT           *data.EVTService
-	Label         *data.LabelService
-	Labeled       *data.LabeledService
-	Lesson        *data.LessonService
-	LessonComment *data.LessonCommentService
-	Mail          *MailService
-	Notification  *data.NotificationService
-	Perm          *data.PermissionService
-	PRT           *data.PRTService
-	Role          *data.RoleService
-	Storage       *StorageService
-	Study         *data.StudyService
-	Topic         *data.TopicService
-	Topiced       *data.TopicedService
-	User          *data.UserService
-	UserAsset     *data.UserAssetService
+	Auth    *AuthService
+	Mail    *MailService
+	Storage *StorageService
 }
 
-func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
+func NewServices(conf *myconf.Config) (*Services, error) {
 	authConfig := &AuthServiceConfig{
 		KeyId: conf.AuthKeyId,
 	}
@@ -42,24 +25,8 @@ func NewServices(conf *myconf.Config, db data.Queryer) (*Services, error) {
 		return nil, err
 	}
 	return &Services{
-		Auth:          NewAuthService(myaws.NewKMS(), authConfig),
-		Enrolled:      data.NewEnrolledService(db),
-		Event:         data.NewEventService(db),
-		EVT:           data.NewEVTService(db),
-		Label:         data.NewLabelService(db),
-		Labeled:       data.NewLabeledService(db),
-		Lesson:        data.NewLessonService(db),
-		LessonComment: data.NewLessonCommentService(db),
-		Mail:          NewMailService(myaws.NewSES(), mailConfig),
-		Notification:  data.NewNotificationService(db),
-		Perm:          data.NewPermissionService(db),
-		PRT:           data.NewPRTService(db),
-		Role:          data.NewRoleService(db),
-		Storage:       storageSvc,
-		Study:         data.NewStudyService(db),
-		Topic:         data.NewTopicService(db),
-		Topiced:       data.NewTopicedService(db),
-		User:          data.NewUserService(db),
-		UserAsset:     data.NewUserAssetService(db),
+		Auth:    NewAuthService(myaws.NewKMS(), authConfig),
+		Mail:    NewMailService(myaws.NewSES(), mailConfig),
+		Storage: storageSvc,
 	}, nil
 }

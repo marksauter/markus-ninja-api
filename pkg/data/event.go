@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	CreateEvent    = "created"
-	CommentEvent   = "commented"
-	DeleteEvent    = "deleted"
-	DismissEvent   = "dismissed"
-	EnrollEvent    = "enrolled"
-	MentionEvent   = "mentioned"
-	ReferenceEvent = "referenced"
+	CreatedEvent    = "created"
+	CommentedEvent  = "commented"
+	DeletedEvent    = "deleted"
+	DismissedEvent  = "dismissed"
+	EnrolledEvent   = "enrolled"
+	MentionedEvent  = "mentioned"
+	ReferencedEvent = "referenced"
 )
 
 type Event struct {
@@ -27,14 +27,6 @@ type Event struct {
 	SourceId  mytype.OID         `db:"source_id" permit:"create/read"`
 	TargetId  mytype.OID         `db:"target_id" permit:"create/read"`
 	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
-}
-
-func NewEventService(db Queryer) *EventService {
-	return &EventService{db}
-}
-
-type EventService struct {
-	db Queryer
 }
 
 type EventFilterOption int
@@ -59,33 +51,33 @@ const (
 func (src EventFilterOption) String() string {
 	switch src {
 	case FilterCreateEvents:
-		return `action != '` + CreateEvent + `'`
+		return `action != '` + CreatedEvent + `'`
 	case FilterCommentEvents:
-		return `action != '` + CommentEvent + `'`
+		return `action != '` + CommentedEvent + `'`
 	case FilterDeleteEvents:
-		return `action != '` + DeleteEvent + `'`
+		return `action != '` + DeletedEvent + `'`
 	case FilterDismissEvents:
-		return `action != '` + DismissEvent + `'`
+		return `action != '` + DismissedEvent + `'`
 	case FilterEnrollEvents:
-		return `action != '` + EnrollEvent + `'`
+		return `action != '` + EnrolledEvent + `'`
 	case FilterMentionEvents:
-		return `action != '` + MentionEvent + `'`
+		return `action != '` + MentionedEvent + `'`
 	case FilterReferenceEvents:
-		return `action != '` + ReferenceEvent + `'`
+		return `action != '` + ReferencedEvent + `'`
 	case GetCreateEvents:
-		return `action = '` + CreateEvent + `'`
+		return `action = '` + CreatedEvent + `'`
 	case GetCommentEvents:
-		return `action = '` + CommentEvent + `'`
+		return `action = '` + CommentedEvent + `'`
 	case GetDeleteEvents:
-		return `action = '` + DeleteEvent + `'`
+		return `action = '` + DeletedEvent + `'`
 	case GetDismissEvents:
-		return `action = '` + DismissEvent + `'`
+		return `action = '` + DismissedEvent + `'`
 	case GetEnrollEvents:
-		return `action = '` + EnrollEvent + `'`
+		return `action = '` + EnrolledEvent + `'`
 	case GetMentionEvents:
-		return `action = '` + MentionEvent + `'`
+		return `action = '` + MentionedEvent + `'`
 	case GetReferenceEvents:
-		return `action = '` + ReferenceEvent + `'`
+		return `action = '` + ReferencedEvent + `'`
 	default:
 		return ""
 	}
@@ -97,11 +89,12 @@ const countEventBySourceSQL = `
 	WHERE source_id = $1
 `
 
-func (s *EventService) CountBySource(
+func CountEventBySource(
+	db Queryer,
 	sourceId string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("source_id", sourceId).Info("Event.CountBySource()")
+	mylog.Log.WithField("source_id", sourceId).Info("CountEventBySource()")
 
 	ands := make([]string, len(opts))
 	for i, o := range opts {
@@ -112,7 +105,7 @@ func (s *EventService) CountBySource(
 
 	psName := preparedName("countEventBySource", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, sourceId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, sourceId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -125,11 +118,12 @@ const countEventByTargetSQL = `
 	WHERE target_id = $1
 `
 
-func (s *EventService) CountByTarget(
+func CountEventByTarget(
+	db Queryer,
 	targetId string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("target_id", targetId).Info("Event.CountByTarget()")
+	mylog.Log.WithField("target_id", targetId).Info("CountEventByTarget()")
 
 	ands := make([]string, len(opts))
 	for i, o := range opts {
@@ -140,20 +134,21 @@ func (s *EventService) CountByTarget(
 
 	psName := preparedName("countEventByTarget", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, targetId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, targetId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
 
-func (s *EventService) get(
+func getEvent(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*Event, error) {
 	var row Event
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Action,
 		&row.CreatedAt,
 		&row.Id,
@@ -171,14 +166,15 @@ func (s *EventService) get(
 	return &row, nil
 }
 
-func (s *EventService) getMany(
+func getManyEvent(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*Event, error) {
 	var rows []*Event
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get events")
 		return nil, err
@@ -219,17 +215,21 @@ const getEventSQL = `
 	WHERE id = $1
 `
 
-func (s *EventService) Get(id string) (*Event, error) {
-	mylog.Log.WithField("id", id).Info("Event.Get(id)")
-	return s.get("getEvent", getEventSQL, id)
+func GetEvent(
+	db Queryer,
+	id string,
+) (*Event, error) {
+	mylog.Log.WithField("id", id).Info("GetEvent(id)")
+	return getEvent(db, "getEvent", getEventSQL, id)
 }
 
-func (s *EventService) GetBySource(
+func GetEventBySource(
+	db Queryer,
 	sourceId string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("source_id", sourceId).Info("Event.GetBySource(source_id)")
+	mylog.Log.WithField("source_id", sourceId).Info("GetEventBySource(source_id)")
 	ands := make([]string, len(opts))
 	for i, o := range opts {
 		ands[i] = o.String()
@@ -253,15 +253,16 @@ func (s *EventService) GetBySource(
 
 	psName := preparedName("getEventsBySource", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyEvent(db, psName, sql, args...)
 }
 
-func (s *EventService) GetByTarget(
+func GetEventByTarget(
+	db Queryer,
 	targetId string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("target_id", targetId).Info("Event.GetByTarget(target_id)")
+	mylog.Log.WithField("target_id", targetId).Info("GetEventByTarget(target_id)")
 	ands := make([]string, len(opts))
 	for i, o := range opts {
 		ands[i] = o.String()
@@ -287,11 +288,14 @@ func (s *EventService) GetByTarget(
 
 	psName := preparedName("getEventsByTarget", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyEvent(db, psName, sql, args...)
 }
 
-func (s *EventService) Create(row *Event) (*Event, error) {
-	mylog.Log.Info("Event.Create()")
+func CreateEvent(
+	db Queryer,
+	row *Event,
+) (*Event, error) {
+	mylog.Log.Info("CreateEvent()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -314,7 +318,7 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -375,8 +379,7 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 		return nil, err
 	}
 
-	eventSvc := NewEventService(tx)
-	event, err := eventSvc.Get(row.Id.String)
+	event, err := GetEvent(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -392,11 +395,12 @@ func (s *EventService) Create(row *Event) (*Event, error) {
 	return event, nil
 }
 
-func (s *EventService) BatchCreate(
+func BatchCreateEvent(
+	db Queryer,
 	src *Event,
 	targetIds []*mytype.OID,
 ) error {
-	mylog.Log.Info("Event.BatchCreate()")
+	mylog.Log.Info("BatchCreateEvent()")
 
 	n := len(targetIds)
 	lessonEvents := make([][]interface{}, 0, n)
@@ -423,7 +427,7 @@ func (s *EventService) BatchCreate(
 		}
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -539,10 +543,13 @@ const deleteUserEventSQL = `
 	WHERE id = $1
 `
 
-func (s *EventService) Delete(id *mytype.OID) error {
-	mylog.Log.WithField("id", id).Info("Event.Delete(id)")
+func DeleteEvent(
+	db Queryer,
+	id *mytype.OID,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteEvent(id)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"deleteEvent",
 		deleteUserEventSQL,
 		id,
@@ -557,13 +564,14 @@ func (s *EventService) Delete(id *mytype.OID) error {
 	return nil
 }
 
-func (s *EventService) ParseBodyForEvents(
+func ParseBodyForEvents(
+	db Queryer,
 	userId,
 	studyId,
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -571,9 +579,6 @@ func (s *EventService) ParseBodyForEvents(
 	if newTx {
 		defer RollbackTransaction(tx)
 	}
-
-	lessonSvc := NewLessonService(tx)
-	eventSvc := NewEventService(tx)
 
 	lessonNumberEvents, err := body.NumberRefs()
 	if err != nil {
@@ -589,7 +594,8 @@ func (s *EventService) ParseBodyForEvents(
 	event.SourceId.Set(sourceId)
 	event.UserId.Set(userId)
 	if len(lessonNumberEvents) > 0 {
-		lessons, err := lessonSvc.BatchGetByNumber(
+		lessons, err := BatchGetLessonByNumber(
+			tx,
 			userId.String,
 			studyId.String,
 			lessonNumberEvents,
@@ -601,15 +607,15 @@ func (s *EventService) ParseBodyForEvents(
 		for i, l := range lessons {
 			lessonIds[i] = &l.Id
 		}
-		event.Action.Set(ReferenceEvent)
-		err = eventSvc.BatchCreate(event, lessonIds)
+		event.Action.Set(ReferencedEvent)
+		err = BatchCreateEvent(db, event, lessonIds)
 		if err != nil {
 			return err
 		}
 	}
 	if len(userEvents) > 0 {
-		userSvc := NewUserService(tx)
-		users, err := userSvc.BatchGetByLogin(
+		users, err := BatchGetUserByLogin(
+			db,
 			userEvents,
 		)
 		if err != nil {
@@ -619,8 +625,8 @@ func (s *EventService) ParseBodyForEvents(
 		for i, u := range users {
 			userIds[i] = &u.Id
 		}
-		event.Action.Set(MentionEvent)
-		err = eventSvc.BatchCreate(event, userIds)
+		event.Action.Set(MentionedEvent)
+		err = BatchCreateEvent(db, event, userIds)
 		if err != nil {
 			return err
 		}
@@ -637,13 +643,14 @@ func (s *EventService) ParseBodyForEvents(
 	return nil
 }
 
-func (s *EventService) ParseUpdatedBodyForEvents(
+func ParseUpdatedBodyForEvents(
+	db Queryer,
 	userId,
 	studyId,
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -652,12 +659,9 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 		defer RollbackTransaction(tx)
 	}
 
-	lessonSvc := NewLessonService(tx)
-	eventSvc := NewEventService(tx)
-
 	newEvents := make(map[string]struct{})
 	oldEvents := make(map[string]struct{})
-	events, err := eventSvc.GetBySource(sourceId.String, nil)
+	events, err := GetEventBySource(db, sourceId.String, nil)
 	if err != nil {
 		return err
 	}
@@ -670,7 +674,8 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 		return err
 	}
 	if len(lessonNumberEvents) > 0 {
-		lessons, err := lessonSvc.BatchGetByNumber(
+		lessons, err := BatchGetLessonByNumber(
+			db,
 			userId.String,
 			studyId.String,
 			lessonNumberEvents,
@@ -682,11 +687,11 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 			newEvents[l.Id.String] = struct{}{}
 			if _, prs := oldEvents[l.Id.String]; !prs {
 				event := &Event{}
-				event.Action.Set(ReferenceEvent)
+				event.Action.Set(ReferencedEvent)
 				event.TargetId.Set(l.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event)
+				_, err = CreateEvent(db, event)
 				if err != nil {
 					return err
 				}
@@ -700,8 +705,8 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 	//   return err
 	// }
 	if len(userEvents) > 0 {
-		userSvc := NewUserService(tx)
-		users, err := userSvc.BatchGetByLogin(
+		users, err := BatchGetUserByLogin(
+			db,
 			userEvents,
 		)
 		if err != nil {
@@ -711,11 +716,11 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 			newEvents[u.Id.String] = struct{}{}
 			if _, prs := oldEvents[u.Id.String]; !prs {
 				event := &Event{}
-				event.Action.Set(MentionEvent)
+				event.Action.Set(MentionedEvent)
 				event.TargetId.Set(u.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = eventSvc.Create(event)
+				_, err = CreateEvent(db, event)
 				if err != nil {
 					return err
 				}
@@ -724,7 +729,7 @@ func (s *EventService) ParseUpdatedBodyForEvents(
 	}
 	for _, event := range events {
 		if _, prs := newEvents[event.TargetId.String]; !prs {
-			err := eventSvc.Delete(&event.Id)
+			err := DeleteEvent(db, &event.Id)
 			if err != nil {
 				return err
 			}

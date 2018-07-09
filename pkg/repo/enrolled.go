@@ -59,23 +59,22 @@ func (r *EnrolledPermit) UserId() (*mytype.OID, error) {
 	return &r.enrolled.UserId, nil
 }
 
-func NewEnrolledRepo(svc *data.EnrolledService) *EnrolledRepo {
+func NewEnrolledRepo() *EnrolledRepo {
 	return &EnrolledRepo{
-		svc: svc,
+		load: loader.NewEnrolledLoader(),
 	}
 }
 
 type EnrolledRepo struct {
 	load  *loader.EnrolledLoader
 	perms *Permitter
-	svc   *data.EnrolledService
 }
 
 func (r *EnrolledRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewEnrolledLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.perms = p
 	return nil
 }
 
@@ -96,13 +95,13 @@ func (r *EnrolledRepo) CheckConnection() error {
 func (r *EnrolledRepo) CountByEnrollable(
 	enrollableId string,
 ) (int32, error) {
-	return r.svc.CountByEnrollable(enrollableId)
+	return data.CountEnrolledByEnrollable(enrollableId)
 }
 
 func (r *EnrolledRepo) CountByUser(
 	userId string,
 ) (int32, error) {
-	return r.svc.CountByUser(userId)
+	return data.CountEnrolledByUser(userId)
 }
 
 func (r *EnrolledRepo) Connect(enrolled *data.Enrolled) (*EnrolledPermit, error) {

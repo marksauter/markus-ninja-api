@@ -7,13 +7,11 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewEVTLoader(
-	svc *data.EVTService,
-) *EVTLoader {
+func NewEVTLoader() *EVTLoader {
 	return &EVTLoader{
-		svc: svc,
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -27,8 +25,13 @@ func NewEVTLoader(
 				for i, key := range keys {
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
 						ks := splitCompositeKey(key)
-						evt, err := svc.Get(ks[0], ks[1])
+						evt, err := data.GetEVT(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: evt, Error: err}
 					}(i, key)
 				}
@@ -42,8 +45,6 @@ func NewEVTLoader(
 }
 
 type EVTLoader struct {
-	svc *data.EVTService
-
 	batchGet *dataloader.Loader
 }
 
@@ -57,8 +58,11 @@ func (r *EVTLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *EVTLoader) Get(emailId, token string) (*data.EVT, error) {
-	ctx := context.Background()
+func (r *EVTLoader) Get(
+	ctx context.Context,
+	emailId,
+	token string,
+) (*data.EVT, error) {
 	compositeKey := newCompositeKey(emailId, token)
 	evtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {

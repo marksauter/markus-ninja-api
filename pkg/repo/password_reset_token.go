@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -69,23 +70,22 @@ func (r *PRTPermit) EndedAt() (time.Time, error) {
 	return r.prt.EndedAt.Time, nil
 }
 
-func NewPRTRepo(svc *data.PRTService) *PRTRepo {
+func NewPRTRepo() *PRTRepo {
 	return &PRTRepo{
-		svc: svc,
+		load: loader.NewPRTLoader(),
 	}
 }
 
 type PRTRepo struct {
-	load  *loader.PRTLoader
-	perms *Permitter
-	svc   *data.PRTService
+	load   *loader.PRTLoader
+	permit *Permitter
 }
 
 func (r *PRTRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewPRTLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -107,14 +107,14 @@ func (r *PRTRepo) Create(t *data.PRT) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, t); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, t); err != nil {
 		return nil, err
 	}
 	prt, err := r.svc.Create(t)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, prt)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (r *PRTRepo) Get(userId, token string) (*PRTPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, prt)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}

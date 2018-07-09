@@ -2,6 +2,7 @@ package myctx
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -11,13 +12,32 @@ type key string
 
 var queryerContextKey key = "queryer"
 
+type ErrNotFound struct {
+	Name string
+}
+
+func (e *ErrNotFound) Error() string {
+	return fmt.Sprintf("%s not found", e.Name)
+}
+
 func NewQueryerContext(ctx context.Context, v data.Queryer) context.Context {
 	return context.WithValue(ctx, queryerContextKey, v)
 }
 
 func QueryerFromContext(ctx context.Context) (data.Queryer, bool) {
-	v, ok := ctx.Value(userContextKey).(data.Queryer)
+	v, ok := ctx.Value(queryerContextKey).(data.Queryer)
 	return v, ok
+}
+
+func TransactionFromContext(ctx context.Context) (q data.Queryer, err error, newTx bool) {
+	var ok bool
+	q, ok = ctx.Value(queryerContextKey).(data.Queryer)
+	if !ok {
+		err = &ErrNotFound{"queryer"}
+		return
+	}
+	q, err, newTx = data.BeginTransaction(q)
+	return
 }
 
 var requesterIpContextKey key = "requester_ip"

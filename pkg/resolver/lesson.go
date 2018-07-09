@@ -17,12 +17,12 @@ type lessonResolver struct {
 	Repos  *repo.Repos
 }
 
-func (r *lessonResolver) Author() (*userResolver, error) {
+func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Lesson.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +92,7 @@ func (r *lessonResolver) Comments(
 	}
 
 	lessonComments, err := r.Repos.LessonComment().GetByLesson(
+		ctx,
 		userId.String,
 		studyId.String,
 		lessonId.String,
@@ -101,6 +102,7 @@ func (r *lessonResolver) Comments(
 		return nil, err
 	}
 	count, err := r.Repos.LessonComment().CountByLesson(
+		ctx,
 		userId.String,
 		studyId.String,
 		lessonId.String,
@@ -156,13 +158,14 @@ func (r *lessonResolver) Enrollees(
 		return nil, err
 	}
 	users, err := r.Repos.User().GetEnrollees(
+		ctx,
 		lessonId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(lessonId.String)
+	count, err := r.Repos.User().CountByEnrollable(ctx, lessonId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -214,13 +217,14 @@ func (r *lessonResolver) Labels(
 	}
 
 	labels, err := r.Repos.Label().GetByLabelable(
+		ctx,
 		lessonId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(lessonId.String)
+	count, err := r.Repos.Label().CountByLabelable(ctx, lessonId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +280,7 @@ func (r *lessonResolver) Events(
 	}
 
 	events, err := r.Repos.Event().GetByTarget(
+		ctx,
 		lessonId.String,
 		pageOptions,
 		data.FilterCreateEvents,
@@ -286,6 +291,7 @@ func (r *lessonResolver) Events(
 		return nil, err
 	}
 	count, err := r.Repos.Event().CountByTarget(
+		ctx,
 		lessonId.String,
 		data.FilterCreateEvents,
 		data.FilterDismissEvents,
@@ -324,12 +330,12 @@ func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonResolver) Study() (*studyResolver, error) {
+func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	studyId, err := r.Lesson.StudyId()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -355,14 +361,14 @@ func (r *lessonResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonResolver) ViewerCanDelete() bool {
+func (r *lessonResolver) ViewerCanDelete(ctx context.Context) bool {
 	lesson := r.Lesson.Get()
-	return r.Repos.Lesson().ViewerCanDelete(lesson)
+	return r.Repos.Lesson().ViewerCanDelete(ctx, lesson)
 }
 
-func (r *lessonResolver) ViewerCanUpdate() bool {
+func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) bool {
 	lesson := r.Lesson.Get()
-	return r.Repos.Lesson().ViewerCanUpdate(lesson)
+	return r.Repos.Lesson().ViewerCanUpdate(ctx, lesson)
 }
 
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
@@ -391,7 +397,7 @@ func (r *lessonResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(lessonId)
 	enrolled.UserId.Set(viewer.Id)
-	if _, err := r.Repos.Enrolled().Get(enrolled); err != nil {
+	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

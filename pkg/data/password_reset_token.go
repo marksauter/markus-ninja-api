@@ -23,17 +23,14 @@ type PRT struct {
 	Token     pgtype.Varchar     `db:"token" permit:"create"`
 }
 
-func NewPRTService(q Queryer) *PRTService {
-	return &PRTService{q}
-}
-
-type PRTService struct {
-	db Queryer
-}
-
-func (s *PRTService) get(name string, sql string, args ...interface{}) (*PRT, error) {
+func getPRT(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*PRT, error) {
 	var row PRT
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.EmailId,
 		&row.EndedAt,
 		&row.EndIP,
@@ -66,12 +63,17 @@ const getPRTByIdSQL = `
 	WHERE user_id = $1 AND token = $2
 `
 
-func (s *PRTService) Get(userId, token string) (*PRT, error) {
+func GetPRT(
+	db Queryer,
+	userId,
+	token string,
+) (*PRT, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"token":   token,
-	}).Info("PRT.Get(user_id, token)")
-	return s.get(
+	}).Info("GetPRT(user_id, token)")
+	return getPRT(
+		db,
 		"getPRTById",
 		getPRTByIdSQL,
 		userId,
@@ -79,8 +81,11 @@ func (s *PRTService) Get(userId, token string) (*PRT, error) {
 	)
 }
 
-func (s *PRTService) Create(row *PRT) (*PRT, error) {
-	mylog.Log.Info("PRT.Create()")
+func CreatePRT(
+	db Queryer,
+	row *PRT,
+) (*PRT, error) {
+	mylog.Log.Info("CreatePRT()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 	var columns, values []string
@@ -113,7 +118,7 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -146,8 +151,7 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 		return nil, err
 	}
 
-	prtSvc := NewPRTService(tx)
-	prt, err := prtSvc.Get(row.UserId.String, row.Token.String)
+	prt, err := GetPRT(db, row.UserId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -163,11 +167,14 @@ func (s *PRTService) Create(row *PRT) (*PRT, error) {
 	return prt, nil
 }
 
-func (s *PRTService) Update(row *PRT) (*PRT, error) {
+func UpdatePRT(
+	db Queryer,
+	row *PRT,
+) (*PRT, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": row.UserId.String,
 		"token":   row.Token.String,
-	}).Info("PRT.Update(user_id, token)")
+	}).Info("UpdatePRT(user_id, token)")
 
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
@@ -179,7 +186,7 @@ func (s *PRTService) Update(row *PRT) (*PRT, error) {
 		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -205,8 +212,7 @@ func (s *PRTService) Update(row *PRT) (*PRT, error) {
 		return nil, ErrNotFound
 	}
 
-	prtSvc := NewPRTService(tx)
-	prt, err := prtSvc.Get(row.UserId.String, row.Token.String)
+	prt, err := GetPRT(db, row.UserId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -227,13 +233,17 @@ const deletePRTSQL = `
 	WHERE user_id = $1 AND token = $2
 `
 
-func (s *PRTService) Delete(userId, token string) error {
+func DeletePRT(
+	db Queryer,
+	userId,
+	token string,
+) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"token":   token,
-	}).Info("PRT.Delete(user_id, token)")
+	}).Info("DeletePRT(user_id, token)")
 
-	commandTag, err := prepareExec(s.db, "deletePRT", deletePRTSQL, userId, token)
+	commandTag, err := prepareExec(db, "deletePRT", deletePRTSQL, userId, token)
 	if err != nil {
 		return err
 	}

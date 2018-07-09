@@ -8,11 +8,11 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewAppledLoader(db data.Queryer) *AppledLoader {
+func NewAppledLoader() *AppledLoader {
 	return &AppledLoader{
-		db: db,
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -31,6 +31,11 @@ func NewAppledLoader(db data.Queryer) *AppledLoader {
 							results[i] = &dataloader.Result{Error: err}
 							return
 						}
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
 						appled, err := data.GetAppled(db, int32(id))
 						results[i] = &dataloader.Result{Data: appled, Error: err}
 					}(i, key)
@@ -41,7 +46,7 @@ func NewAppledLoader(db data.Queryer) *AppledLoader {
 				return results
 			},
 		),
-		batchGetForAppleable: createLoader(
+		batchGetByAppleableAndUser: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
 					n       = len(keys)
@@ -55,7 +60,12 @@ func NewAppledLoader(db data.Queryer) *AppledLoader {
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
 						ks := splitCompositeKey(key)
-						appled, err := data.GetAppledForAppleable(db, ks[0], ks[1])
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						appled, err := data.GetAppledByAppleableAndUser(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: appled, Error: err}
 					}(i, key)
 				}
@@ -69,9 +79,8 @@ func NewAppledLoader(db data.Queryer) *AppledLoader {
 }
 
 type AppledLoader struct {
-	db                   data.Queryer
-	batchGet             *dataloader.Loader
-	batchGetForAppleable *dataloader.Loader
+	batchGet                   *dataloader.Loader
+	batchGetByAppleableAndUser *dataloader.Loader
 }
 
 func (r *AppledLoader) Clear(id string) {
@@ -81,11 +90,10 @@ func (r *AppledLoader) Clear(id string) {
 
 func (r *AppledLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetForAppleable.ClearAll()
+	r.batchGetByAppleableAndUser.ClearAll()
 }
 
-func (r *AppledLoader) Get(id int32) (*data.Appled, error) {
-	ctx := context.Background()
+func (r *AppledLoader) Get(ctx context.Context, id int32) (*data.Appled, error) {
 	key := strconv.Itoa(int(id))
 	appledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
@@ -97,15 +105,18 @@ func (r *AppledLoader) Get(id int32) (*data.Appled, error) {
 	}
 
 	compositeKey := newCompositeKey(appled.AppleableId.String, appled.UserId.String)
-	r.batchGetForAppleable.Prime(ctx, compositeKey, appled)
+	r.batchGetByAppleableAndUser.Prime(ctx, compositeKey, appled)
 
 	return appled, nil
 }
 
-func (r *AppledLoader) GetForAppleable(appleableId, userId string) (*data.Appled, error) {
-	ctx := context.Background()
+func (r *AppledLoader) GetByAppleableAndUser(
+	ctx context.Context,
+	appleableId,
+	userId string,
+) (*data.Appled, error) {
 	compositeKey := newCompositeKey(appleableId, userId)
-	appledData, err := r.batchGetForAppleable.Load(ctx, compositeKey)()
+	appledData, err := r.batchGetByAppleableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}

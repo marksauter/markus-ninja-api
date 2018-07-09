@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -93,23 +94,22 @@ func (r *UserPermit) UpdatedAt() (time.Time, error) {
 	return r.user.UpdatedAt.Time, nil
 }
 
-func NewUserRepo(svc *data.UserService) *UserRepo {
+func NewUserRepo() *UserRepo {
 	return &UserRepo{
-		svc: svc,
+		load: loader.NewUserLoader(),
 	}
 }
 
 type UserRepo struct {
-	perms *Permitter
-	load  *loader.UserLoader
-	svc   *data.UserService
+	load   *loader.UserLoader
+	permit *Permitter
 }
 
 func (r *UserRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewUserLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -147,14 +147,14 @@ func (r *UserRepo) Create(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, u); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, u); err != nil {
 		return nil, err
 	}
 	user, err := r.svc.Create(u)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r *UserRepo) Get(id string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (r *UserRepo) GetByEnrollee(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +214,7 @@ func (r *UserRepo) GetByAppleable(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -238,7 +238,7 @@ func (r *UserRepo) GetEnrollees(
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +257,7 @@ func (r *UserRepo) GetByLogin(login string) (*UserPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func (r *UserRepo) Delete(user *data.User) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, user); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, user); err != nil {
 		return err
 	}
 	return r.svc.Delete(user.Id.String)
@@ -284,7 +284,7 @@ func (r *UserRepo) Search(query string, po *data.PageOptions) ([]*UserPermit, er
 	}
 	userPermits := make([]*UserPermit, len(users))
 	if len(users) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, users[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, users[0])
 		if err != nil {
 			return nil, err
 		}
@@ -299,14 +299,14 @@ func (r *UserRepo) Update(u *data.User) (*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, u); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, u); err != nil {
 		return nil, err
 	}
 	user, err := r.svc.Update(u)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, user)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, user)
 	if err != nil {
 		return nil, err
 	}

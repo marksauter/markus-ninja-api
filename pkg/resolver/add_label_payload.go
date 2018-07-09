@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -18,14 +19,14 @@ func (r *addLabelPayloadResolver) LabelEdge() (*labelEdgeResolver, error) {
 	return NewLabelEdgeResolver(r.Label, r.Repos)
 }
 
-func (r *addLabelPayloadResolver) Labelable() (*labelableResolver, error) {
+func (r *addLabelPayloadResolver) Labelable(ctx context.Context) (*labelableResolver, error) {
 	labelableId, err := r.Labeled.LabelableId()
 	if err != nil {
 		return nil, err
 	}
 	switch labelableId.Type {
 	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(labelableId.String)
+		lesson, err := r.Repos.Lesson().Get(ctx, labelableId.String)
 		if err != nil {
 			return nil, err
 		}

@@ -7,19 +7,71 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewLabelLoader(svc *data.LabelService) *LabelLoader {
+func NewLabelLoader() *LabelLoader {
 	return &LabelLoader{
-		svc:            svc,
-		batchGet:       createLoader(newBatchGetLabelBy1Fn(svc.Get)),
-		batchGetByName: createLoader(newBatchGetLabelBy1Fn(svc.GetByName)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						label, err := data.GetLabel(db, key.String())
+						results[i] = &dataloader.Result{Data: label, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						label, err := data.GetLabelByName(db, key.String())
+						results[i] = &dataloader.Result{Data: label, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type LabelLoader struct {
-	svc *data.LabelService
-
 	batchGet       *dataloader.Loader
 	batchGetByName *dataloader.Loader
 }
@@ -34,8 +86,10 @@ func (r *LabelLoader) ClearAll() {
 	r.batchGetByName.ClearAll()
 }
 
-func (r *LabelLoader) Get(id string) (*data.Label, error) {
-	ctx := context.Background()
+func (r *LabelLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Label, error) {
 	labelData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -48,8 +102,10 @@ func (r *LabelLoader) Get(id string) (*data.Label, error) {
 	return label, nil
 }
 
-func (r *LabelLoader) GetByName(name string) (*data.Label, error) {
-	ctx := context.Background()
+func (r *LabelLoader) GetByName(
+	ctx context.Context,
+	name string,
+) (*data.Label, error) {
 	labelData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(name))()
 	if err != nil {
 		return nil, err
@@ -82,30 +138,4 @@ func (r *LabelLoader) GetMany(ids *[]string) ([]*data.Label, []error) {
 	}
 
 	return labels, nil
-}
-
-func newBatchGetLabelBy1Fn(
-	getter func(string) (*data.Label, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				label, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: label, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

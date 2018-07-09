@@ -11,18 +11,14 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func ConfirmVerification(svcs *service.Services, db data.Queryer) http.Handler {
-	verifyAcccountHandler := ConfirmVerificationHandler{
-		Svcs: svcs,
-		db:   db,
-	}
+func ConfirmVerification(db data.Queryer) http.Handler {
+	confirmVerificationHandler := ConfirmVerificationHandler{db}
 	return middleware.CommonMiddleware.Append(
 		confirmVerificationCors.Handler,
-	).Then(verifyAcccountHandler)
+	).Then(confirmVerificationHandler)
 }
 
 var confirmVerificationCors = cors.New(cors.Options{
@@ -32,8 +28,7 @@ var confirmVerificationCors = cors.New(cors.Options{
 })
 
 type ConfirmVerificationHandler struct {
-	Svcs *service.Services
-	db   data.Queryer
+	db data.Queryer
 }
 
 func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -46,7 +41,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 	routeVars := mux.Vars(req)
 
 	login := routeVars["login"]
-	user, err := h.Svcs.User.GetByLogin(login)
+	user, err := data.GetUserByLogin(h.db, login)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -63,7 +58,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 	token := routeVars["token"]
-	evt, err := h.Svcs.EVT.Get(emailId.String, token)
+	evt, err := data.GetEVT(h.db, emailId.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -92,7 +87,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	err = h.Svcs.Role.GrantUser(evt.UserId.String, data.UserRole)
+	err = data.GrantUserRole(h.db, evt.UserId.String, data.UserRole)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -105,7 +100,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	evt, err = h.Svcs.EVT.Update(evt)
+	evt, err = data.UpdateEVT(h.db, evt)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

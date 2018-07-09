@@ -18,12 +18,12 @@ type lessonCommentResolver struct {
 	Repos         *repo.Repos
 }
 
-func (r *lessonCommentResolver) Author() (*userResolver, error) {
+func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
 	userId, err := r.LessonComment.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -64,12 +64,12 @@ func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *lessonCommentResolver) Lesson() (*lessonResolver, error) {
+func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
 	lessonId, err := r.LessonComment.LessonId()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(lessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +106,12 @@ func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) Study() (*studyResolver, error) {
+func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, error) {
 	studyId, err := r.LessonComment.StudyId()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -133,14 +133,14 @@ func (r *lessonCommentResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) ViewerCanDelete() bool {
+func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) bool {
 	lessonComment := r.LessonComment.Get()
-	return r.Repos.LessonComment().ViewerCanDelete(lessonComment)
+	return r.Repos.LessonComment().ViewerCanDelete(ctx, lessonComment)
 }
 
-func (r *lessonCommentResolver) ViewerCanUpdate() bool {
+func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) bool {
 	lessonComment := r.LessonComment.Get()
-	return r.Repos.LessonComment().ViewerCanUpdate(lessonComment)
+	return r.Repos.LessonComment().ViewerCanUpdate(ctx, lessonComment)
 }
 
 func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {

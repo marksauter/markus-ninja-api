@@ -33,28 +33,23 @@ type Permission struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at"`
 }
 
-type PermissionService struct {
-	db Queryer
-}
-
-func NewPermissionService(db Queryer) *PermissionService {
-	return &PermissionService{db}
-}
-
 const countPermissionByTypeSQL = `
 	SELECT COUNT(*)
 	FROM permission
 	WHERE type = $1
 `
 
-func (s *PermissionService) CountByType(nodeType interface{}) (n int32, err error) {
+func CountPermissionByType(
+	db Queryer,
+	nodeType interface{},
+) (n int32, err error) {
 	mType, err := mytype.ParseNodeType(structs.Name(nodeType))
 	if err != nil {
 		return
 	}
-	mylog.Log.WithField("node_type", mType).Info("Permission.CountByType(nodeType)")
+	mylog.Log.WithField("node_type", mType).Info("CountPermissionByType(nodeType)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countPermissionByType",
 		countPermissionByTypeSQL,
 		mType,
@@ -68,7 +63,10 @@ func (s *PermissionService) CountByType(nodeType interface{}) (n int32, err erro
 //	- permissions for Create/Read/Update access for each field in model.
 //  - permissions for Connect/Disconnect/Delete.
 // Defaults audience to "AUTHENTICATED"
-func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
+func CreatePermissionSuite(
+	db Queryer,
+	model interface{},
+) error {
 	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
@@ -76,7 +74,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 	mylog.Log.WithField(
 		"model",
 		mType,
-	).Info("Permission.CreatePermissionSuite(model)")
+	).Info("CreatePermissionSuite(model)")
 
 	fields := structs.Fields(model)
 	n := len(fields)*len(accessLevelsWithFields) + len(accessLevelsWithoutFields)
@@ -110,7 +108,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		})
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -119,8 +117,7 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 		defer RollbackTransaction(tx)
 	}
 
-	permSvc := NewPermissionService(tx)
-	if err := permSvc.DeletePermissionSuite(model); err != nil {
+	if err := DeletePermissionSuite(db, model); err != nil {
 		return err
 	}
 
@@ -155,8 +152,13 @@ func (s *PermissionService) CreatePermissionSuite(model interface{}) error {
 	return nil
 }
 
-func (s *PermissionService) ConnectRoles(o *mytype.Operation, fields, roles []string) error {
-	mylog.Log.Info("Permission.ConnectRoles()")
+func ConnectRoles(
+	db Queryer,
+	o *mytype.Operation,
+	fields,
+	roles []string,
+) error {
+	mylog.Log.Info("ConnectRoles()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	andFieldsSQL := ""
@@ -189,7 +191,7 @@ func (s *PermissionService) ConnectRoles(o *mytype.Operation, fields, roles []st
 
 	psName := preparedName("connectRoles", sql)
 
-	_, err := prepareExec(s.db, psName, sql, args...)
+	_, err := prepareExec(db, psName, sql, args...)
 	if err != nil {
 		return err
 	}
@@ -207,7 +209,10 @@ const deletePermissionSuiteSQL = `
 	WHERE type = $1
 `
 
-func (s *PermissionService) DeletePermissionSuite(model interface{}) error {
+func DeletePermissionSuite(
+	db Queryer,
+	model interface{},
+) error {
 	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
@@ -216,7 +221,7 @@ func (s *PermissionService) DeletePermissionSuite(model interface{}) error {
 		"node_type", mType,
 	).Info("Perm.DeletePermissionSuite(node_type)")
 	_, err = prepareExec(
-		s.db,
+		db,
 		"deletePermissionSuite",
 		deletePermissionSuiteSQL,
 		mType,
@@ -241,13 +246,14 @@ const getPermissionByRoleSQL = `
 	WHERE role = $1
 `
 
-func (s *PermissionService) GetByRole(
+func GetByRole(
+	db Queryer,
 	role string,
 ) ([]Permission, error) {
-	mylog.Log.Info("Permission.GetByRole()")
+	mylog.Log.Info("GetByRole()")
 	permissions := make([]Permission, 0)
 
-	rows, err := s.db.Query(getPermissionByRoleSQL, role)
+	rows, err := db.Query(getPermissionByRoleSQL, role)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during query")
 		return nil, err
@@ -280,7 +286,8 @@ func (s *PermissionService) GetByRole(
 	return permissions, nil
 }
 
-func (s *PermissionService) GetQueryPermission(
+func GetQueryPermission(
+	db Queryer,
 	o *mytype.Operation,
 	roles []string,
 ) (*QueryPermission, error) {
@@ -316,14 +323,14 @@ func (s *PermissionService) GetQueryPermission(
 	`
 	var row *pgx.Row
 	if len(roles) != 0 {
-		row = s.db.QueryRow(
+		row = db.QueryRow(
 			permissionSQL+andRoleNameSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
 			roles,
 		)
 	} else {
-		row = s.db.QueryRow(
+		row = db.QueryRow(
 			permissionSQL+andAudienceSQL+groupBySQL,
 			o.AccessLevel,
 			o.NodeType,
@@ -352,8 +359,12 @@ const updatePermissionSQL = `
 	WHERE id = $2
 `
 
-func (s *PermissionService) Update(id string, a mytype.Audience) error {
-	_, err := s.db.Exec(updatePermissionSQL, a, id)
+func UpdatePermission(
+	db Queryer,
+	id string,
+	a mytype.Audience,
+) error {
+	_, err := db.Exec(updatePermissionSQL, a, id)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error during execution")
 		return err
@@ -362,7 +373,7 @@ func (s *PermissionService) Update(id string, a mytype.Audience) error {
 	return nil
 }
 
-const updateOperationAudienceSQL = `
+const updatePermissionAudienceSQL = `
 	UPDATE permission
 	SET audience = $1
 	WHERE access_level = $2
@@ -371,12 +382,13 @@ const updateOperationAudienceSQL = `
 		AND field = ANY($4)
 `
 
-func (s *PermissionService) UpdateOperationAudience(
+func UpdatePermissionAudience(
+	db Queryer,
 	o *mytype.Operation,
 	a mytype.Audience,
 	fields []string,
 ) error {
-	mylog.Log.Info("Permission.UpdateOperationAudience()")
+	mylog.Log.Info("UpdatePermissionAudience()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	andFieldsSQL := ""
@@ -397,7 +409,7 @@ func (s *PermissionService) UpdateOperationAudience(
 
 	psName := preparedName("updateOperationAudience", sql)
 
-	_, err := prepareExec(s.db, psName, sql, args...)
+	_, err := prepareExec(db, psName, sql, args...)
 	if err != nil {
 		return err
 	}
@@ -410,9 +422,14 @@ func (s *PermissionService) UpdateOperationAudience(
 	return nil
 }
 
-func (s *PermissionService) get(name string, sql string, args ...interface{}) (*Permission, error) {
+func getPermission(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Permission, error) {
 	var row Permission
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.AccessLevel,
 		&row.Audience,
 		&row.CreatedAt,
@@ -431,10 +448,15 @@ func (s *PermissionService) get(name string, sql string, args ...interface{}) (*
 	return &row, nil
 }
 
-func (s *PermissionService) getMany(name string, sql string, args ...interface{}) ([]*Permission, error) {
+func getManyPermission(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Permission, error) {
 	var rows []*Permission
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}

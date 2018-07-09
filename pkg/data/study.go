@@ -25,24 +25,19 @@ type Study struct {
 	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func NewStudyService(db Queryer) *StudyService {
-	return &StudyService{db}
-}
-
-type StudyService struct {
-	db Queryer
-}
-
 const countStudyByAppledSQL = `
 	SELECT COUNT(*)
 	FROM study_appled
 	WHERE applee_id = $1
 `
 
-func (s *StudyService) CountByApplee(appleeId string) (n int32, err error) {
-	mylog.Log.WithField("applee_id", appleeId).Info("Study.CountByAppled(applee_id)")
+func CountStudyByApplee(
+	db Queryer,
+	appleeId string,
+) (n int32, err error) {
+	mylog.Log.WithField("applee_id", appleeId).Info("CountStudyByAppled(applee_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countStudyByAppled",
 		countStudyByAppledSQL,
 		appleeId,
@@ -59,10 +54,13 @@ const countStudyByEnrolleeSQL = `
 	WHERE enrollee_id = $1
 `
 
-func (s *StudyService) CountByEnrollee(enrolleeId string) (n int32, err error) {
-	mylog.Log.WithField("enrollee_id", enrolleeId).Info("Study.CountByEnrollee(enrollee_id)")
+func CountStudyByEnrollee(
+	db Queryer,
+	enrolleeId string,
+) (n int32, err error) {
+	mylog.Log.WithField("enrollee_id", enrolleeId).Info("CountStudyByEnrollee(enrollee_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countStudyByEnrollee",
 		countStudyByEnrolleeSQL,
 		enrolleeId,
@@ -79,12 +77,15 @@ const countStudyByTopicSQL = `
 	WHERE topic_id = $1
 `
 
-func (s *StudyService) CountByTopic(topicId string) (n int32, err error) {
+func CountStudyByTopic(
+	db Queryer,
+	topicId string,
+) (n int32, err error) {
 	mylog.Log.WithField(
 		"topic_id", topicId,
-	).Info("Study.CountByTopic(topic_id)")
+	).Info("CountStudyByTopic(topic_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countStudyByTopic",
 		countStudyByTopicSQL,
 		topicId,
@@ -101,10 +102,13 @@ const countStudyByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *StudyService) CountByUser(userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.CountByUser(user_id)")
+func CountStudyByUser(
+	db Queryer,
+	userId string,
+) (n int32, err error) {
+	mylog.Log.WithField("user_id", userId).Info("CountStudyByUser(user_id)")
 	err = prepareQueryRow(
-		s.db,
+		db,
 		"countStudyByUser",
 		countStudyByUserSQL,
 		userId,
@@ -115,8 +119,12 @@ func (s *StudyService) CountByUser(userId string) (n int32, err error) {
 	return
 }
 
-func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("Study.CountBySearch(query)")
+func CountStudyBySearch(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -138,16 +146,21 @@ func (s *StudyService) CountBySearch(within *mytype.OID, query string) (n int32,
 
 	psName := preparedName("countStudyBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
 
-func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study, error) {
+func getStudy(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Study, error) {
 	var row Study
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.AdvancedAt,
 		&row.CreatedAt,
 		&row.Description,
@@ -166,10 +179,15 @@ func (s *StudyService) get(name string, sql string, args ...interface{}) (*Study
 	return &row, nil
 }
 
-func (s *StudyService) getMany(name string, sql string, args ...interface{}) ([]*Study, error) {
+func getManyStudy(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Study, error) {
 	var rows []*Study
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,16 +229,20 @@ const getStudyByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *StudyService) Get(id string) (*Study, error) {
-	mylog.Log.WithField("id", id).Info("Study.Get(id)")
-	return s.get("getStudyById", getStudyByIdSQL, id)
+func GetStudy(
+	db Queryer,
+	id string,
+) (*Study, error) {
+	mylog.Log.WithField("id", id).Info("GetStudy(id)")
+	return getStudy(db, "getStudyById", getStudyByIdSQL, id)
 }
 
-func (s *StudyService) GetByApplee(
+func GetStudyByApplee(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.GetByAppled(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetStudyByAppled(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`applee_id = ` + args.Append(userId)}
 
@@ -241,7 +263,7 @@ func (s *StudyService) GetByApplee(
 
 	var rows []*Study
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -271,11 +293,12 @@ func (s *StudyService) GetByApplee(
 	return rows, nil
 }
 
-func (s *StudyService) GetByEnrollee(
+func GetStudyByEnrollee(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.GetByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetStudyByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollee_id = ` + args.Append(userId)}
 
@@ -296,7 +319,7 @@ func (s *StudyService) GetByEnrollee(
 
 	var rows []*Study
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -326,11 +349,12 @@ func (s *StudyService) GetByEnrollee(
 	return rows, nil
 }
 
-func (s *StudyService) GetByTopic(
+func GetStudyByTopic(
+	db Queryer,
 	topicId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("Study.GetByTopic(topic_id)")
+	mylog.Log.WithField("topic_id", topicId).Info("GetStudyByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`topic_id = ` + args.Append(topicId)}
 
@@ -351,7 +375,7 @@ func (s *StudyService) GetByTopic(
 
 	var rows []*Study
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -381,11 +405,12 @@ func (s *StudyService) GetByTopic(
 	return rows, nil
 }
 
-func (s *StudyService) GetByUser(
+func GetStudyByUser(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("Study.GetByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetStudyByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -403,7 +428,7 @@ func (s *StudyService) GetByUser(
 
 	psName := preparedName("getStudiesByUserId", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyStudy(db, psName, sql, args...)
 }
 
 const getStudyByNameSQL = `
@@ -419,12 +444,16 @@ const getStudyByNameSQL = `
 	WHERE user_id = $1 AND lower(name) = lower($2)
 `
 
-func (s *StudyService) GetByName(userId, name string) (*Study, error) {
+func GetStudyByName(
+	db Queryer,
+	userId,
+	name string,
+) (*Study, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"name":    name,
-	}).Info("Study.GetByName(user_id, name)")
-	return s.get("getStudyByName", getStudyByNameSQL, userId, name)
+	}).Info("GetStudyByName(user_id, name)")
+	return getStudy(db, "getStudyByName", getStudyByNameSQL, userId, name)
 }
 
 const getStudyByUserAndNameSQL = `
@@ -441,16 +470,23 @@ const getStudyByUserAndNameSQL = `
 	WHERE s.user_id = a.id AND lower(s.name) = lower($2)  
 `
 
-func (s *StudyService) GetByUserAndName(owner, name string) (*Study, error) {
+func GetStudyByUserAndName(
+	db Queryer,
+	owner,
+	name string,
+) (*Study, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"owner": owner,
 		"name":  name,
-	}).Info("Study.GetByUserAndName(owner, name)")
-	return s.get("getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	}).Info("GetStudyByUserAndName(owner, name)")
+	return getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
 }
 
-func (s *StudyService) Create(row *Study) (*Study, error) {
-	mylog.Log.Info("Study.Create()")
+func Create(
+	db Queryer,
+	row *Study,
+) (*Study, error) {
+	mylog.Log.Info("Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -481,7 +517,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -513,8 +549,7 @@ func (s *StudyService) Create(row *Study) (*Study, error) {
 		return nil, err
 	}
 
-	studySvc := NewStudyService(tx)
-	study, err := studySvc.Get(row.Id.String)
+	study, err := GetStudy(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -535,9 +570,12 @@ const deleteStudySQL = `
 	WHERE id = $1
 `
 
-func (s *StudyService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Study.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteStudy", deleteStudySQL, id)
+func DeleteStudy(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteStudy(id)")
+	commandTag, err := prepareExec(db, "deleteStudy", deleteStudySQL, id)
 	if err != nil {
 		return err
 	}
@@ -552,10 +590,12 @@ const refreshStudySearchIndexSQL = `
 	SELECT refresh_mv_xxx('study_search_index')
 `
 
-func (s *StudyService) RefreshSearchIndex() error {
-	mylog.Log.Info("Study.RefreshSearchIndex()")
+func RefreshStudySearchIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshStudySearchIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshStudySearchIndex",
 		refreshStudySearchIndexSQL,
 	)
@@ -566,8 +606,13 @@ func (s *StudyService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions) ([]*Study, error) {
-	mylog.Log.WithField("query", query).Info("Study.Search(query)")
+func SearchStudy(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("query", query).Info("SearchStudy(query)")
 	if within != nil {
 		if within.Type != "User" {
 			return nil, fmt.Errorf(
@@ -590,11 +635,14 @@ func (s *StudyService) Search(within *mytype.OID, query string, po *PageOptions)
 
 	psName := preparedName("searchStudyIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyStudy(db, psName, sql, args...)
 }
 
-func (s *StudyService) Update(row *Study) (*Study, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Study.Update(id)")
+func UpdateStudy(
+	db Queryer,
+	row *Study,
+) (*Study, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateStudy(id)")
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -611,7 +659,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -647,8 +695,7 @@ func (s *StudyService) Update(row *Study) (*Study, error) {
 		return nil, ErrNotFound
 	}
 
-	studySvc := NewStudyService(tx)
-	study, err := studySvc.Get(row.Id.String)
+	study, err := GetStudy(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

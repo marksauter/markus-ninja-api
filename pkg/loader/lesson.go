@@ -7,18 +7,43 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewLessonLoader(svc *data.LessonService) *LessonLoader {
+func NewLessonLoader() *LessonLoader {
 	return &LessonLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetLessonFn(svc.Get)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						lesson, err := data.GetLesson(db, key.String())
+						results[i] = &dataloader.Result{Data: lesson, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type LessonLoader struct {
-	svc *data.LessonService
-
 	batchGet *dataloader.Loader
 }
 
@@ -31,8 +56,10 @@ func (r *LessonLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *LessonLoader) Get(id string) (*data.Lesson, error) {
-	ctx := context.Background()
+func (r *LessonLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Lesson, error) {
 	lessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -45,8 +72,10 @@ func (r *LessonLoader) Get(id string) (*data.Lesson, error) {
 	return lesson, nil
 }
 
-func (r *LessonLoader) GetMany(ids *[]string) ([]*data.Lesson, []error) {
-	ctx := context.Background()
+func (r *LessonLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Lesson, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -65,30 +94,4 @@ func (r *LessonLoader) GetMany(ids *[]string) ([]*data.Lesson, []error) {
 	}
 
 	return lessons, nil
-}
-
-func newBatchGetLessonFn(
-	getter func(string) (*data.Lesson, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				lesson, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: lesson, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

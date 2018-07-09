@@ -8,21 +8,79 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewTopicedLoader(svc *data.TopicedService) *TopicedLoader {
+func NewTopicedLoader() *TopicedLoader {
 	return &TopicedLoader{
-		svc:                  svc,
-		batchGet:             createLoader(newBatchGetTopicedBy1Fn(svc.Get)),
-		batchGetForTopicable: createLoader(newBatchGetTopicedBy2Fn(svc.GetForTopicable)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						id, err := strconv.ParseInt(key.String(), 10, 32)
+						if err != nil {
+							results[i] = &dataloader.Result{Error: err}
+							return
+						}
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						topiced, err := data.GetTopiced(db, int32(id))
+						results[i] = &dataloader.Result{Data: topiced, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByTopicableAndTopic: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						topiced, err := data.GetTopicedByTopicableAndTopic(db, ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: topiced, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type TopicedLoader struct {
-	svc *data.TopicedService
-
-	batchGet             *dataloader.Loader
-	batchGetForTopicable *dataloader.Loader
+	batchGet                    *dataloader.Loader
+	batchGetByTopicableAndTopic *dataloader.Loader
 }
 
 func (r *TopicedLoader) Clear(id string) {
@@ -32,11 +90,13 @@ func (r *TopicedLoader) Clear(id string) {
 
 func (r *TopicedLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetForTopicable.ClearAll()
+	r.batchGetByTopicableAndTopic.ClearAll()
 }
 
-func (r *TopicedLoader) Get(id int32) (*data.Topiced, error) {
-	ctx := context.Background()
+func (r *TopicedLoader) Get(
+	ctx context.Context,
+	id int32,
+) (*data.Topiced, error) {
 	key := strconv.Itoa(int(id))
 	topicedData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
@@ -48,15 +108,18 @@ func (r *TopicedLoader) Get(id int32) (*data.Topiced, error) {
 	}
 
 	compositeKey := newCompositeKey(topiced.TopicableId.String, topiced.TopicId.String)
-	r.batchGetForTopicable.Prime(ctx, compositeKey, topiced)
+	r.batchGetByTopicableAndTopic.Prime(ctx, compositeKey, topiced)
 
 	return topiced, nil
 }
 
-func (r *TopicedLoader) GetForTopicable(topicableId, topicId string) (*data.Topiced, error) {
-	ctx := context.Background()
-	compositeKey := newCompositeKey(topicableId, topicId)
-	topicedData, err := r.batchGetForTopicable.Load(ctx, compositeKey)()
+func (r *TopicedLoader) GetByTopicableAndTopic(
+	ctx context.Context,
+	topicableId,
+	userId string,
+) (*data.Topiced, error) {
+	compositeKey := newCompositeKey(topicableId, userId)
+	topicedData, err := r.batchGetByTopicableAndTopic.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -69,62 +132,4 @@ func (r *TopicedLoader) GetForTopicable(topicableId, topicId string) (*data.Topi
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), topiced)
 
 	return topiced, nil
-}
-
-func newBatchGetTopicedBy1Fn(
-	getter func(int32) (*data.Topiced, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				id, err := strconv.ParseInt(key.String(), 10, 32)
-				if err != nil {
-					results[i] = &dataloader.Result{Error: err}
-					return
-				}
-				topiced, err := getter(int32(id))
-				results[i] = &dataloader.Result{Data: topiced, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
-}
-
-func newBatchGetTopicedBy2Fn(
-	getter func(string, string) (*data.Topiced, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				topiced, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: topiced, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }
