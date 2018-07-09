@@ -7,13 +7,11 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewPRTLoader(
-	svc *data.PRTService,
-) *PRTLoader {
+func NewPRTLoader() *PRTLoader {
 	return &PRTLoader{
-		svc: svc,
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -28,7 +26,12 @@ func NewPRTLoader(
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
 						ks := splitCompositeKey(key)
-						prt, err := svc.Get(ks[0], ks[1])
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						prt, err := data.GetPRT(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: prt, Error: err}
 					}(i, key)
 				}
@@ -42,8 +45,6 @@ func NewPRTLoader(
 }
 
 type PRTLoader struct {
-	svc *data.PRTService
-
 	batchGet *dataloader.Loader
 }
 
@@ -57,8 +58,11 @@ func (r *PRTLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *PRTLoader) Get(emailId, token string) (*data.PRT, error) {
-	ctx := context.Background()
+func (r *PRTLoader) Get(
+	ctx context.Context,
+	emailId,
+	token string,
+) (*data.PRT, error) {
 	compositeKey := newCompositeKey(emailId, token)
 	prtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {

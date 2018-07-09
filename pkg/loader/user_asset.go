@@ -7,20 +7,101 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewUserAssetLoader(svc *data.UserAssetService) *UserAssetLoader {
+func NewUserAssetLoader() *UserAssetLoader {
 	return &UserAssetLoader{
-		svc:                        svc,
-		batchGet:                   createLoader(newBatchGetUserAssetBy1Fn(svc.Get)),
-		batchGetByName:             createLoader(newBatchGetUserAssetBy3Fn(svc.GetByName)),
-		batchGetByUserStudyAndName: createLoader(newBatchGetUserAssetBy3Fn(svc.GetByUserStudyAndName)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						userAsset, err := data.GetUserAsset(db, key.String())
+						results[i] = &dataloader.Result{Data: userAsset, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						userAsset, err := data.GetUserAssetByName(db, ks[0], ks[1], ks[2])
+						results[i] = &dataloader.Result{Data: userAsset, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByUserStudyAndName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						userAsset, err := data.GetUserAssetByUserStudyAndName(db, ks[0], ks[1], ks[2])
+						results[i] = &dataloader.Result{Data: userAsset, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type UserAssetLoader struct {
-	svc *data.UserAssetService
-
 	batchGet                   *dataloader.Loader
 	batchGetByName             *dataloader.Loader
 	batchGetByUserStudyAndName *dataloader.Loader
@@ -34,11 +115,12 @@ func (r *UserAssetLoader) Clear(id string) {
 func (r *UserAssetLoader) ClearAll() {
 	r.batchGet.ClearAll()
 	r.batchGetByName.ClearAll()
-	r.batchGetByUserStudyAndName.ClearAll()
 }
 
-func (r *UserAssetLoader) Get(id string) (*data.UserAsset, error) {
-	ctx := context.Background()
+func (r *UserAssetLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.UserAsset, error) {
 	userAssetData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -48,18 +130,15 @@ func (r *UserAssetLoader) Get(id string) (*data.UserAsset, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(
-		userAsset.UserId.String,
-		userAsset.StudyId.String,
-		userAsset.Name.String,
-	)
-	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
-
 	return userAsset, nil
 }
 
-func (r *UserAssetLoader) GetByName(userId, studyId, name string) (*data.UserAsset, error) {
-	ctx := context.Background()
+func (r *UserAssetLoader) GetByName(
+	ctx context.Context,
+	userId,
+	studyId,
+	name string,
+) (*data.UserAsset, error) {
 	compositeKey := newCompositeKey(userId, studyId, name)
 	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
@@ -75,10 +154,14 @@ func (r *UserAssetLoader) GetByName(userId, studyId, name string) (*data.UserAss
 	return userAsset, nil
 }
 
-func (r *UserAssetLoader) GetByUserStudyAndName(userLogin, studyName, name string) (*data.UserAsset, error) {
-	ctx := context.Background()
+func (r *UserAssetLoader) GetByUserStudyAndName(
+	ctx context.Context,
+	userLogin,
+	studyName,
+	name string,
+) (*data.UserAsset, error) {
 	compositeKey := newCompositeKey(userLogin, studyName, name)
-	userAssetData, err := r.batchGetByUserStudyAndName.Load(ctx, compositeKey)()
+	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -88,92 +171,30 @@ func (r *UserAssetLoader) GetByUserStudyAndName(userLogin, studyName, name strin
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
-	compositeKey = newCompositeKey(
-		userAsset.UserId.String,
-		userAsset.StudyId.String,
-		userAsset.Name.String,
-	)
-	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }
 
-func newBatchGetUserAssetBy1Fn(
-	getter func(string) (*data.UserAsset, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				userAsset, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: userAsset, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
+func (r *UserAssetLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.UserAsset, []error) {
+	keys := make(dataloader.Keys, len(*ids))
+	for i, k := range *ids {
+		keys[i] = dataloader.StringKey(k)
 	}
-}
-
-func newBatchGetUserAssetBy2Fn(
-	getter func(string, string) (*data.UserAsset, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				userAsset, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: userAsset, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
+	userAssetData, errs := r.batchGet.LoadMany(ctx, keys)()
+	if errs != nil {
+		return nil, errs
 	}
-}
-
-func newBatchGetUserAssetBy3Fn(
-	getter func(string, string, string) (*data.UserAsset, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				userAsset, err := getter(ks[0], ks[1], ks[2])
-				results[i] = &dataloader.Result{Data: userAsset, Error: err}
-			}(i, key)
+	userAssets := make([]*data.UserAsset, len(userAssetData))
+	for i, d := range userAssetData {
+		var ok bool
+		userAssets[i], ok = d.(*data.UserAsset)
+		if !ok {
+			return nil, []error{fmt.Errorf("wrong type")}
 		}
-
-		wg.Wait()
-
-		return results
 	}
+
+	return userAssets, nil
 }

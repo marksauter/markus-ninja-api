@@ -1,12 +1,15 @@
 package repo
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -94,26 +97,28 @@ func (r *EmailPermit) VerifiedAt() (*time.Time, error) {
 	return &r.email.VerifiedAt.Time, nil
 }
 
-func NewEmailRepo(db data.Queryer) *EmailRepo {
+func NewEmailRepo() *EmailRepo {
 	return &EmailRepo{
-		db:   db,
 		load: loader.NewEmailLoader(),
 	}
 }
 
 type EmailRepo struct {
-	db    data.Queryer
-	load  *loader.EmailLoader
-	perms *Permitter
+	load   *loader.EmailLoader
+	permit *Permitter
 }
 
 func (r *EmailRepo) Open(p *Permitter) error {
-	r.perms = p
+	if p == nil {
+		return errors.New("permitter must not be nil")
+	}
+	r.permit = p
 	return nil
 }
 
 func (r *EmailRepo) Close() {
 	r.load.ClearAll()
+	r.permit = nil
 }
 
 func (r *EmailRepo) CheckConnection() error {
@@ -127,64 +132,90 @@ func (r *EmailRepo) CheckConnection() error {
 // Service methods
 
 func (r *EmailRepo) CountByUser(
+	ctx context.Context,
 	userId string,
 	opts ...data.EmailFilterOption,
-) (int32, error) {
-	return data.CountEmailByUser(r.db, userId)
+) (n int32, err error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err = errors.New("queryer not found")
+		return
+	}
+	return data.CountEmailByUser(db, userId)
 }
 
-func (r *EmailRepo) Create(e *data.Email) (*EmailPermit, error) {
+func (r *EmailRepo) Create(
+	ctx context.Context,
+	e *data.Email,
+) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, e); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, e); err != nil {
 		return nil, err
 	}
-	email, err := data.CreateEmail(r.db, e)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	email, err := data.CreateEmail(db, e)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
-func (r *EmailRepo) Delete(email *data.Email) error {
+func (r *EmailRepo) Delete(
+	ctx context.Context,
+	email *data.Email,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, email); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, email); err != nil {
 		return err
 	}
-	return data.DeleteEmail(r.db, email.Id.String)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	return data.DeleteEmail(db, email.Id.String)
 }
 
-func (r *EmailRepo) Get(id string) (*EmailPermit, error) {
+func (r *EmailRepo) Get(
+	ctx context.Context,
+	id string,
+) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	email, err := r.load.Get(id)
+	email, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
-func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
+func (r *EmailRepo) GetByValue(
+	ctx context.Context,
+	value string,
+) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	email, err := r.load.GetByValue(value)
+	email, err := r.load.GetByValue(ctx, value)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +223,7 @@ func (r *EmailRepo) GetByValue(value string) (*EmailPermit, error) {
 }
 
 func (r *EmailRepo) GetByUser(
+	ctx context.Context,
 	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.EmailFilterOption,
@@ -199,13 +231,17 @@ func (r *EmailRepo) GetByUser(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	emails, err := data.GetEmailByUser(r.db, userId, po, opts...)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	emails, err := data.GetEmailByUser(db, userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
 	emailPermits := make([]*EmailPermit, len(emails))
 	if len(emails) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, emails[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, emails[0])
 		if err != nil {
 			return nil, err
 		}
@@ -216,18 +252,25 @@ func (r *EmailRepo) GetByUser(
 	return emailPermits, nil
 }
 
-func (r *EmailRepo) Update(e *data.Email) (*EmailPermit, error) {
+func (r *EmailRepo) Update(
+	ctx context.Context,
+	e *data.Email,
+) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, e); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, e); err != nil {
 		return nil, err
 	}
-	email, err := data.UpdateEmail(r.db, e)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	email, err := data.UpdateEmail(db, e)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}

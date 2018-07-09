@@ -55,7 +55,7 @@ func (r *userResolver) Appled(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByApplee(id.String)
+	studyCount, err := r.Repos.Study().CountByApplee(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (r *userResolver) Appled(
 
 	switch appleableType {
 	case AppleableTypeStudy:
-		studies, err := r.Repos.Study().GetByApplee(id.String, pageOptions)
+		studies, err := r.Repos.Study().GetByApplee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -113,11 +113,11 @@ func (r *userResolver) Assets(
 		return nil, err
 	}
 
-	userAssets, err := r.Repos.UserAsset().GetByUser(id, pageOptions)
+	userAssets, err := r.Repos.UserAsset().GetByUser(ctx, id, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.UserAsset().CountByUser(id.String)
+	count, err := r.Repos.UserAsset().CountByUser(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +181,19 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 
-	emails, err := r.Repos.Email().GetByUser(id, pageOptions)
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	emails, err := r.Repos.Email().GetByUser(ctx, id, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Email().CountByUser(id.String)
+	count, err := r.Repos.Email().CountByUser(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -236,15 +244,15 @@ func (r *userResolver) Enrolled(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByEnrollee(id.String)
+	lessonCount, err := r.Repos.Lesson().CountByEnrollee(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
-	studyCount, err := r.Repos.Study().CountByEnrollee(id.String)
+	studyCount, err := r.Repos.Study().CountByEnrollee(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountByEnrollee(id.String)
+	userCount, err := r.Repos.User().CountByEnrollee(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +260,7 @@ func (r *userResolver) Enrolled(
 
 	switch enrollableType {
 	case EnrollableTypeLesson:
-		lessons, err := r.Repos.Lesson().GetByEnrollee(id.String, pageOptions)
+		lessons, err := r.Repos.Lesson().GetByEnrollee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -261,7 +269,7 @@ func (r *userResolver) Enrolled(
 			permits[i] = l
 		}
 	case EnrollableTypeStudy:
-		studies, err := r.Repos.Study().GetByEnrollee(id.String, pageOptions)
+		studies, err := r.Repos.Study().GetByEnrollee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +278,7 @@ func (r *userResolver) Enrolled(
 			permits[i] = s
 		}
 	case EnrollableTypeUser:
-		users, err := r.Repos.User().GetByEnrollee(id.String, pageOptions)
+		users, err := r.Repos.User().GetByEnrollee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -321,13 +329,14 @@ func (r *userResolver) Enrollees(
 	}
 
 	users, err := r.Repos.User().GetEnrollees(
+		ctx,
 		id.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(id.String)
+	count, err := r.Repos.User().CountByEnrollable(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -374,13 +383,14 @@ func (r *userResolver) Notifications(
 	}
 
 	notifications, err := r.Repos.Notification().GetByUser(
+		ctx,
 		userId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Notification().CountByUser(userId.String)
+	count, err := r.Repos.Notification().CountByUser(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -452,11 +462,11 @@ func (r *userResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByUser(id.String, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByUser(ctx, id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByUser(id.String)
+	count, err := r.Repos.Lesson().CountByUser(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +509,7 @@ func (r *userResolver) Study(
 		return nil, err
 	}
 
-	study, err := r.Repos.Study().GetByName(userId.String, args.Name)
+	study, err := r.Repos.Study().GetByName(ctx, userId.String, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -537,11 +547,11 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByUser(id.String, pageOptions)
+	studies, err := r.Repos.Study().GetByUser(ctx, id.String, pageOptions)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Study().CountByUser(id.String)
+	count, err := r.Repos.Study().CountByUser(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -585,7 +595,7 @@ func (r *userResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(userId)
 	enrolled.UserId.Set(viewer.Id)
-	if _, err := r.Repos.Enrolled().Get(enrolled); err != nil {
+	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

@@ -13,10 +13,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-func UploadAssets(svcs *service.Services, repos *repo.Repos) http.Handler {
-	authMiddleware := middleware.Authenticate{
-		Svcs: svcs,
-	}
+func UploadAssets(repos *repo.Repos, svcs *service.Services) http.Handler {
+	authMiddleware := middleware.Authenticate{svcs.Auth}
 	uploadAssetsHandler := UploadAssetsHandler{Repos: repos}
 	return middleware.CommonMiddleware.Append(
 		authMiddleware.Use,

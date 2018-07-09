@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
@@ -28,7 +29,7 @@ func (r *eventResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *eventResolver) Source() (*eventSourceResolver, error) {
+func (r *eventResolver) Source(ctx context.Context) (*eventSourceResolver, error) {
 	id, err := r.Event.SourceId()
 	if err != nil {
 		return nil, err
@@ -41,19 +42,19 @@ func (r *eventResolver) Source() (*eventSourceResolver, error) {
 		}
 		return &eventSourceResolver{Subject: lesson, Repos: r.Repos}, nil
 	case "LessonComment":
-		lessonComment, err := r.Repos.LessonComment().Get(id.String)
+		lessonComment, err := r.Repos.LessonComment().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &eventSourceResolver{Subject: lessonComment, Repos: r.Repos}, nil
 	case "Study":
-		study, err := r.Repos.Study().Get(id.String)
+		study, err := r.Repos.Study().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &eventSourceResolver{Subject: study, Repos: r.Repos}, nil
 	case "User":
-		user, err := r.Repos.User().Get(id.String)
+		user, err := r.Repos.User().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
@@ -63,26 +64,26 @@ func (r *eventResolver) Source() (*eventSourceResolver, error) {
 	}
 }
 
-func (r *eventResolver) Target() (*eventTargetResolver, error) {
+func (r *eventResolver) Target(ctx context.Context) (*eventTargetResolver, error) {
 	id, err := r.Event.TargetId()
 	if err != nil {
 		return nil, err
 	}
 	switch id.Type {
 	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(id.String)
+		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &eventTargetResolver{Subject: lesson, Repos: r.Repos}, nil
 	case "Study":
-		study, err := r.Repos.Study().Get(id.String)
+		study, err := r.Repos.Study().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
 		return &eventTargetResolver{Subject: study, Repos: r.Repos}, nil
 	case "User":
-		user, err := r.Repos.User().Get(id.String)
+		user, err := r.Repos.User().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}
@@ -92,12 +93,12 @@ func (r *eventResolver) Target() (*eventTargetResolver, error) {
 	}
 }
 
-func (r *eventResolver) User() (*userResolver, error) {
+func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Event.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}

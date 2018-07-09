@@ -59,23 +59,22 @@ func (r *TopicedPermit) TopicableId() (*mytype.OID, error) {
 	return &r.topiced.TopicableId, nil
 }
 
-func NewTopicedRepo(svc *data.TopicedService) *TopicedRepo {
+func NewTopicedRepo() *TopicedRepo {
 	return &TopicedRepo{
-		svc: svc,
+		load: loader.NewTopicedLoader(),
 	}
 }
 
 type TopicedRepo struct {
-	load  *loader.TopicedLoader
-	perms *Permitter
-	svc   *data.TopicedService
+	load   *loader.TopicedLoader
+	permit *Permitter
 }
 
 func (r *TopicedRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewTopicedLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -109,14 +108,14 @@ func (r *TopicedRepo) Connect(topiced *data.Topiced) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.ConnectAccess, topiced); err != nil {
+	if _, err := r.permit.Check(mytype.ConnectAccess, topiced); err != nil {
 		return nil, err
 	}
 	topiced, err := r.svc.Connect(topiced)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiced)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +144,7 @@ func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
 			"must include either topiced `id` or `topicable_id` and `topic_id` to get an topiced",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiced)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +164,7 @@ func (r *TopicedRepo) GetByTopic(
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiceds[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +188,7 @@ func (r *TopicedRepo) GetByTopicable(
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, topiceds[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +203,7 @@ func (r *TopicedRepo) Disconnect(topiced *data.Topiced) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DisconnectAccess, topiced); err != nil {
+	if _, err := r.permit.Check(mytype.DisconnectAccess, topiced); err != nil {
 		return err
 	}
 	if topiced.Id.Status != pgtype.Undefined {

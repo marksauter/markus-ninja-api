@@ -1,14 +1,14 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type key string
@@ -42,64 +42,37 @@ type FieldPermissionFunc = func(field string) bool
 var AdminPermissionFunc = func(field string) bool { return true }
 
 type Repo interface {
-	Open(*Permitter) error
+	Open(*Permitter)
 	Close()
 }
 
 type Repos struct {
-	lookup map[key]Repo
-	svcs   *service.Services
 	db     data.Queryer
-	conf   *myconf.Config
+	lookup map[key]Repo
 }
 
-func NewRepos(svcs *service.Services, db data.Queryer, conf *myconf.Config) *Repos {
+func NewRepos(db data.Queryer) *Repos {
 	return &Repos{
+		db: db,
 		lookup: map[key]Repo{
-			appledRepoKey:        NewAppledRepo(db),
-			emailRepoKey:         NewEmailRepo(db),
-			enrolledRepoKey:      NewEnrolledRepo(svcs.Enrolled),
-			evtRepoKey:           NewEVTRepo(svcs.EVT),
-			labelRepoKey:         NewLabelRepo(svcs.Label),
-			labeledRepoKey:       NewLabeledRepo(svcs.Labeled),
-			lessonRepoKey:        NewLessonRepo(svcs.Lesson),
-			lessonCommentRepoKey: NewLessonCommentRepo(svcs.LessonComment),
-			notificationRepoKey:  NewNotificationRepo(svcs.Notification),
-			prtRepoKey:           NewPRTRepo(svcs.PRT),
-			eventRepoKey:         NewEventRepo(svcs.Event),
-			studyRepoKey:         NewStudyRepo(svcs.Study),
-			topicRepoKey:         NewTopicRepo(svcs.Topic),
-			topicedRepoKey:       NewTopicedRepo(svcs.Topiced),
-			userRepoKey:          NewUserRepo(svcs.User),
-			userAssetRepoKey:     NewUserAssetRepo(svcs.UserAsset, svcs.Storage),
+			appledRepoKey:        NewAppledRepo(),
+			emailRepoKey:         NewEmailRepo(),
+			enrolledRepoKey:      NewEnrolledRepo(),
+			evtRepoKey:           NewEVTRepo(),
+			labelRepoKey:         NewLabelRepo(),
+			labeledRepoKey:       NewLabeledRepo(),
+			lessonRepoKey:        NewLessonRepo(),
+			lessonCommentRepoKey: NewLessonCommentRepo(),
+			notificationRepoKey:  NewNotificationRepo(),
+			prtRepoKey:           NewPRTRepo(),
+			eventRepoKey:         NewEventRepo(),
+			studyRepoKey:         NewStudyRepo(),
+			topicRepoKey:         NewTopicRepo(),
+			topicedRepoKey:       NewTopicedRepo(),
+			userRepoKey:          NewUserRepo(),
+			userAssetRepoKey:     NewUserAssetRepo(),
 		},
-		svcs: svcs,
-		db:   db,
-		conf: conf,
 	}
-}
-
-func (r *Repos) Begin() (reposTx *Repos, err error, newTx bool) {
-	// copier.Copy(reposTx, r)
-	tx, err, newTx := data.BeginTransaction(r.db)
-	if err != nil {
-		return
-	}
-	// reposTx.db = tx
-	svcs, err := service.NewServices(r.conf, tx)
-	if err != nil {
-		return
-	}
-	reposTx = NewRepos(svcs, tx, r.conf)
-	return
-}
-
-func (r *Repos) Rollback() error {
-	return data.RollbackTransaction(r.db)
-}
-
-func (r *Repos) Commit() error {
-	return data.CommitTransaction(r.db)
 }
 
 func (r *Repos) OpenAll(p *Permitter) error {
@@ -199,43 +172,54 @@ func (r *Repos) UserAsset() *UserAssetRepo {
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		permitter := NewPermitter(r.svcs.Perm, r)
-		permitter.Begin(req.Context())
-		defer permitter.End()
+		permitter := NewPermitter(r)
+		defer permitter.ClearCache()
 		r.OpenAll(permitter)
 		defer r.CloseAll()
-		h.ServeHTTP(rw, req)
+
+		ctx := myctx.NewQueryerContext(req.Context(), r.db)
+
+		h.ServeHTTP(rw, req.WithContext(ctx))
 	})
 }
 
 // Cross repo methods
 
-func (r *Repos) GetEnrollable(enrollableId *mytype.OID) (Permit, error) {
+func (r *Repos) GetEnrollable(
+	ctx context.Context,
+	enrollableId *mytype.OID,
+) (Permit, error) {
 	switch enrollableId.Type {
 	case "Lesson":
-		return r.Lesson().Get(enrollableId.String)
+		return r.Lesson().Get(ctx, enrollableId.String)
 	case "Study":
-		return r.Study().Get(enrollableId.String)
+		return r.Study().Get(ctx, enrollableId.String)
 	case "User":
-		return r.User().Get(enrollableId.String)
+		return r.User().Get(ctx, enrollableId.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableId.Type)
 	}
 }
 
-func (r *Repos) GetLabelable(labelableId *mytype.OID) (Permit, error) {
+func (r *Repos) GetLabelable(
+	ctx context.Context,
+	labelableId *mytype.OID,
+) (Permit, error) {
 	switch labelableId.Type {
 	case "Lesson":
-		return r.Lesson().Get(labelableId.String)
+		return r.Lesson().Get(ctx, labelableId.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableId.Type)
 	}
 }
 
-func (r *Repos) GetTopicable(topicableId *mytype.OID) (Permit, error) {
+func (r *Repos) GetTopicable(
+	ctx context.Context,
+	topicableId *mytype.OID,
+) (Permit, error) {
 	switch topicableId.Type {
 	case "Study":
-		return r.Study().Get(topicableId.String)
+		return r.Study().Get(ctx, topicableId.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableId.Type)
 	}

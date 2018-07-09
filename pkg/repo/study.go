@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -94,23 +95,22 @@ func (r *StudyPermit) UserId() (*mytype.OID, error) {
 	return &r.study.UserId, nil
 }
 
-func NewStudyRepo(svc *data.StudyService) *StudyRepo {
+func NewStudyRepo() *StudyRepo {
 	return &StudyRepo{
-		svc: svc,
+		load: loader.NewStudyLoader(),
 	}
 }
 
 type StudyRepo struct {
-	load  *loader.StudyLoader
-	perms *Permitter
-	svc   *data.StudyService
+	load   *loader.StudyLoader
+	permit *Permitter
 }
 
 func (r *StudyRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewStudyLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -152,7 +152,7 @@ func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, s); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -164,7 +164,7 @@ func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (r *StudyRepo) GetByApplee(appleeId string, po *data.PageOptions) ([]*Study
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +217,7 @@ func (r *StudyRepo) GetByEnrollee(enrolleeId string, po *data.PageOptions) ([]*S
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -238,7 +238,7 @@ func (r *StudyRepo) GetByTopic(topicId string, po *data.PageOptions) ([]*StudyPe
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPerm
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +278,7 @@ func (r *StudyRepo) GetByName(userId, name string) (*StudyPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, e
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (r *StudyRepo) Delete(study *data.Study) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, study); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, study); err != nil {
 		return err
 	}
 	return r.svc.Delete(study.Id.String)
@@ -320,7 +320,7 @@ func (r *StudyRepo) Search(within *mytype.OID, query string, po *data.PageOption
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -335,14 +335,14 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
 	study, err := r.svc.Update(s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
@@ -350,14 +350,14 @@ func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
 }
 
 func (r *StudyRepo) ViewerCanDelete(s *data.Study) bool {
-	if _, err := r.perms.Check(mytype.DeleteAccess, s); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, s); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
-	if _, err := r.perms.Check(mytype.UpdateAccess, s); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, s); err != nil {
 		return false
 	}
 	return true

@@ -8,21 +8,79 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewEnrolledLoader(svc *data.EnrolledService) *EnrolledLoader {
+func NewEnrolledLoader() *EnrolledLoader {
 	return &EnrolledLoader{
-		svc:                   svc,
-		batchGet:              createLoader(newBatchGetEnrolledBy1Fn(svc.Get)),
-		batchGetForEnrollable: createLoader(newBatchGetEnrolledBy2Fn(svc.GetForEnrollable)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						id, err := strconv.ParseInt(key.String(), 10, 32)
+						if err != nil {
+							results[i] = &dataloader.Result{Error: err}
+							return
+						}
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						enrolled, err := data.GetEnrolled(db, int32(id))
+						results[i] = &dataloader.Result{Data: enrolled, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByEnrollableAndUser: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						enrolled, err := data.GetEnrolledByEnrollableAndUser(db, ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: enrolled, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type EnrolledLoader struct {
-	svc *data.EnrolledService
-
-	batchGet              *dataloader.Loader
-	batchGetForEnrollable *dataloader.Loader
+	batchGet                    *dataloader.Loader
+	batchGetByEnrollableAndUser *dataloader.Loader
 }
 
 func (r *EnrolledLoader) Clear(id string) {
@@ -32,11 +90,13 @@ func (r *EnrolledLoader) Clear(id string) {
 
 func (r *EnrolledLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetForEnrollable.ClearAll()
+	r.batchGetByEnrollableAndUser.ClearAll()
 }
 
-func (r *EnrolledLoader) Get(id int32) (*data.Enrolled, error) {
-	ctx := context.Background()
+func (r *EnrolledLoader) Get(
+	ctx context.Context,
+	id int32,
+) (*data.Enrolled, error) {
 	key := strconv.Itoa(int(id))
 	enrolledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
@@ -48,15 +108,18 @@ func (r *EnrolledLoader) Get(id int32) (*data.Enrolled, error) {
 	}
 
 	compositeKey := newCompositeKey(enrolled.EnrollableId.String, enrolled.UserId.String)
-	r.batchGetForEnrollable.Prime(ctx, compositeKey, enrolled)
+	r.batchGetByEnrollableAndUser.Prime(ctx, compositeKey, enrolled)
 
 	return enrolled, nil
 }
 
-func (r *EnrolledLoader) GetForEnrollable(enrollableId, userId string) (*data.Enrolled, error) {
-	ctx := context.Background()
+func (r *EnrolledLoader) GetByEnrollableAndUser(
+	ctx context.Context,
+	enrollableId,
+	userId string,
+) (*data.Enrolled, error) {
 	compositeKey := newCompositeKey(enrollableId, userId)
-	enrolledData, err := r.batchGetForEnrollable.Load(ctx, compositeKey)()
+	enrolledData, err := r.batchGetByEnrollableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +134,10 @@ func (r *EnrolledLoader) GetForEnrollable(enrollableId, userId string) (*data.En
 	return enrolled, nil
 }
 
-func (r *EnrolledLoader) GetMany(ids *[]string) ([]*data.Enrolled, []error) {
-	ctx := context.Background()
+func (r *EnrolledLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Enrolled, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -91,62 +156,4 @@ func (r *EnrolledLoader) GetMany(ids *[]string) ([]*data.Enrolled, []error) {
 	}
 
 	return enrolleds, nil
-}
-
-func newBatchGetEnrolledBy1Fn(
-	getter func(int32) (*data.Enrolled, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				id, err := strconv.ParseInt(key.String(), 10, 32)
-				if err != nil {
-					results[i] = &dataloader.Result{Error: err}
-					return
-				}
-				enrolled, err := getter(int32(id))
-				results[i] = &dataloader.Result{Data: enrolled, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
-}
-
-func newBatchGetEnrolledBy2Fn(
-	getter func(string, string) (*data.Enrolled, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				enrolled, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: enrolled, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

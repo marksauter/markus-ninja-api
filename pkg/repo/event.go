@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -71,21 +72,20 @@ func (r *EventPermit) UserId() (*mytype.OID, error) {
 
 func NewEventRepo(svc *data.EventService) *EventRepo {
 	return &EventRepo{
-		svc: svc,
+		load: loader.NewEventLoader(),
 	}
 }
 
 type EventRepo struct {
-	load  *loader.EventLoader
-	perms *Permitter
-	svc   *data.EventService
+	load   *loader.EventLoader
+	permit *Permitter
 }
 
 func (r *EventRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewEventLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -121,14 +121,14 @@ func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, event); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, event); err != nil {
 		return nil, err
 	}
 	event, err := r.svc.Create(event)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, event)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (r *EventRepo) BatchCreate(
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, event); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, event); err != nil {
 		return err
 	}
 	return r.svc.BatchCreate(event, targetIds)
@@ -156,7 +156,7 @@ func (r *EventRepo) Get(id string) (*EventPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, event)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (r *EventRepo) GetBySource(
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, events[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +202,7 @@ func (r *EventRepo) GetByTarget(
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, events[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +217,7 @@ func (r *EventRepo) Delete(event *data.Event) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, event); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, event); err != nil {
 		return err
 	}
 	return r.svc.Delete(&event.Id)

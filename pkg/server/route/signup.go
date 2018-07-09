@@ -13,13 +13,9 @@ import (
 	"github.com/rs/cors"
 )
 
-func Signup(svcs *service.Services) http.Handler {
-	authMiddleware := middleware.Authenticate{
-		Svcs: svcs,
-	}
-	signupHandler := SignupHandler{
-		Svcs: svcs,
-	}
+func Signup(db data.Queryer, svcs *service.Services) http.Handler {
+	authMiddleware := middleware.Authenticate{svcs.Auth}
+	signupHandler := SignupHandler{db, svcs}
 	return middleware.CommonMiddleware.Append(
 		SignupCors.Handler,
 		authMiddleware.Use,
@@ -33,7 +29,8 @@ var SignupCors = cors.New(cors.Options{
 })
 
 type SignupHandler struct {
-	Svcs *service.Services
+	db   data.Queryer
+	svcs *service.Services
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -108,7 +105,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := h.Svcs.User.Create(u)
+	user, err := data.CreateUser(h.db, u)
 	if err != nil {
 		var response *myhttp.ErrorResponse
 		if dfErr, ok := err.(data.DataFieldError); ok {
@@ -135,7 +132,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.Svcs.Auth.SignJWT(&payload)
+	jwt, err := h.svcs.Auth.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

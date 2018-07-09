@@ -21,27 +21,23 @@ type Notification struct {
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func NewNotificationService(db Queryer) *NotificationService {
-	return &NotificationService{db}
-}
-
-type NotificationService struct {
-	db Queryer
-}
-
 const countNotificationByStudySQL = `
 	SELECT COUNT(*)
 	FROM notification
 	WHERE user_id = $1 AND study_id = $2
 `
 
-func (s *NotificationService) CountByStudy(userId, studyId string) (int32, error) {
+func CountNotificationByStudy(
+	db Queryer,
+	userId,
+	studyId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("Notification.CountByStudy(study_id)")
+	).Info("CountNotificationByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countNotificationByStudy",
 		countNotificationByStudySQL,
 		userId,
@@ -59,11 +55,14 @@ const countNotificationByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *NotificationService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("Notification.CountByUser(user_id)")
+func CountNotificationByUser(
+	db Queryer,
+	userId string,
+) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountNotificationByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countNotificationByUser",
 		countNotificationByUserSQL,
 		userId,
@@ -74,9 +73,14 @@ func (s *NotificationService) CountByUser(userId string) (int32, error) {
 	return n, err
 }
 
-func (s *NotificationService) get(name string, sql string, args ...interface{}) (*Notification, error) {
+func getNotification(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (*Notification, error) {
 	var row Notification
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.EventId,
 		&row.Id,
@@ -96,10 +100,15 @@ func (s *NotificationService) get(name string, sql string, args ...interface{}) 
 	return &row, nil
 }
 
-func (s *NotificationService) getMany(name string, sql string, args ...interface{}) ([]*Notification, error) {
+func getManyNotification(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Notification, error) {
 	var rows []*Notification
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -143,19 +152,23 @@ const getNotificationByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *NotificationService) Get(id string) (*Notification, error) {
-	mylog.Log.WithField("id", id).Info("Notification.Get(id)")
-	return s.get("getNotificationById", getNotificationByIdSQL, id)
+func GetNotification(
+	db Queryer,
+	id string,
+) (*Notification, error) {
+	mylog.Log.WithField("id", id).Info("GetNotification(id)")
+	return getNotification(db, "getNotificationById", getNotificationByIdSQL, id)
 }
 
-func (s *NotificationService) GetByStudy(
+func GetNotificationByStudy(
+	db Queryer,
 	userId,
 	studyId string,
 	po *PageOptions,
 ) ([]*Notification, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("Notification.GetByStudy(study_id)")
+	).Info("GetNotificationByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`user_id = ` + args.Append(userId),
@@ -177,14 +190,15 @@ func (s *NotificationService) GetByStudy(
 
 	psName := preparedName("getNotificationsByStudy", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyNotification(db, psName, sql, args...)
 }
 
-func (s *NotificationService) GetByUser(
+func GetNotificationByUser(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*Notification, error) {
-	mylog.Log.WithField("user_id", userId).Info("Notification.GetByUser(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetNotificationByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -203,7 +217,7 @@ func (s *NotificationService) GetByUser(
 
 	psName := preparedName("getNotificationsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyNotification(db, psName, sql, args...)
 }
 
 type Enroll struct {
@@ -211,11 +225,12 @@ type Enroll struct {
 	UserId     string
 }
 
-func (s *NotificationService) BatchCreate(
+func BatchCreateNotification(
+	db Queryer,
 	src *Notification,
 	enrolls []*Enroll,
 ) error {
-	mylog.Log.Info("Notification.BatchCreate()")
+	mylog.Log.Info("BatchCreateNotification()")
 
 	notifications := make([][]interface{}, len(enrolls))
 	for i, enroll := range enrolls {
@@ -230,7 +245,7 @@ func (s *NotificationService) BatchCreate(
 		}
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return err
@@ -270,8 +285,11 @@ func (s *NotificationService) BatchCreate(
 	return nil
 }
 
-func (s *NotificationService) Create(row *Notification) (*Notification, error) {
-	mylog.Log.Info("Notification.Create()")
+func CreateNotification(
+	db Queryer,
+	row *Notification,
+) (*Notification, error) {
+	mylog.Log.Info("CreateNotification()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
 	var columns, values []string
@@ -298,7 +316,7 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -330,8 +348,7 @@ func (s *NotificationService) Create(row *Notification) (*Notification, error) {
 		return nil, err
 	}
 
-	notificationSvc := NewNotificationService(tx)
-	notification, err := notificationSvc.Get(row.Id.String)
+	notification, err := GetNotification(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -352,9 +369,12 @@ const deleteNotificationSQl = `
 	WHERE id = $1
 `
 
-func (s *NotificationService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("Notification.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteNotification", deleteNotificationSQl, id)
+func DeleteNotification(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteNotification(id)")
+	commandTag, err := prepareExec(db, "deleteNotification", deleteNotificationSQl, id)
 	if err != nil {
 		return err
 	}
@@ -365,8 +385,11 @@ func (s *NotificationService) Delete(id string) error {
 	return nil
 }
 
-func (s *NotificationService) Update(row *Notification) (*Notification, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("Notification.Update(id)")
+func UpdateNotification(
+	db Queryer,
+	row *Notification,
+) (*Notification, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateNotification(id)")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -374,7 +397,7 @@ func (s *NotificationService) Update(row *Notification) (*Notification, error) {
 		sets = append(sets, `last_read_at`+"="+args.Append(&row.LastReadAt))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -399,8 +422,7 @@ func (s *NotificationService) Update(row *Notification) (*Notification, error) {
 		return nil, ErrNotFound
 	}
 
-	notificationSvc := NewNotificationService(tx)
-	notification, err := notificationSvc.Get(row.Id.String)
+	notification, err := GetNotification(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

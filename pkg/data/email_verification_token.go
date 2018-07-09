@@ -20,21 +20,14 @@ type EVT struct {
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
-func NewEVTService(q Queryer) *EVTService {
-	return &EVTService{q}
-}
-
-type EVTService struct {
-	db Queryer
-}
-
-func (s *EVTService) get(
+func getEVT(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*EVT, error) {
 	var row EVT
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.EmailId,
 		&row.ExpiresAt,
 		&row.IssuedAt,
@@ -63,7 +56,8 @@ const getEVTByIdSQL = `
 	WHERE email_id = $1 AND token = $2
 `
 
-func (s *EVTService) Get(
+func GetEVT(
+	db Queryer,
 	emailId,
 	token string,
 ) (*EVT, error) {
@@ -71,7 +65,8 @@ func (s *EVTService) Get(
 		"email_id": emailId,
 		"token":    token,
 	}).Info("EVT.Get(email_id, token)")
-	return s.get(
+	return getEVT(
+		db,
 		"getEVTById",
 		getEVTByIdSQL,
 		emailId,
@@ -79,7 +74,10 @@ func (s *EVTService) Get(
 	)
 }
 
-func (s *EVTService) Create(row *EVT) (*EVT, error) {
+func CreateEVT(
+	db Queryer,
+	row *EVT,
+) (*EVT, error) {
 	mylog.Log.Info("EVT.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
@@ -99,7 +97,7 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -132,8 +130,7 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 		return nil, err
 	}
 
-	evtSvc := NewEVTService(tx)
-	evt, err := evtSvc.Get(row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(db, row.EmailId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +146,8 @@ func (s *EVTService) Create(row *EVT) (*EVT, error) {
 	return evt, nil
 }
 
-func (s *EVTService) Update(
+func UpdateEVT(
+	db Queryer,
 	row *EVT,
 ) (*EVT, error) {
 	mylog.Log.WithFields(logrus.Fields{
@@ -163,7 +161,7 @@ func (s *EVTService) Update(
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -188,8 +186,7 @@ func (s *EVTService) Update(
 		return nil, ErrNotFound
 	}
 
-	evtSvc := NewEVTService(tx)
-	evt, err := evtSvc.Get(row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(db, row.EmailId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -210,13 +207,17 @@ const deleteEVTSQL = `
 	WHERE email_id = $1 AND token = $2
 `
 
-func (s *EVTService) Delete(emailId, token string) error {
+func DeleteEVT(
+	db Queryer,
+	emailId,
+	token string,
+) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"email_id": emailId,
 		"token":    token,
 	}).Info("EVT.Delete(email_id, token)")
 	commandTag, err := prepareExec(
-		s.db,
+		db,
 		"deleteEVT",
 		deleteEVTSQL,
 		emailId,

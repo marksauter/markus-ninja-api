@@ -20,6 +20,7 @@ func (r *RootResolver) Asset(
 	},
 ) (*userAssetResolver, error) {
 	userAsset, err := r.Repos.UserAsset().GetByUserStudyAndName(
+		ctx,
 		args.Owner,
 		args.Study,
 		args.Name,
@@ -40,25 +41,25 @@ func (r *RootResolver) Node(
 	}
 	switch parsedId.Type {
 	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(args.Id)
+		lesson, err := r.Repos.Lesson().Get(ctx, args.Id)
 		if err != nil {
 			return nil, err
 		}
 		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
 	case "Study":
-		study, err := r.Repos.Study().Get(args.Id)
+		study, err := r.Repos.Study().Get(ctx, args.Id)
 		if err != nil {
 			return nil, err
 		}
 		return &nodeResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
 	case "User":
-		user, err := r.Repos.User().Get(args.Id)
+		user, err := r.Repos.User().Get(ctx, args.Id)
 		if err != nil {
 			return nil, err
 		}
 		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
 	case "UserAsset":
-		userAsset, err := r.Repos.UserAsset().Get(args.Id)
+		userAsset, err := r.Repos.UserAsset().Get(ctx, args.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +80,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 		}
 		switch parsedId.Type {
 		case "User":
-			user, err := r.Repos.User().Get(id)
+			user, err := r.Repos.User().Get(ctx, id)
 			if err != nil {
 				return nil, err
 			}
@@ -135,19 +136,19 @@ func (r *RootResolver) Search(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountBySearch(within, args.Query)
+	lessonCount, err := r.Repos.Lesson().CountBySearch(ctx, within, args.Query)
 	if err != nil {
 		return nil, err
 	}
-	studyCount, err := r.Repos.Study().CountBySearch(within, args.Query)
+	studyCount, err := r.Repos.Study().CountBySearch(ctx, within, args.Query)
 	if err != nil {
 		return nil, err
 	}
-	userCount, err := r.Repos.User().CountBySearch(args.Query)
+	userCount, err := r.Repos.User().CountBySearch(ctx, args.Query)
 	if err != nil {
 		return nil, err
 	}
-	userAssetCount, err := r.Repos.UserAsset().CountBySearch(within, args.Query)
+	userAssetCount, err := r.Repos.UserAsset().CountBySearch(ctx, within, args.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +156,7 @@ func (r *RootResolver) Search(
 
 	switch searchType {
 	case SearchTypeLesson:
-		lessons, err := r.Repos.Lesson().Search(within, args.Query, pageOptions)
+		lessons, err := r.Repos.Lesson().Search(ctx, within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +165,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().Search(within, args.Query, pageOptions)
+		studies, err := r.Repos.Study().Search(ctx, within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +174,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeUser:
-		users, err := r.Repos.User().Search(args.Query, pageOptions)
+		users, err := r.Repos.User().Search(ctx, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +183,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeUserAsset:
-		userAssets, err := r.Repos.UserAsset().Search(within, args.Query, pageOptions)
+		userAssets, err := r.Repos.UserAsset().Search(ctx, within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +211,7 @@ func (r *RootResolver) Study(
 		Owner string
 	},
 ) (*studyResolver, error) {
-	study, err := r.Repos.Study().GetByUserAndName(args.Owner, args.Name)
+	study, err := r.Repos.Study().GetByUserAndName(ctx, args.Owner, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +225,7 @@ func (r *RootResolver) Topic(
 		Owner string
 	},
 ) (*topicResolver, error) {
-	topic, err := r.Repos.Topic().GetByName(args.Name)
+	topic, err := r.Repos.Topic().GetByName(ctx, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +235,7 @@ func (r *RootResolver) Topic(
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
-	user, err := r.Repos.User().GetByLogin(args.Login)
+	user, err := r.Repos.User().GetByLogin(ctx, args.Login)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +247,7 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	user, err := r.Repos.User().Get(viewer.Id.String)
+	user, err := r.Repos.User().Get(ctx, viewer.Id.String)
 	if err != nil {
 		return nil, err
 	}

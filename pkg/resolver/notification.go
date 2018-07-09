@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -17,12 +19,12 @@ func (r *notificationResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *notificationResolver) Event() (*eventResolver, error) {
+func (r *notificationResolver) Event(ctx context.Context) (*eventResolver, error) {
 	eventId, err := r.Notification.EventId()
 	if err != nil {
 		return nil, err
 	}
-	event, err := r.Repos.Event().Get(eventId.String)
+	event, err := r.Repos.Event().Get(ctx, eventId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -43,12 +45,12 @@ func (r *notificationResolver) Reason() (string, error) {
 	return r.Notification.Reason()
 }
 
-func (r *notificationResolver) Study() (*studyResolver, error) {
+func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
 	studyId, err := r.Notification.StudyId()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +62,12 @@ func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *notificationResolver) User() (*userResolver, error) {
+func (r *notificationResolver) User(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Notification.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}

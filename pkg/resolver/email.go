@@ -41,7 +41,7 @@ func (r *emailResolver) User(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}

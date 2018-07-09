@@ -19,18 +19,15 @@ type Role struct {
 	Name        pgtype.Varchar     `db:"name"`
 }
 
-type RoleService struct {
-	db Queryer
-}
-
-func NewRoleService(db Queryer) *RoleService {
-	return &RoleService{db}
-}
-
-func (s *RoleService) getMany(name string, sql string, args ...interface{}) ([]*Role, error) {
+func getManyRole(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*Role, error) {
 	var rows []*Role
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,11 +63,14 @@ const getRolesByUserSQL = `
 	WHERE ur.user_id = $1
 `
 
-func (s *RoleService) GetByUser(userId string) ([]*Role, error) {
+func GetRoleByUser(
+	db Queryer,
+	userId string,
+) ([]*Role, error) {
 	mylog.Log.WithField(
 		"user_id", userId,
-	).Info("Role.GetByUser(user_id)")
-	return s.getMany("getRolesByUser", getRolesByUserSQL, userId)
+	).Info("GetRoleByUser(user_id)")
+	return getManyRole(db, "getRolesByUser", getRolesByUserSQL, userId)
 }
 
 const grantUserRolesSQL = `
@@ -82,14 +82,18 @@ const grantUserRolesSQL = `
 	ON CONFLICT ON CONSTRAINT user_role_pkey DO NOTHING
 `
 
-func (s *RoleService) GrantUser(userId string, roles ...string) error {
+func GrantUserRoles(
+	db Queryer,
+	userId string,
+	roles ...string,
+) error {
 	mylog.Log.WithFields(logrus.Fields{
 		"user_id": userId,
 		"roles":   roles,
-	}).Info("GrantUser(user_id, roles)")
+	}).Info("GrantUserRoles(user_id, roles)")
 	if len(roles) > 0 {
 		_, err := prepareExec(
-			s.db,
+			db,
 			"grantUserRoles",
 			grantUserRolesSQL,
 			roles,

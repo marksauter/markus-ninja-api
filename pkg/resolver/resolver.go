@@ -3,17 +3,13 @@ package resolver
 import (
 	"errors"
 
-	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 var clientURL = "http://localhost:3000"
 
 type RootResolver struct {
-	Db    data.Queryer
 	Repos *repo.Repos
-	Svcs  *service.Services
 }
 
 func permitToResolver(p repo.Permit, repos *repo.Repos) (interface{}, error) {

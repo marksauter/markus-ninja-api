@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -18,8 +20,8 @@ func (r *deleteLessonPayloadResolver) DeletedLessonId() graphql.ID {
 	return graphql.ID(r.LessonId.String)
 }
 
-func (r *deleteLessonPayloadResolver) Study() (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(r.StudyId.String)
+func (r *deleteLessonPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
+	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
 	if err != nil {
 		return nil, err
 	}

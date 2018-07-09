@@ -45,34 +45,32 @@ func main() {
 	}
 	defer db.Close()
 
-	svcs, err := service.NewServices(conf, db)
+	svcs, err := service.NewServices(conf)
 	if err != nil {
-		panic(err)
+		mylog.Log.WithField("error", err).Fatal("unable to start services")
 	}
 
-	repos := repo.NewRepos(svcs, db, conf)
+	repos := repo.NewRepos(db, conf)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
-			Db:    db,
 			Repos: repos,
-			Svcs:  svcs,
 		},
 	)
 
-	go startRefreshMV(svcs)
+	go startRefreshMV()
 
 	r := mux.NewRouter()
 
 	r.Handle("/", route.Index())
-	r.Handle("/graphql", route.GraphQL(graphQLSchema, svcs, repos))
+	r.Handle("/graphql", route.GraphQL(graphQLSchema, repos, svcs))
 	r.Handle("/graphiql", route.GraphiQL())
-	r.Handle("/signup", route.Signup(svcs))
-	r.Handle("/token", route.Token(svcs))
+	r.Handle("/signup", route.Signup(db, svcs))
+	r.Handle("/token", route.Token(db, svcs))
 	r.Handle("/upload", route.Upload())
-	r.Handle("/upload/assets", route.UploadAssets(svcs, repos))
+	r.Handle("/upload/assets", route.UploadAssets(repos, svcs))
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
-		route.ConfirmVerification(svcs, db),
+		route.ConfirmVerification(db),
 	)
 	r.Handle("/user/assets/{user_id}/{key}",
 		route.UserAssets(svcs),
@@ -109,10 +107,6 @@ func initDB(conf *myconf.Config) error {
 	}
 	defer db.Close()
 
-	svcs, err := service.NewServices(conf, db)
-	if err != nil {
-		panic(err)
-	}
 	err = data.Initialize(db)
 	if err != nil {
 		return err
@@ -138,7 +132,7 @@ func initDB(conf *myconf.Config) error {
 	}
 
 	for _, model := range modelTypes {
-		if err := svcs.Perm.CreatePermissionSuite(model); err != nil {
+		if err := data.CreatePermissionSuite(db, model); err != nil {
 			mylog.Log.WithError(err).Fatal("error during permission suite creation")
 			return err
 		}
@@ -151,12 +145,12 @@ func initDB(conf *myconf.Config) error {
 
 	for _, p := range permissions.Permissions {
 		if !p.Authenticated {
-			err := svcs.Perm.UpdateOperationAudience(&p.Operation, mytype.Everyone, p.Fields)
+			err := data.UpdateOperationAudience(db, &p.Operation, mytype.Everyone, p.Fields)
 			if err != nil {
 				return err
 			}
 		} else {
-			err := svcs.Perm.ConnectRoles(&p.Operation, p.Fields, p.Roles)
+			err := data.ConnectRolePermissions(db, &p.Operation, p.Fields, p.Roles)
 			if err != nil {
 				return err
 			}
@@ -207,7 +201,7 @@ func initDB(conf *myconf.Config) error {
 	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
 		return err
 	}
-	if _, err := svcs.User.Create(guest); err != nil {
+	if _, err := data.CreateUser(db, guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to create guest account")
@@ -227,14 +221,14 @@ func initDB(conf *myconf.Config) error {
 	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
 		return err
 	}
-	if _, err := svcs.User.Create(markus); err != nil {
+	if _, err := data.CreateUser(db, markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to create markus account")
 				return err
 			}
 			mylog.Log.Info("markus account already exists")
-			markus, err = svcs.User.GetByLogin("markus")
+			markus, err = data.GetUserByLogin("markus")
 			if err != nil {
 				return err
 			}
@@ -249,7 +243,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !markusIsAdmin {
-		if err := svcs.Role.GrantUser(markus.Id.String, data.AdminRole); err != nil {
+		if err := data.GrantUserRole(markus.Id.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
@@ -270,14 +264,14 @@ func initDB(conf *myconf.Config) error {
 	if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
 		return err
 	}
-	if _, err := svcs.User.Create(testUser); err != nil {
+	if _, err := data.CreateUser(db, testUser); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
 				mylog.Log.WithError(err).Fatal("failed to create testUser account")
 				return err
 			}
 			mylog.Log.Info("testUser account already exists")
-			testUser, err = svcs.User.GetByLogin("test")
+			testUser, err = data.GetUserByLogin(db, "test")
 			if err != nil {
 				return err
 			}
@@ -292,7 +286,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !testUserIsUser {
-		if err := svcs.Role.GrantUser(testUser.Id.String, data.UserRole); err != nil {
+		if err := data.GrantUserRole(db, testUser.Id.String, data.UserRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")
@@ -309,17 +303,17 @@ func initDB(conf *myconf.Config) error {
 	return nil
 }
 
-func startRefreshMV(svcs *service.Services) {
+func startRefreshMV(db data.Queryer) {
 	for {
-		go svcs.User.RefreshSearchIndex()
+		go data.RefreshUserSearchIndex(db)
 		time.Sleep(10 * time.Second)
-		go svcs.Study.RefreshSearchIndex()
+		go data.RefreshStudySearchIndex(db)
 		time.Sleep(10 * time.Second)
-		go svcs.Lesson.RefreshSearchIndex()
+		go data.RefreshLessonSearchIndex(db)
 		time.Sleep(10 * time.Second)
-		go svcs.Label.RefreshSearchIndex()
+		go data.RefreshTopicSearchIndex(db)
 		time.Sleep(10 * time.Minute)
-		go svcs.Topic.RefreshSearchIndex()
+		go data.RefreshLabelSearchIndex(db)
 		time.Sleep(30 * time.Minute)
 	}
 }

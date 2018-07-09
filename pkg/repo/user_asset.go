@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"strings"
@@ -133,27 +134,25 @@ func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
 }
 
 func NewUserAssetRepo(
-	svc *data.UserAssetService,
 	store *service.StorageService,
 ) *UserAssetRepo {
 	return &UserAssetRepo{
-		svc:   svc,
+		load:  loader.NewUserAssetLoader(),
 		store: store,
 	}
 }
 
 type UserAssetRepo struct {
-	load  *loader.UserAssetLoader
-	perms *Permitter
-	svc   *data.UserAssetService
-	store *service.StorageService
+	load   *loader.UserAssetLoader
+	permit *Permitter
+	store  *service.StorageService
 }
 
 func (r *UserAssetRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewUserAssetLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -187,14 +186,14 @@ func (r *UserAssetRepo) Create(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, a); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, a); err != nil {
 		return nil, err
 	}
 	userAsset, err := r.svc.Create(a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +204,7 @@ func (r *UserAssetRepo) Delete(userAsset *data.UserAsset) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, userAsset); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, userAsset); err != nil {
 		return err
 	}
 	return r.svc.Delete(userAsset.Id.String)
@@ -219,7 +218,7 @@ func (r *UserAssetRepo) Get(id string) (*UserAssetPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +233,7 @@ func (r *UserAssetRepo) GetByName(userId, studyId, name string) (*UserAssetPermi
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +248,7 @@ func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +270,7 @@ func (r *UserAssetRepo) GetByStudy(
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +295,7 @@ func (r *UserAssetRepo) GetByUser(
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +316,7 @@ func (r *UserAssetRepo) Search(within *mytype.OID, query string, po *data.PageOp
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -332,14 +331,14 @@ func (r *UserAssetRepo) Update(a *data.UserAsset) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, a); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, a); err != nil {
 		return nil, err
 	}
 	userAsset, err := r.svc.Update(a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +389,7 @@ func (r *UserAssetRepo) Upload(
 		return nil, err
 	}
 
-	if _, err := r.perms.Check(mytype.CreateAccess, userAsset); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, userAsset); err != nil {
 		return nil, err
 	}
 
@@ -398,14 +397,14 @@ func (r *UserAssetRepo) Upload(
 }
 
 func (r *UserAssetRepo) ViewerCanDelete(l *data.UserAsset) bool {
-	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *UserAssetRepo) ViewerCanUpdate(l *data.UserAsset) bool {
-	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

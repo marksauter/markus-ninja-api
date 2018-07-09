@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -83,23 +84,22 @@ func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	return r.lessonComment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentRepo(svc *data.LessonCommentService) *LessonCommentRepo {
+func NewLessonCommentRepo() *LessonCommentRepo {
 	return &LessonCommentRepo{
-		svc: svc,
+		load: loader.NewLessonCommentLoader(),
 	}
 }
 
 type LessonCommentRepo struct {
-	load  *loader.LessonCommentLoader
-	perms *Permitter
-	svc   *data.LessonCommentService
+	load   *loader.LessonCommentLoader
+	permit *Permitter
 }
 
 func (r *LessonCommentRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewLessonCommentLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.permit = p
 	return nil
 }
 
@@ -133,14 +133,14 @@ func (r *LessonCommentRepo) Create(lc *data.LessonComment) (*LessonCommentPermit
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, lc); err != nil {
+	if _, err := r.permit.Check(mytype.CreateAccess, lc); err != nil {
 		return nil, err
 	}
 	lessonComment, err := r.svc.Create(lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (r *LessonCommentRepo) GetByLesson(
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +202,7 @@ func (r *LessonCommentRepo) GetByStudy(
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func (r *LessonCommentRepo) GetByUser(userId string, po *data.PageOptions) ([]*L
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -238,7 +238,7 @@ func (r *LessonCommentRepo) Delete(lessonComment *data.LessonComment) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, lessonComment); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, lessonComment); err != nil {
 		return err
 	}
 	return r.svc.Delete(lessonComment.Id.String)
@@ -248,14 +248,14 @@ func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, lc); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, lc); err != nil {
 		return nil, err
 	}
 	lessonComment, err := r.svc.Update(lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -263,14 +263,14 @@ func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit
 }
 
 func (r *LessonCommentRepo) ViewerCanDelete(l *data.LessonComment) bool {
-	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
+	if _, err := r.permit.Check(mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
 func (r *LessonCommentRepo) ViewerCanUpdate(l *data.LessonComment) bool {
-	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
+	if _, err := r.permit.Check(mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

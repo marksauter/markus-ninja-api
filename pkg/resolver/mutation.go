@@ -13,7 +13,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
@@ -29,20 +28,19 @@ func (r *RootResolver) AddEmail(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-
-	reposTx, err, newTx := r.Repos.Begin()
-	defer reposTx.Rollback()
-	permitter := repo.NewPermitter(r.Svcs.Perm, reposTx)
-	permitter.Begin(ctx)
-	defer permitter.End()
-	reposTx.OpenAll(permitter)
-	defer reposTx.CloseAll()
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	email := &data.Email{}
 	email.Value.Set(args.Input.Email)
 	email.UserId.Set(viewer.Id)
 
-	emailPermit, err := reposTx.Email().Create(email)
+	emailPermit, err := r.Repos.Email().Create(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +49,7 @@ func (r *RootResolver) AddEmail(
 	evt.EmailId.Set(email.Id)
 	evt.UserId.Set(viewer.Id)
 
-	evtPermit, err := reposTx.EVT().Create(evt)
+	evtPermit, err := r.Repos.EVT().Create(ctx, evt)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +70,7 @@ func (r *RootResolver) AddEmail(
 	}
 
 	if newTx {
-		err := reposTx.Commit()
+		err := data.CommitTransaction(tx)
 		if err != nil {
 			return resolver, err
 		}
@@ -281,39 +279,56 @@ func (r *RootResolver) CreateUser(
 		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
 	}
 
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	userPermit, err := r.Repos.User().Create(user)
 	if err != nil {
 		return nil, err
 	}
 	user = userPermit.Get()
-	emailPermit, err := r.Repos.Email().GetByValue(args.Input.Email)
+	emailPermit, err := r.Repos.Email().GetByValue(ctx, args.Input.Email)
 	primaryEmail := emailPermit.Get()
 
-	uResolver := &userResolver{User: userPermit, Repos: r.Repos}
+	resolver := &userResolver{User: userPermit, Repos: r.Repos}
 
 	if user.Login.String != "guest" {
 		evt := &data.EVT{}
 		evt.EmailId.Set(primaryEmail.Id)
 		evt.UserId.Set(user.Id)
 
-		newEvt, err := r.Svcs.EVT.Create(evt)
+		evtPermit, err := r.Repos.EVT().Create(ctx, evt)
 		if err != nil {
-			return uResolver, err
+			return resolver, err
 		}
+
+		evt = evtPermit.Get()
 
 		sendMailInput := &service.SendEmailVerificationMailInput{
 			EmailId:   primaryEmail.Id.String,
 			To:        primaryEmail.Value.String,
 			UserLogin: user.Login.String,
-			Token:     newEvt.Token.String,
+			Token:     evt.Token.String,
 		}
 		err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 		if err != nil {
-			return uResolver, err
+			return resolver, err
 		}
 	}
 
-	return uResolver, nil
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return resolver, err
+		}
+	}
+
+	return resolver, nil
 }
 
 type DeleteEmailInput struct {
@@ -324,7 +339,14 @@ func (r *RootResolver) DeleteEmail(
 	ctx context.Context,
 	args struct{ Input DeleteEmailInput },
 ) (*deleteEmailPayloadResolver, error) {
-	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+	emailPermit, err := r.Repos.Email().Get(ctx, args.Input.EmailId)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +354,7 @@ func (r *RootResolver) DeleteEmail(
 	email := emailPermit.Get()
 
 	n, err := r.Repos.Email().CountByUser(
+		ctx,
 		email.UserId.String,
 		data.EmailIsVerified,
 	)
@@ -342,13 +365,14 @@ func (r *RootResolver) DeleteEmail(
 		return nil, errors.New("cannot delete your only verified email")
 	}
 
-	if err := r.Repos.Email().Delete(email); err != nil {
+	if err := r.Repos.Email().Delete(ctx, email); err != nil {
 		return nil, err
 	}
 
 	if email.Type.Type == data.PrimaryEmail {
 		var newPrimaryEmail *data.Email
 		emails, err := r.Repos.Email().GetByUser(
+			ctx,
 			&email.UserId,
 			nil,
 			data.EmailIsVerified,
@@ -367,16 +391,25 @@ func (r *RootResolver) DeleteEmail(
 			}
 		}
 		newPrimaryEmail.Type.Set(data.PrimaryEmail)
-		if _, err := r.Repos.Email().Update(newPrimaryEmail); err != nil {
+		if _, err := r.Repos.Email().Update(ctx, newPrimaryEmail); err != nil {
 			return nil, err
 		}
 	}
 
-	return &deleteEmailPayloadResolver{
+	resolver := &deleteEmailPayloadResolver{
 		EmailId: &email.Id,
 		UserId:  &email.UserId,
 		Repos:   r.Repos,
-	}, nil
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return resolver, err
+		}
+	}
+
+	return resolver, nil
 }
 
 type DeleteLessonInput struct {
@@ -657,8 +690,15 @@ func (r *RootResolver) RequestEmailVerification(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	email, err := r.Repos.Email().GetByValue(args.Input.Email)
+	email, err := r.Repos.Email().GetByValue(ctx, args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return nil, errors.New("`email` not found")
@@ -694,7 +734,7 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, myerr.UnexpectedError{"failed to set evt user_id"}
 	}
 
-	evtPermit, err := r.Repos.EVT().Create(evt)
+	evtPermit, err := r.Repos.EVT().Create(ctx, evt)
 	if err != nil {
 		return nil, err
 	}
@@ -715,7 +755,16 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, err
 	}
 
-	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
+	resolver := &evtResolver{EVT: evtPermit, Repos: r.Repos}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return resolver, err
+		}
+	}
+
+	return resolver, nil
 }
 
 type RequestPasswordResetInput struct {
@@ -882,7 +931,7 @@ func (r *RootResolver) UpdateEmail(
 	ctx context.Context,
 	args struct{ Input UpdateEmailInput },
 ) (*emailResolver, error) {
-	emailPermit, err := r.Repos.Email().Get(args.Input.EmailId)
+	emailPermit, err := r.Repos.Email().Get(ctx, args.Input.EmailId)
 	if err != nil {
 		return nil, err
 	}
@@ -903,7 +952,7 @@ func (r *RootResolver) UpdateEmail(
 		}
 	}
 
-	emailPermit, err = r.Repos.Email().Update(email)
+	emailPermit, err = r.Repos.Email().Update(ctx, email)
 	if err != nil {
 		return nil, err
 	}

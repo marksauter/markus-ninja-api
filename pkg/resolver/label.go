@@ -79,7 +79,7 @@ func (r *labelResolver) Labelables(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByLabel(id.String)
+	lessonCount, err := r.Repos.Lesson().CountByLabel(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (r *labelResolver) Labelables(
 
 	switch labelableType {
 	case LabelableTypeLesson:
-		studies, err := r.Repos.Lesson().GetByLabel(id.String, pageOptions)
+		studies, err := r.Repos.Lesson().GetByLabel(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +126,7 @@ func (r *labelResolver) Study() (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -150,10 +150,10 @@ func (r *labelResolver) URL() (mygql.URI, error) {
 
 func (r *labelResolver) ViewerCanDelete() bool {
 	label := r.Label.Get()
-	return r.Repos.Label().ViewerCanDelete(label)
+	return r.Repos.Label().ViewerCanDelete(ctx, label)
 }
 
 func (r *labelResolver) ViewerCanUpdate() bool {
 	label := r.Label.Get()
-	return r.Repos.Label().ViewerCanUpdate(label)
+	return r.Repos.Label().ViewerCanUpdate(ctx, label)
 }

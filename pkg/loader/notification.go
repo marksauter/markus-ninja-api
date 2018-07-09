@@ -7,18 +7,43 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewNotificationLoader(svc *data.NotificationService) *NotificationLoader {
+func NewNotificationLoader() *NotificationLoader {
 	return &NotificationLoader{
-		svc:      svc,
-		batchGet: createLoader(newBatchGetNotificationFn(svc.Get)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						notification, err := data.GetNotification(db, key.String())
+						results[i] = &dataloader.Result{Data: notification, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type NotificationLoader struct {
-	svc *data.NotificationService
-
 	batchGet *dataloader.Loader
 }
 
@@ -31,8 +56,10 @@ func (r *NotificationLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *NotificationLoader) Get(id string) (*data.Notification, error) {
-	ctx := context.Background()
+func (r *NotificationLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Notification, error) {
 	notificationData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -45,8 +72,10 @@ func (r *NotificationLoader) Get(id string) (*data.Notification, error) {
 	return notification, nil
 }
 
-func (r *NotificationLoader) GetMany(ids *[]string) ([]*data.Notification, []error) {
-	ctx := context.Background()
+func (r *NotificationLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Notification, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -65,30 +94,4 @@ func (r *NotificationLoader) GetMany(ids *[]string) ([]*data.Notification, []err
 	}
 
 	return notifications, nil
-}
-
-func newBatchGetNotificationFn(
-	getter func(string) (*data.Notification, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				notification, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: notification, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

@@ -7,19 +7,71 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewTopicLoader(svc *data.TopicService) *TopicLoader {
+func NewTopicLoader() *TopicLoader {
 	return &TopicLoader{
-		svc:            svc,
-		batchGet:       createLoader(newBatchGetTopicBy1Fn(svc.Get)),
-		batchGetByName: createLoader(newBatchGetTopicBy1Fn(svc.GetByName)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						topic, err := data.GetTopic(db, key.String())
+						results[i] = &dataloader.Result{Data: topic, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						topic, err := data.GetTopicByName(db, key.String())
+						results[i] = &dataloader.Result{Data: topic, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type TopicLoader struct {
-	svc *data.TopicService
-
 	batchGet       *dataloader.Loader
 	batchGetByName *dataloader.Loader
 }
@@ -31,11 +83,12 @@ func (r *TopicLoader) Clear(id string) {
 
 func (r *TopicLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetByName.ClearAll()
 }
 
-func (r *TopicLoader) Get(id string) (*data.Topic, error) {
-	ctx := context.Background()
+func (r *TopicLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Topic, error) {
 	topicData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -45,12 +98,16 @@ func (r *TopicLoader) Get(id string) (*data.Topic, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
+	r.batchGetByName.Prime(ctx, dataloader.StringKey(topic.Name.String), topic)
+
 	return topic, nil
 }
 
-func (r *TopicLoader) GetByName(name string) (*data.Topic, error) {
-	ctx := context.Background()
-	topicData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(name))()
+func (r *TopicLoader) GetByName(
+	ctx context.Context,
+	id string,
+) (*data.Topic, error) {
+	topicData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +116,15 @@ func (r *TopicLoader) GetByName(name string) (*data.Topic, error) {
 		return nil, fmt.Errorf("wrong type")
 	}
 
+	r.batchGet.Prime(ctx, dataloader.StringKey(topic.Id.String), topic)
+
 	return topic, nil
 }
 
-func (r *TopicLoader) GetMany(ids *[]string) ([]*data.Topic, []error) {
-	ctx := context.Background()
+func (r *TopicLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Topic, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -82,30 +143,4 @@ func (r *TopicLoader) GetMany(ids *[]string) ([]*data.Topic, []error) {
 	}
 
 	return topics, nil
-}
-
-func newBatchGetTopicBy1Fn(
-	getter func(string) (*data.Topic, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				topic, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: topic, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

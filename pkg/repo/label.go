@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -85,23 +86,22 @@ func (r *LabelPermit) UpdatedAt() (time.Time, error) {
 	return r.label.UpdatedAt.Time, nil
 }
 
-func NewLabelRepo(svc *data.LabelService) *LabelRepo {
+func NewLabelRepo() *LabelRepo {
 	return &LabelRepo{
-		svc: svc,
+		load: loader.NewLabelLoader(),
 	}
 }
 
 type LabelRepo struct {
 	load  *loader.LabelLoader
 	perms *Permitter
-	svc   *data.LabelService
 }
 
 func (r *LabelRepo) Open(p *Permitter) error {
-	r.perms = p
-	if r.load == nil {
-		r.load = loader.NewLabelLoader(r.svc)
+	if p == nil {
+		return errors.New("permitter must not be nil")
 	}
+	r.perms = p
 	return nil
 }
 

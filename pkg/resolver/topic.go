@@ -83,7 +83,7 @@ func (r *topicResolver) Topicables(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByTopic(id.String)
+	studyCount, err := r.Repos.Study().CountByTopic(ctx, id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (r *topicResolver) Topicables(
 
 	switch topicableType {
 	case TopicableTypeStudy:
-		studies, err := r.Repos.Study().GetByTopic(id.String, pageOptions)
+		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}

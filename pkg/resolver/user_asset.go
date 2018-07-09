@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
@@ -43,12 +44,12 @@ func (r *userAssetResolver) OriginalName() (string, error) {
 	return r.UserAsset.OriginalName()
 }
 
-func (r *userAssetResolver) Owner() (*userResolver, error) {
+func (r *userAssetResolver) Owner(ctx context.Context) (*userResolver, error) {
 	userId, err := r.UserAsset.UserId()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(userId.String)
+	user, err := r.Repos.User().Get(ctx, userId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +90,12 @@ func (r *userAssetResolver) Size() (int32, error) {
 	return int32(s), err
 }
 
-func (r *userAssetResolver) Study() (*studyResolver, error) {
+func (r *userAssetResolver) Study(ctx context.Context) (*studyResolver, error) {
 	studyId, err := r.UserAsset.StudyId()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +125,12 @@ func (r *userAssetResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *userAssetResolver) ViewerCanDelete() bool {
+func (r *userAssetResolver) ViewerCanDelete(ctx context.Context) bool {
 	userAsset := r.UserAsset.Get()
-	return r.Repos.UserAsset().ViewerCanDelete(userAsset)
+	return r.Repos.UserAsset().ViewerCanDelete(ctx, userAsset)
 }
 
-func (r *userAssetResolver) ViewerCanUpdate() bool {
+func (r *userAssetResolver) ViewerCanUpdate(ctx context.Context) bool {
 	userAsset := r.UserAsset.Get()
-	return r.Repos.UserAsset().ViewerCanUpdate(userAsset)
+	return r.Repos.UserAsset().ViewerCanUpdate(ctx, userAsset)
 }

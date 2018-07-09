@@ -132,7 +132,7 @@ func GetAppled(db Queryer, id int32) (*Appled, error) {
 	return getAppled(db, "getAppled", getAppledSQL, id)
 }
 
-const getAppledForAppleableSQL = `
+const getAppledByAppleableAndUserSQL = `
 	SELECT
 		appleable_id,
 		created_at,
@@ -142,12 +142,12 @@ const getAppledForAppleableSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func GetAppledForAppleable(db Queryer, appleableId, userId string) (*Appled, error) {
-	mylog.Log.Info("GetAppledForAppleable()")
+func GetAppledByAppleableAndUser(db Queryer, appleableId, userId string) (*Appled, error) {
+	mylog.Log.Info("GetAppledByAppleableAndUser()")
 	return getAppled(
 		db,
-		"getAppledForAppleable",
-		getAppledForAppleableSQL,
+		"getAppledByAppleableAndUser",
+		getAppledByAppleableAndUserSQL,
 		appleableId,
 		userId,
 	)

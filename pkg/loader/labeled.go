@@ -8,21 +8,79 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewLabeledLoader(svc *data.LabeledService) *LabeledLoader {
+func NewLabeledLoader() *LabeledLoader {
 	return &LabeledLoader{
-		svc:                  svc,
-		batchGet:             createLoader(newBatchGetLabeledBy1Fn(svc.Get)),
-		batchGetForLabelable: createLoader(newBatchGetLabeledBy2Fn(svc.GetForLabelable)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						id, err := strconv.ParseInt(key.String(), 10, 32)
+						if err != nil {
+							results[i] = &dataloader.Result{Error: err}
+							return
+						}
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						labeled, err := data.GetLabeled(db, int32(id))
+						results[i] = &dataloader.Result{Data: labeled, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByLabelableAndLabel: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						labeled, err := data.GetLabeledByLabelableAndLabel(db, ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: labeled, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type LabeledLoader struct {
-	svc *data.LabeledService
-
-	batchGet             *dataloader.Loader
-	batchGetForLabelable *dataloader.Loader
+	batchGet                    *dataloader.Loader
+	batchGetByLabelableAndLabel *dataloader.Loader
 }
 
 func (r *LabeledLoader) Clear(id string) {
@@ -32,11 +90,13 @@ func (r *LabeledLoader) Clear(id string) {
 
 func (r *LabeledLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetForLabelable.ClearAll()
+	r.batchGetByLabelableAndLabel.ClearAll()
 }
 
-func (r *LabeledLoader) Get(id int32) (*data.Labeled, error) {
-	ctx := context.Background()
+func (r *LabeledLoader) Get(
+	ctx context.Context,
+	id int32,
+) (*data.Labeled, error) {
 	key := strconv.Itoa(int(id))
 	labeledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
@@ -48,15 +108,18 @@ func (r *LabeledLoader) Get(id int32) (*data.Labeled, error) {
 	}
 
 	compositeKey := newCompositeKey(labeled.LabelableId.String, labeled.LabelId.String)
-	r.batchGetForLabelable.Prime(ctx, compositeKey, labeled)
+	r.batchGetByLabelableAndLabel.Prime(ctx, compositeKey, labeled)
 
 	return labeled, nil
 }
 
-func (r *LabeledLoader) GetForLabelable(labelableId, userId string) (*data.Labeled, error) {
-	ctx := context.Background()
+func (r *LabeledLoader) GetByLabelableAndLabel(
+	ctx context.Context,
+	labelableId,
+	userId string,
+) (*data.Labeled, error) {
 	compositeKey := newCompositeKey(labelableId, userId)
-	labeledData, err := r.batchGetForLabelable.Load(ctx, compositeKey)()
+	labeledData, err := r.batchGetByLabelableAndLabel.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -69,62 +132,4 @@ func (r *LabeledLoader) GetForLabelable(labelableId, userId string) (*data.Label
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), labeled)
 
 	return labeled, nil
-}
-
-func newBatchGetLabeledBy1Fn(
-	getter func(int32) (*data.Labeled, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				id, err := strconv.ParseInt(key.String(), 10, 32)
-				if err != nil {
-					results[i] = &dataloader.Result{Error: err}
-					return
-				}
-				labeled, err := getter(int32(id))
-				results[i] = &dataloader.Result{Data: labeled, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
-}
-
-func newBatchGetLabeledBy2Fn(
-	getter func(string, string) (*data.Labeled, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				labeled, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: labeled, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
@@ -13,34 +12,16 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-func NewPermitter(svc *data.PermissionService, repos *Repos) *Permitter {
+func NewPermitter(repos *Repos) *Permitter {
 	return &Permitter{
+		load:  loader.NewQueryPermLoader(),
 		repos: repos,
-		svc:   svc,
 	}
 }
 
 type Permitter struct {
-	load   *loader.QueryPermLoader
-	repos  *Repos
-	svc    *data.PermissionService
-	viewer *data.User
-}
-
-func (r *Permitter) Begin(ctx context.Context) error {
-	if r.load == nil {
-		var ok bool
-		r.viewer, ok = myctx.UserFromContext(ctx)
-		if !ok {
-			return fmt.Errorf("viewer not found")
-		}
-		r.load = loader.NewQueryPermLoader(r.svc, r.viewer)
-	}
-	return nil
-}
-
-func (r *Permitter) End() {
-	r.load.ClearAll()
+	load  *loader.QueryPermLoader
+	repos *Repos
 }
 
 func (r *Permitter) CheckConnection() error {
@@ -51,22 +32,30 @@ func (r *Permitter) CheckConnection() error {
 	return nil
 }
 
-func (r *Permitter) Clear(o mytype.Operation) {
+func (r *Permitter) ClearCacheOperation(o mytype.Operation) {
 	r.load.Clear(o)
 }
 
-func (r *Permitter) ClearAll() {
+func (r *Permitter) ClearCache() {
 	r.load.ClearAll()
 }
 
-func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissionFunc, error) {
-	var checkField FieldPermissionFunc
-	if err := r.CheckConnection(); err != nil {
-		return checkField, err
+func (r *Permitter) Check(
+	ctx context.Context,
+	a mytype.AccessLevel,
+	node interface{},
+) (f FieldPermissionFunc, err error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err = myctx.ErrNotFound{"viewer"}
+		return
+	}
+	if err = r.CheckConnection(); err != nil {
+		return
 	}
 	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
-		return checkField, err
+		return
 	}
 	o := mytype.NewOperation(a, nt)
 
@@ -74,9 +63,9 @@ func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissi
 	// If we are not creating, then check if the viewer can admin the object. If
 	// yes, then grant the owner role to the user.
 	if a != mytype.CreateAccess {
-		ok, err := r.ViewerCanAdmin(node)
+		ok, err := r.ViewerCanAdmin(viewer, node)
 		if err != nil {
-			return checkField, err
+			return
 		}
 		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
@@ -84,9 +73,9 @@ func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissi
 	} else {
 		// If we are creating, then check if viewer can create the object.  If yes,
 		// then grant the owner role to the user.
-		ok, err := r.ViewerCanCreate(node)
+		ok, err := r.ViewerCanCreate(viewer, node)
 		if err != nil {
-			return checkField, err
+			return
 		}
 		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
@@ -96,14 +85,15 @@ func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissi
 	queryPerm, err := r.load.Get(o, additionalRoles)
 	if err != nil {
 		if err == data.ErrNotFound {
-			return checkField, ErrAccessDenied
+			err = ErrAccessDenied
+			return
 		} else {
-			return checkField, err
+			return
 		}
 	}
 	// Set field permission function for the fields returned by the query
 	// permission.
-	checkField = func(field string) bool {
+	f = func(field string) bool {
 		// If the returned query permission has a null value for fields, then return
 		// true for all checks.
 		// NOTE: checkField only makes sense in respect to create/read/update
@@ -120,21 +110,22 @@ func (r *Permitter) Check(a mytype.AccessLevel, node interface{}) (FieldPermissi
 	}
 	// If creating/updating, then check if fields provided are permitted.
 	if a == mytype.CreateAccess || a == mytype.UpdateAccess {
-		for _, f := range structs.Fields(node) {
-			if !f.IsZero() {
-				dbField := f.Tag("db")
-				if ok := checkField(dbField); !ok {
-					return checkField, ErrAccessDenied
+		for _, field := range structs.Fields(node) {
+			if !field.IsZero() {
+				dbField := field.Tag("db")
+				if ok := f(dbField); !ok {
+					err = ErrAccessDenied
+					return
 				}
 			}
 		}
 	}
-	return checkField, nil
+	return
 }
 
 // Can the viewer admin the node, i.e. is the viewer the owner of the object?
-func (r *Permitter) ViewerCanAdmin(node interface{}) (bool, error) {
-	vid := r.viewer.Id.String
+func (r *Permitter) ViewerCanAdmin(viewer *data.User, node interface{}) (bool, error) {
+	vid := viewer.Id.String
 	switch node := node.(type) {
 	case data.Email:
 		return vid == node.UserId.String, nil
@@ -201,8 +192,8 @@ func (r *Permitter) ViewerCanAdmin(node interface{}) (bool, error) {
 // Can the viewer create the passed node? Mainly used for objects that have
 // parent objects, and the viewer must be the owner of the parent object to
 // create a child object.
-func (r *Permitter) ViewerCanCreate(node interface{}) (bool, error) {
-	vid := r.viewer.Id.String
+func (r *Permitter) ViewerCanCreate(viewer *data.User, node interface{}) (bool, error) {
+	vid := viewer.Id.String
 	switch node := node.(type) {
 	case data.Label:
 		study, err := r.repos.Study().Get(node.StudyId.String)

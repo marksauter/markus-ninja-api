@@ -26,14 +26,6 @@ type UserAsset struct {
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
 
-func NewUserAssetService(db Queryer) *UserAssetService {
-	return &UserAssetService{db}
-}
-
-type UserAssetService struct {
-	db Queryer
-}
-
 type UserAssetFilterOption int
 
 const (
@@ -49,8 +41,12 @@ func (src UserAssetFilterOption) String() string {
 	}
 }
 
-func (s *UserAssetService) CountBySearch(within *mytype.OID, query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("UserAsset.CountBySearch(query)")
+func CountUserAssetBySearch(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountUserAssetBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -72,7 +68,7 @@ func (s *UserAssetService) CountBySearch(within *mytype.OID, query string) (n in
 
 	psName := preparedName("countUserAssetBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -85,11 +81,15 @@ const countUserAssetByStudySQL = `
 	WHERE user_id = $1 AND study_id = $2
 `
 
-func (s *UserAssetService) CountByStudy(userId, studyId string) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("UserAsset.CountByStudy(study_id)")
+func CountUserAssetByStudy(
+	db Queryer,
+	userId,
+	studyId string,
+) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountUserAssetByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countUserAssetByStudy",
 		countUserAssetByStudySQL,
 		userId,
@@ -107,11 +107,14 @@ const countUserAssetByUserSQL = `
 	WHERE user_id = $1
 `
 
-func (s *UserAssetService) CountByUser(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("UserAsset.CountByUser(user_id)")
+func CountUserAssetByUser(
+	db Queryer,
+	userId string,
+) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountUserAssetByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countUserAssetByUser",
 		countUserAssetByUserSQL,
 		userId,
@@ -122,13 +125,14 @@ func (s *UserAssetService) CountByUser(userId string) (int32, error) {
 	return n, err
 }
 
-func (s *UserAssetService) get(
+func getUserAsset(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) (*UserAsset, error) {
 	var row UserAsset
-	err := prepareQueryRow(s.db, name, sql, args...).Scan(
+	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
 		&row.Key,
@@ -152,14 +156,15 @@ func (s *UserAssetService) get(
 	return &row, nil
 }
 
-func (s *UserAssetService) getMany(
+func getManyUserAsset(
+	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
 ) ([]*UserAsset, error) {
 	var rows []*UserAsset
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,9 +216,12 @@ const getUserAssetByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *UserAssetService) Get(id string) (*UserAsset, error) {
-	mylog.Log.WithField("id", id).Info("UserAsset.Get(id)")
-	return s.get("getUserAssetById", getUserAssetByIdSQL, id)
+func GetUserAsset(
+	db Queryer,
+	id string,
+) (*UserAsset, error) {
+	mylog.Log.WithField("id", id).Info("GetUserAsset(id)")
+	return getUserAsset(db, "getUserAssetById", getUserAssetByIdSQL, id)
 }
 
 const getUserAssetByNameSQL = `
@@ -234,9 +242,15 @@ const getUserAssetByNameSQL = `
 	WHERE user_id = $1 AND study_id = $2 AND lower(name) = lower($3)
 `
 
-func (s *UserAssetService) GetByName(userId, studyId, name string) (*UserAsset, error) {
-	mylog.Log.WithField("name", name).Info("UserAsset.GetByName(name)")
-	return s.get(
+func GetUserAssetByName(
+	db Queryer,
+	userId,
+	studyId,
+	name string,
+) (*UserAsset, error) {
+	mylog.Log.WithField("name", name).Info("GetUserAssetByName(name)")
+	return getUserAsset(
+		db,
 		"getUserAssetByName",
 		getUserAssetByNameSQL,
 		userId,
@@ -265,15 +279,17 @@ const getAssetByUserStudyAndNameSQL = `
 	WHERE ua.user_id = a.id AND ua.study_id = s.id AND lower(ua.name) = lower($3)
 `
 
-func (s *UserAssetService) GetByUserStudyAndName(
+func GetUserAssetByUserStudyAndName(
+	db Queryer,
 	userLogin,
 	studyName,
 	name string,
 ) (*UserAsset, error) {
 	mylog.Log.WithField(
 		"name", name,
-	).Info("UserAsset.GetByUserStudyAndName(name)")
-	return s.get(
+	).Info("GetUserAssetByUserStudyAndName(name)")
+	return getUserAsset(
+		db,
 		"getAssetByUserStudyAndName",
 		getAssetByUserStudyAndNameSQL,
 		userLogin,
@@ -282,7 +298,8 @@ func (s *UserAssetService) GetByUserStudyAndName(
 	)
 }
 
-func (s *UserAssetService) GetByStudy(
+func GetUserAssetByStudy(
+	db Queryer,
 	userId *mytype.OID,
 	studyId *mytype.OID,
 	po *PageOptions,
@@ -290,7 +307,7 @@ func (s *UserAssetService) GetByStudy(
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
 		"study_id", studyId.String,
-	).Info("UserAsset.GetByStudy(studyId)")
+	).Info("GetUserAssetByStudy(studyId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`user_id = ` + args.Append(userId),
@@ -315,17 +332,18 @@ func (s *UserAssetService) GetByStudy(
 
 	psName := preparedName("getUserAssetsByStudy", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyUserAsset(db, psName, sql, args...)
 }
 
-func (s *UserAssetService) GetByUser(
+func GetUserAssetByUser(
+	db Queryer,
 	userId *mytype.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
 		"user_id", userId.String,
-	).Info("UserAsset.GetByUser(userId)")
+	).Info("GetUserAssetByUser(userId)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -348,11 +366,14 @@ func (s *UserAssetService) GetByUser(
 
 	psName := preparedName("getUserAssetsByUser", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyUserAsset(db, psName, sql, args...)
 }
 
-func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
-	mylog.Log.Info("UserAsset.Create()")
+func CreateUserAsset(
+	db Queryer,
+	row *UserAsset,
+) (*UserAsset, error) {
+	mylog.Log.Info("CreateUserAsset()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -397,7 +418,7 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		values = append(values, args.Append(&row.UserId))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -429,8 +450,7 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 		return nil, err
 	}
 
-	userAssetSvc := NewUserAssetService(tx)
-	userAsset, err := userAssetSvc.Get(row.Id.String)
+	userAsset, err := GetUserAsset(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -446,14 +466,17 @@ func (s *UserAssetService) Create(row *UserAsset) (*UserAsset, error) {
 	return userAsset, nil
 }
 
-const deleteAssetSQl = `
+const deleteUserAssetSQL = `
 	DELETE FROM user_asset
 	WHERE id = $1
 `
 
-func (s *UserAssetService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("UserAsset.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteAsset", deleteAssetSQl, id)
+func DeleteUserAsset(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteUserAsset(id)")
+	commandTag, err := prepareExec(db, "deleteUserAsset", deleteUserAssetSQL, id)
 	if err != nil {
 		return err
 	}
@@ -465,13 +488,15 @@ func (s *UserAssetService) Delete(id string) error {
 }
 
 const refreshUserAssetSearchIndexSQL = `
-	REFRESH MATERIALIZED VIEW CONCURRENTLY user_asset_search_index
+	SELECT refresh_mv_xxx('user_asset_search_index')
 `
 
-func (s *UserAssetService) RefreshSearchIndex() error {
-	mylog.Log.Info("UserAsset.RefreshSearchIndex()")
+func RefreshUserAssetIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshUserAssetIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshUserAssetSearchIndex",
 		refreshUserAssetSearchIndexSQL,
 	)
@@ -482,8 +507,13 @@ func (s *UserAssetService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *UserAssetService) Search(within *mytype.OID, query string, po *PageOptions) ([]*UserAsset, error) {
-	mylog.Log.WithField("query", query).Info("UserAsset.Search(query)")
+func SearchUserAsset(
+	db Queryer,
+	within *mytype.OID,
+	query string,
+	po *PageOptions,
+) ([]*UserAsset, error) {
+	mylog.Log.WithField("query", query).Info("SearchUserAsset(query)")
 	if within != nil {
 		if within.Type != "User" && within.Type != "Study" {
 			return nil, fmt.Errorf(
@@ -511,11 +541,14 @@ func (s *UserAssetService) Search(within *mytype.OID, query string, po *PageOpti
 
 	psName := preparedName("searchUserAssetIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyUserAsset(db, psName, sql, args...)
 }
 
-func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
-	mylog.Log.Info("UserAsset.Update()")
+func UpdateUserAsset(
+	db Queryer,
+	row *UserAsset,
+) (*UserAsset, error) {
+	mylog.Log.Info("UpdateUserAsset()")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -523,7 +556,7 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -559,8 +592,7 @@ func (s *UserAssetService) Update(row *UserAsset) (*UserAsset, error) {
 		return nil, ErrNotFound
 	}
 
-	userAssetSvc := NewUserAssetService(tx)
-	userAsset, err := userAssetSvc.Get(row.Id.String)
+	userAsset, err := GetUserAsset(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

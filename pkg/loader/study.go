@@ -7,19 +7,72 @@ import (
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewStudyLoader(svc *data.StudyService) *StudyLoader {
+func NewStudyLoader() *StudyLoader {
 	return &StudyLoader{
-		svc:                   svc,
-		batchGet:              createLoader(newBatchGetStudyBy1Fn(svc.Get)),
-		batchGetByUserAndName: createLoader(newBatchGetStudyBy2Fn(svc.GetByUserAndName)),
+		batchGet: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						study, err := data.GetStudy(db, key.String())
+						results[i] = &dataloader.Result{Data: study, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchGetByUserAndName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						study, err := data.GetStudyByUserAndName(db, ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: study, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type StudyLoader struct {
-	svc *data.StudyService
-
 	batchGet              *dataloader.Loader
 	batchGetByUserAndName *dataloader.Loader
 }
@@ -34,8 +87,10 @@ func (r *StudyLoader) ClearAll() {
 	r.batchGetByUserAndName.ClearAll()
 }
 
-func (r *StudyLoader) Get(id string) (*data.Study, error) {
-	ctx := context.Background()
+func (r *StudyLoader) Get(
+	ctx context.Context,
+	id string,
+) (*data.Study, error) {
 	studyData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
@@ -48,8 +103,11 @@ func (r *StudyLoader) Get(id string) (*data.Study, error) {
 	return study, nil
 }
 
-func (r *StudyLoader) GetByUserAndName(login, name string) (*data.Study, error) {
-	ctx := context.Background()
+func (r *StudyLoader) GetByUserAndName(
+	ctx context.Context,
+	login,
+	name string,
+) (*data.Study, error) {
 	compositeKey := newCompositeKey(login, name)
 	studyData, err := r.batchGetByUserAndName.Load(ctx, compositeKey)()
 	if err != nil {
@@ -65,8 +123,10 @@ func (r *StudyLoader) GetByUserAndName(login, name string) (*data.Study, error) 
 	return study, nil
 }
 
-func (r *StudyLoader) GetMany(ids *[]string) ([]*data.Study, []error) {
-	ctx := context.Background()
+func (r *StudyLoader) GetMany(
+	ctx context.Context,
+	ids *[]string,
+) ([]*data.Study, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
@@ -85,57 +145,4 @@ func (r *StudyLoader) GetMany(ids *[]string) ([]*data.Study, []error) {
 	}
 
 	return studys, nil
-}
-
-func newBatchGetStudyBy1Fn(
-	getter func(string) (*data.Study, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				study, err := getter(key.String())
-				results[i] = &dataloader.Result{Data: study, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
-}
-
-func newBatchGetStudyBy2Fn(
-	getter func(string, string) (*data.Study, error),
-) dataloader.BatchFunc {
-	return func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-		var (
-			n       = len(keys)
-			results = make([]*dataloader.Result, n)
-			wg      sync.WaitGroup
-		)
-
-		wg.Add(n)
-
-		for i, key := range keys {
-			go func(i int, key dataloader.Key) {
-				defer wg.Done()
-				ks := splitCompositeKey(key)
-				study, err := getter(ks[0], ks[1])
-				results[i] = &dataloader.Result{Data: study, Error: err}
-			}(i, key)
-		}
-
-		wg.Wait()
-
-		return results
-	}
 }

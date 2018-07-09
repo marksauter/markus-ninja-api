@@ -25,28 +25,23 @@ type User struct {
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-func NewUserService(q Queryer) *UserService {
-	return &UserService{q}
-}
-
-type UserService struct {
-	db Queryer
-}
-
 const countUserByAppleableSQL = `
 	SELECT COUNT(*)
 	FROM apple_giver
 	WHERE appleable_id = $1
 `
 
-func (s *UserService) CountByAppleable(appleableId string) (int32, error) {
+func CountUserByAppleable(
+	db Queryer,
+	appleableId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"appleable_id",
 		appleableId,
-	).Info("User.CountByAppleable(appleable_id)")
+	).Info("CountUserByAppleable(appleable_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countUserByAppleable",
 		countUserByAppleableSQL,
 		appleableId,
@@ -63,14 +58,17 @@ const countUserByEnrollableSQL = `
 	WHERE enrollable_id = $1
 `
 
-func (s *UserService) CountByEnrollable(enrollableId string) (int32, error) {
+func CountUserByEnrollable(
+	db Queryer,
+	enrollableId string,
+) (int32, error) {
 	mylog.Log.WithField(
 		"enrollable_id",
 		enrollableId,
-	).Info("User.CountByEnrollable(enrollable_id)")
+	).Info("CountUserByEnrollable(enrollable_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countUserByEnrollable",
 		countUserByEnrollableSQL,
 		enrollableId,
@@ -87,11 +85,14 @@ const countUserByEnrolleeSQL = `
 	AND enrollee_id = $1
 `
 
-func (s *UserService) CountByEnrollee(userId string) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("User.CountByEnrollee(user_id)")
+func CountUserByEnrollee(
+	db Queryer,
+	userId string,
+) (int32, error) {
+	mylog.Log.WithField("user_id", userId).Info("CountUserByEnrollee(user_id)")
 	var n int32
 	err := prepareQueryRow(
-		s.db,
+		db,
 		"countUserByEnrollee",
 		countUserByEnrolleeSQL,
 		userId,
@@ -102,8 +103,11 @@ func (s *UserService) CountByEnrollee(userId string) (int32, error) {
 	return n, err
 }
 
-func (s *UserService) CountBySearch(query string) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("User.CountBySearch(query)")
+func CountUserBySearch(
+	db Queryer,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountUserBySearch(query)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 	sql := `
 		SELECT COUNT(*)
@@ -112,7 +116,7 @@ func (s *UserService) CountBySearch(query string) (n int32, err error) {
 	`
 	psName := preparedName("countUserBySearch", sql)
 
-	err = prepareQueryRow(s.db, psName, sql, args...).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -133,9 +137,12 @@ const batchGetUserSQL = `
 	WHERE id = ANY($1)
 `
 
-func (s *UserService) BatchGet(ids []string) ([]*User, error) {
-	mylog.Log.WithField("ids", ids).Info("User.BatchGet(ids) User")
-	return s.getMany("batchGetUserById", batchGetUserSQL, ids)
+func BatchGetUser(
+	db Queryer,
+	ids []string,
+) ([]*User, error) {
+	mylog.Log.WithField("ids", ids).Info("BatchGetUser(ids) User")
+	return getManyUser(db, "batchGetUserById", batchGetUserSQL, ids)
 }
 
 const batchGetUserByLoginSQL = `
@@ -152,14 +159,22 @@ const batchGetUserByLoginSQL = `
 	WHERE lower(login) = any($1)
 `
 
-func (s *UserService) BatchGetByLogin(logins []string) ([]*User, error) {
-	mylog.Log.WithField("logins", logins).Info("User.BatchGetByLogin(logins) User")
-	return s.getMany("batchGetUserByLoginById", batchGetUserByLoginSQL, logins)
+func BatchGetUserByLogin(
+	db Queryer,
+	logins []string,
+) ([]*User, error) {
+	mylog.Log.WithField("logins", logins).Info("BatchGetUserByLogin(logins) User")
+	return getManyUser(db, "batchGetUserByLoginById", batchGetUserByLoginSQL, logins)
 }
 
-func (s *UserService) get(name string, sql string, arg interface{}) (*User, error) {
+func getUser(
+	db Queryer,
+	name string,
+	sql string,
+	arg interface{},
+) (*User, error) {
 	var row User
-	err := prepareQueryRow(s.db, name, sql, arg).Scan(
+	err := prepareQueryRow(db, name, sql, arg).Scan(
 		&row.Bio,
 		&row.CreatedAt,
 		&row.Id,
@@ -179,10 +194,15 @@ func (s *UserService) get(name string, sql string, arg interface{}) (*User, erro
 	return &row, nil
 }
 
-func (s *UserService) getMany(name string, sql string, args ...interface{}) ([]*User, error) {
+func getManyUser(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) ([]*User, error) {
 	var rows []*User
 
-	dbRows, err := prepareQuery(s.db, name, sql, args...)
+	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,19 +246,23 @@ const getUserByIdSQL = `
 	WHERE id = $1
 `
 
-func (s *UserService) Get(id string) (*User, error) {
-	mylog.Log.WithField("id", id).Info("User.Get(id)")
-	return s.get("getUserById", getUserByIdSQL, id)
+func GetUser(
+	db Queryer,
+	id string) (*User, error,
+) {
+	mylog.Log.WithField("id", id).Info("GetUser(id)")
+	return getUser(db, "getUserById", getUserByIdSQL, id)
 }
 
-func (s *UserService) GetByAppleable(
+func GetUserByAppleable(
+	db Queryer,
 	appleableId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"appleabled_id",
 		appleableId,
-	).Info("User.GetByAppleable(appleabled_id)")
+	).Info("GetUserByAppleable(appleabled_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`appleable_id = ` + args.Append(appleableId)}
 
@@ -260,7 +284,7 @@ func (s *UserService) GetByAppleable(
 
 	var rows []*User
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -290,14 +314,15 @@ func (s *UserService) GetByAppleable(
 	return rows, nil
 }
 
-func (s *UserService) GetByEnrollee(
+func GetUserByEnrollee(
+	db Queryer,
 	userId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"user_id",
 		userId,
-	).Info("User.GetByEnrollee(user_id)")
+	).Info("GetUserByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollee_id = ` + args.Append(userId)}
 
@@ -319,7 +344,7 @@ func (s *UserService) GetByEnrollee(
 
 	var rows []*User
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -350,13 +375,14 @@ func (s *UserService) GetByEnrollee(
 	return rows, nil
 }
 
-func (s *UserService) GetEnrollees(
+func GetUserEnrollees(
+	db Queryer,
 	enrollableId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"enrollable_id", enrollableId,
-	).Info("User.GetEnrollees(enrollable_id)")
+	).Info("GetUserEnrollees(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
@@ -378,7 +404,7 @@ func (s *UserService) GetEnrollees(
 
 	var rows []*User
 
-	dbRows, err := prepareQuery(s.db, psName, sql, args...)
+	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -423,18 +449,22 @@ const getUserByLoginSQL = `
 	WHERE LOWER(login) = LOWER($1)
 `
 
-func (s *UserService) GetByLogin(login string) (*User, error) {
-	mylog.Log.WithField("login", login).Info("User.GetByLogin(login)")
-	return s.get("getUserByLogin", getUserByLoginSQL, login)
+func GetUserByLogin(
+	db Queryer,
+	login string) (*User, error,
+) {
+	mylog.Log.WithField("login", login).Info("GetUserByLogin(login)")
+	return getUser(db, "getUserByLogin", getUserByLoginSQL, login)
 }
 
-func (s *UserService) getCredentials(
+func getUserCredentials(
+	db Queryer,
 	name string,
 	sql string,
 	arg interface{},
 ) (*User, error) {
 	var row User
-	err := prepareQueryRow(s.db, name, sql, arg).Scan(
+	err := prepareQueryRow(db, name, sql, arg).Scan(
 		&row.Id,
 		&row.Login,
 		&row.Password,
@@ -462,11 +492,12 @@ const getUserCredentialsSQL = `
 	WHERE id = $1
 `
 
-func (s *UserService) GetCredentials(
+func GetUserCredentials(
+	db Queryer,
 	id string,
 ) (*User, error) {
-	mylog.Log.WithField("id", id).Info("User.GetCredentials(id)")
-	return s.getCredentials("getUserCredentials", getUserCredentialsSQL, id)
+	mylog.Log.WithField("id", id).Info("GetUserCredentials(id)")
+	return getUserCredentials(db, "getUserCredentials", getUserCredentialsSQL, id)
 }
 
 const getUserCredentialsByLoginSQL = `  
@@ -480,11 +511,12 @@ const getUserCredentialsByLoginSQL = `
 	WHERE LOWER(login) = LOWER($1)
 `
 
-func (s *UserService) GetCredentialsByLogin(
+func GetUserCredentialsByLogin(
+	db Queryer,
 	login string,
 ) (*User, error) {
-	mylog.Log.WithField("login", login).Info("User.GetCredentialsByLogin(login)")
-	return s.getCredentials("getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
+	mylog.Log.WithField("login", login).Info("GetUserCredentialsByLogin(login)")
+	return getUserCredentials(db, "getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
 }
 
 const getUserCredentialsByEmailSQL = `
@@ -500,21 +532,26 @@ const getUserCredentialsByEmailSQL = `
 	WHERE u.id = e.user_id
 `
 
-func (s *UserService) GetCredentialsByEmail(
+func GetUserCredentialsByEmail(
+	db Queryer,
 	email string,
 ) (*User, error) {
 	mylog.Log.WithField(
 		"email", email,
-	).Info("User.GetCredentialsByEmail(email)")
-	return s.getCredentials(
+	).Info("GetUserCredentialsByEmail(email)")
+	return getUserCredentials(
+		db,
 		"getUserCredentialsByEmail",
 		getUserCredentialsByEmailSQL,
 		email,
 	)
 }
 
-func (s *UserService) Create(row *User) (*User, error) {
-	mylog.Log.Info("User.Create()")
+func CreateUser(
+	db Queryer,
+	row *User) (*User, error,
+) {
+	mylog.Log.Info("CreateUser()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	var columns, values []string
@@ -537,7 +574,7 @@ func (s *UserService) Create(row *User) (*User, error) {
 		values = append(values, args.Append(&row.Password))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		return nil, err
 	}
@@ -571,13 +608,12 @@ func (s *UserService) Create(row *User) (*User, error) {
 	primaryEmail.Type.Set(PrimaryEmail)
 	primaryEmail.UserId.Set(row.Id)
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
-	_, err = CreateEmail(s.db, primaryEmail)
+	_, err = CreateEmail(db, primaryEmail)
 	if err != nil {
 		return nil, err
 	}
 
-	userSvc := NewUserService(tx)
-	user, err := userSvc.Get(row.Id.String)
+	user, err := GetUser(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -597,9 +633,12 @@ const deleteUserSQL = `
 	WHERE id = $1 
 `
 
-func (s *UserService) Delete(id string) error {
-	mylog.Log.WithField("id", id).Info("User.Delete(id)")
-	commandTag, err := prepareExec(s.db, "deleteUser", deleteUserSQL, id)
+func DeleteUser(
+	db Queryer,
+	id string,
+) error {
+	mylog.Log.WithField("id", id).Info("DeleteUser(id)")
+	commandTag, err := prepareExec(db, "deleteUser", deleteUserSQL, id)
 	if err != nil {
 		return err
 	}
@@ -614,10 +653,12 @@ const refreshUserSearchIndexSQL = `
 	SELECT refresh_mv_xxx('user_search_index')
 `
 
-func (s *UserService) RefreshSearchIndex() error {
-	mylog.Log.Info("User.RefreshSearchIndex()")
+func RefreshUserSearchIndex(
+	db Queryer,
+) error {
+	mylog.Log.Info("RefreshUserSearchIndex()")
 	_, err := prepareExec(
-		s.db,
+		db,
 		"refreshUserSearchIndex",
 		refreshUserSearchIndexSQL,
 	)
@@ -628,8 +669,12 @@ func (s *UserService) RefreshSearchIndex() error {
 	return nil
 }
 
-func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
-	mylog.Log.WithField("query", query).Info("User.Search(query)")
+func SearchUser(
+	db Queryer,
+	query string,
+	po *PageOptions,
+) ([]*User, error) {
+	mylog.Log.WithField("query", query).Info("SearchUser(query)")
 	selects := []string{
 		"bio",
 		"created_at",
@@ -644,11 +689,14 @@ func (s *UserService) Search(query string, po *PageOptions) ([]*User, error) {
 
 	psName := preparedName("searchUserIndex", sql)
 
-	return s.getMany(psName, sql, args...)
+	return getManyUser(db, psName, sql, args...)
 }
 
-func (s *UserService) Update(row *User) (*User, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("User.Update()")
+func UpdateUser(
+	db Queryer,
+	row *User,
+) (*User, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateUser()")
 
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
@@ -666,7 +714,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
 	}
 
-	tx, err, newTx := BeginTransaction(s.db)
+	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
@@ -704,7 +752,7 @@ func (s *UserService) Update(row *User) (*User, error) {
 	}
 
 	if row.PublicEmail.Status != pgtype.Undefined {
-		publicEmail, err := GetEmailByValue(s.db, row.PublicEmail.String)
+		publicEmail, err := GetEmailByValue(db, row.PublicEmail.String)
 		if err != nil {
 			return nil, err
 		}
@@ -712,14 +760,13 @@ func (s *UserService) Update(row *User) (*User, error) {
 			return nil, errors.New("cannot set unverified email to public")
 		}
 		publicEmail.Public.Set(true)
-		_, err = UpdateEmail(s.db, publicEmail)
+		_, err = UpdateEmail(db, publicEmail)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	userSvc := NewUserService(tx)
-	user, err := userSvc.Get(row.Id.String)
+	user, err := GetUser(db, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

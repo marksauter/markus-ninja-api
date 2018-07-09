@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -15,12 +17,12 @@ func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResol
 	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos)
 }
 
-func (r *addLessonCommentPayloadResolver) Lesson() (*lessonResolver, error) {
+func (r *addLessonCommentPayloadResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
 	lessonId, err := r.LessonComment.LessonId()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(lessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
 	if err != nil {
 		return nil, err
 	}
