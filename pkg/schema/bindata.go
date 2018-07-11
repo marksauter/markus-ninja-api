@@ -15,7 +15,6 @@
 // enum/lesson_order_field.gql
 // enum/notification_order_field.gql
 // enum/order_direction.gql
-// enum/pupil_order_field.gql
 // enum/ref_order_field.gql
 // enum/search_order_field.gql
 // enum/search_type.gql
@@ -23,7 +22,6 @@
 // enum/topic_order_field.gql
 // enum/topicable_order_field.gql
 // enum/topicable_type.gql
-// enum/tutor_order_field.gql
 // enum/user_asset_order_field.gql
 // input/add_email.gql
 // input/add_label.gql
@@ -51,7 +49,6 @@
 // input/lesson_order.gql
 // input/move_lesson.gql
 // input/notification_order.gql
-// input/pupil_order.gql
 // input/ref_order.gql
 // input/request_email_verification.gql
 // input/request_password_reset.gql
@@ -61,13 +58,12 @@
 // input/take_apple.gql
 // input/topic_order.gql
 // input/topicable_order.gql
-// input/tutor_order.gql
 // input/update_email.gql
 // input/update_lesson.gql
 // input/update_lesson_comment.gql
 // input/update_study.gql
 // input/update_topics.gql
-// input/update_user.gql
+// input/update_viewer.gql
 // input/user_asset_order.gql
 // interface/appleable.gql
 // interface/authorable.gql
@@ -111,14 +107,12 @@
 // type/notification.gql
 // type/page_info.gql
 // type/password_reset_token.gql
-// type/pupil_connection.gql
 // type/search_result_item.gql
 // type/study.gql
 // type/text_match.gql
 // type/text_match_highlight.gql
 // type/topic.gql
 // type/topicable_connection.gql
-// type/tutor_connection.gql
 // type/update_topics_payload.gql
 // type/user.gql
 // type/user_asset.gql
@@ -204,7 +198,7 @@ func enumApple_giver_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/apple_giver_order_field.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/apple_giver_order_field.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -224,7 +218,7 @@ func enumAppleable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/appleable_order_field.gql", size: 332, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/appleable_order_field.gql", size: 332, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -244,7 +238,7 @@ func enumAppleable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/appleable_type.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/appleable_type.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -264,7 +258,7 @@ func enumEmail_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/email_type.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/email_type.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -284,7 +278,7 @@ func enumEnrollable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollable_order_field.gql", size: 385, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/enrollable_order_field.gql", size: 385, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -304,7 +298,7 @@ func enumEnrollable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollable_type.gql", size: 171, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/enrollable_type.gql", size: 171, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -324,7 +318,7 @@ func enumEnrollee_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollee_order_field.gql", size: 144, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/enrollee_order_field.gql", size: 144, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -344,7 +338,7 @@ func enumEvent_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/event_order_field.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/event_order_field.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -364,7 +358,7 @@ func enumLabel_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/label_order_field.gql", size: 167, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/label_order_field.gql", size: 167, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -384,12 +378,12 @@ func enumLabelable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/labelable_order_field.gql", size: 284, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/labelable_order_field.gql", size: 284, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _enumLabelable_typeGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x34\xcc\x31\x0a\x02\x31\x10\x85\xe1\x7e\x4e\xf1\xc0\x7e\x6f\x61\xb7\x28\xb8\x5e\x20\xcb\x3e\x31\x30\x4e\x42\x66\x22\x04\xf1\xee\x92\xc2\xfa\xff\xf9\x4e\xb8\xb1\x36\x3a\x2d\x1c\xf1\x24\xb2\x1d\xf9\x9d\x8f\x9e\x14\x31\x2a\x1d\xe5\x01\x4d\x3b\x35\xed\x4a\x47\x14\x34\x46\x6f\xb6\x08\xad\xbf\xb0\xfe\xd3\x7d\x54\xe2\x23\xc0\x14\xe7\xe0\x50\xba\x17\xf3\x45\x80\xf5\xbc\x6d\xd7\x8b\x7c\xe5\x17\x00\x00\xff\xff\x79\xea\x2e\xe0\x70\x00\x00\x00")
+var _enumLabelable_typeGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x6c\xcd\xbb\x0a\xc2\x40\x14\x84\xe1\xfe\x3c\xc5\x80\x7d\x5e\x42\xd2\xe5\x02\x26\xbd\x6c\xcc\x88\x0b\x7b\x63\xcf\xae\x10\xc4\x77\x97\x2d\xc4\xc6\xfa\xff\x98\x39\xe1\xc2\x94\xa9\x0c\x45\x51\x1e\x84\x0d\xbb\x7d\xda\xbd\x1a\x87\x72\x24\x2a\xe2\x1d\xce\x6c\x74\x66\x73\x54\x94\x88\xcc\x52\x73\xe8\x84\xa1\x7a\x0c\xdf\xb4\x1e\x89\x78\x09\xd0\x16\x1b\x50\x38\xaa\xc6\xa0\x9d\x00\x43\xbf\x2c\xf3\x24\x7f\x32\x6e\xd1\xfb\xf6\xfe\x63\xd7\xf3\x3c\x8e\xfd\xb4\xca\x5b\x3e\x01\x00\x00\xff\xff\xc0\x33\x81\xfe\x9f\x00\x00\x00")
 
 func enumLabelable_typeGqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -404,7 +398,7 @@ func enumLabelable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/labelable_type.gql", size: 112, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/labelable_type.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1531325007, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -424,7 +418,7 @@ func enumLesson_comment_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/lesson_comment_order_field.gql", size: 211, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/lesson_comment_order_field.gql", size: 211, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -444,7 +438,7 @@ func enumLesson_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/lesson_order_field.gql", size: 219, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/lesson_order_field.gql", size: 219, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -464,7 +458,7 @@ func enumNotification_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/notification_order_field.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/notification_order_field.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -484,27 +478,7 @@ func enumOrder_directionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/order_direction.gql", size: 256, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _enumPupil_order_fieldGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x2c\xcc\xc1\x0a\xc2\x30\x10\x84\xe1\x7b\x9e\x62\xa0\x77\xdf\x41\x50\xaf\x2d\x52\xcf\x62\x93\x81\x2c\xd4\xdd\x90\x6e\x90\x22\xbe\xbb\xb4\x7a\xfd\x99\xf9\x3a\x0c\xd5\x0a\xab\x0b\x17\x4c\x2b\x5e\x59\x62\x46\x69\x45\x66\x44\x53\x65\x74\x31\x5d\x10\x1f\x8a\x89\xb0\x9a\x58\x99\x0e\x81\xda\x9e\x18\xb6\x59\xbf\xa5\x8b\x70\x4e\x78\x07\xa0\xc3\x1e\x7e\xc4\x9f\xa4\xc2\x33\x57\x78\x73\xdb\xdf\xc0\x78\x1b\xfb\xeb\xf9\x74\x3f\x8e\xe1\x13\xbe\x01\x00\x00\xff\xff\xca\x9c\x8d\xe3\x85\x00\x00\x00")
-
-func enumPupil_order_fieldGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_enumPupil_order_fieldGql,
-		"enum/pupil_order_field.gql",
-	)
-}
-
-func enumPupil_order_fieldGql() (*asset, error) {
-	bytes, err := enumPupil_order_fieldGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "enum/pupil_order_field.gql", size: 133, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/order_direction.gql", size: 256, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -524,7 +498,7 @@ func enumRef_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/ref_order_field.gql", size: 123, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/ref_order_field.gql", size: 123, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -544,7 +518,7 @@ func enumSearch_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/search_order_field.gql", size: 360, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/search_order_field.gql", size: 360, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -564,7 +538,7 @@ func enumSearch_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/search_type.gql", size: 302, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/search_type.gql", size: 302, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -584,7 +558,7 @@ func enumStudy_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/study_order_field.gql", size: 263, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/study_order_field.gql", size: 263, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -604,7 +578,7 @@ func enumTopic_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topic_order_field.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/topic_order_field.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -624,7 +598,7 @@ func enumTopicable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topicable_order_field.gql", size: 333, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/topicable_order_field.gql", size: 333, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -644,27 +618,7 @@ func enumTopicable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topicable_type.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _enumTutor_order_fieldGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x24\xcc\xc1\x0a\x82\x50\x10\x85\xe1\xfd\x3c\xc5\x01\xf7\xbe\x43\x50\x6d\x8d\xb8\xad\x23\xaf\x07\x1c\xc8\x99\x18\x47\x22\xa2\x77\x0f\x75\xfb\xf3\xf3\x35\xb8\x84\xbf\x18\xa9\x9c\xd1\x7f\xf0\x1e\xb5\x8e\xc8\x25\x3d\x50\xdd\x8c\x35\xd5\x6d\x46\x7d\x18\x7a\xc2\x63\x60\x70\x68\x85\xb6\x4c\x28\xeb\xd6\xad\xe9\xac\x7c\x0e\xf8\x0a\xd0\x60\x0b\x3b\xb1\x91\x3b\x96\x3a\xb1\x15\xa0\xdc\x4a\x77\x3d\x1d\xef\x87\x22\x3f\xf9\x07\x00\x00\xff\xff\xb4\x9f\x5f\x68\x7e\x00\x00\x00")
-
-func enumTutor_order_fieldGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_enumTutor_order_fieldGql,
-		"enum/tutor_order_field.gql",
-	)
-}
-
-func enumTutor_order_fieldGql() (*asset, error) {
-	bytes, err := enumTutor_order_fieldGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "enum/tutor_order_field.gql", size: 126, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/topicable_type.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -684,7 +638,7 @@ func enumUser_asset_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/user_asset_order_field.gql", size: 214, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "enum/user_asset_order_field.gql", size: 214, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -704,7 +658,7 @@ func inputAdd_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_email.gql", size: 107, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/add_email.gql", size: 107, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -724,7 +678,7 @@ func inputAdd_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_label.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/add_label.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -744,7 +698,7 @@ func inputAdd_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_lesson_comment.gql", size: 174, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/add_lesson_comment.gql", size: 174, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -764,7 +718,7 @@ func inputApple_giver_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/apple_giver_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/apple_giver_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -784,7 +738,7 @@ func inputAppleable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/appleable_order.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/appleable_order.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -804,7 +758,7 @@ func inputCreate_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_label.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/create_label.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -824,7 +778,7 @@ func inputCreate_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_lesson.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/create_lesson.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -844,7 +798,7 @@ func inputCreate_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_study.gql", size: 104, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/create_study.gql", size: 104, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -864,7 +818,7 @@ func inputCreate_userGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_user.gql", size: 118, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/create_user.gql", size: 118, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -884,7 +838,7 @@ func inputDelete_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_email.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/delete_email.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -904,7 +858,7 @@ func inputDelete_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_lesson.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/delete_lesson.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -924,7 +878,7 @@ func inputDelete_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_lesson_comment.gql", size: 126, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/delete_lesson_comment.gql", size: 126, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -944,12 +898,12 @@ func inputDelete_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_study.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/delete_study.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _inputDelete_userGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x52\x56\xf0\xcc\x2b\x28\x2d\x51\x28\xa9\x2c\x48\x55\x48\xcb\x2f\x52\x70\x49\xcd\x49\x2d\x49\x0d\x2d\x4e\x2d\xd2\xe3\xca\x04\x4b\x21\x44\x20\x4a\xab\xb9\x14\x14\x94\x15\x3c\x5d\x14\xf2\xd3\x14\x4a\x32\x52\x15\x4a\xc1\x6a\x15\xc0\xb4\x67\x8a\x95\x82\xa7\x8b\x22\x57\x2d\x17\x20\x00\x00\xff\xff\x40\xdb\x11\xa9\x59\x00\x00\x00")
+var _inputDelete_userGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x54\xcb\x31\x0a\x02\x30\x0c\x85\xe1\x3d\xa7\x78\xd2\xbd\x07\x70\x13\x5c\x9c\xf5\x02\x12\x52\x0d\x4a\x52\xca\xab\x50\xc4\xbb\x8b\x3a\xb9\xfe\x1f\x7f\xc1\x21\xfa\x24\xb8\xba\xa1\xe5\xc0\xde\xee\x46\xdb\xa9\x6a\xce\x60\x15\xff\xf2\x7f\xfd\x2d\x4f\x01\x0a\x4e\x79\xb3\x00\x13\x0f\x1b\xde\x16\xce\x93\x57\x0b\xba\x3a\x57\x15\x80\x1f\xdf\xe2\xc8\xe1\x71\xd9\xc8\x4b\xde\x01\x00\x00\xff\xff\x97\xa9\x01\xff\x72\x00\x00\x00")
 
 func inputDelete_userGqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -964,7 +918,7 @@ func inputDelete_userGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_user.gql", size: 89, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/delete_user.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1531322862, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -984,7 +938,7 @@ func inputDismissGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/dismiss.gql", size: 108, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/dismiss.gql", size: 108, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1004,7 +958,7 @@ func inputEnrollGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/enroll.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/enroll.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1024,7 +978,7 @@ func inputEnrollable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/enrollable_order.gql", size: 251, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/enrollable_order.gql", size: 251, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1044,7 +998,7 @@ func inputEnrollee_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/enrollee_order.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/enrollee_order.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1064,7 +1018,7 @@ func inputEvent_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/event_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/event_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1084,7 +1038,7 @@ func inputGive_appleGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/give_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/give_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1104,7 +1058,7 @@ func inputLabel_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/label_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/label_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1124,7 +1078,7 @@ func inputLabelable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/labelable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/labelable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1144,7 +1098,7 @@ func inputLesson_comment_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/lesson_comment_order.gql", size: 281, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/lesson_comment_order.gql", size: 281, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1164,7 +1118,7 @@ func inputLesson_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/lesson_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/lesson_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1184,7 +1138,7 @@ func inputMove_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/move_lesson.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/move_lesson.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1204,27 +1158,7 @@ func inputNotification_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/notification_order.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _inputPupil_orderGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x8e\x31\x0a\xc3\x30\x0c\x45\x77\x9d\xe2\x87\xec\x39\x40\xe6\xd2\xb5\x1d\x0a\x9d\x13\x5b\xc5\x82\x20\x19\xdb\xa1\x84\xd2\xbb\x17\x27\xb4\xe9\x92\x51\x9f\xf7\x1e\x6a\x71\x1f\x96\x0c\x51\x3c\x83\xb8\x80\x38\x47\x99\xe0\x4c\x95\x5d\x11\xd3\x0c\x37\x28\x46\x86\x25\xcf\x89\x7d\x47\xa2\x71\x2e\xb8\x56\xee\x52\x37\xbc\x08\x68\x71\x0b\x0c\x2f\x69\xb3\xf6\x5e\xb1\xcd\x84\x9a\xe7\xdc\x11\x76\xa8\xc7\xea\x9f\xbe\x77\x43\xbf\xd0\x43\x78\xf2\x47\x11\x8c\x4b\xed\xac\x4c\xff\xf7\xc8\xb9\x0e\x0d\xbd\xe9\x13\x00\x00\xff\xff\x3d\x6c\x1e\x24\xd4\x00\x00\x00")
-
-func inputPupil_orderGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_inputPupil_orderGql,
-		"input/pupil_order.gql",
-	)
-}
-
-func inputPupil_orderGql() (*asset, error) {
-	bytes, err := inputPupil_orderGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "input/pupil_order.gql", size: 212, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/notification_order.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1244,7 +1178,7 @@ func inputRef_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/ref_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/ref_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1264,7 +1198,7 @@ func inputRequest_email_verificationGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/request_email_verification.gql", size: 121, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/request_email_verification.gql", size: 121, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1284,7 +1218,7 @@ func inputRequest_password_resetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/request_password_reset.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/request_password_reset.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1304,7 +1238,7 @@ func inputReset_passwordGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/reset_password.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/reset_password.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1324,7 +1258,7 @@ func inputSearch_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/search_order.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/search_order.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1344,7 +1278,7 @@ func inputStudy_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/study_order.gql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/study_order.gql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1364,7 +1298,7 @@ func inputTake_appleGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/take_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/take_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1384,7 +1318,7 @@ func inputTopic_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/topic_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/topic_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1404,27 +1338,7 @@ func inputTopicable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/topicable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _inputTutor_orderGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x8e\xb1\x0a\xc2\x40\x0c\x86\xf7\x3c\xc5\x5f\xba\xf7\x01\x3a\x8b\xab\x4b\xc1\xb9\xbd\x44\x2e\x20\x89\xdc\x5d\x91\x22\xbe\xbb\x5c\x8b\xda\xa5\x63\x7e\xbe\xef\x23\x2d\xae\xe3\x92\xa1\x86\x67\xd4\x10\x51\xe6\xe2\x09\xc1\xcd\x24\x14\x75\xcb\x08\xa3\x61\x12\x78\x62\x49\xc2\x1d\xa9\x3d\xe6\x82\xa1\x72\x97\xba\xe1\x45\x40\x8b\x21\x0a\x58\xd3\x66\xed\x7a\xbe\x99\x30\x67\xc9\x1d\xe1\x0f\xf5\x58\xfd\xd3\xf7\x6e\xe8\x17\xba\xa9\xdc\xf9\x28\x82\x69\xa9\x9d\x95\xe9\x77\x8f\x9c\xeb\xd0\xd0\x9b\x3e\x01\x00\x00\xff\xff\x2d\xf4\x7b\x23\xd4\x00\x00\x00")
-
-func inputTutor_orderGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_inputTutor_orderGql,
-		"input/tutor_order.gql",
-	)
-}
-
-func inputTutor_orderGql() (*asset, error) {
-	bytes, err := inputTutor_orderGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "input/tutor_order.gql", size: 212, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/topicable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1444,7 +1358,7 @@ func inputUpdate_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_email.gql", size: 139, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_email.gql", size: 139, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1464,7 +1378,7 @@ func inputUpdate_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_lesson.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_lesson.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1484,7 +1398,7 @@ func inputUpdate_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_lesson_comment.gql", size: 178, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_lesson_comment.gql", size: 178, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1504,7 +1418,7 @@ func inputUpdate_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_study.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_study.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1524,27 +1438,27 @@ func inputUpdate_topicsGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_topics.gql", size: 168, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_topics.gql", size: 168, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _inputUpdate_userGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x8d\x31\xae\xc2\x40\x0c\x44\x7b\x9f\x62\xbe\x52\xfc\x2e\x07\xa0\x86\x22\x35\xe4\x00\x09\x71\x82\xa5\xcd\x7a\xb5\x71\x0a\x84\xb8\x3b\x72\x02\x42\x11\x14\x54\xe3\xf5\xbe\x37\x2e\x50\xc5\x34\x1b\xec\x9a\x18\xbd\x66\xd4\xa9\x6b\x8c\xeb\x89\x73\x49\xb2\x7c\xbd\x37\x2b\x7a\x23\xa0\xc0\xe9\xc2\x98\x27\xce\xff\x13\xd2\xdc\x06\x39\x23\x65\xed\x25\x30\x5a\xd1\x92\xe0\xb1\xc3\xd1\xb2\xc4\x81\x36\x46\x6c\xc6\x65\xe8\x60\x8a\xa0\x83\x44\xc7\x97\xe1\xbb\xf0\x79\xc2\x2b\x5c\xf2\xfc\xd5\xe1\xb1\x91\xe0\xd2\xba\x3f\xf8\x73\xeb\x56\x7b\x68\x0f\x7b\x36\x38\xea\x59\x75\x2f\xea\x8f\xee\xf4\x08\x00\x00\xff\xff\xb1\x73\x86\x92\x30\x01\x00\x00")
+var _inputUpdate_viewerGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\xcd\x3d\x0a\xc3\x30\x0c\x05\xe0\xdd\xa7\x78\x90\xa1\x5b\x0e\x90\x39\x8b\xe7\xfe\xec\x49\xa3\xa4\x02\xc7\x36\x8e\xdc\x52\x4a\xef\x5e\xe4\x40\x08\x94\x76\xd2\x43\xf6\xa7\x57\xc1\xfa\x98\x05\xf2\x8c\x84\x31\x24\x9c\xe3\xd0\x09\x5d\x98\x1e\x94\x6a\xc3\xe5\x71\xbf\x5b\xbf\xbf\x0c\x50\xe1\x74\x23\xdc\xcb\xf6\xb0\x20\xe6\xde\xf1\x15\x31\x85\x91\x1d\xa1\xe7\x50\x1b\xe8\x68\x70\x94\xc4\x7e\x32\x9b\xb1\x2d\xc2\x08\xf9\xa3\x69\xee\xd8\xa9\x2f\xc1\x0e\x0d\x6c\x6b\x76\x9d\x2b\xca\x0b\x25\xdf\xcd\xa4\x61\x80\x04\xb8\x30\xb1\x57\x56\xc2\x77\xf1\xaf\x3a\x3d\xa2\x4c\xe7\xa6\xde\xe6\x13\x00\x00\xff\xff\x4b\xc0\x10\xda\x1d\x01\x00\x00")
 
-func inputUpdate_userGqlBytes() ([]byte, error) {
+func inputUpdate_viewerGqlBytes() ([]byte, error) {
 	return bindataRead(
-		_inputUpdate_userGql,
-		"input/update_user.gql",
+		_inputUpdate_viewerGql,
+		"input/update_viewer.gql",
 	)
 }
 
-func inputUpdate_userGql() (*asset, error) {
-	bytes, err := inputUpdate_userGqlBytes()
+func inputUpdate_viewerGql() (*asset, error) {
+	bytes, err := inputUpdate_viewerGqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_user.gql", size: 304, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/update_viewer.gql", size: 285, mode: os.FileMode(420), modTime: time.Unix(1531324749, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1564,7 +1478,7 @@ func inputUser_asset_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/user_asset_order.gql", size: 246, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "input/user_asset_order.gql", size: 246, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1584,7 +1498,7 @@ func interfaceAppleableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/appleable.gql", size: 134, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/appleable.gql", size: 134, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1604,7 +1518,7 @@ func interfaceAuthorableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/authorable.gql", size: 576, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/authorable.gql", size: 576, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1624,7 +1538,7 @@ func interfaceConnectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/connection.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/connection.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1644,7 +1558,7 @@ func interfaceDeleteableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/deleteable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/deleteable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1664,7 +1578,7 @@ func interfaceEdgeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/edge.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/edge.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1684,7 +1598,7 @@ func interfaceEnrollableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/enrollable.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/enrollable.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1704,7 +1618,7 @@ func interfaceLabelableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/labelable.gql", size: 64, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/labelable.gql", size: 64, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1724,7 +1638,7 @@ func interfaceNodeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/node.gql", size: 29, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/node.gql", size: 29, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1744,7 +1658,7 @@ func interfaceStudy_nodeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/study_node.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/study_node.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1764,7 +1678,7 @@ func interfaceTokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/token.gql", size: 177, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/token.gql", size: 177, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1784,7 +1698,7 @@ func interfaceTopicableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/topicable.gql", size: 79, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/topicable.gql", size: 79, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1804,7 +1718,7 @@ func interfaceUniform_resource_locatableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/uniform_resource_locatable.gql", size: 196, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/uniform_resource_locatable.gql", size: 196, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1824,7 +1738,7 @@ func interfaceUpdateableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/updateable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "interface/updateable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1844,7 +1758,7 @@ func scalarHtmlGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/html.gql", size: 45, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "scalar/html.gql", size: 45, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1864,7 +1778,7 @@ func scalarTimeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/time.gql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "scalar/time.gql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1884,12 +1798,12 @@ func scalarUriGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/uri.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "scalar/uri.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _schemaGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x96\x41\x8f\xdb\x38\x0f\x86\xef\xfe\x15\x0c\x7a\x98\x16\x18\xcc\x77\xcf\xad\x1d\x17\x45\x80\xf6\xdb\x6e\x36\xe9\xa5\xe8\x41\xb1\x99\x89\x30\xb6\xe4\x4a\x72\x82\x60\xd1\xff\xbe\x20\x69\xc9\xb2\xe3\x74\xb1\xa7\x44\xaf\xa4\xe7\xa5\x2d\x92\x96\xaf\x4e\xd8\x2a\xf8\xbb\x00\xf8\xd9\xa3\xbb\xae\xe1\x4f\xfa\x29\x00\xda\x3e\xa8\xa0\xad\x59\xc3\x97\xe1\x5f\xf1\xab\x08\xd7\x0e\x65\x05\x6f\x79\x03\x9f\xad\x7d\xed\x3b\x50\xf0\xa2\xcf\x68\x40\x79\x8f\x01\x0e\x57\x08\x27\x04\x7b\x31\xe8\x1e\xc1\x87\xbe\xbe\x82\x51\x2d\x3e\x82\x32\xf5\xb0\x86\xc6\x4f\x05\xc8\xe8\x6d\x01\x00\x2c\xad\xe1\xaf\xe0\xb4\x79\x59\xb1\xc2\x84\xa9\xc4\xb4\x5c\x7a\xb7\x86\xbd\x47\xf7\x9e\x38\x45\x1e\x93\xb1\x35\x52\x28\x9b\x92\x7c\x68\x24\x36\x6f\x60\x77\x42\xd8\x94\x60\x8f\x1c\x26\xcd\x3c\xf1\x8c\xae\xd7\xb0\x29\x07\xe8\xff\x6d\x8d\x37\x3c\x4f\x40\x05\x8d\xf6\x81\xb6\x6f\x4a\x1f\xd9\x3e\x87\xcf\xe6\x89\xec\xd7\xf0\x7d\x53\xae\x7e\x0c\xf4\xef\x84\xff\xb1\x22\x03\x8f\xca\x55\xa7\xb8\x7d\x8b\xa1\x77\xc6\x73\x64\xd8\x60\x8b\x26\x78\xd0\x86\xc7\x8c\x0d\x27\x15\xa0\xb2\x2d\x82\x3a\x06\x74\x3c\xe1\x3b\xac\xf4\x51\x63\x0d\x2f\x8d\x3d\xa8\x66\x78\x66\x90\x25\xf1\x6d\x15\xff\xdd\xe2\x80\x47\xeb\xf0\xf7\x1e\xb2\xe6\x77\x26\x47\xed\x7c\x00\x33\x9a\x1d\xad\x6b\x93\x9d\x50\x78\xcd\x1a\x36\x26\x2c\x11\x1a\xf5\xaf\x00\x5a\x32\xd9\xff\x87\xab\x91\x22\x02\xdb\x51\xf6\xf2\x26\xd0\x01\x5b\x0f\x8e\xd1\x58\xc3\xd1\x59\xe1\x54\xd6\x18\xac\x68\x9d\xd0\x2c\x6d\xfe\x40\x89\xc6\xa7\xc3\xac\x22\x3b\x61\x39\x34\xf0\xfc\xcc\x10\x2c\x34\xd6\xbe\x92\x83\x6c\x1f\x6a\x29\x66\x69\xb6\x91\x2a\xc8\x53\x6e\x0c\x04\x09\x28\xd8\x38\xbe\xe8\x70\xd2\x43\x10\xb4\x36\x46\xb0\xbb\x76\x38\x01\x4d\x13\xf8\x0e\x41\xfe\x53\x56\x4b\xda\x09\x6b\x8b\xbe\x6f\xc2\x26\x60\xfb\x9c\x1e\x7b\x55\x2c\xd5\xb3\xd4\x6e\x5e\xcf\x5c\xc2\x63\x49\x93\x0d\x8f\xf2\xf4\xa7\x89\x18\x1c\x4f\x3e\xdd\xa9\xef\xa1\x5a\xec\x8b\x36\x70\xd4\xd8\xd4\xb4\x4b\x41\xef\x71\x78\x8f\x37\x0d\x80\x9e\x81\x88\xb3\x68\x83\xed\x74\x45\x71\xc6\x98\x58\xc8\x63\x62\xe1\xc1\xa7\x05\xb7\xe1\xbc\x5b\xc3\x8e\x16\xcd\xd0\x14\x0c\x91\x39\xca\x27\x28\x80\x95\xb7\x37\xf1\x0f\xcf\x3b\xc6\xce\xf2\x42\xa7\x12\x3e\x6d\xac\x7a\xe7\xd0\x84\xe6\x0a\xaa\x0f\x27\x34\x41\x57\x2a\x60\x9d\x18\x67\x8d\x17\x7a\x7c\xda\xb5\x8a\xdd\x37\x76\xe3\xa1\x01\xbf\xaf\x6b\x0f\xca\x00\xb6\x4a\x37\x94\x05\x14\x84\x6c\x7c\xf0\xa0\xaa\xca\xf6\x86\x2b\x44\xd5\xf5\x47\x5a\xf3\x56\x9b\xae\x0f\x6b\xda\xc8\xe3\x0d\x0d\x57\xef\x46\xe1\xab\xba\x36\x56\xd5\x19\x1d\x1a\x75\x40\x86\x0f\x7f\xd5\xa1\xc1\x81\xf9\x99\xc6\x19\x93\xc7\x39\x93\x85\x05\x66\x65\x5b\xaa\xe5\x81\x8a\xde\x4b\xe9\x11\x92\x07\xcf\x32\x9f\xa3\x73\x7d\x62\x91\x4f\x44\x2b\xf6\x7a\x76\xa8\x02\x92\x9d\xc1\x8b\xc4\x4e\x26\x15\xcb\x93\xd0\x9f\x47\x29\xa1\x79\xb4\xc4\x49\xd1\x0e\x20\x1e\xcf\x48\xac\x8d\x28\x1e\x2e\xb0\x52\x7d\x08\x8a\x93\x7b\x4a\x62\x29\x81\x24\xfb\x6f\x39\x31\x67\x04\x43\x19\x33\xa5\x90\x92\x20\x63\x1a\x96\xd8\x20\x43\x62\x06\xa5\x8e\xb8\x94\x43\x35\xaf\x9e\xa4\x51\x39\x4a\x09\x9f\x69\xf9\xc1\x27\xaf\xe1\x05\x8a\x97\x1a\x5f\x81\xe0\xa7\x6f\xb3\xcc\xb4\x99\x81\x88\xcb\x0e\x31\xbb\x06\x8b\xf1\xc4\x72\x8f\x59\x8a\x95\xb7\x53\x8b\x8e\xb3\x44\x9b\x1a\xcf\x1e\x66\x72\x9e\xe5\x28\xcd\xc0\xac\x2d\x03\xe3\xc1\x0a\x2f\x3f\xd8\x32\x29\x89\xc6\x7d\xfe\x0d\x94\xda\xb7\xda\x7b\xf4\xc3\xf3\x1b\xf8\x68\x9c\x6d\x52\xdd\xd6\x32\x9f\x40\x32\x4c\x94\x71\xb1\x24\x89\x8c\xf9\x8e\x70\x83\x42\x1e\x45\x92\xcc\xdd\x05\x7d\xd2\x67\xc9\x35\xd5\x75\x0d\x7f\xb3\x94\x81\xf7\xf4\x3f\xe2\xe8\xb3\xc3\x42\x24\x7e\x8a\xc2\x58\xf0\x71\xbd\x30\xbf\xd8\x73\x9e\x53\xdc\x4e\xa8\x20\x4c\xdf\x1e\xd0\x61\x0d\x9d\xf5\x9a\x1b\xa6\x7c\x0c\xf3\x33\x6a\xed\x79\x96\x6e\x5f\x92\x32\x2b\xdd\x8f\xf5\xcb\x60\xb8\xc5\x9f\x3d\xfa\x90\xd5\xcc\x19\x9d\x3e\x52\xef\x26\x97\xd8\x87\x0f\x74\x49\x90\xb2\x71\xb2\x83\x0b\xe2\x5b\xb6\x36\x9a\x6e\xef\xcc\x8f\xef\xf1\xdb\x6e\x66\x0d\x9d\xf2\xfe\x62\x5d\x0d\x0e\xe9\x3a\x7d\xdf\xf5\xeb\xb0\x70\x4b\xeb\x66\x8e\x93\xb9\xe4\xf6\x75\x1b\xdd\x3c\x86\x98\x82\x0f\x3e\x59\x0a\xdc\x63\xda\x3e\x52\x33\x31\xe1\x3e\x58\xdb\xa0\x8a\x17\x8c\x9d\x7a\xcd\x53\x20\xe6\xe7\x24\x09\x82\x7a\x9d\x26\xc1\x2e\x0a\xf7\x92\x60\xdf\xd5\x2a\x6f\x63\x0f\x9e\x2f\x4f\x74\x59\xf9\x9f\x75\x70\x39\x61\x38\x21\xdd\xfe\xe8\x31\xfa\x43\xa3\x2b\xb0\x0e\x8c\xe5\x17\xd5\xf3\xe6\x49\x57\xdb\x8f\xd2\x78\x08\x34\x9a\xb8\x51\x9b\x3c\xd8\xfa\x1a\x6d\x82\x0e\x0d\xca\x15\x66\x6c\x38\x42\x9f\x66\xd9\x3e\xd3\x96\x3e\x11\x37\x06\x19\x33\xb6\xb6\x39\x7b\xd6\xcc\xf6\xb7\x53\x33\xa7\x41\xbd\x31\xac\xd1\x57\x4e\xf3\x9d\x59\x7c\x53\xb9\x88\xdd\xa4\xa5\xed\x47\x69\xe1\x13\xb5\xc5\xae\x51\xd5\xc0\xe5\x1b\x18\x1d\x19\x1d\x0e\xfd\xf7\x5c\x91\x3c\x27\xb7\x4d\x51\x47\x27\xbe\x8e\xf9\xa9\x95\x68\xe3\x97\x2c\x13\xf3\xfe\x39\x79\x83\xda\x3e\xca\x6d\xec\x31\x9e\x54\xbc\xa1\x8e\xed\x55\x1c\xf3\xf6\xba\x4f\xca\xf4\xbb\xf9\xab\xf8\x27\x00\x00\xff\xff\x30\x6e\xbb\xea\x35\x0f\x00\x00")
+var _schemaGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x97\xcf\x6e\xdb\x38\x10\xc6\xef\x7a\x8a\x09\x72\x48\x0b\x04\xd9\xbb\x6f\x6d\x5c\x14\x06\xda\xdd\xae\x37\xee\xa5\xe8\x81\x96\xc6\x31\x11\x89\x54\x49\x2a\x81\xb1\xe8\xbb\x2f\x66\xf8\x5f\x52\x5a\xec\x29\xe6\x47\xf2\xf7\x0d\xc5\x19\x92\xb1\xed\x19\x07\x01\xff\x36\x00\x3f\x26\x34\x97\x0d\xfc\x4d\x7f\x1a\x80\x61\x72\xc2\x49\xad\x36\xf0\x39\xfc\x6a\x7e\x36\xee\x32\xa2\x1f\xc1\x53\xae\xe1\x93\xd6\x4f\xd3\x08\x02\x1e\xe5\x33\x2a\x10\xd6\xa2\x83\xe3\x05\xdc\x19\x41\xbf\x28\x34\xb7\x60\xdd\xd4\x5d\x40\x89\x01\x6f\x41\xa8\x2e\x8c\xa1\xf6\x5d\x03\xbe\xf5\xa6\x01\x00\x96\x36\xf0\x8f\x33\x52\x3d\x5e\xb1\xc2\x84\x5a\x62\x5a\x29\xbd\xdd\xc0\xc1\xa2\x79\x47\x9c\xa6\x8c\x49\xe9\x0e\x29\x94\xdd\x96\x7c\xa8\xe5\x6d\xae\xe1\xe1\x8c\xb0\xdb\x82\x3e\x71\x98\xd4\x73\xc7\x3d\xb2\xdb\xc0\x6e\x1b\xa0\x7f\xea\x0e\x17\x3c\x4b\x40\x01\xbd\xb4\x8e\xa6\xef\xb6\x36\xb2\x6d\x09\x9f\xf5\x13\xd9\x6e\xe0\xdb\x6e\x7b\xf5\x3d\xd0\xbf\x11\xfe\xfb\x15\x19\x58\x14\xa6\x3d\xc7\xe9\x7b\x74\x93\x51\x96\x23\xc3\x1e\x07\x54\xce\x82\x54\xdc\x66\xac\x3b\x0b\x07\xad\x1e\x10\xc4\xc9\xa1\xe1\x0e\x3b\x62\x2b\x4f\x12\x3b\x78\xec\xf5\x51\xf4\x61\xcd\xe0\x87\xc4\xaf\xd5\xfc\x7f\x8b\x23\x9e\xb4\xc1\x5f\x7b\xf8\x31\xbf\x32\x39\x49\x63\x1d\xa8\x6c\x76\xd2\x66\x48\x76\x9e\xc2\x63\x36\xb0\x53\x6e\x8d\xd0\x8b\xdf\x02\x68\x48\x35\xff\x2f\xd3\x21\x45\x04\x7a\xa4\xec\xe5\x49\x20\x1d\x0e\x16\x0c\xa3\xb1\x83\x93\xd1\x9e\xd3\x6a\xa5\xb0\xa5\x71\x9e\xa6\x69\xf2\x7b\x4a\x34\xde\x1d\x66\x35\xc5\x0e\xfb\x4d\x03\xcb\x6b\x06\xa7\xa1\xd7\xfa\x89\x1c\xfc\xf4\x50\x4b\x31\x4b\x8b\x89\x54\x41\x96\x72\x23\x10\x7c\x40\x4e\xc7\xf6\x8b\x74\x67\x19\x82\xa0\xb1\x31\x82\x87\xcb\x88\x15\xa8\x4e\xe0\x57\x08\xfe\x37\x65\xb5\x4f\x3b\xcf\xda\xa3\x9d\x7a\xb7\x73\x38\xdc\xa7\x65\x5f\x35\x6b\xf5\xec\x6b\xb7\xac\x67\x2e\xe1\x5c\xd2\x64\xc3\xad\x32\xfd\xa9\x23\x06\xc7\x9d\x77\xaf\xd4\x77\xa8\x16\xfd\x28\x15\x9c\x24\xf6\x1d\xcd\x12\x30\x59\x0c\xdf\x71\x71\x00\xd0\x1a\x88\x38\x8b\xd6\xe9\x51\xb6\x14\x67\x8c\x89\x85\x32\x26\x16\x6e\x6c\x1a\xb0\x0c\xe7\xed\x06\x1e\x68\xd0\x0c\x4d\xc1\x10\x99\xa3\xbc\x83\x06\x58\x79\xb3\x88\x3f\xac\x37\xc7\xce\xf2\xca\x49\xe5\xf9\x34\xb1\x9d\x8c\x41\xe5\xfa\x0b\x88\xc9\x9d\x51\x39\xd9\x0a\x87\x5d\x62\x3c\x4b\x7c\xa1\xe5\xd3\xac\xab\x78\xfa\xc6\xd3\x38\x1c\xc0\xef\xba\xce\x82\x50\x80\x83\x90\x3d\x65\x01\x05\xe1\x27\xde\x58\x10\x6d\xab\x27\xc5\x15\x22\xba\xee\x03\x8d\x79\x23\xd5\x38\xb9\x0d\x4d\xe4\xf6\x8e\x9a\x57\x6f\xb3\xf0\x45\x5c\x7a\x2d\xba\x82\x0e\xbd\x38\x22\xc3\xc3\x4f\x71\xec\x31\x30\x3f\x51\xbb\x60\x72\xbb\x64\xb2\xb0\xc2\x6c\xf5\x40\xb5\x1c\xa8\x68\xad\x2f\x3d\x42\x72\xe3\xde\xf7\x97\xe8\x52\xaf\x2c\xca\x8e\x68\xc5\x5e\xf7\x06\x85\x43\xb2\x53\xf8\xe2\x63\x27\x93\x96\xe5\x2a\xf4\xfb\x2c\x25\x34\xb7\xd6\x38\x29\xda\x00\xe2\xf6\x8c\xc4\x5a\x46\x71\x73\x85\x95\xea\xc3\xa3\x38\xb9\x6b\x12\x4b\x09\x54\x64\xff\x16\x7b\x64\x50\xdc\xfd\x74\x9a\xad\xed\x7f\xc7\xa3\xab\x14\xd8\x66\x29\xf1\x0b\xad\xdc\xb4\xe4\x15\x72\x81\xad\x44\x8e\xfe\x3a\xf0\xab\x6f\xba\xcd\xd2\x8c\xbf\x48\x8a\x82\xcf\x5f\x6a\x61\x10\xf0\xd5\x97\xde\x16\xda\xdc\x80\xc5\x75\x87\x98\x79\xc1\x22\xef\x66\xe9\x31\x4b\xbf\xed\xb2\x6b\xd5\x71\x96\x84\xb5\xf1\x6c\x31\xd5\x5e\x6f\xb3\x34\x03\xb3\xb6\x0e\xe4\xb3\x89\x5f\x50\xe5\x1e\xa4\xe7\x50\xcd\x4e\xf2\x8c\x9f\xf4\xca\x43\xda\x41\x5a\x8b\x36\x7c\x25\x05\x1f\x94\xd1\x7d\xaa\xfc\xce\xf7\x27\x07\xdf\x4c\xe4\x3c\xd8\xa7\xaa\x6f\xf3\x2b\x63\x81\x42\x6e\x45\x92\xef\x7b\x15\xf4\x51\x3e\xfb\x8c\x17\xe3\xd8\xf3\xad\x27\x14\xbc\xa3\xdf\x11\x47\x17\x17\x0b\x91\xf8\x31\x0a\xf9\xc8\x88\xe3\x3d\xf3\xb3\x7e\x2e\x33\x8f\x0f\x24\x2a\x4d\x35\x0d\x47\x34\xd8\xc1\xa8\xad\xe4\x23\xd7\x5f\xa7\xe5\x4e\x0e\xfa\x79\x96\x94\x9f\x93\x32\x2b\xfe\x0f\xdd\x63\x30\xdc\xe3\x10\x2d\xcb\x62\xaa\x8e\xd6\x6b\x30\x3c\xaa\x2a\xa8\x7d\x96\x12\xbc\xd0\xca\x0d\xdc\xe3\x8f\x09\xad\x2b\x4e\x87\x67\x34\xf2\x44\x37\x0c\xad\x24\xde\x16\x47\x7a\xca\xf8\x03\xc2\xf8\x19\x5c\xfa\x5f\x8b\xb1\xd9\x7c\xbd\x3f\xef\xd5\xd7\x87\x99\x35\x8c\xc2\xda\x17\x6d\x3a\x30\x48\x8f\xfe\xd7\x5d\xbf\x84\x81\x7b\x2c\xf2\x76\xbf\xd2\x97\xdc\xbe\xec\xa3\x9b\x45\x17\x8b\xe1\xc6\x26\x4b\x0f\xe7\xb4\xf6\x42\xa6\x16\x62\xc2\xbd\xd7\xba\x47\x11\x9f\x41\x0f\xe2\xa9\x4c\xb3\x58\x03\x55\xa2\x39\xf1\x54\x27\xda\x43\x14\x5e\x4b\xb4\xc3\xd8\x89\xf2\xc0\xbe\xb1\xfc\xc4\xa3\x27\xd5\x1f\xda\xc0\xcb\x19\xdd\x19\xe9\x8d\x4a\xcb\x98\x8e\xbd\x6c\x41\x1b\x50\x9a\x3f\xd4\xc4\x93\xab\xf3\xfb\x90\xa5\xbc\x09\xd4\xaa\xdc\xfc\xf3\xb6\xd7\x26\xfa\x74\x68\x5b\x23\xf9\x51\xec\xdf\x5b\xe9\x5e\xbc\x0e\x2e\x55\xd2\x1d\xb2\xb4\x72\x33\x96\x2e\x47\xdd\x5d\xa2\x89\x93\xae\xc7\x80\x4f\x07\x6c\xa0\x57\xf5\x72\x28\xb4\xb5\xeb\x72\x61\x50\x30\xe3\x51\x3e\x67\xcf\x0e\xef\xc3\xb2\x6b\xe6\x14\xd4\x85\xe1\xe2\x53\xa5\xc2\xf7\x76\xd5\x11\x7e\xc8\xd2\xec\xba\xfe\x2d\x96\x5f\xa7\xe5\x0e\xf0\x4b\xb4\x06\xb3\x94\xc0\xfe\xa9\xea\x0b\x60\xec\x45\x1b\xc8\x0c\xa2\x8c\xa3\xdc\xa2\xdf\x96\x0f\x2d\xee\xf3\x4f\x7a\xaf\xe6\x25\x30\xc8\xae\x58\xe5\xd3\xbc\x14\xcb\x33\xa6\x5c\x52\x7c\xf3\x2f\x2f\x25\x6f\xb3\xb8\x94\x0e\xb5\x9c\xcd\xd2\x3f\xf3\x8b\xdd\x97\xfa\xd6\x17\xce\xad\x7f\x5c\xdf\xc6\x64\x2b\xff\xe1\xf0\x6f\x9f\xbc\xbe\xaf\xdc\xae\x5d\xbd\x56\x59\x36\x3f\x9b\xff\x02\x00\x00\xff\xff\x43\x19\xb8\xcc\x0c\x11\x00\x00")
 
 func schemaGqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -1904,7 +1818,7 @@ func schemaGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema.gql", size: 3893, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "schema.gql", size: 4364, mode: os.FileMode(420), modTime: time.Unix(1531324828, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1924,7 +1838,7 @@ func typeAdd_email_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_email_payload.gql", size: 245, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/add_email_payload.gql", size: 245, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1944,7 +1858,7 @@ func typeAdd_label_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_label_payload.gql", size: 181, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/add_label_payload.gql", size: 181, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1964,7 +1878,7 @@ func typeAdd_lesson_comment_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/add_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1984,7 +1898,7 @@ func typeApple_giver_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/apple_giver_connection.gql", size: 517, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/apple_giver_connection.gql", size: 517, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2004,7 +1918,7 @@ func typeAppleable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/appleable_connection.gql", size: 496, mode: os.FileMode(420), modTime: time.Unix(1530455511, 0)}
+	info := bindataFileInfo{name: "type/appleable_connection.gql", size: 496, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2024,7 +1938,7 @@ func typeAppled_study_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/appled_study_connection.gql", size: 524, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/appled_study_connection.gql", size: 524, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2044,7 +1958,7 @@ func typeDelete_email_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_email_payload.gql", size: 173, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/delete_email_payload.gql", size: 173, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2064,7 +1978,7 @@ func typeDelete_lesson_commentpayloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_lesson_commentpayload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/delete_lesson_commentpayload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2084,7 +1998,7 @@ func typeDelete_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_lesson_payload.gql", size: 169, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/delete_lesson_payload.gql", size: 169, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2104,7 +2018,7 @@ func typeDelete_study_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_study_payload.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/delete_study_payload.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2124,7 +2038,7 @@ func typeEmailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/email.gql", size: 943, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/email.gql", size: 943, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2144,7 +2058,7 @@ func typeEmail_verification_tokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/email_verification_token.gql", size: 227, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/email_verification_token.gql", size: 227, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2164,7 +2078,7 @@ func typeEnrollable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/enrollable_connection.gql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1530455531, 0)}
+	info := bindataFileInfo{name: "type/enrollable_connection.gql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2184,7 +2098,7 @@ func typeEnrolled_study_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/enrolled_study_connection.gql", size: 534, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/enrolled_study_connection.gql", size: 534, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2204,7 +2118,7 @@ func typeEnrollee_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/enrollee_connection.gql", size: 518, mode: os.FileMode(420), modTime: time.Unix(1530455555, 0)}
+	info := bindataFileInfo{name: "type/enrollee_connection.gql", size: 518, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2224,7 +2138,7 @@ func typeEventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/event.gql", size: 827, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/event.gql", size: 827, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2244,7 +2158,7 @@ func typeEvent_sourceGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/event_source.gql", size: 85, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/event_source.gql", size: 85, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2264,7 +2178,7 @@ func typeEvent_targetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/event_target.gql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/event_target.gql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2284,7 +2198,7 @@ func typeLabelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/label.gql", size: 1829, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/label.gql", size: 1829, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2304,7 +2218,7 @@ func typeLabelable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/labelable_connection.gql", size: 501, mode: os.FileMode(420), modTime: time.Unix(1530455547, 0)}
+	info := bindataFileInfo{name: "type/labelable_connection.gql", size: 501, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2324,12 +2238,12 @@ func typeLessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/lesson.gql", size: 3568, mode: os.FileMode(420), modTime: time.Unix(1530455185, 0)}
+	info := bindataFileInfo{name: "type/lesson.gql", size: 3568, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _typeLesson_commentGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x9c\x54\xc1\x8e\xda\x30\x10\xbd\xe7\x2b\x5e\xb5\xd7\xaa\x1f\xe0\x1b\x85\x4a\x8b\xc4\x56\x2b\x16\x4e\xd5\x1e\x86\x78\x20\x6e\x13\x3b\xb2\x27\x65\x51\xd5\x7f\xaf\x6c\x27\x10\x02\x5d\xa9\x3d\xc5\xb1\xdf\x3c\xbf\x37\x9e\x99\x07\xac\xb9\xf5\x1c\xd8\x4a\x00\xa1\xe6\x10\x9c\x45\xe9\x9a\x86\xad\x7c\x2a\xe4\xd4\x32\x56\x69\x73\x9e\xf7\x60\x9a\xb6\xe6\x26\xe1\x0b\x60\xd6\x49\xe5\x3c\xed\x6a\xfe\x58\x00\x0b\xae\x59\x78\xf8\xfb\xea\x74\xfa\xbe\x48\xa7\x4f\xc3\xcf\xd6\x9a\xbd\xf3\xcd\x9a\x83\xeb\x7c\xc9\x2b\x57\x92\x0c\x01\xdb\x56\x53\x0e\x2f\x7e\x15\xc0\x03\x36\x15\x83\xd2\x0d\x70\x7b\x48\xc5\x17\x65\xe8\x0f\x14\xb6\x81\x7d\x71\x86\xef\x9c\x3e\x81\x02\x9e\xc8\xff\xd0\xee\x68\x23\x32\xee\x29\xbc\x88\x37\xf6\xf0\x61\x02\xf5\x6c\x35\x7b\xd6\x10\x87\xc7\xcd\xd3\x6a\xc0\xc7\xb5\x4a\x3b\xef\x45\x08\xbf\xc9\x10\xb1\xe1\x37\x99\xdc\xb2\xd4\x6c\xc5\xec\x0d\x87\x24\x3e\xba\x03\x59\x0d\x31\x0d\xe3\x58\xb1\x4d\xdb\x6e\xf7\x9d\x4b\xc1\x91\x02\x4a\xcf\x24\xac\x23\x65\xbf\x9c\x89\xc2\xc6\x34\x9c\x18\x8d\x56\x58\x2e\x46\x82\xfa\xf7\xa2\x10\x5c\x69\x22\x1c\x47\x23\x15\xa4\x32\x61\x9c\xaa\x0c\x53\xfd\x4b\xde\x8a\x3b\x4b\xb9\x7e\xff\x24\xa9\xed\x76\xb5\x09\x15\x6b\x50\xe2\x3a\xff\x0f\xca\x2e\x6a\x1e\x37\x9b\x67\xb4\x24\x15\xf6\xce\x67\x11\xd3\x82\x02\x7c\xff\xf2\xcf\x24\x95\xc2\x76\xbd\x1c\xd9\x09\xb1\x52\xee\xbb\xb9\x25\x4a\x60\x95\xab\xeb\x7f\xf3\x5d\x53\x10\x74\xa9\xec\x52\xd2\xfb\xe5\x55\xd2\x47\xde\xb6\xeb\xd5\x7b\xd6\x3a\x5f\x8f\x1d\xcd\x29\xdf\xf7\xd3\xf0\x91\x3d\x74\x6a\x8e\x1c\x9b\x25\xc4\x98\x7c\x38\x27\x9b\x7b\x47\xe1\xb3\x73\x35\x93\xbd\xcf\x91\xf5\xfd\x95\x23\x37\xd0\x94\x63\x61\xf4\x98\xa3\x6f\xa8\x69\x8d\xe4\xd3\x85\xd1\xb3\xbe\xaf\xce\x24\xbf\x8b\xe2\x01\x33\x0b\xd6\x07\x46\x9a\x08\x31\x07\x57\x53\xe1\xde\xa4\xf8\x12\xe1\xa3\x69\x91\xfe\x73\x5f\xcf\x50\x76\x3e\x38\x9f\x88\xba\xc0\x30\x16\x2d\x1d\x8c\x25\x31\x2e\xb5\x6c\x3e\xbf\xd3\xb4\x46\xb8\x01\x49\x32\xc4\x56\x0f\x73\x21\x6a\x8b\x71\xd6\x69\x56\xd7\x3a\x7a\xfd\x28\x9d\xb5\x5c\xc6\x0b\xfe\xc1\xc4\xfc\x12\x34\xb2\x32\xda\xcd\x86\x96\x36\x0e\x35\xca\xe4\x0e\x64\xf4\xad\xa5\x96\x0e\x1c\x71\x0a\xcf\xfd\xaa\xb7\x35\x43\x6d\x82\x44\x27\xd1\x45\x88\xd8\xb4\x50\xf8\x76\x93\xd0\xd7\x69\x48\x34\x1c\x06\xe7\x37\x21\xaf\x97\xc4\x89\x13\xaa\x51\xba\xce\xa6\xb8\x98\xc7\x10\x45\xe6\xa9\x3a\xf8\x89\x4c\x09\x39\x8f\x40\x85\xa5\x95\x58\x00\x7f\x02\x00\x00\xff\xff\x38\x5a\x38\x2b\x27\x06\x00\x00")
+var _typeLesson_commentGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x9c\x55\x4d\x6e\xdb\x3c\x10\xdd\xeb\x14\xf3\x21\x9b\xaf\x40\x91\x03\x68\xe7\xd8\x05\x62\xc0\x69\x03\xc7\x5e\x15\x59\xd0\xe2\xc8\x62\x2b\x91\x02\x39\xaa\x63\x14\xbd\x7b\x31\x43\x4a\x96\x6c\xd7\x45\xba\x12\x49\xbd\x79\x9c\xdf\xc7\x3b\x58\x63\xeb\x31\xa0\xa5\x00\x0a\x6a\x0c\xc1\x59\x28\x5c\xd3\xa0\xa5\xfb\x8c\x8e\x2d\xc2\x4a\x0e\xe7\xf1\x0c\x4c\xd3\xd6\xd8\x08\x3e\x03\x98\x75\x54\x39\xaf\x76\x35\x7e\xcc\x00\x16\x58\x23\x61\xbf\x5b\xa9\x1d\xd6\xfd\xe6\xb3\xd3\xf2\x7d\xa1\x4e\x1f\xfb\xcd\xd6\x9a\xd2\xf9\x66\x8d\xc1\x75\xbe\xc0\x95\x2b\x14\xf5\x06\xdb\x56\xab\xc8\x95\xfd\xcc\x00\xee\x60\x53\x21\x28\xb9\x0e\x5c\x09\x54\xe1\xc9\x4d\x48\x3f\x72\xd8\x06\xf4\xd9\x00\xdf\x39\x7d\x04\x15\xe0\x49\xf9\xef\xda\x1d\x2c\x23\xf9\x2c\x87\x17\xf2\xc6\xee\xff\x3b\x83\x7a\xb4\x1a\x3d\x6a\x20\x07\x8f\x9b\xa7\x55\x8f\xe7\x75\x2e\x27\xb7\x2c\x08\xdf\xa8\xb7\xd8\xe0\x1b\x9d\xdd\xb2\xd4\x68\xc9\x94\x06\x83\x38\xcf\xd1\x81\xb2\x1a\xc8\x34\x08\x87\x0a\xad\x1c\xbb\xdd\x37\x2c\x08\x0e\x2a\x40\xe1\x51\x11\x6a\xa6\x4c\xcb\x19\xe5\xb0\x31\x0d\x0a\xa3\xd1\x39\x2c\x17\x89\x7c\x8d\xd4\x79\x2b\x25\x34\x81\x38\x41\x35\x67\x3f\x40\xe9\x7c\xcc\x55\xe7\x3d\x97\xef\xbc\xc2\x90\x80\xff\x67\x00\x63\x22\xb6\xc1\xbe\xd0\x26\xfa\x26\xd4\x54\x29\x62\x73\x04\x55\x12\x46\xf2\xd0\x62\xc1\x91\x69\xd8\xd7\x6e\xa7\x6a\x58\x2e\xee\x85\x4f\x20\x7d\x1e\xb2\xf7\x5f\xb1\xc3\xd2\x79\xbc\x7d\x47\xc4\xdc\xba\xa4\x34\x3e\x10\xd8\xd3\x65\xdc\x74\xc3\x75\x91\x45\x30\x39\x2c\x2d\x5d\x63\xa8\xd5\x5f\x09\x18\x32\xb1\xff\xe2\x35\xb2\x47\xe0\x5a\x32\xce\xc6\x52\xa4\xaa\x78\xe1\x46\x0d\xa5\x77\x4d\xea\x65\x6b\xb1\x60\x60\xa4\x73\x6c\xfd\x70\xcc\xe3\x14\x09\x57\x06\xf0\x21\xed\xe7\x03\x7a\xd4\x90\xa9\xb4\x2a\x04\x57\x18\x6e\x17\x38\x18\xaa\x80\x2a\x13\x26\xf5\x16\x58\x9e\xc6\xfa\xb2\x39\x87\x56\x9c\xb6\x8a\xb4\x64\xdb\xed\x6a\x13\x2a\xd4\xa0\x84\x6b\xd8\xf7\x9d\x79\xf2\xe6\x71\xb3\x79\x86\x56\x51\x95\x5a\xd0\x84\x2b\xbd\xe7\xd3\xe4\x3f\x2b\xaa\x72\xd8\xae\x97\xa3\x70\x02\x2b\xc5\xf5\x68\x2e\x89\x04\x9c\x47\x75\xf9\xd7\x79\x93\x22\x77\x22\x3b\x32\x74\x69\x39\x19\xba\x51\x6c\xdb\xf5\xea\x56\x68\x9d\xaf\xc7\x11\xcd\x55\xbc\xef\x87\xc1\x03\x7a\xd0\xa2\x94\xd1\x36\xba\xc0\x36\xf1\xe7\x5c\xd9\x28\xa4\x39\x3c\x38\x57\xa3\xb2\xd7\x39\xa2\x7f\x7f\xe4\x88\x02\x7a\xce\xb1\x30\x7a\xcc\x91\x04\xf5\xbc\x47\xe2\xdf\x85\xd1\xb3\xa4\xab\x03\xc9\xaf\x2c\xbb\x83\x99\x05\xd4\x7b\x04\x79\x1e\x38\x07\x93\x27\xe2\xda\xb3\xf1\x89\xe1\xa3\xa7\x43\xf6\x51\xd7\x67\xac\x4d\xc1\x79\x21\xea\x02\xb2\x14\xb4\x6a\x6f\xac\xea\xa7\x21\xfe\xbf\x22\xda\x86\xb0\x01\x45\x51\x49\xac\xee\xdf\x05\xf6\x8d\xed\xac\xd3\x98\x4f\xfd\x48\xfe\x8f\xc6\xed\x1d\x41\x9c\xa6\x6e\x1c\xca\xe8\x34\x06\xb4\xb4\x2c\x0f\x2a\x92\x3b\x50\x46\x5f\x86\xd4\xaa\x3d\x32\x2e\x87\xe7\xb4\x4a\x61\xcd\x06\x01\xe7\x28\x02\x63\x65\x91\xc3\xd7\x8b\x84\xbe\x9e\x9b\x70\xc0\xa1\x8f\xfc\xc2\xe4\xf5\x94\x38\x72\xa4\x6a\x28\x5c\x67\xc5\x8e\xf3\x38\x48\xf0\x54\x89\x04\x39\x67\xa0\x88\x1b\x37\xc0\xef\x00\x00\x00\xff\xff\xf4\xa7\x04\x43\x34\x08\x00\x00")
 
 func typeLesson_commentGqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -2344,7 +2258,7 @@ func typeLesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/lesson_comment.gql", size: 1575, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/lesson_comment.gql", size: 2100, mode: os.FileMode(420), modTime: time.Unix(1531325798, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2364,7 +2278,7 @@ func typeNotificationGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/notification.gql", size: 1101, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/notification.gql", size: 1101, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2384,7 +2298,7 @@ func typePage_infoGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/page_info.gql", size: 377, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/page_info.gql", size: 377, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2404,27 +2318,7 @@ func typePassword_reset_tokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/password_reset_token.gql", size: 222, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _typePupil_connectionGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x90\xb1\x6a\x03\x31\x10\x44\x7b\x7d\xc5\x18\xf7\xfe\x00\x35\xe1\x30\x29\xdc\x19\xe2\x90\x22\xb8\x10\xd6\xfa\x2c\xd0\xed\x1e\xd2\x1e\x21\x84\xfc\x7b\x58\xdd\x25\x67\x12\xd2\xad\xb4\x6f\x96\x99\xd9\xa2\x63\x50\xec\x09\xfa\x3e\x12\xae\x52\xf0\x5c\xa9\xec\x5c\x7b\x1e\xa7\x31\xe5\x47\xdb\xa6\x61\xcc\x34\x10\x6b\x45\x7b\x7f\x38\x60\x8b\x0e\x97\xa9\x54\x29\x4d\x37\x55\x42\x62\x8c\xa1\x4f\x1c\x34\x09\xef\x1c\x96\xbd\xc7\x93\x96\xc4\xfd\xc6\x35\xd9\xe9\x46\x48\x4a\x03\x82\x42\x6f\x04\xe2\x08\xb9\xce\x63\xec\xc9\x74\x2c\x91\x7c\xb3\xb2\x68\x5e\x6e\xc4\x78\x0b\xb5\x51\x4d\xac\x93\x4a\xa1\xf8\xe0\x00\xe2\x22\x39\x53\xec\xd4\xe3\x94\x06\xda\xb8\x4f\xe7\x9a\x3d\x61\xa6\x8b\x99\xf9\x3f\xdf\x7e\x65\xee\x52\xde\xfd\xce\x59\x0f\x7c\x95\x32\x84\xf9\x96\x20\xa4\xf8\x37\xed\x18\x7a\x32\xce\xe3\xb8\x4c\x8b\xfb\x0e\x39\x55\xb5\x90\x16\xb0\x1a\xdb\x06\x8f\xd7\x9f\x8e\xcf\xbf\x51\xeb\xa0\x7e\x97\x61\xa8\x39\x3f\xaf\x15\xaa\x68\xc8\xb8\xc8\xc4\x0d\xb7\x52\xaa\x79\xb2\x86\xd6\xe0\x76\xa0\x91\x7b\x03\x3d\x0e\xac\x56\xcf\x57\x00\x00\x00\xff\xff\xb0\x4a\x30\xfe\xf9\x01\x00\x00")
-
-func typePupil_connectionGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_typePupil_connectionGql,
-		"type/pupil_connection.gql",
-	)
-}
-
-func typePupil_connectionGql() (*asset, error) {
-	bytes, err := typePupil_connectionGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "type/pupil_connection.gql", size: 505, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/password_reset_token.gql", size: 222, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2444,7 +2338,7 @@ func typeSearch_result_itemGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/search_result_item.gql", size: 917, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/search_result_item.gql", size: 917, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2464,7 +2358,7 @@ func typeStudyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/study.gql", size: 5192, mode: os.FileMode(420), modTime: time.Unix(1530539602, 0)}
+	info := bindataFileInfo{name: "type/study.gql", size: 5192, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2484,7 +2378,7 @@ func typeText_matchGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/text_match.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/text_match.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2504,7 +2398,7 @@ func typeText_match_highlightGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/text_match_highlight.gql", size: 288, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/text_match_highlight.gql", size: 288, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2524,7 +2418,7 @@ func typeTopicGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/topic.gql", size: 1506, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/topic.gql", size: 1506, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2544,27 +2438,7 @@ func typeTopicable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/topicable_connection.gql", size: 501, mode: os.FileMode(420), modTime: time.Unix(1530455566, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _typeTutor_connectionGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x90\xb1\x6a\xf4\x30\x10\x84\x7b\x3d\xc5\x1c\xd7\xdf\x03\xa8\xf9\x31\xc7\x5f\x5c\x17\xc8\x85\x14\xe1\x0a\x61\xad\x6d\x81\xbd\x6b\xa4\x35\x21\x84\xbc\x7b\x58\xd9\x89\x8f\x84\x74\x2b\xed\x37\xcb\xcc\x1c\xd1\x30\x28\xf6\x04\x7d\x9b\x09\x9d\x64\x3c\x15\xca\x27\x57\x9f\xd7\x45\x25\xff\xb7\x6d\x9a\xe6\x91\x26\x62\x2d\xa8\xef\x77\x07\x1c\xd1\xa0\x5d\x72\x91\x5c\x75\x4b\x21\x24\xc6\x1c\xfa\xc4\x41\x93\xf0\xc9\x61\xdb\x7b\x3c\x6a\x4e\xdc\x1f\x5c\x95\x5d\x07\x42\x52\x9a\x10\x14\x3a\x10\x88\x23\xa4\x5b\xc7\xd8\x93\xe9\x58\x22\xf9\x6a\x65\xd3\x3c\x0f\xc4\x78\x0d\xa5\x52\x55\xac\x66\x8e\xe2\x3f\x07\x10\x67\x19\x47\x8a\x8d\x7a\x5c\xd3\x44\x07\xf7\xe1\x5c\xb5\x27\xcc\xd4\x9a\x99\xbf\xf3\x9d\x77\xe6\x2e\xe5\xdd\xef\x9a\xf5\xc2\x9d\xe4\x29\xac\xb7\x04\x21\xc5\xdf\x69\xe7\xd0\x93\x71\x1e\x0f\xdb\xb4\xb9\x6f\x30\xa6\xa2\x16\xd2\x02\x16\x63\xeb\xe0\xf1\xf2\xdd\xf1\xed\x27\x6a\x1d\x94\xaf\x32\x0c\x35\xe7\xb7\xbd\x42\x15\x0d\x23\x5a\x59\xb8\xe2\x56\x4a\x31\x4f\xd6\xd0\x1e\xdc\x0e\x54\xf2\x6c\xa0\xc7\x85\xd5\xea\xf9\x0c\x00\x00\xff\xff\x55\xb0\xc9\xf7\xf9\x01\x00\x00")
-
-func typeTutor_connectionGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_typeTutor_connectionGql,
-		"type/tutor_connection.gql",
-	)
-}
-
-func typeTutor_connectionGql() (*asset, error) {
-	bytes, err := typeTutor_connectionGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "type/tutor_connection.gql", size: 505, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/topicable_connection.gql", size: 501, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2584,7 +2458,7 @@ func typeUpdate_topics_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/update_topics_payload.gql", size: 272, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/update_topics_payload.gql", size: 272, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2604,7 +2478,7 @@ func typeUserGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user.gql", size: 5538, mode: os.FileMode(420), modTime: time.Unix(1530535482, 0)}
+	info := bindataFileInfo{name: "type/user.gql", size: 5538, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2624,7 +2498,7 @@ func typeUser_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_asset.gql", size: 1537, mode: os.FileMode(420), modTime: time.Unix(1530454994, 0)}
+	info := bindataFileInfo{name: "type/user_asset.gql", size: 1537, mode: os.FileMode(420), modTime: time.Unix(1530815242, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2696,7 +2570,6 @@ var _bindata = map[string]func() (*asset, error){
 	"enum/lesson_order_field.gql": enumLesson_order_fieldGql,
 	"enum/notification_order_field.gql": enumNotification_order_fieldGql,
 	"enum/order_direction.gql": enumOrder_directionGql,
-	"enum/pupil_order_field.gql": enumPupil_order_fieldGql,
 	"enum/ref_order_field.gql": enumRef_order_fieldGql,
 	"enum/search_order_field.gql": enumSearch_order_fieldGql,
 	"enum/search_type.gql": enumSearch_typeGql,
@@ -2704,7 +2577,6 @@ var _bindata = map[string]func() (*asset, error){
 	"enum/topic_order_field.gql": enumTopic_order_fieldGql,
 	"enum/topicable_order_field.gql": enumTopicable_order_fieldGql,
 	"enum/topicable_type.gql": enumTopicable_typeGql,
-	"enum/tutor_order_field.gql": enumTutor_order_fieldGql,
 	"enum/user_asset_order_field.gql": enumUser_asset_order_fieldGql,
 	"input/add_email.gql": inputAdd_emailGql,
 	"input/add_label.gql": inputAdd_labelGql,
@@ -2732,7 +2604,6 @@ var _bindata = map[string]func() (*asset, error){
 	"input/lesson_order.gql": inputLesson_orderGql,
 	"input/move_lesson.gql": inputMove_lessonGql,
 	"input/notification_order.gql": inputNotification_orderGql,
-	"input/pupil_order.gql": inputPupil_orderGql,
 	"input/ref_order.gql": inputRef_orderGql,
 	"input/request_email_verification.gql": inputRequest_email_verificationGql,
 	"input/request_password_reset.gql": inputRequest_password_resetGql,
@@ -2742,13 +2613,12 @@ var _bindata = map[string]func() (*asset, error){
 	"input/take_apple.gql": inputTake_appleGql,
 	"input/topic_order.gql": inputTopic_orderGql,
 	"input/topicable_order.gql": inputTopicable_orderGql,
-	"input/tutor_order.gql": inputTutor_orderGql,
 	"input/update_email.gql": inputUpdate_emailGql,
 	"input/update_lesson.gql": inputUpdate_lessonGql,
 	"input/update_lesson_comment.gql": inputUpdate_lesson_commentGql,
 	"input/update_study.gql": inputUpdate_studyGql,
 	"input/update_topics.gql": inputUpdate_topicsGql,
-	"input/update_user.gql": inputUpdate_userGql,
+	"input/update_viewer.gql": inputUpdate_viewerGql,
 	"input/user_asset_order.gql": inputUser_asset_orderGql,
 	"interface/appleable.gql": interfaceAppleableGql,
 	"interface/authorable.gql": interfaceAuthorableGql,
@@ -2792,14 +2662,12 @@ var _bindata = map[string]func() (*asset, error){
 	"type/notification.gql": typeNotificationGql,
 	"type/page_info.gql": typePage_infoGql,
 	"type/password_reset_token.gql": typePassword_reset_tokenGql,
-	"type/pupil_connection.gql": typePupil_connectionGql,
 	"type/search_result_item.gql": typeSearch_result_itemGql,
 	"type/study.gql": typeStudyGql,
 	"type/text_match.gql": typeText_matchGql,
 	"type/text_match_highlight.gql": typeText_match_highlightGql,
 	"type/topic.gql": typeTopicGql,
 	"type/topicable_connection.gql": typeTopicable_connectionGql,
-	"type/tutor_connection.gql": typeTutor_connectionGql,
 	"type/update_topics_payload.gql": typeUpdate_topics_payloadGql,
 	"type/user.gql": typeUserGql,
 	"type/user_asset.gql": typeUser_assetGql,
@@ -2861,7 +2729,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"lesson_order_field.gql": &bintree{enumLesson_order_fieldGql, map[string]*bintree{}},
 		"notification_order_field.gql": &bintree{enumNotification_order_fieldGql, map[string]*bintree{}},
 		"order_direction.gql": &bintree{enumOrder_directionGql, map[string]*bintree{}},
-		"pupil_order_field.gql": &bintree{enumPupil_order_fieldGql, map[string]*bintree{}},
 		"ref_order_field.gql": &bintree{enumRef_order_fieldGql, map[string]*bintree{}},
 		"search_order_field.gql": &bintree{enumSearch_order_fieldGql, map[string]*bintree{}},
 		"search_type.gql": &bintree{enumSearch_typeGql, map[string]*bintree{}},
@@ -2869,7 +2736,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"topic_order_field.gql": &bintree{enumTopic_order_fieldGql, map[string]*bintree{}},
 		"topicable_order_field.gql": &bintree{enumTopicable_order_fieldGql, map[string]*bintree{}},
 		"topicable_type.gql": &bintree{enumTopicable_typeGql, map[string]*bintree{}},
-		"tutor_order_field.gql": &bintree{enumTutor_order_fieldGql, map[string]*bintree{}},
 		"user_asset_order_field.gql": &bintree{enumUser_asset_order_fieldGql, map[string]*bintree{}},
 	}},
 	"input": &bintree{nil, map[string]*bintree{
@@ -2899,7 +2765,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"lesson_order.gql": &bintree{inputLesson_orderGql, map[string]*bintree{}},
 		"move_lesson.gql": &bintree{inputMove_lessonGql, map[string]*bintree{}},
 		"notification_order.gql": &bintree{inputNotification_orderGql, map[string]*bintree{}},
-		"pupil_order.gql": &bintree{inputPupil_orderGql, map[string]*bintree{}},
 		"ref_order.gql": &bintree{inputRef_orderGql, map[string]*bintree{}},
 		"request_email_verification.gql": &bintree{inputRequest_email_verificationGql, map[string]*bintree{}},
 		"request_password_reset.gql": &bintree{inputRequest_password_resetGql, map[string]*bintree{}},
@@ -2909,13 +2774,12 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"take_apple.gql": &bintree{inputTake_appleGql, map[string]*bintree{}},
 		"topic_order.gql": &bintree{inputTopic_orderGql, map[string]*bintree{}},
 		"topicable_order.gql": &bintree{inputTopicable_orderGql, map[string]*bintree{}},
-		"tutor_order.gql": &bintree{inputTutor_orderGql, map[string]*bintree{}},
 		"update_email.gql": &bintree{inputUpdate_emailGql, map[string]*bintree{}},
 		"update_lesson.gql": &bintree{inputUpdate_lessonGql, map[string]*bintree{}},
 		"update_lesson_comment.gql": &bintree{inputUpdate_lesson_commentGql, map[string]*bintree{}},
 		"update_study.gql": &bintree{inputUpdate_studyGql, map[string]*bintree{}},
 		"update_topics.gql": &bintree{inputUpdate_topicsGql, map[string]*bintree{}},
-		"update_user.gql": &bintree{inputUpdate_userGql, map[string]*bintree{}},
+		"update_viewer.gql": &bintree{inputUpdate_viewerGql, map[string]*bintree{}},
 		"user_asset_order.gql": &bintree{inputUser_asset_orderGql, map[string]*bintree{}},
 	}},
 	"interface": &bintree{nil, map[string]*bintree{
@@ -2965,14 +2829,12 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"notification.gql": &bintree{typeNotificationGql, map[string]*bintree{}},
 		"page_info.gql": &bintree{typePage_infoGql, map[string]*bintree{}},
 		"password_reset_token.gql": &bintree{typePassword_reset_tokenGql, map[string]*bintree{}},
-		"pupil_connection.gql": &bintree{typePupil_connectionGql, map[string]*bintree{}},
 		"search_result_item.gql": &bintree{typeSearch_result_itemGql, map[string]*bintree{}},
 		"study.gql": &bintree{typeStudyGql, map[string]*bintree{}},
 		"text_match.gql": &bintree{typeText_matchGql, map[string]*bintree{}},
 		"text_match_highlight.gql": &bintree{typeText_match_highlightGql, map[string]*bintree{}},
 		"topic.gql": &bintree{typeTopicGql, map[string]*bintree{}},
 		"topicable_connection.gql": &bintree{typeTopicable_connectionGql, map[string]*bintree{}},
-		"tutor_connection.gql": &bintree{typeTutor_connectionGql, map[string]*bintree{}},
 		"update_topics_payload.gql": &bintree{typeUpdate_topics_payloadGql, map[string]*bintree{}},
 		"user.gql": &bintree{typeUserGql, map[string]*bintree{}},
 		"user_asset.gql": &bintree{typeUser_assetGql, map[string]*bintree{}},

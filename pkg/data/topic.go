@@ -407,6 +407,10 @@ func UpdateTopic(
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
 	}
 
+	if len(sets) == 0 {
+		return GetTopic(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

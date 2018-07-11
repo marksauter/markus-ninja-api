@@ -85,23 +85,23 @@ type Mutation {
   createLesson(input: CreateLessonInput!): Lesson
   # Creates a new study.
   createStudy(input: CreateStudyInput!): Study
-  # Creates a new user.
-  createUser(input: CreateUserInput!): User
 
   # Deletes an email from the viewer's account.
   deleteEmail(input: DeleteEmailInput!): DeleteEmailPayload
+  # Deletes a label from a study.
+  deleteLabel(input: DeleteLabelInput!): DeleteLabelPayload
   # Deletes a lesson from a study.
   deleteLesson(input: DeleteLessonInput!): DeleteLessonPayload
   # Deletes a comment from a lesson.
   deleteLessonComment(input: DeleteLessonCommentInput!): DeleteLessonCommentPayload
   # Deletes a study.
   deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
-  # Deletes a user.
-  deleteUser(input: DeleteUserInput!): ID
-  # Dismisses from an Enrollable.
+  # Deletes a user asset.
+  deleteUserAsset(input: DeleteUserAssetInput!): DeleteUserAssetPayload
+  # Dismisses viewer from an Enrollable.
   dismiss(input: DismissInput!): Enrollable
 
-  # Enrolls in an Enrollable.
+  # Enrolls viewer in an Enrollable.
   enroll(input: EnrollInput!): Enrollable
 
   # Gives an apple to an Appleable.
@@ -110,6 +110,8 @@ type Mutation {
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge
 
+  # Removes a label from a labelable.
+  removeLabel(input: RemoveLabelInput!): RemoveLabelPayload
   # Requests an email verification mail to be sent.
   requestEmailVerification(input: RequestEmailVerificationInput!): EVT
   # Requests a password reset mail to be sent.
@@ -122,14 +124,20 @@ type Mutation {
 
   # Updates an email's type and/or whether it's public or not.
   updateEmail(input: UpdateEmailInput!): Email
+  # Updates the color and/or description of a label.
+  updateLabel(input: UpdateLabelInput!): Label
   # Updates the body and/or title of a lesson.
   updateLesson(input: UpdateLessonInput!): Lesson
   # Updates the body of a lesson comment.
   updateLessonComment(input: UpdateLessonCommentInput!): LessonComment
   # Updates the description of a study.
   updateStudy(input: UpdateStudyInput!): Study
+  # Updates the description of a topic.
+  # updateTopic(input: UpdateTopicInput!): Topic
   # Replaces the topicable's topics with the given topics.
   updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
-  # Updates the bio, login, and/or name of a user.
-  updateUser(input: UpdateUserInput!): User
+  # Updates the name of a user asset.
+  # updateUserAsset(input: UpdateUserAssetInput!): UserAsset
+  # Updates the bio, email, login, and/or name of the viewer.
+  updateViewer(input: UpdateViewerInput!): User
 }

@@ -186,6 +186,10 @@ func UpdatePRT(
 		sets = append(sets, `end_ip`+"="+args.Append(&row.EndIP))
 	}
 
+	if len(sets) == 0 {
+		return GetPRT(db, row.UserId.String, row.Token.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
@@ -198,9 +202,8 @@ func UpdatePRT(
 	sql := `
 		UPDATE password_reset_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE token = ` + args.Append(row.Token.String) + `
-		AND user_id = ` + args.Append(row.UserId.String) + `
-	`
+		WHERE user_id = ` + args.Append(&row.UserId) + `
+		AND token = ` + args.Append(&row.Token)
 
 	psName := preparedName("updatePRT", sql)
 
@@ -212,7 +215,7 @@ func UpdatePRT(
 		return nil, ErrNotFound
 	}
 
-	prt, err := GetPRT(db, row.UserId.String, row.Token.String)
+	prt, err := GetPRT(tx, row.UserId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}

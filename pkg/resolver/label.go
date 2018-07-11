@@ -83,7 +83,7 @@ func (r *labelResolver) Labelables(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.Permit{}
+	permits := []repo.NodePermit{}
 
 	switch labelableType {
 	case LabelableTypeLesson:
@@ -91,7 +91,7 @@ func (r *labelResolver) Labelables(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(studies))
+		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}

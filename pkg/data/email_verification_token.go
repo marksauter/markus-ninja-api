@@ -161,6 +161,10 @@ func UpdateEVT(
 		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
 	}
 
+	if len(sets) == 0 {
+		return GetEVT(db, row.EmailId.String, row.Token.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

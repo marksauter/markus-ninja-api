@@ -20,7 +20,6 @@ const (
 	LessonCommentType
 	NotificationType
 	PRTType
-	RefType
 	StudyType
 	TopicType
 	TopicedType
@@ -52,8 +51,6 @@ func (nt NodeType) String() string {
 		return "Notification"
 	case PRTType:
 		return "PRT"
-	case RefType:
-		return "Ref"
 	case StudyType:
 		return "Study"
 	case TopicType:
@@ -93,8 +90,6 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return NotificationType, nil
 	case "prt":
 		return PRTType, nil
-	case "ref":
-		return RefType, nil
 	case "study":
 		return StudyType, nil
 	case "topic":

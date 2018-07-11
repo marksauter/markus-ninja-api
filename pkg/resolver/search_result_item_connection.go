@@ -7,8 +7,7 @@ import (
 
 func NewSearchResultItemConnectionResolver(
 	repos *repo.Repos,
-	searchResultItems []repo.Permit,
-	pageOptions *data.PageOptions,
+	searchResultItems []repo.NodePermit, pageOptions *data.PageOptions,
 	lessonCount int32,
 	studyCount int32,
 	userCount int32,
@@ -45,7 +44,7 @@ func NewSearchResultItemConnectionResolver(
 type searchResultItemConnectionResolver struct {
 	edges             []*searchResultItemEdgeResolver
 	lessonCount       int32
-	searchResultItems []repo.Permit
+	searchResultItems []repo.NodePermit
 	pageInfo          *pageInfoResolver
 	repos             *repo.Repos
 	studyCount        int32

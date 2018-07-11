@@ -9,8 +9,7 @@ import (
 
 func NewEnrollableConnectionResolver(
 	repos *repo.Repos,
-	enrollables []repo.Permit,
-	pageOptions *data.PageOptions,
+	enrollables []repo.NodePermit, pageOptions *data.PageOptions,
 	lessonCount,
 	studyCount,
 	userCount int32,
@@ -44,7 +43,7 @@ func NewEnrollableConnectionResolver(
 
 type enrollableConnectionResolver struct {
 	edges       []*enrollableEdgeResolver
-	enrollables []repo.Permit
+	enrollables []repo.NodePermit
 	pageInfo    *pageInfoResolver
 	repos       *repo.Repos
 	lessonCount int32
@@ -70,7 +69,7 @@ func (r *enrollableConnectionResolver) Nodes() (*[]*enrollableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		enrollables := r.enrollables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range enrollables {
-			resolver, err := permitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos)
 			if err != nil {
 				return nil, err
 			}

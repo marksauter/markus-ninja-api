@@ -659,6 +659,10 @@ func UpdateStudy(
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
+	if len(sets) == 0 {
+		return GetStudy(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

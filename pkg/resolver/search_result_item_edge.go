@@ -7,8 +7,7 @@ import (
 
 func NewSearchResultItemEdgeResolver(
 	repos *repo.Repos,
-	node repo.Permit,
-) (*searchResultItemEdgeResolver, error) {
+	node repo.NodePermit) (*searchResultItemEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err
@@ -23,7 +22,7 @@ func NewSearchResultItemEdgeResolver(
 
 type searchResultItemEdgeResolver struct {
 	cursor string
-	node   repo.Permit
+	node   repo.NodePermit
 	repos  *repo.Repos
 }
 

@@ -10,8 +10,7 @@ import (
 
 func NewAppleableEdgeResolver(
 	repos *repo.Repos,
-	node repo.Permit,
-) (*appleableEdgeResolver, error) {
+	node repo.NodePermit) (*appleableEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err
@@ -26,7 +25,7 @@ func NewAppleableEdgeResolver(
 
 type appleableEdgeResolver struct {
 	cursor string
-	node   repo.Permit
+	node   repo.NodePermit
 	repos  *repo.Repos
 }
 
@@ -35,7 +34,7 @@ func (r *appleableEdgeResolver) Cursor() string {
 }
 
 func (r *appleableEdgeResolver) Node() (*appleableResolver, error) {
-	resolver, err := permitToResolver(r.node, r.repos)
+	resolver, err := nodePermitToResolver(r.node, r.repos)
 	if err != nil {
 		return nil, err
 	}

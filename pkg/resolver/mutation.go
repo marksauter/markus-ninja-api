@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"time"
 
-	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -37,8 +36,10 @@ func (r *RootResolver) AddEmail(
 	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	email := &data.Email{}
-	email.Value.Set(args.Input.Email)
-	email.UserId.Set(viewer.Id)
+	if err := email.Value.Set(args.Input.Email); err != nil {
+		return nil, errors.New("invalid email value")
+	}
+	email.UserId.Set(&viewer.Id)
 
 	emailPermit, err := r.Repos.Email().Create(ctx, email)
 	if err != nil {
@@ -46,8 +47,8 @@ func (r *RootResolver) AddEmail(
 	}
 
 	evt := &data.EVT{}
-	evt.EmailId.Set(email.Id)
-	evt.UserId.Set(viewer.Id)
+	evt.EmailId.Set(&email.Id)
+	evt.UserId.Set(&viewer.Id)
 
 	evtPermit, err := r.Repos.EVT().Create(ctx, evt)
 	if err != nil {
@@ -89,23 +90,22 @@ func (r *RootResolver) AddLabel(
 	args struct{ Input AddLabelInput },
 ) (*addLabelPayloadResolver, error) {
 	labeled := &data.Labeled{}
-	labeled.LabelId.Set(args.Input.LabelId)
-	labeled.LabelableId.Set(args.Input.LabelableId)
-
-	labeledPermit, err := r.Repos.Labeled().Connect(ctx, labeled)
-	if err != nil {
-		return nil, err
+	if err := labeled.LabelId.Set(args.Input.LabelId); err != nil {
+		return nil, errors.New("invalid labeled label_id")
+	}
+	if err := labeled.LabelableId.Set(args.Input.LabelableId); err != nil {
+		return nil, errors.New("invalid labeled labelable_id")
 	}
 
-	labelPermit, err := r.Repos.Label().Get(ctx, labeled.LabelId.String)
+	_, err := r.Repos.Labeled().Connect(ctx, labeled)
 	if err != nil {
 		return nil, err
 	}
 
 	return &addLabelPayloadResolver{
-		Label:   labelPermit,
-		Labeled: labeledPermit,
-		Repos:   r.Repos,
+		LabelId:     &labeled.LabelId,
+		LabelableId: &labeled.LabelableId,
+		Repos:       r.Repos,
 	}, nil
 }
 
@@ -123,20 +123,14 @@ func (r *RootResolver) AddLessonComment(
 		return nil, errors.New("viewer not found")
 	}
 
-	lesson, err := r.Repos.Lesson().Get(ctx, args.Input.LessonId)
-	if err != nil {
-		return nil, err
-	}
-	studyId, err := lesson.StudyId()
-	if err != nil {
-		return nil, err
-	}
-
 	lessonComment := &data.LessonComment{}
-	lessonComment.Body.Set(args.Input.Body)
-	lessonComment.LessonId.Set(args.Input.LessonId)
-	lessonComment.StudyId.Set(studyId)
-	lessonComment.UserId.Set(viewer.Id)
+	if err := lessonComment.Body.Set(args.Input.Body); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson_comment body"}
+	}
+	if err := lessonComment.LessonId.Set(args.Input.LessonId); err != nil {
+		return nil, errors.New("invalid lesson_comment lesson_id")
+	}
+	lessonComment.UserId.Set(&viewer.Id)
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Create(ctx, lessonComment)
 	if err != nil {
@@ -206,9 +200,7 @@ func (r *RootResolver) CreateLesson(
 	if err := lesson.Title.Set(args.Input.Title); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set lesson title"}
 	}
-	if err := lesson.UserId.Set(viewer.Id); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
-	}
+	lesson.UserId.Set(&viewer.Id)
 
 	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
 	if err != nil {
@@ -239,9 +231,7 @@ func (r *RootResolver) CreateStudy(
 	if err := study.Name.Set(args.Input.Name); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set study name"}
 	}
-	if err := study.UserId.Set(viewer.Id.String); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study user_id"}
-	}
+	study.UserId.Set(&viewer.Id.String)
 
 	studyPermit, err := r.Repos.Study().Create(ctx, study)
 	if err != nil {
@@ -249,86 +239,6 @@ func (r *RootResolver) CreateStudy(
 	}
 
 	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
-}
-
-type CreateUserInput struct {
-	Email    string
-	Login    string
-	Password string
-}
-
-func (r *RootResolver) CreateUser(
-	ctx context.Context,
-	args struct{ Input CreateUserInput },
-) (*userResolver, error) {
-	user := &data.User{}
-
-	if err := user.Password.Set(args.Input.Password); err != nil {
-		mylog.Log.WithError(err).Error("failed to set password")
-		return nil, err
-	}
-	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
-		mylog.Log.WithError(err).Error("password failed strength check")
-		return nil, err
-	}
-
-	if err := user.Login.Set(args.Input.Login); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user login"}
-	}
-	if err := user.PrimaryEmail.Set(args.Input.Email); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
-	}
-
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return nil, err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
-	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
-
-	userPermit, err := r.Repos.User().Create(ctx, user)
-	if err != nil {
-		return nil, err
-	}
-	user = userPermit.Get()
-	emailPermit, err := r.Repos.Email().GetByValue(ctx, args.Input.Email)
-	primaryEmail := emailPermit.Get()
-
-	resolver := &userResolver{User: userPermit, Repos: r.Repos}
-
-	if user.Login.String != "guest" {
-		evt := &data.EVT{}
-		evt.EmailId.Set(primaryEmail.Id)
-		evt.UserId.Set(user.Id)
-
-		evtPermit, err := r.Repos.EVT().Create(ctx, evt)
-		if err != nil {
-			return resolver, err
-		}
-
-		evt = evtPermit.Get()
-
-		sendMailInput := &service.SendEmailVerificationMailInput{
-			EmailId:   primaryEmail.Id.String,
-			To:        primaryEmail.Value.String,
-			UserLogin: user.Login.String,
-			Token:     evt.Token.String,
-		}
-		err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
-		if err != nil {
-			return resolver, err
-		}
-	}
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return resolver, err
-		}
-	}
-
-	return resolver, nil
 }
 
 type DeleteEmailInput struct {
@@ -413,6 +323,30 @@ func (r *RootResolver) DeleteEmail(
 	return resolver, nil
 }
 
+type DeleteLabelInput struct {
+	LabelId string
+}
+
+func (r *RootResolver) DeleteLabel(
+	ctx context.Context,
+	args struct{ Input DeleteLabelInput },
+) (*deleteLabelPayloadResolver, error) {
+	label := &data.Label{}
+	if err := label.Id.Set(args.Input.LabelId); err != nil {
+		return nil, errors.New("invalid label id")
+	}
+
+	if err := r.Repos.Label().Delete(ctx, label); err != nil {
+		return nil, err
+	}
+
+	return &deleteLabelPayloadResolver{
+		LabelId: &label.Id,
+		StudyId: &label.StudyId,
+		Repos:   r.Repos,
+	}, nil
+}
+
 type DeleteLessonInput struct {
 	LessonId string
 }
@@ -421,12 +355,10 @@ func (r *RootResolver) DeleteLesson(
 	ctx context.Context,
 	args struct{ Input DeleteLessonInput },
 ) (*deleteLessonPayloadResolver, error) {
-	lessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonId)
-	if err != nil {
-		return nil, err
+	lesson := &data.Lesson{}
+	if err := lesson.Id.Set(args.Input.LessonId); err != nil {
+		return nil, errors.New("invalid lesson id")
 	}
-
-	lesson := lessonPermit.Get()
 
 	if err := r.Repos.Lesson().Delete(ctx, lesson); err != nil {
 		return nil, err
@@ -447,12 +379,10 @@ func (r *RootResolver) DeleteLessonComment(
 	ctx context.Context,
 	args struct{ Input DeleteLessonCommentInput },
 ) (*deleteLessonCommentPayloadResolver, error) {
-	lessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, args.Input.LessonCommentId)
-	if err != nil {
-		return nil, err
+	lessonComment := &data.LessonComment{}
+	if err := lessonComment.Id.Set(args.Input.LessonCommentId); err != nil {
+		return nil, errors.New("invalid lesson_comment id")
 	}
-
-	lessonComment := lessonCommentPermit.Get()
 
 	if err := r.Repos.LessonComment().Delete(ctx, lessonComment); err != nil {
 		return nil, err
@@ -473,12 +403,10 @@ func (r *RootResolver) DeleteStudy(
 	ctx context.Context,
 	args struct{ Input DeleteStudyInput },
 ) (*deleteStudyPayloadResolver, error) {
-	studyPermit, err := r.Repos.Study().Get(ctx, args.Input.StudyId)
-	if err != nil {
-		return nil, err
+	study := &data.Study{}
+	if err := study.Id.Set(args.Input.StudyId); err != nil {
+		return nil, errors.New("invalid study id")
 	}
-
-	study := studyPermit.Get()
 
 	if err := r.Repos.Study().Delete(ctx, study); err != nil {
 		return nil, err
@@ -491,31 +419,28 @@ func (r *RootResolver) DeleteStudy(
 	}, nil
 }
 
-type DeleteUserInput struct {
-	UserId string
+type DeleteUserAssetInput struct {
+	UserAssetId string
 }
 
-func (r *RootResolver) DeleteUser(
+func (r *RootResolver) DeleteUserAsset(
 	ctx context.Context,
-	args struct{ Input DeleteUserInput },
-) (*graphql.ID, error) {
-	userPermit, err := r.Repos.User().Get(ctx, args.Input.UserId)
-	if err != nil {
+	args struct{ Input DeleteUserAssetInput },
+) (*deleteUserAssetPayloadResolver, error) {
+	userAsset := &data.UserAsset{}
+	if err := userAsset.Id.Set(args.Input.UserAssetId); err != nil {
+		return nil, errors.New("invalid user_asset id")
+	}
+
+	if err := r.Repos.UserAsset().Delete(ctx, userAsset); err != nil {
 		return nil, err
 	}
 
-	user := userPermit.Get()
-
-	if err := user.Id.Set(args.Input.UserId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user id"}
-	}
-
-	if err := r.Repos.User().Delete(ctx, user); err != nil {
-		return nil, err
-	}
-
-	gqlID := graphql.ID(args.Input.UserId)
-	return &gqlID, nil
+	return &deleteUserAssetPayloadResolver{
+		UserAssetId: &userAsset.Id,
+		StudyId:     &userAsset.StudyId,
+		Repos:       r.Repos,
+	}, nil
 }
 
 type DismissInput struct {
@@ -531,39 +456,28 @@ func (r *RootResolver) Dismiss(
 		return nil, errors.New("viewer not found")
 	}
 
-	id, err := mytype.ParseOID(args.Input.EnrollableId)
-	if err != nil {
-		return nil, err
-	}
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(id)
-	enrolled.UserId.Set(viewer.Id)
-	err = r.Repos.Enrolled().Disconnect(ctx, enrolled)
-	if err != nil {
-		return nil, err
-	}
-	switch id.Type {
-	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	case "User":
-		user, err := r.Repos.User().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&userResolver{User: user, Repos: r.Repos}}, nil
-	default:
+	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
 		return nil, errors.New("invalid enrollable id")
 	}
+	enrolled.UserId.Set(&viewer.Id)
+	err := r.Repos.Enrolled().Disconnect(ctx, enrolled)
+	if err != nil {
+		return nil, err
+	}
+	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	enrollable, ok := resolver.(enrollable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to enrollable")
+	}
+	return &enrollableResolver{enrollable}, nil
 }
 
 type EnrollInput struct {
@@ -579,40 +493,29 @@ func (r *RootResolver) Enroll(
 		return nil, errors.New("viewer not found")
 	}
 
-	id, err := mytype.ParseOID(args.Input.EnrollableId)
-	if err != nil {
-		return nil, err
-	}
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(id)
-	enrolled.ReasonName.Set(data.ManualReason)
-	enrolled.UserId.Set(viewer.Id)
-	_, err = r.Repos.Enrolled().Connect(ctx, enrolled)
-	if err != nil {
-		return nil, err
-	}
-	switch id.Type {
-	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	case "User":
-		user, err := r.Repos.User().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &enrollableResolver{&userResolver{User: user, Repos: r.Repos}}, nil
-	default:
+	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
 		return nil, errors.New("invalid enrollable id")
 	}
+	enrolled.ReasonName.Set(data.ManualReason)
+	enrolled.UserId.Set(&viewer.Id)
+	_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
+	if err != nil {
+		return nil, err
+	}
+	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	enrollable, ok := resolver.(enrollable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to enrollable")
+	}
+	return &enrollableResolver{enrollable}, nil
 }
 
 type GiveAppleInput struct {
@@ -628,27 +531,28 @@ func (r *RootResolver) GiveApple(
 		return nil, errors.New("viewer not found")
 	}
 
-	id, err := mytype.ParseOID(args.Input.AppleableId)
-	if err != nil {
-		return nil, err
-	}
 	appled := &data.Appled{}
-	appled.AppleableId.Set(id)
-	appled.UserId.Set(viewer.Id)
-	_, err = r.Repos.Appled().Connect(ctx, appled)
-	if err != nil {
-		return nil, err
-	}
-	switch id.Type {
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &appleableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	default:
+	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
 		return nil, errors.New("invalid appleable id")
 	}
+	appled.UserId.Set(&viewer.Id)
+	_, err := r.Repos.Appled().Connect(ctx, appled)
+	if err != nil {
+		return nil, err
+	}
+	permit, err := r.Repos.GetAppleable(ctx, &appled.AppleableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	appleable, ok := resolver.(appleable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to appleable")
+	}
+	return &appleableResolver{appleable}, nil
 }
 
 type MoveLessonInput struct {
@@ -660,25 +564,20 @@ func (r *RootResolver) MoveLesson(
 	ctx context.Context,
 	args struct{ Input MoveLessonInput },
 ) (*lessonEdgeResolver, error) {
-	number := int32(1)
+	lesson := &data.Lesson{}
+	if err := lesson.Id.Set(args.Input.LessonId); err != nil {
+		return nil, errors.New("invalid lesson id")
+	}
 	if args.Input.Number != nil {
 		if *args.Input.Number < 1 {
 			return nil, errors.New("`number` must be greater than 0")
 		}
-		number = *args.Input.Number
+		if err := lesson.Number.Set(args.Input.Number); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set lesson number"}
+		}
 	}
 
-	lessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonId)
-	if err != nil {
-		return nil, err
-	}
-
-	lesson := lessonPermit.Get()
-	if err := lesson.Number.Set(number); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson number"}
-	}
-
-	lessonPermit, err = r.Repos.Lesson().Update(ctx, lesson)
+	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -689,6 +588,35 @@ func (r *RootResolver) MoveLesson(
 	}
 
 	return resolver, nil
+}
+
+type RemoveLabelInput struct {
+	LabelId     string
+	LabelableId string
+}
+
+func (r *RootResolver) RemoveLabel(
+	ctx context.Context,
+	args struct{ Input RemoveLabelInput },
+) (*removeLabelPayloadResolver, error) {
+	labeled := &data.Labeled{}
+	if err := labeled.LabelId.Set(args.Input.LabelId); err != nil {
+		return nil, errors.New("invalid labeled label_id")
+	}
+	if err := labeled.LabelableId.Set(args.Input.LabelableId); err != nil {
+		return nil, errors.New("invalid labeled labelable_id")
+	}
+
+	err := r.Repos.Labeled().Disconnect(ctx, labeled)
+	if err != nil {
+		return nil, err
+	}
+
+	return &removeLabelPayloadResolver{
+		LabelId:     &labeled.LabelId,
+		LabelableId: &labeled.LabelableId,
+		Repos:       r.Repos,
+	}, nil
 }
 
 type RequestEmailVerificationInput struct {
@@ -816,11 +744,11 @@ func (r *RootResolver) RequestPasswordReset(
 	}
 
 	prt := &data.PRT{}
-	if err := prt.EmailId.Set(email.Id); err != nil {
+	if err := prt.EmailId.Set(&email.Id); err != nil {
 		mylog.Log.Error(err)
 		return nil, myerr.UnexpectedError{"failed to set prt email_id"}
 	}
-	if err := prt.UserId.Set(email.UserId); err != nil {
+	if err := prt.UserId.Set(&email.UserId); err != nil {
 		mylog.Log.Error(err)
 		return nil, myerr.UnexpectedError{"failed to set prt user_id"}
 	}
@@ -913,6 +841,12 @@ func (r *RootResolver) ResetPassword(
 		return false, errors.New("requester ip not found")
 	}
 
+	if err := prt.UserId.Set(&user.Id); err != nil {
+		return false, myerr.UnexpectedError{"failed to set prt user_id"}
+	}
+	if err := prt.Token.Set(args.Input.Token); err != nil {
+		return false, myerr.UnexpectedError{"failed to set prt token"}
+	}
 	if err := prt.EndIP.Set(endIp); err != nil {
 		return false, myerr.UnexpectedError{"failed to set prt end_ip"}
 	}
@@ -921,7 +855,7 @@ func (r *RootResolver) ResetPassword(
 	}
 
 	if _, err := r.Repos.PRT().Update(ctx, prt); err != nil {
-		return false, myerr.UnexpectedError{"failed to update prt"}
+		return false, err
 	}
 
 	if newTx {
@@ -947,27 +881,28 @@ func (r *RootResolver) TakeApple(
 		return nil, errors.New("viewer not found")
 	}
 
-	id, err := mytype.ParseOID(args.Input.AppleableId)
-	if err != nil {
-		return nil, err
-	}
 	appled := &data.Appled{}
-	appled.AppleableId.Set(id)
-	appled.UserId.Set(viewer.Id)
-	err = r.Repos.Appled().Disconnect(ctx, appled)
-	if err != nil {
-		return nil, err
-	}
-	switch id.Type {
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &appleableResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	default:
+	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
 		return nil, errors.New("invalid appleable id")
 	}
+	appled.UserId.Set(&viewer.Id)
+	err := r.Repos.Appled().Disconnect(ctx, appled)
+	if err != nil {
+		return nil, err
+	}
+	permit, err := r.Repos.GetAppleable(ctx, &appled.AppleableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	appleable, ok := resolver.(appleable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to appleable")
+	}
+	return &appleableResolver{appleable}, nil
 }
 
 type UpdateEmailInput struct {
@@ -992,11 +927,13 @@ func (r *RootResolver) UpdateEmail(
 		return nil, errors.New("cannot update unverified email")
 	}
 
-	email := emailPermit.Get()
-
+	email := &data.Email{}
+	if err := email.Id.Set(args.Input.EmailId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set email id"}
+	}
 	if args.Input.Type != nil {
 		if err := email.Type.Set(args.Input.Type); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user_email type"}
+			return nil, myerr.UnexpectedError{"failed to set email type"}
 		}
 	}
 
@@ -1005,6 +942,39 @@ func (r *RootResolver) UpdateEmail(
 		return nil, err
 	}
 	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
+}
+
+type UpdateLabelInput struct {
+	Color       *string
+	Description *string
+	LabelId     string
+}
+
+func (r *RootResolver) UpdateLabel(
+	ctx context.Context,
+	args struct{ Input UpdateLabelInput },
+) (*labelResolver, error) {
+	label := &data.Label{}
+	if err := label.Id.Set(args.Input.LabelId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set label id"}
+	}
+
+	if args.Input.Color != nil {
+		if err := label.Color.Set(args.Input.Color); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set label color"}
+		}
+	}
+	if args.Input.Description != nil {
+		if err := label.Description.Set(args.Input.Description); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set label description"}
+		}
+	}
+
+	labelPermit, err := r.Repos.Label().Update(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+	return &labelResolver{Label: labelPermit, Repos: r.Repos}, nil
 }
 
 type UpdateLessonInput struct {
@@ -1157,8 +1127,10 @@ func (r *RootResolver) UpdateTopics(
 				return nil, err
 			}
 			topiced := &data.Topiced{}
-			topiced.TopicId.Set(topicId)
-			topiced.TopicableId.Set(args.Input.TopicableId)
+			topiced.TopicId.Set(&topicId)
+			if err := topiced.TopicableId.Set(args.Input.TopicableId); err != nil {
+				return nil, errors.New("invalid topicable id")
+			}
 			_, err = r.Repos.Topiced().Connect(ctx, topiced)
 			if err != nil {
 				return nil, err
@@ -1200,17 +1172,16 @@ func validateTopicNames(topicNames []string) (invalidTopicNames []string) {
 	return
 }
 
-type UpdateUserInput struct {
-	Bio         *string
-	Login       *string
-	Name        *string
-	PublicEmail *string
-	UserId      string
+type UpdateViewerInput struct {
+	Bio     *string
+	EmailId *string
+	Login   *string
+	Name    *string
 }
 
-func (r *RootResolver) UpdateUser(
+func (r *RootResolver) UpdateViewer(
 	ctx context.Context,
-	args struct{ Input UpdateUserInput },
+	args struct{ Input UpdateViewerInput },
 ) (*userResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
@@ -1218,7 +1189,7 @@ func (r *RootResolver) UpdateUser(
 	}
 
 	user := &data.User{}
-	user.Id.Set(viewer.Id)
+	user.Id.Set(&viewer.Id)
 
 	if args.Input.Bio != nil {
 		if err := user.Bio.Set(args.Input.Bio); err != nil {
@@ -1235,9 +1206,28 @@ func (r *RootResolver) UpdateUser(
 			return nil, myerr.UnexpectedError{"failed to set user name"}
 		}
 	}
-	if args.Input.PublicEmail != nil {
-		if err := user.PublicEmail.Set(args.Input.PublicEmail); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user public_email"}
+
+	if args.Input.EmailId != nil {
+		emailPermit, err := r.Repos.Email().Get(ctx, *args.Input.EmailId)
+		if err != nil {
+			return nil, err
+		}
+		ok, err := emailPermit.IsVerified()
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("cannot update unverified email")
+		}
+
+		email := &data.Email{}
+		if err := email.Id.Set(args.Input.EmailId); err != nil {
+			return nil, errors.New("invalid email id")
+		}
+		email.Public.Set(true)
+		_, err = r.Repos.Email().Update(ctx, email)
+		if err != nil {
+			return nil, err
 		}
 	}
 

@@ -9,8 +9,7 @@ import (
 
 func NewAppleableConnectionResolver(
 	repos *repo.Repos,
-	appleables []repo.Permit,
-	pageOptions *data.PageOptions,
+	appleables []repo.NodePermit, pageOptions *data.PageOptions,
 	studyCount int32,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
@@ -40,7 +39,7 @@ func NewAppleableConnectionResolver(
 
 type appleableConnectionResolver struct {
 	edges      []*appleableEdgeResolver
-	appleables []repo.Permit
+	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	studyCount int32
@@ -60,7 +59,7 @@ func (r *appleableConnectionResolver) Nodes() (*[]*appleableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		appleables := r.appleables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range appleables {
-			resolver, err := permitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos)
 			if err != nil {
 				return nil, err
 			}

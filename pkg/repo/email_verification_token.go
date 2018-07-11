@@ -58,11 +58,11 @@ func (r *EVTPermit) Token() (string, error) {
 	return r.evt.Token.String, nil
 }
 
-func (r *EVTPermit) UserId() (string, error) {
+func (r *EVTPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return "", ErrAccessDenied
+		return nil, ErrAccessDenied
 	}
-	return r.evt.UserId.String, nil
+	return &r.evt.UserId, nil
 }
 
 func (r *EVTPermit) VerifiedAt() (time.Time, error) {

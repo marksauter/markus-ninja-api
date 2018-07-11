@@ -144,15 +144,15 @@ permissions:
 
 
 
-  # Only authenticated users can connect/disconnect labeled.
+  # Only owners can connect/disconnect labeled.
   - operation: Connect Labeled 
     authenticated: true
     roles:
-      - user
+      - owner
   - operation: Disconnect Labeled
     authenticated: true
     roles:
-      - user
+      - owner
 
 
 
@@ -336,8 +336,12 @@ permissions:
   # Only authenticated users can connect/disconnect topiced.
   - operation: Connect Topiced 
     authenticated: true
+    roles:
+      - owner
   - operation: Disconnect Topiced
     authenticated: true
+    roles:
+      - owner
 
 
 
