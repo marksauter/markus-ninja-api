@@ -2,6 +2,7 @@ schema {
   query: Query
   mutation: Mutation
 }
+
 type Query {
   # Lookup a given asset by the owner, study name, and asset name.
   asset(
@@ -71,6 +72,7 @@ type Query {
   # The currently authenticated user.
   viewer: User!
 }
+
 type Mutation {
   # Adds an email to the viewer's account.
   addEmail(input: AddEmailInput!): AddEmailPayload
@@ -133,11 +135,11 @@ type Mutation {
   # Updates the description of a study.
   updateStudy(input: UpdateStudyInput!): Study
   # Updates the description of a topic.
-  # updateTopic(input: UpdateTopicInput!): Topic
+  updateTopic(input: UpdateTopicInput!): Topic
   # Replaces the topicable's topics with the given topics.
   updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
   # Updates the name of a user asset.
-  # updateUserAsset(input: UpdateUserAssetInput!): UserAsset
+  updateUserAsset(input: UpdateUserAssetInput!): UserAsset
   # Updates the bio, email, login, and/or name of the viewer.
   updateViewer(input: UpdateViewerInput!): User
 }

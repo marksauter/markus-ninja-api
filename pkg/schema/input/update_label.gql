@@ -1,0 +1,11 @@
+# Input type for UpdateLabel.
+input UpdateLabelInput {
+  # The color of the label.
+  color: String
+
+  # The description of the label.
+  description: String
+
+  # ID of the label.
+  labelId: ID!
+}

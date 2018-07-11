@@ -170,13 +170,13 @@ func (r *LabeledRepo) Get(
 	}
 	var labeled *data.Labeled
 	var err error
-	if labeled.Id.Status != pgtype.Undefined {
+	if l.Id.Status != pgtype.Undefined {
 		labeled, err = r.load.Get(ctx, l.Id.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if labeled.LabelableId.Status != pgtype.Undefined &&
-		labeled.LabelId.Status != pgtype.Undefined {
+	} else if l.LabelableId.Status != pgtype.Undefined &&
+		l.LabelId.Status != pgtype.Undefined {
 		labeled, err = r.load.GetByLabelableAndLabel(ctx, l.LabelableId.String, l.LabelId.String)
 		if err != nil {
 			return nil, err

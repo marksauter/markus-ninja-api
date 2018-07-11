@@ -40,6 +40,9 @@ func (r *RootResolver) AddEmail(
 		return nil, errors.New("invalid email value")
 	}
 	email.UserId.Set(&viewer.Id)
+	if err := email.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set email user_id"}
+	}
 
 	emailPermit, err := r.Repos.Email().Create(ctx, email)
 	if err != nil {
@@ -47,8 +50,12 @@ func (r *RootResolver) AddEmail(
 	}
 
 	evt := &data.EVT{}
-	evt.EmailId.Set(&email.Id)
-	evt.UserId.Set(&viewer.Id)
+	if err := evt.EmailId.Set(&email.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set evt email_id"}
+	}
+	if err := evt.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set evt user_id"}
+	}
 
 	evtPermit, err := r.Repos.EVT().Create(ctx, evt)
 	if err != nil {
@@ -130,7 +137,9 @@ func (r *RootResolver) AddLessonComment(
 	if err := lessonComment.LessonId.Set(args.Input.LessonId); err != nil {
 		return nil, errors.New("invalid lesson_comment lesson_id")
 	}
-	lessonComment.UserId.Set(&viewer.Id)
+	if err := lessonComment.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid lesson_comment user_id")
+	}
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Create(ctx, lessonComment)
 	if err != nil {
@@ -200,7 +209,9 @@ func (r *RootResolver) CreateLesson(
 	if err := lesson.Title.Set(args.Input.Title); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set lesson title"}
 	}
-	lesson.UserId.Set(&viewer.Id)
+	if err := lesson.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
+	}
 
 	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
 	if err != nil {
@@ -231,7 +242,9 @@ func (r *RootResolver) CreateStudy(
 	if err := study.Name.Set(args.Input.Name); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set study name"}
 	}
-	study.UserId.Set(&viewer.Id.String)
+	if err := study.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set study user_id"}
+	}
 
 	studyPermit, err := r.Repos.Study().Create(ctx, study)
 	if err != nil {
@@ -460,7 +473,9 @@ func (r *RootResolver) Dismiss(
 	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
 		return nil, errors.New("invalid enrollable id")
 	}
-	enrolled.UserId.Set(&viewer.Id)
+	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid enrollable user_id")
+	}
 	err := r.Repos.Enrolled().Disconnect(ctx, enrolled)
 	if err != nil {
 		return nil, err
@@ -497,8 +512,12 @@ func (r *RootResolver) Enroll(
 	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
 		return nil, errors.New("invalid enrollable id")
 	}
-	enrolled.ReasonName.Set(data.ManualReason)
-	enrolled.UserId.Set(&viewer.Id)
+	if err := enrolled.ReasonName.Set(data.ManualReason); err != nil {
+		return nil, errors.New("invalid enrollable reason_name")
+	}
+	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid enrollable user_id")
+	}
 	_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
 	if err != nil {
 		return nil, err
@@ -535,7 +554,9 @@ func (r *RootResolver) GiveApple(
 	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
 		return nil, errors.New("invalid appleable id")
 	}
-	appled.UserId.Set(&viewer.Id)
+	if err := appled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid appleable user_id")
+	}
 	_, err := r.Repos.Appled().Connect(ctx, appled)
 	if err != nil {
 		return nil, err
@@ -885,7 +906,9 @@ func (r *RootResolver) TakeApple(
 	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
 		return nil, errors.New("invalid appleable id")
 	}
-	appled.UserId.Set(&viewer.Id)
+	if err := appled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid appleable user_id")
+	}
 	err := r.Repos.Appled().Disconnect(ctx, appled)
 	if err != nil {
 		return nil, err
@@ -1067,6 +1090,32 @@ func (r *RootResolver) UpdateStudy(
 	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
 }
 
+type UpdateTopicInput struct {
+	Description *string
+	TopicId     string
+}
+
+func (r *RootResolver) UpdateTopic(
+	ctx context.Context,
+	args struct{ Input UpdateTopicInput },
+) (*topicResolver, error) {
+	topic := &data.Topic{}
+	if err := topic.Id.Set(args.Input.TopicId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set topic id"}
+	}
+	if args.Input.Description != nil {
+		if err := topic.Description.Set(args.Input.Description); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set topic description"}
+		}
+	}
+
+	topicPermit, err := r.Repos.Topic().Update(ctx, topic)
+	if err != nil {
+		return nil, err
+	}
+	return &topicResolver{Topic: topicPermit, Repos: r.Repos}, nil
+}
+
 type UpdateTopicsInput struct {
 	Description *string
 	TopicableId string
@@ -1118,6 +1167,9 @@ func (r *RootResolver) UpdateTopics(
 		if _, prs := oldTopics[name]; !prs {
 			t := &data.Topic{}
 			t.Name.Set(name)
+			if err := t.Name.Set(name); err != nil {
+				return nil, errors.New("invalid topic name")
+			}
 			topic, err := r.Repos.Topic().Create(ctx, t)
 			if err != nil {
 				return nil, err
@@ -1127,7 +1179,9 @@ func (r *RootResolver) UpdateTopics(
 				return nil, err
 			}
 			topiced := &data.Topiced{}
-			topiced.TopicId.Set(&topicId)
+			if err := topiced.TopicId.Set(topicId); err != nil {
+				return nil, errors.New("invalid topic id")
+			}
 			if err := topiced.TopicableId.Set(args.Input.TopicableId); err != nil {
 				return nil, errors.New("invalid topicable id")
 			}
@@ -1141,8 +1195,12 @@ func (r *RootResolver) UpdateTopics(
 		name := t.Name.String
 		if _, prs := newTopics[name]; !prs {
 			topiced := &data.Topiced{}
-			topiced.TopicId.Set(&t.Id)
-			topiced.TopicableId.Set(topicableId)
+			if err := topiced.TopicId.Set(&t.Id); err != nil {
+				return nil, errors.New("invalid topic id")
+			}
+			if err := topiced.TopicableId.Set(topicableId); err != nil {
+				return nil, errors.New("invalid topicable id")
+			}
 			err := r.Repos.Topiced().Disconnect(ctx, topiced)
 			if err != nil {
 				return nil, err
@@ -1172,6 +1230,33 @@ func validateTopicNames(topicNames []string) (invalidTopicNames []string) {
 	return
 }
 
+type UpdateUserAssetInput struct {
+	Name        *string
+	UserAssetId string
+}
+
+func (r *RootResolver) UpdateUserAsset(
+	ctx context.Context,
+	args struct{ Input UpdateUserAssetInput },
+) (*userAssetResolver, error) {
+	userAsset := &data.UserAsset{}
+	if err := userAsset.Id.Set(args.Input.UserAssetId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user_asset id"}
+	}
+
+	if args.Input.Name != nil {
+		if err := userAsset.Name.Set(args.Input.Name); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_asset name"}
+		}
+	}
+
+	userAssetPermit, err := r.Repos.UserAsset().Update(ctx, userAsset)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAssetPermit, Repos: r.Repos}, nil
+}
+
 type UpdateViewerInput struct {
 	Bio     *string
 	EmailId *string
@@ -1189,7 +1274,9 @@ func (r *RootResolver) UpdateViewer(
 	}
 
 	user := &data.User{}
-	user.Id.Set(&viewer.Id)
+	if err := user.Id.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user id"}
+	}
 
 	if args.Input.Bio != nil {
 		if err := user.Bio.Set(args.Input.Bio); err != nil {
@@ -1225,6 +1312,9 @@ func (r *RootResolver) UpdateViewer(
 			return nil, errors.New("invalid email id")
 		}
 		email.Public.Set(true)
+		if err := email.Public.Set(true); err != nil {
+			return nil, errors.New("invalid email public")
+		}
 		_, err = r.Repos.Email().Update(ctx, email)
 		if err != nil {
 			return nil, err

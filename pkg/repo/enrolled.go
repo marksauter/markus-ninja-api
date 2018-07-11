@@ -152,13 +152,13 @@ func (r *EnrolledRepo) Get(
 	}
 	var enrolled *data.Enrolled
 	var err error
-	if enrolled.Id.Status != pgtype.Undefined {
+	if e.Id.Status != pgtype.Undefined {
 		enrolled, err = r.load.Get(ctx, e.Id.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if enrolled.EnrollableId.Status != pgtype.Undefined &&
-		enrolled.UserId.Status != pgtype.Undefined {
+	} else if e.EnrollableId.Status != pgtype.Undefined &&
+		e.UserId.Status != pgtype.Undefined {
 		enrolled, err = r.load.GetByEnrollableAndUser(ctx, e.EnrollableId.String, e.UserId.String)
 		if err != nil {
 			return nil, err

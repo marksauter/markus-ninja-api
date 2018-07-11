@@ -1,0 +1,8 @@
+# Return type for RemoveLabel.
+type RemoveLabelPayload {
+  # The label removed.
+  label: Label!
+
+  # The labelable from which the label was removed.
+  labelable: Labelable!
+}

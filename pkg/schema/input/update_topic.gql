@@ -1,0 +1,8 @@
+# Input type for UpdateTopic.
+input UpdateTopicInput {
+  # The description of the topic.
+  description: String
+
+  # ID of the topic.
+  topicId: ID!
+}

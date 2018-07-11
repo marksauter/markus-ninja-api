@@ -1,0 +1,5 @@
+# Input type for DeleteUserAsset.
+input DeleteUserAssetInput {
+  # ID of the user asset.
+  userAssetId: ID!
+}

@@ -400,8 +400,8 @@ func UpdateTopic(
 	row *Topic,
 ) (*Topic, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("UpdateTopic(id)")
-	sets := make([]string, 0, 3)
-	args := pgx.QueryArgs(make([]interface{}, 0, 5))
+	sets := make([]string, 0, 1)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	if row.Description.Status != pgtype.Undefined {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
@@ -436,7 +436,7 @@ func UpdateTopic(
 		return nil, ErrNotFound
 	}
 
-	topic, err := GetTopic(db, row.Id.String)
+	topic, err := GetTopic(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

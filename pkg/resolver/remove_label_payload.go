@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -17,11 +16,19 @@ type removeLabelPayloadResolver struct {
 	Repos       *repo.Repos
 }
 
-func (r *removeLabelPayloadResolver) RemovedLabelId() graphql.ID {
-	return graphql.ID(r.LabelId.String)
+func (r *removeLabelPayloadResolver) Label(
+	ctx context.Context,
+) (*labelResolver, error) {
+	label, err := r.Repos.Label().Get(ctx, r.LabelId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &labelResolver{Label: label, Repos: r.Repos}, nil
 }
 
-func (r *removeLabelPayloadResolver) Labelable(ctx context.Context) (*labelableResolver, error) {
+func (r *removeLabelPayloadResolver) Labelable(
+	ctx context.Context,
+) (*labelableResolver, error) {
 	permit, err := r.Repos.GetLabelable(ctx, r.LabelableId)
 	if err != nil {
 		return nil, err

@@ -298,6 +298,7 @@ func GetUserByAppleable(
 			&row.Login,
 			&row.Name,
 			&row.PublicEmail,
+			&row.Roles,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)

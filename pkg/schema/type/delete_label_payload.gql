@@ -1,0 +1,8 @@
+# Return type for DeleteLabel.
+type DeleteLabelPayload {
+  # The deleted label id.
+  deletedLabelId: ID!
+
+  # The study the deleted label was in.
+  study: Study!
+}
