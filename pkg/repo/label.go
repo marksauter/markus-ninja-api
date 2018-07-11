@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -93,15 +95,15 @@ func NewLabelRepo() *LabelRepo {
 }
 
 type LabelRepo struct {
-	load  *loader.LabelLoader
-	perms *Permitter
+	load   *loader.LabelLoader
+	permit *Permitter
 }
 
 func (r *LabelRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
 	}
-	r.perms = p
+	r.permit = p
 	return nil
 }
 
@@ -119,23 +121,55 @@ func (r *LabelRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LabelRepo) CountByLabelable(labelableId string) (int32, error) {
-	return r.svc.CountByLabelable(labelableId)
+func (r *LabelRepo) CountByLabelable(
+	ctx context.Context,
+	labelableId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLabelByLabelable(db, labelableId)
 }
 
-func (r *LabelRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
+func (r *LabelRepo) CountBySearch(
+	ctx context.Context,
+	within *mytype.OID,
+	query string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLabelBySearch(db, within, query)
 }
 
-func (r *LabelRepo) CountByStudy(studyId string) (int32, error) {
-	return r.svc.CountByStudy(studyId)
+func (r *LabelRepo) CountByStudy(
+	ctx context.Context,
+	studyId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLabelByStudy(db, studyId)
 }
 
-func (r *LabelRepo) Create(l *data.Label) (*LabelPermit, error) {
+func (r *LabelRepo) Create(
+	ctx context.Context,
+	l *data.Label,
+) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, l); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, l); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(l.Name.String)
@@ -143,26 +177,29 @@ func (r *LabelRepo) Create(l *data.Label) (*LabelPermit, error) {
 	if err := l.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
-	label, err := r.svc.Create(l)
+	label, err := data.CreateLabel(db, l)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
 	return &LabelPermit{fieldPermFn, label}, nil
 }
 
-func (r *LabelRepo) Get(id string) (*LabelPermit, error) {
+func (r *LabelRepo) Get(
+	ctx context.Context,
+	id string,
+) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	label, err := r.load.Get(id)
+	label, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
@@ -170,19 +207,24 @@ func (r *LabelRepo) Get(id string) (*LabelPermit, error) {
 }
 
 func (r *LabelRepo) GetByLabelable(
+	ctx context.Context,
 	labelableId string,
 	po *data.PageOptions,
 ) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	labels, err := r.svc.GetByLabelable(labelableId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	labels, err := data.GetLabelByLabelable(db, labelableId, po)
 	if err != nil {
 		return nil, err
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -193,17 +235,25 @@ func (r *LabelRepo) GetByLabelable(
 	return labelPermits, nil
 }
 
-func (r *LabelRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*LabelPermit, error) {
+func (r *LabelRepo) GetByStudy(
+	ctx context.Context,
+	studyId string,
+	po *data.PageOptions,
+) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	labels, err := r.svc.GetByStudy(studyId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	labels, err := data.GetLabelByStudy(db, studyId, po)
 	if err != nil {
 		return nil, err
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -214,42 +264,60 @@ func (r *LabelRepo) GetByStudy(studyId string, po *data.PageOptions) ([]*LabelPe
 	return labelPermits, nil
 }
 
-func (r *LabelRepo) GetByName(name string) (*LabelPermit, error) {
+func (r *LabelRepo) GetByName(
+	ctx context.Context,
+	name string,
+) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	label, err := r.load.GetByName(name)
+	label, err := r.load.GetByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
 	return &LabelPermit{fieldPermFn, label}, nil
 }
 
-func (r *LabelRepo) Delete(label *data.Label) error {
+func (r *LabelRepo) Delete(
+	ctx context.Context,
+	label *data.Label,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DeleteAccess, label); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, label); err != nil {
 		return err
 	}
-	return r.svc.Delete(label.Id.String)
+	return data.DeleteLabel(db, label.Id.String)
 }
 
-func (r *LabelRepo) Search(query string, po *data.PageOptions) ([]*LabelPermit, error) {
+func (r *LabelRepo) Search(
+	ctx context.Context,
+	query string,
+	po *data.PageOptions,
+) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	labels, err := r.svc.Search(query, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	labels, err := data.SearchLabel(db, query, po)
 	if err != nil {
 		return nil, err
 	}
 	labelPermits := make([]*LabelPermit, len(labels))
 	if len(labels) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, labels[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labels[0])
 		if err != nil {
 			return nil, err
 		}
@@ -260,33 +328,46 @@ func (r *LabelRepo) Search(query string, po *data.PageOptions) ([]*LabelPermit, 
 	return labelPermits, nil
 }
 
-func (r *LabelRepo) Update(l *data.Label) (*LabelPermit, error) {
+func (r *LabelRepo) Update(
+	ctx context.Context,
+	l *data.Label,
+) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
 		return nil, err
 	}
-	label, err := r.svc.Update(l)
+	label, err := data.UpdateLabel(db, l)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, label)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, label)
 	if err != nil {
 		return nil, err
 	}
 	return &LabelPermit{fieldPermFn, label}, nil
 }
 
-func (r *LabelRepo) ViewerCanDelete(l *data.Label) bool {
-	if _, err := r.perms.Check(mytype.DeleteAccess, l); err != nil {
+func (r *LabelRepo) ViewerCanDelete(
+	ctx context.Context,
+	l *data.Label,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
-func (r *LabelRepo) ViewerCanUpdate(l *data.Label) bool {
-	if _, err := r.perms.Check(mytype.UpdateAccess, l); err != nil {
+func (r *LabelRepo) ViewerCanUpdate(
+	ctx context.Context,
+	l *data.Label,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

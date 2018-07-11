@@ -611,21 +611,33 @@ func CreateLesson(
 		return nil, err
 	}
 
-	err = ParseBodyForEvents(db, &row.UserId, &row.StudyId, &row.Id, &row.Body)
+	err = ParseBodyForEvents(tx, &row.UserId, &row.StudyId, &row.Id, &row.Body)
 	if err != nil {
 		return nil, err
 	}
 	e := &Event{}
-	e.Action.Set(CreateEvent)
-	e.SourceId.Set(&row.StudyId)
-	e.TargetId.Set(&row.Id)
-	e.UserId.Set(&row.UserId)
-	_, err = CreateEvent(db, e)
+	err = e.Action.Set(CreatedEvent)
+	if err != nil {
+		return nil, err
+	}
+	err = e.SourceId.Set(&row.StudyId)
+	if err != nil {
+		return nil, err
+	}
+	err = e.TargetId.Set(&row.Id)
+	if err != nil {
+		return nil, err
+	}
+	err = e.UserId.Set(&row.UserId)
+	if err != nil {
+		return nil, err
+	}
+	_, err = CreateEvent(tx, e)
 	if err != nil {
 		return nil, err
 	}
 
-	enrolleds, err := GetEnrolledByEnrollable(db, row.Id.String, nil)
+	enrolleds, err := GetEnrolledByEnrollable(tx, row.Id.String, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -640,11 +652,11 @@ func CreateLesson(
 	notification := &Notification{}
 	notification.EventId.Set(&e.Id)
 	notification.StudyId.Set(&row.StudyId)
-	if err := BatchCreateNotification(db, notification, enrolls); err != nil {
+	if err := BatchCreateNotification(tx, notification, enrolls); err != nil {
 		return nil, err
 	}
 
-	lesson, err := GetLesson(db, row.Id.String)
+	lesson, err := GetLesson(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -785,14 +797,14 @@ func UpdateLesson(
 	}
 
 	ParseUpdatedBodyForEvents(
-		db,
+		tx,
 		&row.UserId,
 		&row.StudyId,
 		&row.Id,
 		&row.Body,
 	)
 
-	lesson, err := GetLesson(db, row.Id.String)
+	lesson, err := GetLesson(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

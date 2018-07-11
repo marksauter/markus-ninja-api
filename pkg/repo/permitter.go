@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
@@ -44,18 +45,14 @@ func (r *Permitter) Check(
 	ctx context.Context,
 	a mytype.AccessLevel,
 	node interface{},
-) (f FieldPermissionFunc, err error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		err = myctx.ErrNotFound{"viewer"}
-		return
-	}
-	if err = r.CheckConnection(); err != nil {
-		return
+) (FieldPermissionFunc, error) {
+	var f FieldPermissionFunc
+	if err := r.CheckConnection(); err != nil {
+		return f, err
 	}
 	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
-		return
+		return f, err
 	}
 	o := mytype.NewOperation(a, nt)
 
@@ -63,9 +60,9 @@ func (r *Permitter) Check(
 	// If we are not creating, then check if the viewer can admin the object. If
 	// yes, then grant the owner role to the user.
 	if a != mytype.CreateAccess {
-		ok, err := r.ViewerCanAdmin(viewer, node)
+		ok, err := r.ViewerCanAdmin(ctx, node)
 		if err != nil {
-			return
+			return f, err
 		}
 		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
@@ -73,22 +70,21 @@ func (r *Permitter) Check(
 	} else {
 		// If we are creating, then check if viewer can create the object.  If yes,
 		// then grant the owner role to the user.
-		ok, err := r.ViewerCanCreate(viewer, node)
+		ok, err := r.ViewerCanCreate(ctx, node)
 		if err != nil {
-			return
+			return f, err
 		}
 		if ok {
 			additionalRoles = append(additionalRoles, data.OwnerRole)
 		}
 	}
 	// Get the query permissions.
-	queryPerm, err := r.load.Get(o, additionalRoles)
+	queryPerm, err := r.load.Get(ctx, o, additionalRoles)
 	if err != nil {
 		if err == data.ErrNotFound {
-			err = ErrAccessDenied
-			return
+			return f, ErrAccessDenied
 		} else {
-			return
+			return f, err
 		}
 	}
 	// Set field permission function for the fields returned by the query
@@ -108,23 +104,43 @@ func (r *Permitter) Check(
 		}
 		return false
 	}
+
 	// If creating/updating, then check if fields provided are permitted.
-	if a == mytype.CreateAccess || a == mytype.UpdateAccess {
+	if a == mytype.CreateAccess {
 		for _, field := range structs.Fields(node) {
-			if !field.IsZero() {
+			permit := field.Tag("permit")
+			createable := strings.Contains(permit, "create")
+			if createable && !field.IsZero() {
 				dbField := field.Tag("db")
 				if ok := f(dbField); !ok {
-					err = ErrAccessDenied
-					return
+					return f, ErrAccessDenied
+				}
+			}
+		}
+	} else if a == mytype.UpdateAccess {
+		for _, field := range structs.Fields(node) {
+			permit := field.Tag("permit")
+			updateable := strings.Contains(permit, "update")
+			if updateable && !field.IsZero() {
+				dbField := field.Tag("db")
+				if ok := f(dbField); !ok {
+					return f, ErrAccessDenied
 				}
 			}
 		}
 	}
-	return
+	return f, nil
 }
 
 // Can the viewer admin the node, i.e. is the viewer the owner of the object?
-func (r *Permitter) ViewerCanAdmin(viewer *data.User, node interface{}) (bool, error) {
+func (r *Permitter) ViewerCanAdmin(
+	ctx context.Context,
+	node interface{},
+) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, &myctx.ErrNotFound{"viewer"}
+	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
 	case data.Email:
@@ -136,7 +152,7 @@ func (r *Permitter) ViewerCanAdmin(viewer *data.User, node interface{}) (bool, e
 	case *data.EVT:
 		return vid == node.UserId.String, nil
 	case data.Label:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}
@@ -146,7 +162,7 @@ func (r *Permitter) ViewerCanAdmin(viewer *data.User, node interface{}) (bool, e
 		}
 		return vid == userId.String, nil
 	case *data.Label:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}
@@ -192,11 +208,18 @@ func (r *Permitter) ViewerCanAdmin(viewer *data.User, node interface{}) (bool, e
 // Can the viewer create the passed node? Mainly used for objects that have
 // parent objects, and the viewer must be the owner of the parent object to
 // create a child object.
-func (r *Permitter) ViewerCanCreate(viewer *data.User, node interface{}) (bool, error) {
+func (r *Permitter) ViewerCanCreate(
+	ctx context.Context,
+	node interface{},
+) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, &myctx.ErrNotFound{"viewer"}
+	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
 	case data.Label:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}
@@ -206,7 +229,7 @@ func (r *Permitter) ViewerCanCreate(viewer *data.User, node interface{}) (bool, 
 		}
 		return vid == userId.String, nil
 	case *data.Label:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}
@@ -216,7 +239,7 @@ func (r *Permitter) ViewerCanCreate(viewer *data.User, node interface{}) (bool, 
 		}
 		return vid == userId.String, nil
 	case data.Lesson:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}
@@ -226,7 +249,7 @@ func (r *Permitter) ViewerCanCreate(viewer *data.User, node interface{}) (bool, 
 		}
 		return vid == userId.String, nil
 	case *data.Lesson:
-		study, err := r.repos.Study().Get(node.StudyId.String)
+		study, err := r.repos.Study().Get(ctx, node.StudyId.String)
 		if err != nil {
 			return false, err
 		}

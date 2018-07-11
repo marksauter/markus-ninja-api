@@ -98,10 +98,10 @@ func (r *AppledRepo) CountByAppleable(
 	ctx context.Context,
 	appleableId string,
 ) (int32, error) {
+	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		err = errors.New("queryer not found")
-		return
+		return n, &myctx.ErrNotFound{"queryer"}
 	}
 	return data.CountAppledByAppleable(db, appleableId)
 }
@@ -110,10 +110,10 @@ func (r *AppledRepo) CountByUser(
 	ctx context.Context,
 	userId string,
 ) (int32, error) {
+	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		err = errors.New("queryer not found")
-		return
+		return n, &myctx.ErrNotFound{"queryer"}
 	}
 	return data.CountAppledByUser(db, userId)
 }
@@ -122,22 +122,21 @@ func (r *AppledRepo) Connect(
 	ctx context.Context,
 	appled *data.Appled,
 ) (*AppledPermit, error) {
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err = errors.New("queryer not found")
-		return
-	}
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.ConnectAccess, appled); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, appled); err != nil {
 		return nil, err
 	}
-	appled, err := data.ConnectAppled(db, appled)
+	appled, err := data.CreateAppled(db, *appled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, appled)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -148,24 +147,19 @@ func (r *AppledRepo) Get(
 	ctx context.Context,
 	a *data.Appled,
 ) (*AppledPermit, error) {
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err = errors.New("queryer not found")
-		return
-	}
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	var appled *data.Appled
 	var err error
 	if a.Id.Status != pgtype.Undefined {
-		appled, err = r.load.Get(a.Id.Int)
+		appled, err = r.load.Get(ctx, a.Id.Int)
 		if err != nil {
 			return nil, err
 		}
 	} else if a.AppleableId.Status != pgtype.Undefined &&
 		appled.UserId.Status != pgtype.Undefined {
-		appled, err = r.load.GetForAppleable(a.AppleableId.String, a.UserId.String)
+		appled, err = r.load.GetByAppleableAndUser(ctx, a.AppleableId.String, a.UserId.String)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +168,7 @@ func (r *AppledRepo) Get(
 			"must include either appled `id` or `appleable_id` and `user_id` to get an appled",
 		)
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, appled)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -186,13 +180,12 @@ func (r *AppledRepo) GetByAppleable(
 	appleableId string,
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err = errors.New("queryer not found")
-		return
-	}
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	appleds, err := data.GetAppledByAppleable(db, appleableId, po)
 	if err != nil {
@@ -200,7 +193,7 @@ func (r *AppledRepo) GetByAppleable(
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, appleds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -216,13 +209,12 @@ func (r *AppledRepo) GetByUser(
 	userId string,
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err = errors.New("queryer not found")
-		return
-	}
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	appleds, err := data.GetAppledByUser(db, userId, po)
 	if err != nil {
@@ -230,7 +222,7 @@ func (r *AppledRepo) GetByUser(
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, appleds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -245,22 +237,21 @@ func (r *AppledRepo) Disconnect(
 	ctx context.Context,
 	a *data.Appled,
 ) error {
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err = errors.New("queryer not found")
-		return
-	}
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DisconnectAccess, a); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, a); err != nil {
 		return err
 	}
 	if a.Id.Status != pgtype.Undefined {
-		return data.DisconnectAppled(db, a.Id.Int)
+		return data.DeleteAppled(db, a.Id.Int)
 	} else if a.AppleableId.Status != pgtype.Undefined &&
 		a.UserId.Status != pgtype.Undefined {
-		return data.DisconnectAppledFromAppleable(db, a.AppleableId.String, a.UserId.String)
+		return data.DeleteAppledByAppleableAndUser(db, a.AppleableId.String, a.UserId.String)
 	}
 	return errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",

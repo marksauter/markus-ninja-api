@@ -355,21 +355,33 @@ func CreateLessonComment(
 		return nil, err
 	}
 
-	err = ParseBodyForEvents(db, &row.UserId, &row.StudyId, &row.Id, &row.Body)
+	err = ParseBodyForEvents(tx, &row.UserId, &row.StudyId, &row.Id, &row.Body)
 	if err != nil {
 		return nil, err
 	}
 	e := &Event{}
-	e.Action.Set(CommentedEvent)
-	e.SourceId.Set(&row.Id)
-	e.TargetId.Set(&row.LessonId)
-	e.UserId.Set(&row.UserId)
-	_, err = CreateEvent(db, e)
+	err = e.Action.Set(CommentedEvent)
+	if err != nil {
+		return nil, err
+	}
+	err = e.SourceId.Set(&row.Id)
+	if err != nil {
+		return nil, err
+	}
+	err = e.TargetId.Set(&row.LessonId)
+	if err != nil {
+		return nil, err
+	}
+	err = e.UserId.Set(&row.UserId)
+	if err != nil {
+		return nil, err
+	}
+	_, err = CreateEvent(tx, e)
 	if err != nil {
 		return nil, err
 	}
 
-	lessonComment, err := GetLessonComment(db, row.Id.String)
+	lessonComment, err := GetLessonComment(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +462,7 @@ func UpdateLessonComment(
 		return nil, ErrNotFound
 	}
 
-	lessonComment, err := GetLessonComment(db, row.Id.String)
+	lessonComment, err := GetLessonComment(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

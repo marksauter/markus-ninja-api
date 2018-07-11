@@ -2,14 +2,7 @@ package route
 
 import (
 	"net/http"
-
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 )
-
-func Upload() http.Handler {
-	uploadHandler := UploadHandler{}
-	return middleware.CommonMiddleware.Then(uploadHandler)
-}
 
 type UploadHandler struct{}
 

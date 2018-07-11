@@ -608,12 +608,12 @@ func CreateUser(
 	primaryEmail.Type.Set(PrimaryEmail)
 	primaryEmail.UserId.Set(row.Id)
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
-	_, err = CreateEmail(db, primaryEmail)
+	_, err = CreateEmail(tx, primaryEmail)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := GetUser(db, row.Id.String)
+	user, err := GetUser(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -752,7 +752,7 @@ func UpdateUser(
 	}
 
 	if row.PublicEmail.Status != pgtype.Undefined {
-		publicEmail, err := GetEmailByValue(db, row.PublicEmail.String)
+		publicEmail, err := GetEmailByValue(tx, row.PublicEmail.String)
 		if err != nil {
 			return nil, err
 		}
@@ -760,13 +760,13 @@ func UpdateUser(
 			return nil, errors.New("cannot set unverified email to public")
 		}
 		publicEmail.Public.Set(true)
-		_, err = UpdateEmail(db, publicEmail)
+		_, err = UpdateEmail(tx, publicEmail)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	user, err := GetUser(db, row.Id.String)
+	user, err := GetUser(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

@@ -158,7 +158,8 @@ const getEnrolledByEnrollableAndUserSQL = `
 
 func GetEnrolledByEnrollableAndUser(
 	db Queryer,
-	enrollableId, userId string,
+	enrollableId,
+	userId string,
 ) (*Enrolled, error) {
 	mylog.Log.Info("GetEnrolledByEnrollableAndUser()")
 	return getEnrolled(
@@ -218,11 +219,11 @@ func GetEnrolledByEnrollable(
 	return getManyEnrolled(db, psName, sql, args...)
 }
 
-func ConnectEnrolled(
+func CreateEnrolled(
 	db Queryer,
-	row *Enrolled,
+	row Enrolled,
 ) (*Enrolled, error) {
-	mylog.Log.Info("ConnectEnrolled()")
+	mylog.Log.Info("CreateEnrolled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -268,17 +269,15 @@ func ConnectEnrolled(
 	sql := `
 		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING enrolled_id
 	`
 
 	psName := preparedName("createEnrolled", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
-	)
-	if err != nil {
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil && err != pgx.ErrNoRows {
 		mylog.Log.WithError(err).Error("failed to create enrolled")
 		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.Debug(pgErr.Code)
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
 				return nil, RequiredFieldError(pgErr.ColumnName)
@@ -291,7 +290,11 @@ func ConnectEnrolled(
 		return nil, err
 	}
 
-	enrolled, err := GetEnrolled(db, row.Id.Int)
+	enrolled, err := GetEnrolledByEnrollableAndUser(
+		tx,
+		row.EnrollableId.String,
+		row.UserId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -307,20 +310,20 @@ func ConnectEnrolled(
 	return enrolled, nil
 }
 
-const disconnectEnrolledSQL = `
+const deleteEnrolledSQL = `
 	DELETE FROM enrolled
 	WHERE id = $1
 `
 
-func DisconnectEnrolled(
+func DeleteEnrolled(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.WithField("id", id).Info("DisconnectEnrolled(id)")
+	mylog.Log.WithField("id", id).Info("DeleteEnrolled(id)")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectEnrolled",
-		disconnectEnrolledSQL,
+		"deleteEnrolled",
+		deleteEnrolledSQL,
 		id,
 	)
 	if err != nil {
@@ -333,21 +336,21 @@ func DisconnectEnrolled(
 	return nil
 }
 
-const disconnectEnrolledFromEnrollableSQL = `
+const deleteEnrolledByEnrollableAndUserSQL = `
 	DELETE FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
 `
 
-func DisconnectEnrolledFromEnrollable(
+func DeleteEnrolledByEnrollableAndUser(
 	db Queryer,
 	enrollable_id,
 	user_id string,
 ) error {
-	mylog.Log.Info("DisconnectEnrolledFromEnrollable()")
+	mylog.Log.Info("DeleteEnrolledByEnrollableAndUser()")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectEnrolledFromEnrollable",
-		disconnectEnrolledFromEnrollableSQL,
+		"deleteEnrolledByEnrollableAndUser",
+		deleteEnrolledByEnrollableAndUserSQL,
 		enrollable_id,
 		user_id,
 	)

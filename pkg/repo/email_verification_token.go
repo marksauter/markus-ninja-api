@@ -79,15 +79,15 @@ func NewEVTRepo() *EVTRepo {
 }
 
 type EVTRepo struct {
-	load  *loader.EVTLoader
-	perms *Permitter
+	load   *loader.EVTLoader
+	permit *Permitter
 }
 
 func (r *EVTRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
 	}
-	r.perms = p
+	r.permit = p
 	return nil
 }
 
@@ -112,18 +112,18 @@ func (r *EVTRepo) Create(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.CreateAccess, token); err != nil {
-		return nil, err
-	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, token); err != nil {
+		return nil, err
 	}
 	evt, err := data.CreateEVT(db, token)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, evt)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, evt)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (r *EVTRepo) Get(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, evt)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, evt)
 	if err != nil {
 		return nil, err
 	}

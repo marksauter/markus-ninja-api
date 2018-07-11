@@ -312,13 +312,15 @@ func (r *lessonResolver) Events(
 	return eventConnectionResolver, nil
 }
 
-func (r *lessonResolver) ResourcePath() (mygql.URI, error) {
+func (r *lessonResolver) ResourcePath(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	study, err := r.Study()
+	study, err := r.Study(ctx)
 	if err != nil {
 		return uri, err
 	}
-	studyPath, err := study.ResourcePath()
+	studyPath, err := study.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -351,9 +353,11 @@ func (r *lessonResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) URL() (mygql.URI, error) {
+func (r *lessonResolver) URL(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}

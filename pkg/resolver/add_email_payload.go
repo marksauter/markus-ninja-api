@@ -22,7 +22,9 @@ func (r *addEmailPayloadResolver) Token() *evtResolver {
 	return &evtResolver{EVT: r.EVT, Repos: r.Repos}
 }
 
-func (r *addEmailPayloadResolver) User(ctx context.Context) (*userResolver, error) {
+func (r *addEmailPayloadResolver) User(
+	ctx context.Context,
+) (*userResolver, error) {
 	userId, err := r.Email.UserId()
 	if err != nil {
 		return nil, err

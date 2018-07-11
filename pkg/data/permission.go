@@ -152,13 +152,13 @@ func CreatePermissionSuite(
 	return nil
 }
 
-func ConnectRoles(
+func ConnectRolePermissions(
 	db Queryer,
 	o *mytype.Operation,
 	fields,
 	roles []string,
 ) error {
-	mylog.Log.Info("ConnectRoles()")
+	mylog.Log.Info("ConnectRolePermissions()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	andFieldsSQL := ""

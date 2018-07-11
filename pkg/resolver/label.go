@@ -121,7 +121,9 @@ func (r *labelResolver) ResourcePath() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *labelResolver) Study() (*studyResolver, error) {
+func (r *labelResolver) Study(
+	ctx context.Context,
+) (*studyResolver, error) {
 	studyId, err := r.Label.StudyId()
 	if err != nil {
 		return nil, err
@@ -148,12 +150,16 @@ func (r *labelResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
-func (r *labelResolver) ViewerCanDelete() bool {
+func (r *labelResolver) ViewerCanDelete(
+	ctx context.Context,
+) bool {
 	label := r.Label.Get()
 	return r.Repos.Label().ViewerCanDelete(ctx, label)
 }
 
-func (r *labelResolver) ViewerCanUpdate() bool {
+func (r *labelResolver) ViewerCanUpdate(
+	ctx context.Context,
+) bool {
 	label := r.Label.Get()
 	return r.Repos.Label().ViewerCanUpdate(ctx, label)
 }

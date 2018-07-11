@@ -329,16 +329,16 @@ func CreateTopic(
 	}
 
 	if row.TopicableId.Status != pgtype.Undefined {
-		topiced := &Topiced{}
+		topiced := Topiced{}
 		topiced.TopicId.Set(&row.Id)
 		topiced.TopicableId.Set(&row.TopicableId)
-		_, err := ConnectTopiced(db, topiced)
+		_, err := CreateTopiced(tx, topiced)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	topic, err := GetTopic(db, row.Id.String)
+	topic, err := GetTopic(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

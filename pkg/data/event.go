@@ -379,7 +379,7 @@ func CreateEvent(
 		return nil, err
 	}
 
-	event, err := GetEvent(db, row.Id.String)
+	event, err := GetEvent(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

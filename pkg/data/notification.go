@@ -348,7 +348,7 @@ func CreateNotification(
 		return nil, err
 	}
 
-	notification, err := GetNotification(db, row.Id.String)
+	notification, err := GetNotification(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +422,7 @@ func UpdateNotification(
 		return nil, ErrNotFound
 	}
 
-	notification, err := GetNotification(db, row.Id.String)
+	notification, err := GetNotification(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

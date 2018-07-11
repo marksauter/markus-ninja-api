@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
@@ -34,7 +35,8 @@ func (a *AddContext) Use(h http.Handler) http.Handler {
 }
 
 type Authenticate struct {
-	Svc *service.AuthService
+	AuthSvc *service.AuthService
+	Db      data.Queryer
 }
 
 func (a *Authenticate) Use(h http.Handler) http.Handler {
@@ -46,14 +48,14 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			return
 		}
 
-		payload, err := a.Svc.ValidateJWT(token)
+		payload, err := a.AuthSvc.ValidateJWT(token)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 
-		user, err := data.GetUserCredentials(db, payload.Sub)
+		user, err := data.GetUserCredentials(a.Db, payload.Sub)
 		if err != nil {
 			response := myhttp.UnauthorizedErrorResponse("user not found")
 			myhttp.WriteResponseTo(rw, response)

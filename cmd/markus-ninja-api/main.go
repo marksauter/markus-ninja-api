@@ -50,31 +50,71 @@ func main() {
 		mylog.Log.WithField("error", err).Fatal("unable to start services")
 	}
 
-	repos := repo.NewRepos(db, conf)
+	repos := repo.NewRepos(db, svcs)
 	graphQLSchema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
 			Repos: repos,
+			Svcs:  svcs,
 		},
 	)
 
-	go startRefreshMV()
+	go startRefreshMV(db)
 
 	r := mux.NewRouter()
 
-	r.Handle("/", route.Index())
-	r.Handle("/graphql", route.GraphQL(graphQLSchema, repos, svcs))
-	r.Handle("/graphiql", route.GraphiQL())
-	r.Handle("/signup", route.Signup(db, svcs))
-	r.Handle("/token", route.Token(db, svcs))
-	r.Handle("/upload", route.Upload())
-	r.Handle("/upload/assets", route.UploadAssets(repos, svcs))
+	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
+
+	graphQLHandler := route.GraphQLHandler{Schema: graphQLSchema, Repos: repos}
+	graphiQLHandler := route.GraphiQLHandler{}
+	confirmVerificationHandler := route.ConfirmVerificationHandler{db}
+	indexHandler := route.IndexHandler{}
+	tokenHandler := route.TokenHandler{svcs.Auth, db}
+	signupHandler := route.SignupHandler{svcs.Auth, db}
+	uploadHandler := route.UploadHandler{}
+	uploadAssetsHandler := route.UploadAssetsHandler{repos}
+	userAssetsHandler := route.UserAssetsHandler{svcs.Storage}
+
+	graphql := middleware.CommonMiddleware.Append(
+		route.GraphQLCors.Handler,
+		authMiddleware.Use,
+		repos.Use,
+	).Then(graphQLHandler)
+	graphiql := middleware.CommonMiddleware.Append(
+		route.GraphiQLCors.Handler,
+	).Then(graphiQLHandler)
+	confirmVerification := middleware.CommonMiddleware.Append(
+		route.ConfirmVerificationCors.Handler,
+	).Then(confirmVerificationHandler)
+	index := middleware.CommonMiddleware.Then(indexHandler)
+	token := middleware.CommonMiddleware.Append(
+		route.TokenCors.Handler,
+	).Then(tokenHandler)
+	signup := middleware.CommonMiddleware.Append(
+		route.SignupCors.Handler,
+		authMiddleware.Use,
+	).Then(signupHandler)
+	upload := middleware.CommonMiddleware.Then(uploadHandler)
+	uploadAssets := middleware.CommonMiddleware.Append(
+		route.UploadAssetsCors.Handler,
+		authMiddleware.Use,
+		repos.Use,
+	).Then(uploadAssetsHandler)
+	userAssets := middleware.CommonMiddleware.Append(
+		route.UserAssetsCors.Handler,
+	).Then(userAssetsHandler)
+
+	r.Handle("/", index)
+	r.Handle("/graphql", graphql)
+	r.Handle("/graphiql", graphiql)
+	r.Handle("/signup", signup)
+	r.Handle("/token", token)
+	r.Handle("/upload", upload)
+	r.Handle("/upload/assets", uploadAssets)
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
-		route.ConfirmVerification(db),
+		confirmVerification,
 	)
-	r.Handle("/user/assets/{user_id}/{key}",
-		route.UserAssets(svcs),
-	)
+	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 
 	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
@@ -145,7 +185,7 @@ func initDB(conf *myconf.Config) error {
 
 	for _, p := range permissions.Permissions {
 		if !p.Authenticated {
-			err := data.UpdateOperationAudience(db, &p.Operation, mytype.Everyone, p.Fields)
+			err := data.UpdatePermissionAudience(db, &p.Operation, mytype.Everyone, p.Fields)
 			if err != nil {
 				return err
 			}
@@ -228,7 +268,7 @@ func initDB(conf *myconf.Config) error {
 				return err
 			}
 			mylog.Log.Info("markus account already exists")
-			markus, err = data.GetUserByLogin("markus")
+			markus, err = data.GetUserByLogin(db, "markus")
 			if err != nil {
 				return err
 			}
@@ -243,7 +283,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !markusIsAdmin {
-		if err := data.GrantUserRole(markus.Id.String, data.AdminRole); err != nil {
+		if err := data.GrantUserRoles(db, markus.Id.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
@@ -286,7 +326,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !testUserIsUser {
-		if err := data.GrantUserRole(db, testUser.Id.String, data.UserRole); err != nil {
+		if err := data.GrantUserRoles(db, testUser.Id.String, data.UserRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")

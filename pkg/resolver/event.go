@@ -29,14 +29,16 @@ func (r *eventResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *eventResolver) Source(ctx context.Context) (*eventSourceResolver, error) {
+func (r *eventResolver) Source(
+	ctx context.Context,
+) (*eventSourceResolver, error) {
 	id, err := r.Event.SourceId()
 	if err != nil {
 		return nil, err
 	}
 	switch id.Type {
 	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(id.String)
+		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
 		if err != nil {
 			return nil, err
 		}

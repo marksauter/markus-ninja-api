@@ -151,7 +151,7 @@ func CreatePRT(
 		return nil, err
 	}
 
-	prt, err := GetPRT(db, row.UserId.String, row.Token.String)
+	prt, err := GetPRT(tx, row.UserId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}

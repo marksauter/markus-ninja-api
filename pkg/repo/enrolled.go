@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -66,15 +68,15 @@ func NewEnrolledRepo() *EnrolledRepo {
 }
 
 type EnrolledRepo struct {
-	load  *loader.EnrolledLoader
-	perms *Permitter
+	load   *loader.EnrolledLoader
+	permit *Permitter
 }
 
 func (r *EnrolledRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
 	}
-	r.perms = p
+	r.permit = p
 	return nil
 }
 
@@ -93,49 +95,71 @@ func (r *EnrolledRepo) CheckConnection() error {
 // Service methods
 
 func (r *EnrolledRepo) CountByEnrollable(
+	ctx context.Context,
 	enrollableId string,
 ) (int32, error) {
-	return data.CountEnrolledByEnrollable(enrollableId)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEnrolledByEnrollable(db, enrollableId)
 }
 
 func (r *EnrolledRepo) CountByUser(
+	ctx context.Context,
 	userId string,
 ) (int32, error) {
-	return data.CountEnrolledByUser(userId)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEnrolledByUser(db, userId)
 }
 
-func (r *EnrolledRepo) Connect(enrolled *data.Enrolled) (*EnrolledPermit, error) {
+func (r *EnrolledRepo) Connect(
+	ctx context.Context,
+	enrolled *data.Enrolled,
+) (*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.perms.Check(mytype.ConnectAccess, enrolled); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, enrolled); err != nil {
 		return nil, err
 	}
-	enrolled, err := r.svc.Connect(enrolled)
+	enrolled, err := data.CreateEnrolled(db, *enrolled)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolled)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolled)
 	if err != nil {
 		return nil, err
 	}
 	return &EnrolledPermit{fieldPermFn, enrolled}, nil
 }
 
-func (r *EnrolledRepo) Get(e *data.Enrolled) (*EnrolledPermit, error) {
+func (r *EnrolledRepo) Get(
+	ctx context.Context,
+	e *data.Enrolled,
+) (*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	var enrolled *data.Enrolled
 	var err error
 	if enrolled.Id.Status != pgtype.Undefined {
-		enrolled, err = r.load.Get(e.Id.Int)
+		enrolled, err = r.load.Get(ctx, e.Id.Int)
 		if err != nil {
 			return nil, err
 		}
 	} else if enrolled.EnrollableId.Status != pgtype.Undefined &&
 		enrolled.UserId.Status != pgtype.Undefined {
-		enrolled, err = r.load.GetForEnrollable(e.EnrollableId.String, e.UserId.String)
+		enrolled, err = r.load.GetByEnrollableAndUser(ctx, e.EnrollableId.String, e.UserId.String)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +168,7 @@ func (r *EnrolledRepo) Get(e *data.Enrolled) (*EnrolledPermit, error) {
 			"must include either enrolled `id` or `enrollable_id` and `user_id` to get an enrolled",
 		)
 	}
-	fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolled)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolled)
 	if err != nil {
 		return nil, err
 	}
@@ -152,19 +176,24 @@ func (r *EnrolledRepo) Get(e *data.Enrolled) (*EnrolledPermit, error) {
 }
 
 func (r *EnrolledRepo) GetByEnrollable(
+	ctx context.Context,
 	enrollableId string,
 	po *data.PageOptions,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	enrolleds, err := r.svc.GetByEnrollable(enrollableId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	enrolleds, err := data.GetEnrolledByEnrollable(db, enrollableId, po)
 	if err != nil {
 		return nil, err
 	}
 	enrolledPermits := make([]*EnrolledPermit, len(enrolleds))
 	if len(enrolleds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolleds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -176,19 +205,24 @@ func (r *EnrolledRepo) GetByEnrollable(
 }
 
 func (r *EnrolledRepo) GetByUser(
+	ctx context.Context,
 	userId string,
 	po *data.PageOptions,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	enrolleds, err := r.svc.GetByUser(userId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	enrolleds, err := data.GetEnrolledByUser(db, userId, po)
 	if err != nil {
 		return nil, err
 	}
 	enrolledPermits := make([]*EnrolledPermit, len(enrolleds))
 	if len(enrolleds) > 0 {
-		fieldPermFn, err := r.perms.Check(mytype.ReadAccess, enrolleds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolleds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -199,18 +233,29 @@ func (r *EnrolledRepo) GetByUser(
 	return enrolledPermits, nil
 }
 
-func (r *EnrolledRepo) Disconnect(enrolled *data.Enrolled) error {
+func (r *EnrolledRepo) Disconnect(
+	ctx context.Context,
+	enrolled *data.Enrolled,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.perms.Check(mytype.DisconnectAccess, enrolled); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, enrolled); err != nil {
 		return err
 	}
 	if enrolled.Id.Status != pgtype.Undefined {
-		return r.svc.Disconnect(enrolled.Id.Int)
+		return data.DeleteEnrolled(db, enrolled.Id.Int)
 	} else if enrolled.EnrollableId.Status != pgtype.Undefined &&
 		enrolled.UserId.Status != pgtype.Undefined {
-		return r.svc.DisconnectFromEnrollable(enrolled.EnrollableId.String, enrolled.UserId.String)
+		return data.DeleteEnrolledByEnrollableAndUser(
+			db,
+			enrolled.EnrollableId.String,
+			enrolled.UserId.String,
+		)
 	}
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
 }

@@ -130,7 +130,7 @@ func CreateEVT(
 		return nil, err
 	}
 
-	evt, err := GetEVT(db, row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func UpdateEVT(
 		return nil, ErrNotFound
 	}
 
-	evt, err := GetEVT(db, row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}

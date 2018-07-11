@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -170,85 +172,134 @@ func (r *UserAssetRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *UserAssetRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
+func (r *UserAssetRepo) CountBySearch(
+	ctx context.Context,
+	within *mytype.OID,
+	query string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountUserAssetBySearch(db, within, query)
 }
 
-func (r *UserAssetRepo) CountByStudy(userId, studyId string) (int32, error) {
-	return r.svc.CountByStudy(userId, studyId)
+func (r *UserAssetRepo) CountByStudy(
+	ctx context.Context,
+	userId,
+	studyId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountUserAssetByStudy(db, userId, studyId)
 }
 
-func (r *UserAssetRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *UserAssetRepo) CountByUser(
+	ctx context.Context,
+	userId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountUserAssetByUser(db, userId)
 }
 
-func (r *UserAssetRepo) Create(a *data.UserAsset) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) Create(
+	ctx context.Context,
+	a *data.UserAsset,
+) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, a); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, a); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.svc.Create(a)
+	userAsset, err := data.CreateUserAsset(db, a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
-func (r *UserAssetRepo) Delete(userAsset *data.UserAsset) error {
+func (r *UserAssetRepo) Delete(
+	ctx context.Context,
+	userAsset *data.UserAsset,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, userAsset); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, userAsset); err != nil {
 		return err
 	}
-	return r.svc.Delete(userAsset.Id.String)
+	return data.DeleteUserAsset(db, userAsset.Id.String)
 }
 
-func (r *UserAssetRepo) Get(id string) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) Get(
+	ctx context.Context,
+	id string,
+) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.Get(id)
+	userAsset, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
-func (r *UserAssetRepo) GetByName(userId, studyId, name string) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) GetByName(
+	ctx context.Context,
+	userId, studyId, name string,
+) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.GetByName(userId, studyId, name)
+	userAsset, err := r.load.GetByName(ctx, userId, studyId, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
-func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) GetByUserStudyAndName(
+	ctx context.Context,
+	userLogin, studyName, name string,
+) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.GetByUserStudyAndName(userLogin, studyName, name)
+	userAsset, err := r.load.GetByUserStudyAndName(ctx, userLogin, studyName, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +307,7 @@ func (r *UserAssetRepo) GetByUserStudyAndName(userLogin, studyName, name string)
 }
 
 func (r *UserAssetRepo) GetByStudy(
+	ctx context.Context,
 	userId *mytype.OID,
 	studyId *mytype.OID,
 	po *data.PageOptions,
@@ -264,13 +316,17 @@ func (r *UserAssetRepo) GetByStudy(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAssets, err := r.svc.GetByStudy(userId, studyId, po, opts...)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	userAssets, err := data.GetUserAssetByStudy(db, userId, studyId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -282,6 +338,7 @@ func (r *UserAssetRepo) GetByStudy(
 }
 
 func (r *UserAssetRepo) GetByUser(
+	ctx context.Context,
 	userId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
@@ -289,13 +346,17 @@ func (r *UserAssetRepo) GetByUser(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAssets, err := r.svc.GetByUser(userId, po, opts...)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	userAssets, err := data.GetUserAssetByUser(db, userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -306,17 +367,26 @@ func (r *UserAssetRepo) GetByUser(
 	return userAssetPermits, nil
 }
 
-func (r *UserAssetRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*UserAssetPermit, error) {
+func (r *UserAssetRepo) Search(
+	ctx context.Context,
+	within *mytype.OID,
+	query string,
+	po *data.PageOptions,
+) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAssets, err := r.svc.Search(within, query, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	userAssets, err := data.SearchUserAsset(db, within, query, po)
 	if err != nil {
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAssets[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
 			return nil, err
 		}
@@ -327,18 +397,25 @@ func (r *UserAssetRepo) Search(within *mytype.OID, query string, po *data.PageOp
 	return userAssetPermits, nil
 }
 
-func (r *UserAssetRepo) Update(a *data.UserAsset) (*UserAssetPermit, error) {
+func (r *UserAssetRepo) Update(
+	ctx context.Context,
+	a *data.UserAsset,
+) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, a); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, a); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.svc.Update(a)
+	userAsset, err := data.UpdateUserAsset(db, a)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, userAsset)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
 		return nil, err
 	}
@@ -346,6 +423,7 @@ func (r *UserAssetRepo) Update(a *data.UserAsset) (*UserAssetPermit, error) {
 }
 
 func (r *UserAssetRepo) Upload(
+	ctx context.Context,
 	userId *mytype.OID,
 	studyId *mytype.OID,
 	file multipart.File,
@@ -389,22 +467,28 @@ func (r *UserAssetRepo) Upload(
 		return nil, err
 	}
 
-	if _, err := r.permit.Check(mytype.CreateAccess, userAsset); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, userAsset); err != nil {
 		return nil, err
 	}
 
-	return r.Create(userAsset)
+	return r.Create(ctx, userAsset)
 }
 
-func (r *UserAssetRepo) ViewerCanDelete(l *data.UserAsset) bool {
-	if _, err := r.permit.Check(mytype.DeleteAccess, l); err != nil {
+func (r *UserAssetRepo) ViewerCanDelete(
+	ctx context.Context,
+	l *data.UserAsset,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
-func (r *UserAssetRepo) ViewerCanUpdate(l *data.UserAsset) bool {
-	if _, err := r.permit.Check(mytype.UpdateAccess, l); err != nil {
+func (r *UserAssetRepo) ViewerCanUpdate(
+	ctx context.Context,
+	l *data.UserAsset,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

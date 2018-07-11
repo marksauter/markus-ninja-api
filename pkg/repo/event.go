@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -70,7 +72,7 @@ func (r *EventPermit) UserId() (*mytype.OID, error) {
 	return &r.event.UserId, nil
 }
 
-func NewEventRepo(svc *data.EventService) *EventRepo {
+func NewEventRepo() *EventRepo {
 	return &EventRepo{
 		load: loader.NewEventLoader(),
 	}
@@ -104,31 +106,50 @@ func (r *EventRepo) CheckConnection() error {
 // Service methods
 
 func (r *EventRepo) CountBySource(
+	ctx context.Context,
 	sourceId string,
 	opts ...data.EventFilterOption,
 ) (int32, error) {
-	return r.svc.CountBySource(sourceId, opts...)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEventBySource(db, sourceId, opts...)
 }
 
 func (r *EventRepo) CountByTarget(
+	ctx context.Context,
 	targetId string,
 	opts ...data.EventFilterOption,
 ) (int32, error) {
-	return r.svc.CountByTarget(targetId, opts...)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEventByTarget(db, targetId, opts...)
 }
 
-func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
+func (r *EventRepo) Create(
+	ctx context.Context,
+	event *data.Event,
+) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, event); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, event); err != nil {
 		return nil, err
 	}
-	event, err := r.svc.Create(event)
+	event, err := data.CreateEvent(db, event)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, event)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -136,27 +157,35 @@ func (r *EventRepo) Create(event *data.Event) (*EventPermit, error) {
 }
 
 func (r *EventRepo) BatchCreate(
+	ctx context.Context,
 	event *data.Event,
 	targetIds []*mytype.OID,
 ) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, event); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, event); err != nil {
 		return err
 	}
-	return r.svc.BatchCreate(event, targetIds)
+	return data.BatchCreateEvent(db, event, targetIds)
 }
 
-func (r *EventRepo) Get(id string) (*EventPermit, error) {
+func (r *EventRepo) Get(
+	ctx context.Context,
+	id string,
+) (*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	event, err := r.load.Get(id)
+	event, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, event)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, event)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +193,7 @@ func (r *EventRepo) Get(id string) (*EventPermit, error) {
 }
 
 func (r *EventRepo) GetBySource(
+	ctx context.Context,
 	sourceId string,
 	po *data.PageOptions,
 	opts ...data.EventFilterOption,
@@ -171,13 +201,17 @@ func (r *EventRepo) GetBySource(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	events, err := r.svc.GetBySource(sourceId, po, opts...)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	events, err := data.GetEventBySource(db, sourceId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, events[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -189,6 +223,7 @@ func (r *EventRepo) GetBySource(
 }
 
 func (r *EventRepo) GetByTarget(
+	ctx context.Context,
 	targetId string,
 	po *data.PageOptions,
 	opts ...data.EventFilterOption,
@@ -196,13 +231,17 @@ func (r *EventRepo) GetByTarget(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	events, err := r.svc.GetByTarget(targetId, po, opts...)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	events, err := data.GetEventByTarget(db, targetId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
 	eventPermits := make([]*EventPermit, len(events))
 	if len(events) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, events[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, events[0])
 		if err != nil {
 			return nil, err
 		}
@@ -213,12 +252,19 @@ func (r *EventRepo) GetByTarget(
 	return eventPermits, nil
 }
 
-func (r *EventRepo) Delete(event *data.Event) error {
+func (r *EventRepo) Delete(
+	ctx context.Context,
+	event *data.Event,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, event); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, event); err != nil {
 		return err
 	}
-	return r.svc.Delete(&event.Id)
+	return data.DeleteEvent(db, &event.Id)
 }

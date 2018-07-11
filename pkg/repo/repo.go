@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type key string
@@ -42,7 +43,7 @@ type FieldPermissionFunc = func(field string) bool
 var AdminPermissionFunc = func(field string) bool { return true }
 
 type Repo interface {
-	Open(*Permitter)
+	Open(*Permitter) error
 	Close()
 }
 
@@ -51,7 +52,7 @@ type Repos struct {
 	lookup map[key]Repo
 }
 
-func NewRepos(db data.Queryer) *Repos {
+func NewRepos(db data.Queryer, svcs *service.Services) *Repos {
 	return &Repos{
 		db: db,
 		lookup: map[key]Repo{
@@ -70,7 +71,7 @@ func NewRepos(db data.Queryer) *Repos {
 			topicRepoKey:         NewTopicRepo(),
 			topicedRepoKey:       NewTopicedRepo(),
 			userRepoKey:          NewUserRepo(),
-			userAssetRepoKey:     NewUserAssetRepo(),
+			userAssetRepoKey:     NewUserAssetRepo(svcs.Storage),
 		},
 	}
 }

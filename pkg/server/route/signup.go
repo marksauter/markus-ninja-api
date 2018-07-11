@@ -8,29 +8,19 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Signup(db data.Queryer, svcs *service.Services) http.Handler {
-	authMiddleware := middleware.Authenticate{svcs.Auth}
-	signupHandler := SignupHandler{db, svcs}
-	return middleware.CommonMiddleware.Append(
-		SignupCors.Handler,
-		authMiddleware.Use,
-	).Then(signupHandler)
-}
-
 var SignupCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"*"},
+	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
 type SignupHandler struct {
-	db   data.Queryer
-	svcs *service.Services
+	AuthSvc *service.AuthService
+	Db      data.Queryer
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -105,7 +95,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := data.CreateUser(h.db, u)
+	user, err := data.CreateUser(h.Db, u)
 	if err != nil {
 		var response *myhttp.ErrorResponse
 		if dfErr, ok := err.(data.DataFieldError); ok {
@@ -132,7 +122,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.svcs.Auth.SignJWT(&payload)
+	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -128,31 +130,79 @@ func (r *StudyRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *StudyRepo) CountByApplee(appleeId string) (int32, error) {
-	return r.svc.CountByApplee(appleeId)
+func (r *StudyRepo) CountByApplee(
+	ctx context.Context,
+	appleeId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyByApplee(db, appleeId)
 }
 
-func (r *StudyRepo) CountByEnrollee(enrolleeId string) (int32, error) {
-	return r.svc.CountByEnrollee(enrolleeId)
+func (r *StudyRepo) CountByEnrollee(
+	ctx context.Context,
+	enrolleeId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyByEnrollee(db, enrolleeId)
 }
 
-func (r *StudyRepo) CountByTopic(topicId string) (int32, error) {
-	return r.svc.CountByTopic(topicId)
+func (r *StudyRepo) CountByTopic(
+	ctx context.Context,
+	topicId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyByTopic(db, topicId)
 }
 
-func (r *StudyRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
+func (r *StudyRepo) CountBySearch(
+	ctx context.Context,
+	within *mytype.OID,
+	query string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyBySearch(db, within, query)
 }
 
-func (r *StudyRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *StudyRepo) CountByUser(
+	ctx context.Context,
+	userId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyByUser(db, userId)
 }
 
-func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
+func (r *StudyRepo) Create(
+	ctx context.Context,
+	s *data.Study,
+) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, s); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -160,43 +210,54 @@ func (r *StudyRepo) Create(s *data.Study) (*StudyPermit, error) {
 	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.Create(s)
+	study, err := data.CreateStudy(db, s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
-	if err != nil {
-		return nil, err
-	}
-	return &StudyPermit{fieldPermFn, study}, nil
-}
-
-func (r *StudyRepo) Get(id string) (*StudyPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	study, err := r.load.Get(id)
-	if err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByApplee(appleeId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) Get(
+	ctx context.Context,
+	id string,
+) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByApplee(appleeId, po)
+	study, err := r.load.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
+	if err != nil {
+		return nil, err
+	}
+	return &StudyPermit{fieldPermFn, study}, nil
+}
+
+func (r *StudyRepo) GetByApplee(
+	ctx context.Context,
+	appleeId string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.GetStudyByApplee(db, appleeId, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -207,17 +268,25 @@ func (r *StudyRepo) GetByApplee(appleeId string, po *data.PageOptions) ([]*Study
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByEnrollee(enrolleeId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByEnrollee(
+	ctx context.Context,
+	enrolleeId string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByEnrollee(enrolleeId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.GetStudyByEnrollee(db, enrolleeId, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -228,17 +297,25 @@ func (r *StudyRepo) GetByEnrollee(enrolleeId string, po *data.PageOptions) ([]*S
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByTopic(topicId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByTopic(
+	ctx context.Context,
+	topicId string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByTopic(topicId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.GetStudyByTopic(db, topicId, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -249,17 +326,25 @@ func (r *StudyRepo) GetByTopic(topicId string, po *data.PageOptions) ([]*StudyPe
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) GetByUser(
+	ctx context.Context,
+	userId string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.GetByUser(userId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.GetStudyByUser(db, userId, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -270,57 +355,85 @@ func (r *StudyRepo) GetByUser(userId string, po *data.PageOptions) ([]*StudyPerm
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) GetByName(userId, name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByName(
+	ctx context.Context,
+	userId,
+	name string,
+) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.GetByName(userId, name)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	study, err := data.GetStudyByName(db, userId, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) GetByUserAndName(owner string, name string) (*StudyPermit, error) {
+func (r *StudyRepo) GetByUserAndName(
+	ctx context.Context,
+	owner,
+	name string,
+) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.load.GetByUserAndName(owner, name)
+	study, err := r.load.GetByUserAndName(ctx, owner, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) Delete(study *data.Study) error {
+func (r *StudyRepo) Delete(
+	ctx context.Context,
+	study *data.Study,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, study); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, study); err != nil {
 		return err
 	}
-	return r.svc.Delete(study.Id.String)
+	return data.DeleteStudy(db, study.Id.String)
 }
 
-func (r *StudyRepo) Search(within *mytype.OID, query string, po *data.PageOptions) ([]*StudyPermit, error) {
+func (r *StudyRepo) Search(
+	ctx context.Context,
+	within *mytype.OID,
+	query string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	studies, err := r.svc.Search(within, query, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.SearchStudy(db, within, query, po)
 	if err != nil {
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, studies[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
 			return nil, err
 		}
@@ -331,33 +444,46 @@ func (r *StudyRepo) Search(within *mytype.OID, query string, po *data.PageOption
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) Update(s *data.Study) (*StudyPermit, error) {
+func (r *StudyRepo) Update(
+	ctx context.Context,
+	s *data.Study,
+) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, s); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.Update(s)
+	study, err := data.UpdateStudy(db, s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) ViewerCanDelete(s *data.Study) bool {
-	if _, err := r.permit.Check(mytype.DeleteAccess, s); err != nil {
+func (r *StudyRepo) ViewerCanDelete(
+	ctx context.Context,
+	s *data.Study,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, s); err != nil {
 		return false
 	}
 	return true
 }
 
-func (r *StudyRepo) ViewerCanUpdate(s *data.Study) bool {
-	if _, err := r.permit.Check(mytype.UpdateAccess, s); err != nil {
+func (r *StudyRepo) ViewerCanUpdate(
+	ctx context.Context,
+	s *data.Study,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
 		return false
 	}
 	return true
