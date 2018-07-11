@@ -10,8 +10,7 @@ import (
 
 func NewEnrollableEdgeResolver(
 	repos *repo.Repos,
-	node repo.Permit,
-) (*enrollableEdgeResolver, error) {
+	node repo.NodePermit) (*enrollableEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err
@@ -26,7 +25,7 @@ func NewEnrollableEdgeResolver(
 
 type enrollableEdgeResolver struct {
 	cursor string
-	node   repo.Permit
+	node   repo.NodePermit
 	repos  *repo.Repos
 }
 
@@ -35,7 +34,7 @@ func (r *enrollableEdgeResolver) Cursor() string {
 }
 
 func (r *enrollableEdgeResolver) Node() (*enrollableResolver, error) {
-	resolver, err := permitToResolver(r.node, r.repos)
+	resolver, err := nodePermitToResolver(r.node, r.repos)
 	if err != nil {
 		return nil, err
 	}

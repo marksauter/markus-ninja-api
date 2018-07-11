@@ -1,0 +1,14 @@
+# Input type for UpdateViewer.
+input UpdateViewerInput {
+  # The viewer's public profile bio.
+  bio: String
+
+  # The ID of the viewer's public profile email.
+  emailId: ID
+
+  # The viwer's username used to login.
+  login: String
+
+  # The viewer's public profile name.
+  name: String
+}

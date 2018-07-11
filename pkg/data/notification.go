@@ -397,6 +397,10 @@ func UpdateNotification(
 		sets = append(sets, `last_read_at`+"="+args.Append(&row.LastReadAt))
 	}
 
+	if len(sets) == 0 {
+		return GetNotification(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

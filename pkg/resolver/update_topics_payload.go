@@ -32,7 +32,7 @@ func (r *updateTopicsPayloadResolver) Topicable(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := permitToResolver(t, r.Repos)
+	resolver, err := nodePermitToResolver(t, r.Repos)
 	if err != nil {
 		return nil, err
 	}

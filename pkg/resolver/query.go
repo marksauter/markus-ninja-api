@@ -35,38 +35,23 @@ func (r *RootResolver) Node(
 	ctx context.Context,
 	args struct{ Id string },
 ) (*nodeResolver, error) {
-	parsedId, err := mytype.ParseOID(args.Id)
+	id, err := mytype.ParseOID(args.Id)
 	if err != nil {
 		return nil, err
 	}
-	switch parsedId.Type {
-	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(ctx, args.Id)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeResolver{&lessonResolver{Lesson: lesson, Repos: r.Repos}}, nil
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, args.Id)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeResolver{&studyResolver{Study: study, Repos: r.Repos}}, nil
-	case "User":
-		user, err := r.Repos.User().Get(ctx, args.Id)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeResolver{&userResolver{User: user, Repos: r.Repos}}, nil
-	case "UserAsset":
-		userAsset, err := r.Repos.UserAsset().Get(ctx, args.Id)
-		if err != nil {
-			return nil, err
-		}
-		return &nodeResolver{&userAssetResolver{UserAsset: userAsset, Repos: r.Repos}}, nil
-	default:
-		return nil, errors.New("invalid node id")
+	permit, err := r.Repos.GetNode(ctx, id)
+	if err != nil {
+		return nil, err
 	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	node, ok := resolver.(node)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to node")
+	}
+	return &nodeResolver{node}, nil
 }
 
 func (r *RootResolver) Nodes(ctx context.Context, args struct {
@@ -74,20 +59,23 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 }) ([]*nodeResolver, error) {
 	nodes := make([]*nodeResolver, len(args.Ids))
 	for i, id := range args.Ids {
-		parsedId, err := mytype.ParseOID(id)
+		nodeId, err := mytype.ParseOID(id)
 		if err != nil {
 			return nil, err
 		}
-		switch parsedId.Type {
-		case "User":
-			user, err := r.Repos.User().Get(ctx, id)
-			if err != nil {
-				return nil, err
-			}
-			nodes[i] = &nodeResolver{&userResolver{User: user, Repos: r.Repos}}
-		default:
-			return nil, fmt.Errorf("invalid node id: %s", id)
+		permit, err := r.Repos.GetNode(ctx, nodeId)
+		if err != nil {
+			return nil, err
 		}
+		resolver, err := nodePermitToResolver(permit, r.Repos)
+		if err != nil {
+			return nil, err
+		}
+		node, ok := resolver.(node)
+		if !ok {
+			return nil, errors.New("cannot convert resolver to node")
+		}
+		nodes[i] = &nodeResolver{node}
 	}
 	return nodes, nil
 }
@@ -152,7 +140,7 @@ func (r *RootResolver) Search(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.Permit{}
+	permits := []repo.NodePermit{}
 
 	switch searchType {
 	case SearchTypeLesson:
@@ -160,7 +148,7 @@ func (r *RootResolver) Search(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(lessons))
+		permits = make([]repo.NodePermit, len(lessons))
 		for i, l := range lessons {
 			permits[i] = l
 		}
@@ -169,7 +157,7 @@ func (r *RootResolver) Search(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(studies))
+		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}
@@ -178,7 +166,7 @@ func (r *RootResolver) Search(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(users))
+		permits = make([]repo.NodePermit, len(users))
 		for i, l := range users {
 			permits[i] = l
 		}
@@ -187,7 +175,7 @@ func (r *RootResolver) Search(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(userAssets))
+		permits = make([]repo.NodePermit, len(userAssets))
 		for i, l := range userAssets {
 			permits[i] = l
 		}

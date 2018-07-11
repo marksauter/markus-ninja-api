@@ -10,8 +10,7 @@ import (
 
 func NewTopicableEdgeResolver(
 	repos *repo.Repos,
-	node repo.Permit,
-) (*topicableEdgeResolver, error) {
+	node repo.NodePermit) (*topicableEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err
@@ -26,7 +25,7 @@ func NewTopicableEdgeResolver(
 
 type topicableEdgeResolver struct {
 	cursor string
-	node   repo.Permit
+	node   repo.NodePermit
 	repos  *repo.Repos
 }
 
@@ -35,7 +34,7 @@ func (r *topicableEdgeResolver) Cursor() string {
 }
 
 func (r *topicableEdgeResolver) Node() (*topicableResolver, error) {
-	resolver, err := permitToResolver(r.node, r.repos)
+	resolver, err := nodePermitToResolver(r.node, r.repos)
 	if err != nil {
 		return nil, err
 	}

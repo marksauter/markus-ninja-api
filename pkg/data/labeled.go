@@ -247,6 +247,8 @@ func CreateLabeled(
 	switch row.LabelableId.Type {
 	case "Lesson":
 		labelable = "lesson"
+	case "LessonComment":
+		labelable = "lesson_comment"
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for labeled labelable id", row.LabelableId.Type)
 	}
@@ -307,6 +309,7 @@ func BatchCreateLabeled(
 
 	n := len(labelableIds)
 	lessonLabeleds := make([][]interface{}, 0, n)
+	lessonCommentLabeleds := make([][]interface{}, 0, n)
 	for _, labelableId := range labelableIds {
 		id, _ := mytype.NewOID("Labeled")
 		src.Id.Set(id)
@@ -318,6 +321,8 @@ func BatchCreateLabeled(
 		switch labelableId.Type {
 		case "Lesson":
 			lessonLabeleds = append(lessonLabeleds, labeled)
+		case "LessonComment":
+			lessonCommentLabeleds = append(lessonCommentLabeleds, labeled)
 		default:
 			return fmt.Errorf("invalid type '%s' for labeled labelable id", labelableId.Type)
 		}
@@ -353,6 +358,27 @@ func BatchCreateLabeled(
 		}
 	}
 
+	var lessonCommentLabeledCopyCount int
+	if len(lessonCommentLabeleds) > 0 {
+		lessonCommentLabeledCopyCount, err = tx.CopyFrom(
+			pgx.Identifier{"lesson_comment_labeled"},
+			[]string{"label_id", "labelable_id", "labeled_id"},
+			pgx.CopyFromRows(lessonCommentLabeleds),
+		)
+		if err != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				default:
+					return err
+				case UniqueViolation:
+					mylog.Log.Warn("labeleds already created")
+					return nil
+				}
+			}
+			return err
+		}
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
@@ -363,7 +389,7 @@ func BatchCreateLabeled(
 
 	mylog.Log.WithField(
 		"n",
-		lessonLabeledCopyCount,
+		lessonLabeledCopyCount+lessonCommentLabeledCopyCount,
 	).Info("created labeleds")
 
 	return nil

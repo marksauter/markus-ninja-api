@@ -6,7 +6,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-type Permit interface {
+type NodePermit interface {
 	ID() (*mytype.OID, error)
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -62,6 +63,60 @@ func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
 func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	id, err := r.LessonComment.ID()
 	return graphql.ID(id.String), err
+}
+
+func (r *lessonCommentResolver) Labels(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*labelConnectionResolver, error) {
+	lessonCommentId, err := r.LessonComment.ID()
+	if err != nil {
+		return nil, err
+	}
+	labelOrder, err := ParseLabelOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		labelOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := r.Repos.Label().GetByLabelable(
+		ctx,
+		lessonCommentId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentId.String)
+	if err != nil {
+		return nil, err
+	}
+	labelConnectionResolver, err := NewLabelConnectionResolver(
+		labels,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return labelConnectionResolver, nil
 }
 
 func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {

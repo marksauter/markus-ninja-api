@@ -158,7 +158,7 @@ func (r *AppledRepo) Get(
 			return nil, err
 		}
 	} else if a.AppleableId.Status != pgtype.Undefined &&
-		appled.UserId.Status != pgtype.Undefined {
+		a.UserId.Status != pgtype.Undefined {
 		appled, err = r.load.GetByAppleableAndUser(ctx, a.AppleableId.String, a.UserId.String)
 		if err != nil {
 			return nil, err

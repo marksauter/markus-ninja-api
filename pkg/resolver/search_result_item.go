@@ -3,7 +3,7 @@ package resolver
 import "github.com/marksauter/markus-ninja-api/pkg/repo"
 
 type searchResultItemResolver struct {
-	Item  repo.Permit
+	Item  repo.NodePermit
 	Repos *repo.Repos
 }
 

@@ -556,6 +556,10 @@ func UpdateUserAsset(
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
 
+	if len(sets) == 0 {
+		return GetUserAsset(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

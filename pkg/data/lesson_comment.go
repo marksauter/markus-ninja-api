@@ -438,6 +438,10 @@ func UpdateLessonComment(
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
 
+	if len(sets) == 0 {
+		return GetLessonComment(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

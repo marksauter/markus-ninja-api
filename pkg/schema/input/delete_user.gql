@@ -1,5 +1,5 @@
-# Input type for DeleteUser.
-input DeleteUserInput {
-  # ID of the user.
-  userId: ID!
+# Input type for DeleteAcccount.
+input DeleteAcccountInput {
+  # Token to verify authenticity.
+  token: String!
 }

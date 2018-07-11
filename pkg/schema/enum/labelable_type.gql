@@ -2,4 +2,7 @@
 enum LabelableType {
   # Returns lessons.
   LESSON
+
+  # Returns lesson comments.
+  LESSON_COMMENT
 }

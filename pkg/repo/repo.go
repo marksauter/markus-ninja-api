@@ -186,10 +186,22 @@ func (r *Repos) Use(h http.Handler) http.Handler {
 
 // Cross repo methods
 
+func (r *Repos) GetAppleable(
+	ctx context.Context,
+	appleableId *mytype.OID,
+) (NodePermit, error) {
+	switch appleableId.Type {
+	case "Study":
+		return r.Study().Get(ctx, appleableId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for appleable id", appleableId.Type)
+	}
+}
+
 func (r *Repos) GetEnrollable(
 	ctx context.Context,
 	enrollableId *mytype.OID,
-) (Permit, error) {
+) (NodePermit, error) {
 	switch enrollableId.Type {
 	case "Lesson":
 		return r.Lesson().Get(ctx, enrollableId.String)
@@ -205,19 +217,51 @@ func (r *Repos) GetEnrollable(
 func (r *Repos) GetLabelable(
 	ctx context.Context,
 	labelableId *mytype.OID,
-) (Permit, error) {
+) (NodePermit, error) {
 	switch labelableId.Type {
 	case "Lesson":
 		return r.Lesson().Get(ctx, labelableId.String)
+	case "LessonComment":
+		return r.LessonComment().Get(ctx, labelableId.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableId.Type)
+	}
+}
+
+func (r *Repos) GetNode(
+	ctx context.Context,
+	nodeId *mytype.OID,
+) (NodePermit, error) {
+	switch nodeId.Type {
+	case "Email":
+		return r.Email().Get(ctx, nodeId.String)
+	case "Event":
+		return r.Event().Get(ctx, nodeId.String)
+	case "Label":
+		return r.Label().Get(ctx, nodeId.String)
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeId.String)
+	case "LessonComment":
+		return r.LessonComment().Get(ctx, nodeId.String)
+	case "Notification":
+		return r.Notification().Get(ctx, nodeId.String)
+	case "Study":
+		return r.Study().Get(ctx, nodeId.String)
+	case "Topic":
+		return r.Topic().Get(ctx, nodeId.String)
+	case "User":
+		return r.User().Get(ctx, nodeId.String)
+	case "UserAsset":
+		return r.UserAsset().Get(ctx, nodeId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
 	}
 }
 
 func (r *Repos) GetTopicable(
 	ctx context.Context,
 	topicableId *mytype.OID,
-) (Permit, error) {
+) (NodePermit, error) {
 	switch topicableId.Type {
 	case "Study":
 		return r.Study().Get(ctx, topicableId.String)

@@ -9,8 +9,7 @@ import (
 
 func NewLabelableConnectionResolver(
 	repos *repo.Repos,
-	labelables []repo.Permit,
-	pageOptions *data.PageOptions,
+	labelables []repo.NodePermit, pageOptions *data.PageOptions,
 	studyCount int32,
 ) (*labelableConnectionResolver, error) {
 	edges := make([]*labelableEdgeResolver, len(labelables))
@@ -40,7 +39,7 @@ func NewLabelableConnectionResolver(
 
 type labelableConnectionResolver struct {
 	edges      []*labelableEdgeResolver
-	labelables []repo.Permit
+	labelables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	studyCount int32
@@ -60,7 +59,7 @@ func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		labelables := r.labelables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range labelables {
-			resolver, err := permitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos)
 			if err != nil {
 				return nil, err
 			}

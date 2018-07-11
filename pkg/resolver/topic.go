@@ -87,7 +87,7 @@ func (r *topicResolver) Topicables(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.Permit{}
+	permits := []repo.NodePermit{}
 
 	switch topicableType {
 	case TopicableTypeStudy:
@@ -95,7 +95,7 @@ func (r *topicResolver) Topicables(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(studies))
+		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}

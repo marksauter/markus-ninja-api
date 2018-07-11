@@ -16,3 +16,8 @@ func (r *labelableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.labelable.(*lessonResolver)
 	return resolver, ok
 }
+
+func (r *labelableResolver) ToLessonComment() (*lessonCommentResolver, bool) {
+	resolver, ok := r.labelable.(*lessonCommentResolver)
+	return resolver, ok
+}

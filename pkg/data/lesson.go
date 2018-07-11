@@ -771,6 +771,10 @@ func UpdateLesson(
 		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
 
+	if len(sets) == 0 {
+		return GetLesson(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")

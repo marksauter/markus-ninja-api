@@ -14,7 +14,7 @@ type RootResolver struct {
 	Svcs  *service.Services
 }
 
-func permitToResolver(p repo.Permit, repos *repo.Repos) (interface{}, error) {
+func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, error) {
 	id, err := p.ID()
 	if err != nil {
 		return nil, err

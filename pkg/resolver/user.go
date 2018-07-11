@@ -59,7 +59,7 @@ func (r *userResolver) Appled(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.Permit{}
+	permits := []repo.NodePermit{}
 
 	switch appleableType {
 	case AppleableTypeStudy:
@@ -67,7 +67,7 @@ func (r *userResolver) Appled(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(studies))
+		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}
@@ -256,7 +256,7 @@ func (r *userResolver) Enrolled(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.Permit{}
+	permits := []repo.NodePermit{}
 
 	switch enrollableType {
 	case EnrollableTypeLesson:
@@ -264,7 +264,7 @@ func (r *userResolver) Enrolled(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(lessons))
+		permits = make([]repo.NodePermit, len(lessons))
 		for i, l := range lessons {
 			permits[i] = l
 		}
@@ -273,7 +273,7 @@ func (r *userResolver) Enrolled(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(studies))
+		permits = make([]repo.NodePermit, len(studies))
 		for i, s := range studies {
 			permits[i] = s
 		}
@@ -282,7 +282,7 @@ func (r *userResolver) Enrolled(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.Permit, len(users))
+		permits = make([]repo.NodePermit, len(users))
 		for i, u := range users {
 			permits[i] = u
 		}

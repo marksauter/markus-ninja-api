@@ -9,8 +9,7 @@ import (
 
 func NewTopicableConnectionResolver(
 	repos *repo.Repos,
-	topicables []repo.Permit,
-	pageOptions *data.PageOptions,
+	topicables []repo.NodePermit, pageOptions *data.PageOptions,
 	studyCount int32,
 ) (*topicableConnectionResolver, error) {
 	edges := make([]*topicableEdgeResolver, len(topicables))
@@ -40,7 +39,7 @@ func NewTopicableConnectionResolver(
 
 type topicableConnectionResolver struct {
 	edges      []*topicableEdgeResolver
-	topicables []repo.Permit
+	topicables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	studyCount int32
@@ -60,7 +59,7 @@ func (r *topicableConnectionResolver) Nodes() (*[]*topicableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		topicables := r.topicables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range topicables {
-			resolver, err := permitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos)
 			if err != nil {
 				return nil, err
 			}

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -714,6 +713,10 @@ func UpdateUser(
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
 	}
 
+	if len(sets) == 0 {
+		return GetUser(db, row.Id.String)
+	}
+
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
@@ -726,8 +729,7 @@ func UpdateUser(
 	sql := `
 		UPDATE account
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
-	`
+		WHERE id = ` + args.Append(&row.Id)
 
 	psName := preparedName("updateUser", sql)
 
@@ -749,21 +751,6 @@ func UpdateUser(
 	}
 	if commandTag.RowsAffected() != 1 {
 		return nil, ErrNotFound
-	}
-
-	if row.PublicEmail.Status != pgtype.Undefined {
-		publicEmail, err := GetEmailByValue(tx, row.PublicEmail.String)
-		if err != nil {
-			return nil, err
-		}
-		if publicEmail.VerifiedAt.Status == pgtype.Null {
-			return nil, errors.New("cannot set unverified email to public")
-		}
-		publicEmail.Public.Set(true)
-		_, err = UpdateEmail(tx, publicEmail)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	user, err := GetUser(tx, row.Id.String)

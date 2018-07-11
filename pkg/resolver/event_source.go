@@ -3,7 +3,7 @@ package resolver
 import "github.com/marksauter/markus-ninja-api/pkg/repo"
 
 type eventSourceResolver struct {
-	Subject repo.Permit
+	Subject repo.NodePermit
 	Repos   *repo.Repos
 }
 
