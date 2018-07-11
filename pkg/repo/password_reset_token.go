@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -103,33 +105,69 @@ func (r *PRTRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *PRTRepo) Create(t *data.PRT) (*PRTPermit, error) {
+func (r *PRTRepo) Create(
+	ctx context.Context,
+	t *data.PRT,
+) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, t); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, t); err != nil {
 		return nil, err
 	}
-	prt, err := r.svc.Create(t)
+	prt, err := data.CreatePRT(db, t)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, prt)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}
 	return &PRTPermit{fieldPermFn, prt}, nil
 }
 
-func (r *PRTRepo) Get(userId, token string) (*PRTPermit, error) {
+func (r *PRTRepo) Get(
+	ctx context.Context,
+	userId,
+	token string,
+) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	prt, err := r.load.Get(userId, token)
+	prt, err := r.load.Get(ctx, userId, token)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, prt)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, prt)
+	if err != nil {
+		return nil, err
+	}
+	return &PRTPermit{fieldPermFn, prt}, nil
+}
+
+func (r *PRTRepo) Update(
+	ctx context.Context,
+	token *data.PRT,
+) (*PRTPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, token); err != nil {
+		return nil, err
+	}
+	prt, err := data.UpdatePRT(db, token)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, prt)
 	if err != nil {
 		return nil, err
 	}

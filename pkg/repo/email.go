@@ -151,7 +151,7 @@ func (r *EmailRepo) Create(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, e); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, e); err != nil {
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -162,7 +162,7 @@ func (r *EmailRepo) Create(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (r *EmailRepo) Delete(
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, email); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, email); err != nil {
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -197,7 +197,7 @@ func (r *EmailRepo) Get(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (r *EmailRepo) GetByValue(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (r *EmailRepo) GetByUser(
 	}
 	emailPermits := make([]*EmailPermit, len(emails))
 	if len(emails) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, emails[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, emails[0])
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func (r *EmailRepo) Update(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, e); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, e); err != nil {
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -270,7 +270,7 @@ func (r *EmailRepo) Update(
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, email)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
 	if err != nil {
 		return nil, err
 	}

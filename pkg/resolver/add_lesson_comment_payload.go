@@ -17,7 +17,9 @@ func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResol
 	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos)
 }
 
-func (r *addLessonCommentPayloadResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
+func (r *addLessonCommentPayloadResolver) Lesson(
+	ctx context.Context,
+) (*lessonResolver, error) {
 	lessonId, err := r.LessonComment.LessonId()
 	if err != nil {
 		return nil, err

@@ -84,13 +84,15 @@ func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
 	return &graphql.Time{t}, nil
 }
 
-func (r *lessonCommentResolver) ResourcePath() (mygql.URI, error) {
+func (r *lessonCommentResolver) ResourcePath(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	lesson, err := r.Lesson()
+	lesson, err := r.Lesson(ctx)
 	if err != nil {
 		return uri, err
 	}
-	lessonPath, err := lesson.ResourcePath()
+	lessonPath, err := lesson.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -123,9 +125,11 @@ func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonCommentResolver) URL() (mygql.URI, error) {
+func (r *lessonCommentResolver) URL(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}

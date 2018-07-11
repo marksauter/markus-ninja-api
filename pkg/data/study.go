@@ -482,7 +482,7 @@ func GetStudyByUserAndName(
 	return getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
 }
 
-func Create(
+func CreateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
@@ -549,7 +549,7 @@ func Create(
 		return nil, err
 	}
 
-	study, err := GetStudy(db, row.Id.String)
+	study, err := GetStudy(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -695,7 +695,7 @@ func UpdateStudy(
 		return nil, ErrNotFound
 	}
 
-	study, err := GetStudy(db, row.Id.String)
+	study, err := GetStudy(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

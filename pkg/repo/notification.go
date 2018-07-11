@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -117,43 +119,68 @@ func (r *NotificationRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *NotificationRepo) CountByStudy(userId, studyId string) (int32, error) {
-	return r.svc.CountByStudy(userId, studyId)
+func (r *NotificationRepo) CountByStudy(
+	ctx context.Context,
+	userId,
+	studyId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountNotificationByStudy(db, userId, studyId)
 }
 
-func (r *NotificationRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *NotificationRepo) CountByUser(
+	ctx context.Context,
+	userId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountNotificationByUser(db, userId)
 }
 
 func (r *NotificationRepo) Create(
+	ctx context.Context,
 	notification *data.Notification,
 ) (*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, notification); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, notification); err != nil {
 		return nil, err
 	}
-	notification, err := r.svc.Create(notification)
+	notification, err := data.CreateNotification(db, notification)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notification)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
 	return &NotificationPermit{fieldPermFn, notification}, nil
 }
 
-func (r *NotificationRepo) Get(id string) (*NotificationPermit, error) {
+func (r *NotificationRepo) Get(
+	ctx context.Context,
+	id string,
+) (*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	notification, err := r.load.Get(id)
+	notification, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notification)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +188,7 @@ func (r *NotificationRepo) Get(id string) (*NotificationPermit, error) {
 }
 
 func (r *NotificationRepo) GetByStudy(
+	ctx context.Context,
 	userId,
 	studyId string,
 	po *data.PageOptions,
@@ -168,13 +196,17 @@ func (r *NotificationRepo) GetByStudy(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	notifications, err := r.svc.GetByStudy(userId, studyId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	notifications, err := data.GetNotificationByStudy(db, userId, studyId, po)
 	if err != nil {
 		return nil, err
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notifications[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -186,19 +218,24 @@ func (r *NotificationRepo) GetByStudy(
 }
 
 func (r *NotificationRepo) GetByUser(
+	ctx context.Context,
 	userId string,
 	po *data.PageOptions,
 ) ([]*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	notifications, err := r.svc.GetByUser(userId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	notifications, err := data.GetNotificationByUser(db, userId, po)
 	if err != nil {
 		return nil, err
 	}
 	notificationPermits := make([]*NotificationPermit, len(notifications))
 	if len(notifications) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, notifications[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notifications[0])
 		if err != nil {
 			return nil, err
 		}
@@ -209,28 +246,42 @@ func (r *NotificationRepo) GetByUser(
 	return notificationPermits, nil
 }
 
-func (r *NotificationRepo) Delete(n *data.Notification) error {
+func (r *NotificationRepo) Delete(
+	ctx context.Context,
+	n *data.Notification,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, n); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, n); err != nil {
 		return err
 	}
-	return r.svc.Delete(n.Id.String)
+	return data.DeleteNotification(db, n.Id.String)
 }
 
-func (r *NotificationRepo) Update(n *data.Notification) (*NotificationPermit, error) {
+func (r *NotificationRepo) Update(
+	ctx context.Context,
+	n *data.Notification,
+) (*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, n); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, n); err != nil {
 		return nil, err
 	}
-	study, err := r.svc.Update(n)
+	study, err := data.UpdateNotification(db, n)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
 		return nil, err
 	}

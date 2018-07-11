@@ -17,16 +17,16 @@ func newUser() *data.User {
 }
 
 func TestDataUsersLifeCycle(t *testing.T) {
-	db := mydb.NewTestDB(t)
+	testDb := mydb.NewTestDB(t)
 
 	input := newUser()
-	output, err := data.CreateUser(db, input)
+	output, err := data.CreateUser(testDb.DB, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 	userId := output.Id.String
 
-	user, err := data.GetUserCredentialsByLogin(db, input.Login.String)
+	user, err := data.GetUserCredentialsByLogin(testDb.DB, input.Login.String)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestDataUsersLifeCycle(t *testing.T) {
 		t.Errorf("Expected %v, got %v", input.PrimaryEmail.String, user.PrimaryEmail.String)
 	}
 
-	user, err = data.GetUser(db, output.Id.String)
+	user, err = data.GetUser(testDb.DB, output.Id.String)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,16 +53,16 @@ func TestDataUsersLifeCycle(t *testing.T) {
 }
 
 func TestDataCreateUserHandlesLoginUniqueness(t *testing.T) {
-	db := mydb.NewTestDB(t)
+	testDb := mydb.NewTestDB(t)
 
 	input := newUser()
-	_, err := data.CreateUser(db, input)
+	_, err := data.CreateUser(testDb.DB, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	input = newUser()
-	_, actual := data.CreateUser(db, input)
+	_, actual := data.CreateUser(testDb.DB, input)
 	expected := data.DuplicateFieldError("login")
 	if actual != expected {
 		t.Fatalf("Expected %v, got %v", expected, actual)
@@ -70,17 +70,17 @@ func TestDataCreateUserHandlesLoginUniqueness(t *testing.T) {
 }
 
 func TestDataCreateUserHandlesPrimaryEmailUniqueness(t *testing.T) {
-	db := mydb.NewTestDB(t)
+	testDb := mydb.NewTestDB(t)
 
 	user := newUser()
 	user.PrimaryEmail.Set("test@example.com")
-	_, err := data.CreateUser(db, user)
+	_, err := data.CreateUser(testDb.DB, user)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	user.Login.Set("otherlogin")
-	_, actual := data.CreateUser(db, user)
+	_, actual := data.CreateUser(testDb.DB, user)
 	expected := data.DuplicateFieldError("primary_email")
 	if actual != expected {
 		t.Fatalf("Expected %v, got %v", expected, actual)
@@ -88,17 +88,17 @@ func TestDataCreateUserHandlesPrimaryEmailUniqueness(t *testing.T) {
 }
 
 func BenchmarkDataGetUser(b *testing.B) {
-	db := mydb.NewTestDB(b)
+	testDb := mydb.NewTestDB(b)
 
 	user := newUser()
-	output, err := data.CreateUser(db, user)
+	output, err := data.CreateUser(testDb.DB, user)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := data.GetUser(db, output.Id.String)
+		_, err := data.GetUser(testDb.DB, output.Id.String)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -106,17 +106,17 @@ func BenchmarkDataGetUser(b *testing.B) {
 }
 
 func BenchmarkDataGetUserByLogin(b *testing.B) {
-	db := mydb.NewTestDB(b)
+	testDb := mydb.NewTestDB(b)
 
 	input := newUser()
-	_, err := data.CreateUser(db, input)
+	_, err := data.CreateUser(testDb.DB, input)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := data.GetUserByLogin(db, input.Login.String)
+		_, err := data.GetUserByLogin(testDb.DB, input.Login.String)
 		if err != nil {
 			b.Fatal(err)
 		}

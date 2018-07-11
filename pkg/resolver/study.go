@@ -477,12 +477,14 @@ func (r *studyResolver) Name() (string, error) {
 	return r.Study.Name()
 }
 
-func (r *studyResolver) NameWithOwner() (string, error) {
+func (r *studyResolver) NameWithOwner(
+	ctx context.Context,
+) (string, error) {
 	name, err := r.Name()
 	if err != nil {
 		return "", err
 	}
-	owner, err := r.Owner()
+	owner, err := r.Owner(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -505,9 +507,11 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
-func (r *studyResolver) ResourcePath() (mygql.URI, error) {
+func (r *studyResolver) ResourcePath(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	nameWithOwner, err := r.NameWithOwner()
+	nameWithOwner, err := r.NameWithOwner(ctx)
 	if err != nil {
 		return uri, err
 	}
@@ -574,9 +578,11 @@ func (r *studyResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *studyResolver) URL() (mygql.URI, error) {
+func (r *studyResolver) URL(
+	ctx context.Context,
+) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}

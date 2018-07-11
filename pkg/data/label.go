@@ -378,7 +378,7 @@ func CreateLabel(
 		return nil, err
 	}
 
-	label, err := GetLabel(db, row.Id.String)
+	label, err := GetLabel(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func RefreshLabelSearchIndex(
 	return nil
 }
 
-func Search(
+func SearchLabel(
 	db Queryer,
 	query string,
 	po *PageOptions,
@@ -496,7 +496,7 @@ func UpdateLabel(
 		return nil, ErrNotFound
 	}
 
-	label, err := GetLabel(db, row.Id.String)
+	label, err := GetLabel(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

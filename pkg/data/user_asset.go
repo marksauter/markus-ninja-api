@@ -15,15 +15,15 @@ type UserAsset struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
-	Name         mytype.Filename    `db:"name" permit:"read/update"`
-	OriginalName pgtype.Text        `db:"original_name" permit:"read"`
+	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
+	OriginalName pgtype.Text        `db:"original_name" permit:"create/read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
-	Size         pgtype.Int8        `db:"size" permit:"read"`
-	StudyId      mytype.OID         `db:"study_id" permit:"read"`
-	Subtype      pgtype.Text        `db:"subtype" permit:"read"`
-	Type         pgtype.Text        `db:"type" permit:"read"`
+	Size         pgtype.Int8        `db:"size" permit:"create/read"`
+	StudyId      mytype.OID         `db:"study_id" permit:"create/read"`
+	Subtype      pgtype.Text        `db:"subtype" permit:"create/read"`
+	Type         pgtype.Text        `db:"type" permit:"create/read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId       mytype.OID         `db:"user_id" permit:"read"`
+	UserId       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 type UserAssetFilterOption int
@@ -212,7 +212,7 @@ const getUserAssetByIdSQL = `
 		type,
 		updated_at,
 		user_id
-	FROM user_asset_master
+	FROM user_asset
 	WHERE id = $1
 `
 
@@ -238,7 +238,7 @@ const getUserAssetByNameSQL = `
 		type,
 		updated_at,
 		user_id
-	FROM user_asset_master
+	FROM user_asset
 	WHERE user_id = $1 AND study_id = $2 AND lower(name) = lower($3)
 `
 
@@ -327,7 +327,7 @@ func GetUserAssetByStudy(
 		"updated_at",
 		"user_id",
 	}
-	from := "user_asset_master"
+	from := "user_asset"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserAssetsByStudy", sql)
@@ -361,7 +361,7 @@ func GetUserAssetByUser(
 		"updated_at",
 		"user_id",
 	}
-	from := "user_asset_master"
+	from := "user_asset"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getUserAssetsByUser", sql)
@@ -450,7 +450,7 @@ func CreateUserAsset(
 		return nil, err
 	}
 
-	userAsset, err := GetUserAsset(db, row.Id.String)
+	userAsset, err := GetUserAsset(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +592,7 @@ func UpdateUserAsset(
 		return nil, ErrNotFound
 	}
 
-	userAsset, err := GetUserAsset(db, row.Id.String)
+	userAsset, err := GetUserAsset(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

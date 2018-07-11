@@ -3,13 +3,13 @@ package route
 import (
 	"net/http"
 
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
+	"github.com/rs/cors"
 )
 
-func GraphiQL() http.Handler {
-	graphiQLHandler := GraphiQLHandler{}
-	return middleware.CommonMiddleware.Then(graphiQLHandler)
-}
+var GraphiQLCors = cors.New(cors.Options{
+	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
+	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+})
 
 type GraphiQLHandler struct{}
 

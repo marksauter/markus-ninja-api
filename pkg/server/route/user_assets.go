@@ -8,17 +8,18 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/rs/cors"
 )
 
-func UserAssets(svcs *service.Services) http.Handler {
-	userAssetsHandler := UserAssetsHandler{svcs}
-	return middleware.CommonMiddleware.Then(userAssetsHandler)
-}
+var UserAssetsCors = cors.New(cors.Options{
+	AllowedHeaders: []string{"Content-Type"},
+	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
+	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+})
 
 type UserAssetsHandler struct {
-	svcs *service.Services
+	StorageSvc *service.StorageService
 }
 
 func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -40,7 +41,7 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	}
 
 	key := routeVars["key"]
-	asset, err := h.svcs.Storage.Get(uid, key)
+	asset, err := h.StorageSvc.Get(uid, key)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get file")
 		response := myhttp.InternalServerErrorResponse(err.Error())

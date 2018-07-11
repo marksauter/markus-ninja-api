@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -24,8 +25,10 @@ func (r *updateTopicsPayloadResolver) Message() string {
 	return ""
 }
 
-func (r *updateTopicsPayloadResolver) Topicable() (*topicableResolver, error) {
-	t, err := r.Repos.GetTopicable(r.TopicableId)
+func (r *updateTopicsPayloadResolver) Topicable(
+	ctx context.Context,
+) (*topicableResolver, error) {
+	t, err := r.Repos.GetTopicable(ctx, r.TopicableId)
 	if err != nil {
 		return nil, err
 	}

@@ -9,24 +9,25 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/rs/cors"
 )
 
-func UploadAssets(repos *repo.Repos, svcs *service.Services) http.Handler {
-	authMiddleware := middleware.Authenticate{svcs.Auth}
-	uploadAssetsHandler := UploadAssetsHandler{Repos: repos}
-	return middleware.CommonMiddleware.Append(
-		authMiddleware.Use,
-		repos.Use,
-	).Then(uploadAssetsHandler)
-}
+var UploadAssetsCors = cors.New(cors.Options{
+	AllowedHeaders: []string{"Content-Type"},
+	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
+	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+})
 
 type UploadAssetsHandler struct {
 	Repos *repo.Repos
 }
 
 func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		response := myhttp.MethodNotAllowedResponse(req.Method)
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
 	file, header, err := req.FormFile("file")
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get form file")
@@ -60,7 +61,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	userAssetPermit, err := h.Repos.UserAsset().Upload(&viewer.Id, sid, file, header)
+	userAssetPermit, err := h.Repos.UserAsset().Upload(req.Context(), &viewer.Id, sid, file, header)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to upload file")
 		response := myhttp.InternalServerErrorResponse(err.Error())

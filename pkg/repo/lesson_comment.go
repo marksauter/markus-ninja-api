@@ -1,12 +1,14 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -117,45 +119,82 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonCommentRepo) CountByLesson(userId, studyId, lessonId string) (int32, error) {
-	return r.svc.CountByLesson(userId, studyId, lessonId)
+func (r *LessonCommentRepo) CountByLesson(
+	ctx context.Context,
+	userId,
+	studyId,
+	lessonId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLessonCommentByLesson(db, userId, studyId, lessonId)
 }
 
-func (r *LessonCommentRepo) CountByStudy(userId, studyId string) (int32, error) {
-	return r.svc.CountByStudy(userId, studyId)
+func (r *LessonCommentRepo) CountByStudy(
+	ctx context.Context,
+	userId,
+	studyId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLessonCommentByStudy(db, userId, studyId)
 }
 
-func (r *LessonCommentRepo) CountByUser(userId string) (int32, error) {
-	return r.svc.CountByUser(userId)
+func (r *LessonCommentRepo) CountByUser(
+	ctx context.Context,
+	userId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLessonCommentByUser(db, userId)
 }
 
-func (r *LessonCommentRepo) Create(lc *data.LessonComment) (*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) Create(
+	ctx context.Context,
+	lc *data.LessonComment,
+) (*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, lc); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, lc); err != nil {
 		return nil, err
 	}
-	lessonComment, err := r.svc.Create(lc)
+	lessonComment, err := data.CreateLessonComment(db, lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
 	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
-func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) Get(
+	ctx context.Context,
+	id string,
+) (*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComment, err := r.load.Get(id)
+	lessonComment, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +202,7 @@ func (r *LessonCommentRepo) Get(id string) (*LessonCommentPermit, error) {
 }
 
 func (r *LessonCommentRepo) GetByLesson(
+	ctx context.Context,
 	userId,
 	studyId,
 	lessonId string,
@@ -171,13 +211,17 @@ func (r *LessonCommentRepo) GetByLesson(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByLesson(userId, studyId, lessonId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComments, err := data.GetLessonCommentByLesson(db, userId, studyId, lessonId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -189,6 +233,7 @@ func (r *LessonCommentRepo) GetByLesson(
 }
 
 func (r *LessonCommentRepo) GetByStudy(
+	ctx context.Context,
 	userId,
 	studyId string,
 	po *data.PageOptions,
@@ -196,13 +241,17 @@ func (r *LessonCommentRepo) GetByStudy(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByStudy(userId, studyId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComments, err := data.GetLessonCommentByStudy(db, userId, studyId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -213,17 +262,25 @@ func (r *LessonCommentRepo) GetByStudy(
 	return lessonCommentPermits, nil
 }
 
-func (r *LessonCommentRepo) GetByUser(userId string, po *data.PageOptions) ([]*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) GetByUser(
+	ctx context.Context,
+	userId string,
+	po *data.PageOptions,
+) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	lessonComments, err := r.svc.GetByUser(userId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComments, err := data.GetLessonCommentByUser(db, userId, po)
 	if err != nil {
 		return nil, err
 	}
 	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
 	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComments[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -234,43 +291,63 @@ func (r *LessonCommentRepo) GetByUser(userId string, po *data.PageOptions) ([]*L
 	return lessonCommentPermits, nil
 }
 
-func (r *LessonCommentRepo) Delete(lessonComment *data.LessonComment) error {
+func (r *LessonCommentRepo) Delete(
+	ctx context.Context,
+	lc *data.LessonComment,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DeleteAccess, lessonComment); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, lc); err != nil {
 		return err
 	}
-	return r.svc.Delete(lessonComment.Id.String)
+	return data.DeleteLessonComment(db, lc.Id.String)
 }
 
-func (r *LessonCommentRepo) Update(lc *data.LessonComment) (*LessonCommentPermit, error) {
+func (r *LessonCommentRepo) Update(
+	ctx context.Context,
+	lc *data.LessonComment,
+) (*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, lc); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, lc); err != nil {
 		return nil, err
 	}
-	lessonComment, err := r.svc.Update(lc)
+	lessonComment, err := data.UpdateLessonComment(db, lc)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
 	if err != nil {
 		return nil, err
 	}
 	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
-func (r *LessonCommentRepo) ViewerCanDelete(l *data.LessonComment) bool {
-	if _, err := r.permit.Check(mytype.DeleteAccess, l); err != nil {
+func (r *LessonCommentRepo) ViewerCanDelete(
+	ctx context.Context,
+	l *data.LessonComment,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
 		return false
 	}
 	return true
 }
 
-func (r *LessonCommentRepo) ViewerCanUpdate(l *data.LessonComment) bool {
-	if _, err := r.permit.Check(mytype.UpdateAccess, l); err != nil {
+func (r *LessonCommentRepo) ViewerCanUpdate(
+	ctx context.Context,
+	l *data.LessonComment,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
 		return false
 	}
 	return true

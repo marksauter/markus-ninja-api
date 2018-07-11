@@ -19,7 +19,9 @@ func (r *addLabelPayloadResolver) LabelEdge() (*labelEdgeResolver, error) {
 	return NewLabelEdgeResolver(r.Label, r.Repos)
 }
 
-func (r *addLabelPayloadResolver) Labelable(ctx context.Context) (*labelableResolver, error) {
+func (r *addLabelPayloadResolver) Labelable(
+	ctx context.Context,
+) (*labelableResolver, error) {
 	labelableId, err := r.Labeled.LabelableId()
 	if err != nil {
 		return nil, err

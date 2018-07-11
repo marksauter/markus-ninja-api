@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -98,19 +100,42 @@ func (r *TopicRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *TopicRepo) CountBySearch(within *mytype.OID, query string) (int32, error) {
-	return r.svc.CountBySearch(within, query)
+func (r *TopicRepo) CountBySearch(
+	ctx context.Context,
+	within *mytype.OID, query string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountTopicBySearch(db, within, query)
 }
 
-func (r *TopicRepo) CountByTopicable(topicableId string) (int32, error) {
-	return r.svc.CountByTopicable(topicableId)
+func (r *TopicRepo) CountByTopicable(
+	ctx context.Context,
+	topicableId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountTopicByTopicable(db, topicableId)
 }
 
-func (r *TopicRepo) Create(s *data.Topic) (*TopicPermit, error) {
+func (r *TopicRepo) Create(
+	ctx context.Context,
+	s *data.Topic,
+) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.CreateAccess, s); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(s.Name.String)
@@ -118,26 +143,29 @@ func (r *TopicRepo) Create(s *data.Topic) (*TopicPermit, error) {
 	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
-	topic, err := r.svc.Create(s)
+	topic, err := data.CreateTopic(db, s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topic)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
 }
 
-func (r *TopicRepo) Get(id string) (*TopicPermit, error) {
+func (r *TopicRepo) Get(
+	ctx context.Context,
+	id string,
+) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topic, err := r.load.Get(id)
+	topic, err := r.load.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topic)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -145,19 +173,24 @@ func (r *TopicRepo) Get(id string) (*TopicPermit, error) {
 }
 
 func (r *TopicRepo) GetByTopicable(
+	ctx context.Context,
 	topicableId string,
 	po *data.PageOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topics, err := r.svc.GetByTopicable(topicableId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	topics, err := data.GetTopicByTopicable(db, topicableId, po)
 	if err != nil {
 		return nil, err
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topics[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topics[0])
 		if err != nil {
 			return nil, err
 		}
@@ -168,32 +201,43 @@ func (r *TopicRepo) GetByTopicable(
 	return topicPermits, nil
 }
 
-func (r *TopicRepo) GetByName(name string) (*TopicPermit, error) {
+func (r *TopicRepo) GetByName(
+	ctx context.Context,
+	name string,
+) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topic, err := r.load.GetByName(name)
+	topic, err := r.load.GetByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topic)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
 }
 
-func (r *TopicRepo) Search(query string, po *data.PageOptions) ([]*TopicPermit, error) {
+func (r *TopicRepo) Search(
+	ctx context.Context,
+	query string,
+	po *data.PageOptions,
+) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topics, err := r.svc.Search(query, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	topics, err := data.SearchTopic(db, query, po)
 	if err != nil {
 		return nil, err
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topics[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topics[0])
 		if err != nil {
 			return nil, err
 		}
@@ -204,18 +248,25 @@ func (r *TopicRepo) Search(query string, po *data.PageOptions) ([]*TopicPermit, 
 	return topicPermits, nil
 }
 
-func (r *TopicRepo) Update(s *data.Topic) (*TopicPermit, error) {
+func (r *TopicRepo) Update(
+	ctx context.Context,
+	s *data.Topic,
+) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.UpdateAccess, s); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
 		return nil, err
 	}
-	topic, err := r.svc.Update(s)
+	topic, err := data.UpdateTopic(db, s)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topic)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
 		return nil, err
 	}

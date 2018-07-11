@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
@@ -93,49 +95,75 @@ func (r *TopicedRepo) CheckConnection() error {
 // Service methods
 
 func (r *TopicedRepo) CountByTopic(
+	ctx context.Context,
 	topicId string,
 ) (int32, error) {
-	return r.svc.CountByTopic(topicId)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountTopicedByTopic(db, topicId)
 }
 
 func (r *TopicedRepo) CountByTopicable(
+	ctx context.Context,
 	topicableId string,
 ) (int32, error) {
-	return r.svc.CountByTopicable(topicableId)
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountTopicedByTopicable(db, topicableId)
 }
 
-func (r *TopicedRepo) Connect(topiced *data.Topiced) (*TopicedPermit, error) {
+func (r *TopicedRepo) Connect(
+	ctx context.Context,
+	topiced *data.Topiced,
+) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	if _, err := r.permit.Check(mytype.ConnectAccess, topiced); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, topiced); err != nil {
 		return nil, err
 	}
-	topiced, err := r.svc.Connect(topiced)
+	topiced, err := data.CreateTopiced(db, *topiced)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiced)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
 	return &TopicedPermit{fieldPermFn, topiced}, nil
 }
 
-func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
+func (r *TopicedRepo) Get(
+	ctx context.Context,
+	t *data.Topiced,
+) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
 	var topiced *data.Topiced
 	var err error
 	if topiced.Id.Status != pgtype.Undefined {
-		topiced, err = r.load.Get(t.Id.Int)
+		topiced, err = r.load.Get(ctx, t.Id.Int)
 		if err != nil {
 			return nil, err
 		}
 	} else if topiced.TopicableId.Status != pgtype.Undefined &&
 		topiced.TopicId.Status != pgtype.Undefined {
-		topiced, err = r.load.GetForTopicable(t.TopicableId.String, t.TopicId.String)
+		topiced, err = r.load.GetByTopicableAndTopic(
+			ctx,
+			t.TopicableId.String,
+			t.TopicId.String,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +172,7 @@ func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
 			"must include either topiced `id` or `topicable_id` and `topic_id` to get an topiced",
 		)
 	}
-	fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiced)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiced)
 	if err != nil {
 		return nil, err
 	}
@@ -152,19 +180,24 @@ func (r *TopicedRepo) Get(t *data.Topiced) (*TopicedPermit, error) {
 }
 
 func (r *TopicedRepo) GetByTopic(
+	ctx context.Context,
 	topicId string,
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topiceds, err := r.svc.GetByTopic(topicId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	topiceds, err := data.GetTopicedByTopic(db, topicId, po)
 	if err != nil {
 		return nil, err
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiceds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -176,19 +209,24 @@ func (r *TopicedRepo) GetByTopic(
 }
 
 func (r *TopicedRepo) GetByTopicable(
+	ctx context.Context,
 	topicableId string,
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	topiceds, err := r.svc.GetByTopicable(topicableId, po)
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	topiceds, err := data.GetTopicedByTopicable(db, topicableId, po)
 	if err != nil {
 		return nil, err
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
-		fieldPermFn, err := r.permit.Check(mytype.ReadAccess, topiceds[0])
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiceds[0])
 		if err != nil {
 			return nil, err
 		}
@@ -199,18 +237,25 @@ func (r *TopicedRepo) GetByTopicable(
 	return topicedPermits, nil
 }
 
-func (r *TopicedRepo) Disconnect(topiced *data.Topiced) error {
+func (r *TopicedRepo) Disconnect(
+	ctx context.Context,
+	topiced *data.Topiced,
+) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
 	}
-	if _, err := r.permit.Check(mytype.DisconnectAccess, topiced); err != nil {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, topiced); err != nil {
 		return err
 	}
 	if topiced.Id.Status != pgtype.Undefined {
-		return r.svc.Disconnect(topiced.Id.Int)
+		return data.DeleteTopiced(db, topiced.Id.Int)
 	} else if topiced.TopicableId.Status != pgtype.Undefined &&
 		topiced.TopicId.Status != pgtype.Undefined {
-		return r.svc.DisconnectFromTopicable(topiced.TopicableId.String, topiced.TopicId.String)
+		return data.DeleteTopicedByTopicableAndTopic(db, topiced.TopicableId.String, topiced.TopicId.String)
 	}
 	return errors.New(
 		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",

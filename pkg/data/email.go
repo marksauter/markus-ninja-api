@@ -46,7 +46,7 @@ func CountEmailByUser(
 	userId string,
 	opts ...EmailFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountByUser(user_id) Email")
+	mylog.Log.WithField("user_id", userId).Info("CountEmailByUser(user_id) Email")
 
 	ands := make([]string, len(opts))
 	for i, o := range opts {
@@ -138,7 +138,7 @@ const getEmailByIdSQL = `
 `
 
 func GetEmail(db Queryer, id string) (*Email, error) {
-	mylog.Log.WithField("id", id).Info("Email.Get(id)")
+	mylog.Log.WithField("id", id).Info("GetEmail(id)")
 	return getEmail(db, "getEmailById", getEmailByIdSQL, id)
 }
 
@@ -159,7 +159,7 @@ const getEmailByValueSQL = `
 func GetEmailByValue(db Queryer, email string) (*Email, error) {
 	mylog.Log.WithField(
 		"email", email,
-	).Info("Email.GetByValue(email)")
+	).Info("GetEmailByValue(email)")
 	return getEmail(
 		db,
 		"getEmailByValue",
@@ -176,7 +176,7 @@ func GetEmailByUser(
 ) ([]*Email, error) {
 	mylog.Log.WithField(
 		"user_id", userId.String,
-	).Info("Email.GetByUser(userId)")
+	).Info("GetEmailByUser(userId)")
 
 	ands := make([]string, len(opts))
 	for i, o := range opts {
@@ -207,7 +207,7 @@ func GetEmailByUser(
 }
 
 func CreateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("Email.Create()")
+	mylog.Log.Info("CreateEmail()")
 
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -264,7 +264,7 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 		return nil, err
 	}
 
-	email, err := GetEmail(db, row.Id.String)
+	email, err := GetEmail(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,7 @@ const deleteEmailSQL = `
 `
 
 func DeleteEmail(db Queryer, id string) error {
-	mylog.Log.WithField("id", id).Info("Email.Delete(id)")
+	mylog.Log.WithField("id", id).Info("DeleteEmail(id)")
 
 	commandTag, err := prepareExec(
 		db,
@@ -306,7 +306,7 @@ func DeleteEmail(db Queryer, id string) error {
 }
 
 func UpdateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("Email.Update()")
+	mylog.Log.Info("UpdateEmail()")
 
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
@@ -346,7 +346,7 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 		return nil, ErrNotFound
 	}
 
-	email, err := GetEmail(db, row.Id.String)
+	email, err := GetEmail(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}

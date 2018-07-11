@@ -145,8 +145,8 @@ const getLabeledByLabelableAndLabelSQL = `
 	SELECT
 		created_at,
 		id,
-		label_id
-		labelable_id,
+		label_id,
+		labelable_id
 	FROM labeled
 	WHERE labelable_id = $1 AND label_id = $2
 `
@@ -214,11 +214,13 @@ func GetLabeledByLabelable(
 	return getManyLabeled(db, psName, sql, args...)
 }
 
-func ConnectLabeled(
+func CreateLabeled(
 	db Queryer,
-	row *Labeled,
+	row Labeled,
 ) (*Labeled, error) {
-	mylog.Log.Info("ConnectLabeled()")
+	mylog.Log.WithField(
+		"labelable", row.LabelableId.Type,
+	).Info("CreateLabeled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -256,15 +258,12 @@ func ConnectLabeled(
 	sql := `
 		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING labeled_id
 	`
 
 	psName := preparedName("createLabeled", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
-	)
-	if err != nil {
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil && err != pgx.ErrNoRows {
 		mylog.Log.WithError(err).Error("failed to create labeled")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -279,7 +278,11 @@ func ConnectLabeled(
 		return nil, err
 	}
 
-	labeled, err := GetLabeled(db, row.Id.Int)
+	labeled, err := GetLabeledByLabelableAndLabel(
+		tx,
+		row.LabelableId.String,
+		row.LabelId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -295,12 +298,12 @@ func ConnectLabeled(
 	return labeled, nil
 }
 
-func BatchConnectLabeled(
+func BatchCreateLabeled(
 	db Queryer,
 	src *Labeled,
 	labelableIds []*mytype.OID,
 ) error {
-	mylog.Log.Info("BatchConnectLabeled()")
+	mylog.Log.Info("BatchCreateLabeled()")
 
 	n := len(labelableIds)
 	lessonLabeleds := make([][]interface{}, 0, n)
@@ -366,20 +369,20 @@ func BatchConnectLabeled(
 	return nil
 }
 
-const disconnectLabeledSQL = `
+const deleteLabeledSQL = `
 	DELETE FROM labeled
 	WHERE id = $1
 `
 
-func DisconnectLabeled(
+func DeleteLabeled(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.WithField("id", id).Info("DisconnectLabeled(id)")
+	mylog.Log.Info("DeleteLabeled()")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectLabeled",
-		disconnectLabeledSQL,
+		"deleteLabeled",
+		deleteLabeledSQL,
 		id,
 	)
 	if err != nil {
@@ -392,21 +395,21 @@ func DisconnectLabeled(
 	return nil
 }
 
-const disconnectLabeledFromLabelableSQL = `
+const deleteLabeledByLabelableAndLabelSQL = `
 	DELETE FROM labeled
 	WHERE labelable_id = $1 AND label_id = $2
 `
 
-func DisconnectLabeledFromLabelable(
+func DeleteLabeledByLabelableAndLabel(
 	db Queryer,
 	labelable_id,
 	label_id string,
 ) error {
-	mylog.Log.Info("DisconnectLabeledFromLabelable()")
+	mylog.Log.Info("DeleteLabeledByLabelableAndLabel()")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectLabeledFromLabelable",
-		disconnectLabeledFromLabelableSQL,
+		"deleteLabeledByLabelableAndLabel",
+		deleteLabeledByLabelableAndLabelSQL,
 		labelable_id,
 		label_id,
 	)

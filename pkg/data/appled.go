@@ -201,8 +201,11 @@ func GetAppledByAppleable(
 	return getManyAppled(db, psName, sql, args...)
 }
 
-func ConnectAppled(db Queryer, row *Appled) (*Appled, error) {
-	mylog.Log.Info("ConnectAppled()")
+func CreateAppled(
+	db Queryer,
+	row Appled,
+) (*Appled, error) {
+	mylog.Log.Info("CreateAppled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -240,15 +243,12 @@ func ConnectAppled(db Queryer, row *Appled) (*Appled, error) {
 	sql := `
 		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING appled_id
 	`
 
 	psName := preparedName("createAppled", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
-	)
-	if err != nil {
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil && err != pgx.ErrNoRows {
 		mylog.Log.WithError(err).Error("failed to create appled")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -263,7 +263,11 @@ func ConnectAppled(db Queryer, row *Appled) (*Appled, error) {
 		return nil, err
 	}
 
-	appled, err := GetAppled(tx, row.Id.Int)
+	appled, err := GetAppledByAppleableAndUser(
+		tx,
+		row.AppleableId.String,
+		row.UserId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -279,17 +283,17 @@ func ConnectAppled(db Queryer, row *Appled) (*Appled, error) {
 	return appled, nil
 }
 
-const disconnectAppledSQL = `
+const deleteAppledSQL = `
 	DELETE FROM appled
 	WHERE id = $1
 `
 
-func DisconnectAppled(db Queryer, id int32) error {
-	mylog.Log.WithField("id", id).Info("DisconnectAppled(id)")
+func DeleteAppled(db Queryer, id int32) error {
+	mylog.Log.WithField("id", id).Info("DeleteAppled(id)")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectAppled",
-		disconnectAppledSQL,
+		"deleteAppled",
+		deleteAppledSQL,
 		id,
 	)
 	if err != nil {
@@ -302,17 +306,17 @@ func DisconnectAppled(db Queryer, id int32) error {
 	return nil
 }
 
-const disconnectAppledFromAppleableSQL = `
+const deleteAppledByAppleableAndUserSQL = `
 	DELETE FROM appled
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func DisconnectAppledFromAppleable(db Queryer, appleable_id, user_id string) error {
-	mylog.Log.Info("DisconnectAppledFromAppleable()")
+func DeleteAppledByAppleableAndUser(db Queryer, appleable_id, user_id string) error {
+	mylog.Log.Info("DeleteAppledByAppleableAndUser()")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectAppledFromAppleable",
-		disconnectAppledFromAppleableSQL,
+		"deleteAppledByAppleableAndUser",
+		deleteAppledByAppleableAndUserSQL,
 		appleable_id,
 		user_id,
 	)

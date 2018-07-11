@@ -9,27 +9,19 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
-func Token(db data.Queryer, svcs *service.Services) http.Handler {
-	tokenHandler := TokenHandler{db, svcs}
-	return middleware.CommonMiddleware.Append(
-		tokenCors.Handler,
-	).Then(tokenHandler)
-}
-
-var tokenCors = cors.New(cors.Options{
+var TokenCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
 	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
 })
 
 type TokenHandler struct {
-	db   data.Queryer
-	svcs *service.Services
+	AuthSvc *service.AuthService
+	Db      data.Queryer
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -57,14 +49,14 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var user *data.User
 	err = checkmail.ValidateFormat(creds.Login)
 	if err != nil {
-		user, err = data.GetUserCredentialsByLogin(h.db, creds.Login)
+		user, err = data.GetUserCredentialsByLogin(h.Db, creds.Login)
 		if err != nil {
 			response := myhttp.InvalidCredentialsErrorResponse()
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 	} else {
-		user, err = data.GetUserCredentialsByEmail(h.db, creds.Login)
+		user, err = data.GetUserCredentialsByEmail(h.Db, creds.Login)
 		if err != nil {
 			response := myhttp.InvalidCredentialsErrorResponse()
 			myhttp.WriteResponseTo(rw, response)
@@ -81,7 +73,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
-	jwt, err := h.svcs.Auth.SignJWT(&payload)
+	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)

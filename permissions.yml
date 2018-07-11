@@ -404,6 +404,14 @@ permissions:
     authenticated: true
     roles:
       - user
+    fields:
+      - name
+      - original_name
+      - size
+      - study_id
+      - subtype
+      - type
+      - user_id
   # Only owners can update/delete user assets. 
   - operation: Update UserAsset
     authenticated: true

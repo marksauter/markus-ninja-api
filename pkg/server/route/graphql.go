@@ -11,18 +11,14 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/server/middleware"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/rs/cors"
 )
 
-func GraphQL(schema *graphql.Schema, repos *repo.Repos, svcs *service.Services) http.Handler {
-	authMiddleware := middleware.Authenticate{svcs.Auth}
-	graphQLHandler := GraphQLHandler{Schema: schema, Repos: repos}
-	return middleware.CommonMiddleware.Append(
-		authMiddleware.Use,
-		repos.Use,
-	).Then(graphQLHandler)
-}
+var GraphQLCors = cors.New(cors.Options{
+	AllowedHeaders: []string{"Content-Type"},
+	AllowedMethods: []string{http.MethodOptions, http.MethodPost, http.MethodGet},
+	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+})
 
 type GraphQLHandler struct {
 	Schema *graphql.Schema

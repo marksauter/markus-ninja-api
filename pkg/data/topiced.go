@@ -214,11 +214,11 @@ func GetTopicedByTopicable(
 	return getManyTopiced(db, psName, sql, args...)
 }
 
-func ConnectTopiced(
+func CreateTopiced(
 	db Queryer,
-	row *Topiced,
+	row Topiced,
 ) (*Topiced, error) {
-	mylog.Log.Info("ConnectTopiced()")
+	mylog.Log.Info("CreateTopiced()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -261,10 +261,8 @@ func ConnectTopiced(
 
 	psName := preparedName("createTopiced", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
-	)
-	if err != nil {
+	_, err = prepareExec(tx, psName, sql, args...)
+	if err != nil && err != pgx.ErrNoRows {
 		mylog.Log.WithError(err).Error("failed to create topiced")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -279,7 +277,11 @@ func ConnectTopiced(
 		return nil, err
 	}
 
-	topiced, err := GetTopiced(db, row.Id.Int)
+	topiced, err := GetTopicedByTopicableAndTopic(
+		tx,
+		row.TopicableId.String,
+		row.TopicId.String,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -295,20 +297,20 @@ func ConnectTopiced(
 	return topiced, nil
 }
 
-const disconnectTopicedSQL = `
+const deleteTopicedSQL = `
 	DELETE FROM topiced
 	WHERE id = $1
 `
 
-func DisconnectTopiced(
+func DeleteTopiced(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.WithField("id", id).Info("DisconnectTopiced(id)")
+	mylog.Log.WithField("id", id).Info("DeleteTopiced(id)")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectTopiced",
-		disconnectTopicedSQL,
+		"deleteTopiced",
+		deleteTopicedSQL,
 		id,
 	)
 	if err != nil {
@@ -321,21 +323,21 @@ func DisconnectTopiced(
 	return nil
 }
 
-const disconnectTopicedFromTopicableSQL = `
+const deleteTopicedByTopicableAndTopicSQL = `
 	DELETE FROM topiced
 	WHERE topicable_id = $1 AND topic_id = $2
 `
 
-func DisconnectTopicedFromTopicable(
+func DeleteTopicedByTopicableAndTopic(
 	db Queryer,
 	topicable_id,
 	topic_id string,
 ) error {
-	mylog.Log.Info("DisconnectTopicedFromTopicable()")
+	mylog.Log.Info("DeleteTopicedByTopicableAndTopic()")
 	commandTag, err := prepareExec(
 		db,
-		"disconnectTopicedFromTopicable",
-		disconnectTopicedFromTopicableSQL,
+		"deleteTopicedFromTopicable",
+		deleteTopicedByTopicableAndTopicSQL,
 		topicable_id,
 		topic_id,
 	)
