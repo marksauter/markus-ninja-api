@@ -1,0 +1,8 @@
+# Input type for UpdateUserAsset.
+input UpdateUserAssetInput {
+  # The name of the user asset.
+  name: String
+
+  # ID of the user asset.
+  userAssetId: ID!
+}

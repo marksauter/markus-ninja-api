@@ -1,0 +1,8 @@
+# Input type for RemoveLabel.
+input RemoveLabelInput {
+  # The ID of the label to remove. 
+  labelId: ID!
+
+  # The ID of the labelable from which to remove the label.
+  labelableId: ID!
+}

@@ -1,5 +1,0 @@
-# Input type for DeleteAcccount.
-input DeleteAcccountInput {
-  # Token to verify authenticity.
-  token: String!
-}

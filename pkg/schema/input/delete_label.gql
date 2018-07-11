@@ -1,0 +1,5 @@
+# Input type for DeleteLabel.
+input DeleteLabelInput {
+  # ID of the label.
+  labelId: ID!
+}

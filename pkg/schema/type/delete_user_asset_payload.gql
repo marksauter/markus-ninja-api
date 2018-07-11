@@ -1,0 +1,8 @@
+# Return type for DeleteUserAsset.
+type DeleteUserAssetPayload {
+  # The deleted user asset id.
+  deletedUserAssetId: ID!
+
+  # The study the deleted user asset was in.
+  study: Study!
+}

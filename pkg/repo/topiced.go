@@ -152,13 +152,13 @@ func (r *TopicedRepo) Get(
 	}
 	var topiced *data.Topiced
 	var err error
-	if topiced.Id.Status != pgtype.Undefined {
+	if t.Id.Status != pgtype.Undefined {
 		topiced, err = r.load.Get(ctx, t.Id.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if topiced.TopicableId.Status != pgtype.Undefined &&
-		topiced.TopicId.Status != pgtype.Undefined {
+	} else if t.TopicableId.Status != pgtype.Undefined &&
+		t.TopicId.Status != pgtype.Undefined {
 		topiced, err = r.load.GetByTopicableAndTopic(
 			ctx,
 			t.TopicableId.String,
