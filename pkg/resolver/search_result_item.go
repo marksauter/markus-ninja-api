@@ -17,6 +17,11 @@ func (r *searchResultItemResolver) ToStudy() (*studyResolver, bool) {
 	return &studyResolver{Study: study, Repos: r.Repos}, ok
 }
 
+func (r *searchResultItemResolver) ToTopic() (*topicResolver, bool) {
+	topic, ok := r.Item.(*repo.TopicPermit)
+	return &topicResolver{Topic: topic, Repos: r.Repos}, ok
+}
+
 func (r *searchResultItemResolver) ToUser() (*userResolver, bool) {
 	user, ok := r.Item.(*repo.UserPermit)
 	return &userResolver{User: user, Repos: r.Repos}, ok

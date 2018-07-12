@@ -259,7 +259,7 @@ func GetUserAssetByName(
 	)
 }
 
-const getAssetByUserStudyAndNameSQL = `
+const getUserAssetByUserStudyAndNameSQL = `
 	SELECT
 		ua.created_at,
 		ua.id,
@@ -290,8 +290,8 @@ func GetUserAssetByUserStudyAndName(
 	).Info("GetUserAssetByUserStudyAndName(name)")
 	return getUserAsset(
 		db,
-		"getAssetByUserStudyAndName",
-		getAssetByUserStudyAndNameSQL,
+		"getUserAssetByUserStudyAndName",
+		getUserAssetByUserStudyAndNameSQL,
 		userLogin,
 		studyName,
 		name,
@@ -491,10 +491,10 @@ const refreshUserAssetSearchIndexSQL = `
 	SELECT refresh_mv_xxx('user_asset_search_index')
 `
 
-func RefreshUserAssetIndex(
+func RefreshUserAssetSearchIndex(
 	db Queryer,
 ) error {
-	mylog.Log.Info("RefreshUserAssetIndex()")
+	mylog.Log.Info("RefreshUserAssetSearchIndex()")
 	_, err := prepareExec(
 		db,
 		"refreshUserAssetSearchIndex",

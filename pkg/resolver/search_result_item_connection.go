@@ -5,13 +5,19 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
+type resultItemCounts struct {
+	Lesson    int32
+	Study     int32
+	Topic     int32
+	User      int32
+	UserAsset int32
+}
+
 func NewSearchResultItemConnectionResolver(
 	repos *repo.Repos,
-	searchResultItems []repo.NodePermit, pageOptions *data.PageOptions,
-	lessonCount int32,
-	studyCount int32,
-	userCount int32,
-	userAssetCount int32,
+	searchResultItems []repo.NodePermit,
+	pageOptions *data.PageOptions,
+	counts *resultItemCounts,
 ) (*searchResultItemConnectionResolver, error) {
 	edges := make([]*searchResultItemEdgeResolver, len(searchResultItems))
 	for i := range edges {
@@ -29,27 +35,21 @@ func NewSearchResultItemConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &searchResultItemConnectionResolver{
+		counts:            counts,
 		edges:             edges,
 		searchResultItems: searchResultItems,
 		pageInfo:          pageInfo,
 		repos:             repos,
-		lessonCount:       lessonCount,
-		studyCount:        studyCount,
-		userCount:         userCount,
-		userAssetCount:    userAssetCount,
 	}
 	return resolver, nil
 }
 
 type searchResultItemConnectionResolver struct {
+	counts            *resultItemCounts
 	edges             []*searchResultItemEdgeResolver
-	lessonCount       int32
 	searchResultItems []repo.NodePermit
 	pageInfo          *pageInfoResolver
 	repos             *repo.Repos
-	studyCount        int32
-	userCount         int32
-	userAssetCount    int32
 }
 
 func (r *searchResultItemConnectionResolver) Edges() *[]*searchResultItemEdgeResolver {
@@ -61,7 +61,7 @@ func (r *searchResultItemConnectionResolver) Edges() *[]*searchResultItemEdgeRes
 }
 
 func (r *searchResultItemConnectionResolver) LessonCount() int32 {
-	return r.lessonCount
+	return r.counts.Lesson
 }
 
 func (r *searchResultItemConnectionResolver) Nodes() *[]*searchResultItemResolver {
@@ -81,13 +81,17 @@ func (r *searchResultItemConnectionResolver) PageInfo() (*pageInfoResolver, erro
 }
 
 func (r *searchResultItemConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+	return r.counts.Study
+}
+
+func (r *searchResultItemConnectionResolver) TopicCount() int32 {
+	return r.counts.Topic
 }
 
 func (r *searchResultItemConnectionResolver) UserCount() int32 {
-	return r.userCount
+	return r.counts.User
 }
 
 func (r *searchResultItemConnectionResolver) UserAssetCount() int32 {
-	return r.userAssetCount
+	return r.counts.UserAsset
 }

@@ -352,8 +352,10 @@ func startRefreshMV(db data.Queryer) {
 		go data.RefreshLessonSearchIndex(db)
 		time.Sleep(10 * time.Second)
 		go data.RefreshTopicSearchIndex(db)
-		time.Sleep(10 * time.Minute)
+		time.Sleep(10 * time.Second)
 		go data.RefreshLabelSearchIndex(db)
+		time.Sleep(10 * time.Second)
+		go data.RefreshUserAssetSearchIndex(db)
 		time.Sleep(30 * time.Minute)
 	}
 }

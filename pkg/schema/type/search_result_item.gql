@@ -1,5 +1,5 @@
 # The result of a search.
-union SearchResultItem = Lesson | Study | User | UserAsset
+union SearchResultItem = Lesson | Study | Topic | User | UserAsset
 
 # An edge in a search result item connection.
 type SearchResultItemEdge {
