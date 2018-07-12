@@ -161,7 +161,7 @@ func (r *UserAssetLoader) GetByUserStudyAndName(
 	name string,
 ) (*data.UserAsset, error) {
 	compositeKey := newCompositeKey(userLogin, studyName, name)
-	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
+	userAssetData, err := r.batchGetByUserStudyAndName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}

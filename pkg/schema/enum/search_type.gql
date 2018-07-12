@@ -6,6 +6,9 @@ enum SearchType {
   # Returns results matching studies.
   STUDY
 
+  # Returns results matching topics.
+  TOPIC
+
   # Returns results matching users on rkus.ninja.
   USER
 

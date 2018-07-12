@@ -682,6 +682,7 @@ func SearchUser(
 		"login",
 		"name",
 		"public_email",
+		"roles",
 		"updated_at",
 	}
 	from := "user_search_index"

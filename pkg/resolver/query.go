@@ -132,6 +132,10 @@ func (r *RootResolver) Search(
 	if err != nil {
 		return nil, err
 	}
+	topicCount, err := r.Repos.Topic().CountBySearch(ctx, within, args.Query)
+	if err != nil {
+		return nil, err
+	}
 	userCount, err := r.Repos.User().CountBySearch(ctx, args.Query)
 	if err != nil {
 		return nil, err
@@ -139,6 +143,13 @@ func (r *RootResolver) Search(
 	userAssetCount, err := r.Repos.UserAsset().CountBySearch(ctx, within, args.Query)
 	if err != nil {
 		return nil, err
+	}
+	counts := &resultItemCounts{
+		Lesson:    lessonCount,
+		Study:     studyCount,
+		Topic:     topicCount,
+		User:      userCount,
+		UserAsset: userAssetCount,
 	}
 	permits := []repo.NodePermit{}
 
@@ -159,6 +170,15 @@ func (r *RootResolver) Search(
 		}
 		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
+			permits[i] = l
+		}
+	case SearchTypeTopic:
+		topics, err := r.Repos.Topic().Search(ctx, args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(topics))
+		for i, l := range topics {
 			permits[i] = l
 		}
 	case SearchTypeUser:
@@ -185,10 +205,7 @@ func (r *RootResolver) Search(
 		r.Repos,
 		permits,
 		pageOptions,
-		lessonCount,
-		studyCount,
-		userCount,
-		userAssetCount,
+		counts,
 	)
 }
 
