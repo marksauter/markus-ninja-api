@@ -309,6 +309,7 @@ permissions:
       - owner
     fields:
       - description
+      - name
   - operation: Delete Study
     authenticated: true
     roles:

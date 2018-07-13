@@ -3,6 +3,9 @@ input UpdateStudyInput {
   # The description of the study.
   description: String
 
+  # The name of the study.
+  name: String
+
   # ID of the study.
   studyId: ID!
 }

@@ -1,0 +1,8 @@
+# Return type for LoginUser.
+type LoginUserPayload {
+  # The token used by the client for authentication.
+  token: AccessToken
+
+  # The user for which the token was issued.
+  user: User!
+}

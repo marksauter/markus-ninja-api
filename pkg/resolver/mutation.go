@@ -6,10 +6,12 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/badoux/checkmail"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
+	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
@@ -252,6 +254,35 @@ func (r *RootResolver) CreateStudy(
 	}
 
 	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
+}
+
+type CreateUserInput struct {
+	Email    string
+	Login    string
+	Password string
+}
+
+func (r *RootResolver) CreateUser(
+	ctx context.Context,
+	args struct{ Input CreateUserInput },
+) (*userResolver, error) {
+	user := &data.User{}
+	if err := user.PrimaryEmail.Set(args.Input.Email); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
+	}
+	if err := user.Login.Set(args.Input.Login); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user login"}
+	}
+	if err := user.Password.Set(args.Input.Password); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user password"}
+	}
+
+	userPermit, err := r.Repos.User().Create(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userResolver{User: userPermit, Repos: r.Repos}, nil
 }
 
 type DeleteEmailInput struct {
@@ -574,6 +605,49 @@ func (r *RootResolver) GiveApple(
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
 	return &appleableResolver{appleable}, nil
+}
+
+type LoginUserInput struct {
+	Login    string
+	Password string
+}
+
+func (r *RootResolver) LoginUser(
+	ctx context.Context,
+	args struct{ Input LoginUserInput },
+) (*loginUserPayloadResolver, error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	var user *data.User
+	if err := checkmail.ValidateFormat(args.Input.Login); err != nil {
+		user, err = data.GetUserCredentialsByLogin(db, args.Input.Login)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		user, err = data.GetUserCredentialsByEmail(db, args.Input.Login)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := user.Password.CompareToPassword(args.Input.Password); err != nil {
+		return nil, errors.New("passwords do not match")
+	}
+
+	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
+	jwt, err := r.Svcs.Auth.SignJWT(&payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &loginUserPayloadResolver{
+		AccessToken: jwt,
+		Repos:       r.Repos,
+	}, nil
 }
 
 type MoveLessonInput struct {
@@ -1065,6 +1139,7 @@ func (r *RootResolver) UpdateLessonComment(
 
 type UpdateStudyInput struct {
 	Description *string
+	Name        *string
 	StudyId     string
 }
 
@@ -1080,6 +1155,11 @@ func (r *RootResolver) UpdateStudy(
 	if args.Input.Description != nil {
 		if err := study.Description.Set(args.Input.Description); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set study description"}
+		}
+	}
+	if args.Input.Name != nil {
+		if err := study.Name.Set(args.Input.Name); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set study name"}
 		}
 	}
 

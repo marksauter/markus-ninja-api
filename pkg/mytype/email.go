@@ -14,7 +14,7 @@ type Email struct {
 	String string
 }
 
-var ErrNoMatch = errors.New("name string did not pass validation")
+var ErrInvalidEmail = errors.New("invalid email")
 
 var validateEmail = regexp.MustCompile(
 	`^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$`,
@@ -33,7 +33,7 @@ func (dst *Email) Set(src interface{}) error {
 		*dst = *value
 	case string:
 		if ok := validateEmail.MatchString(value); !ok {
-			return ErrNoMatch
+			return ErrInvalidEmail
 		}
 		*dst = Email{String: value, Status: pgtype.Present}
 	case *string:
@@ -41,7 +41,7 @@ func (dst *Email) Set(src interface{}) error {
 			*dst = Email{Status: pgtype.Null}
 		} else {
 			if ok := validateEmail.MatchString(*value); !ok {
-				return ErrNoMatch
+				return ErrInvalidEmail
 			}
 			*dst = Email{String: *value, Status: pgtype.Present}
 		}
@@ -50,7 +50,7 @@ func (dst *Email) Set(src interface{}) error {
 			*dst = Email{Status: pgtype.Null}
 		} else {
 			if ok := validateEmail.Match(value); !ok {
-				return ErrNoMatch
+				return ErrInvalidEmail
 			}
 			*dst = Email{String: string(value), Status: pgtype.Present}
 		}

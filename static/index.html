@@ -137,10 +137,9 @@
         const type = "Basic";
         const credentials = btoa(this.state.login + ":" + this.state.password);
         return fetch("/token", {
-          method: "POST",
+          method: "GET",
           headers: {
             "Authorization": type + " " + credentials,
-            "Content-Type": "application/json",
           },
         }).then(function (response) {
           return response.text();

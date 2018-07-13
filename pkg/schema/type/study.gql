@@ -1,12 +1,10 @@
 # Represents a study.
 type Study implements
   Appleable,
-  Deleteable,
   Enrollable,
   Node,
   Topicable,
-  UniformResourceLocatable,
-  Updateable
+  UniformResourceLocatable
 {
   # Identifies when the study was advanced at.
   advancedAt: Time
@@ -176,16 +174,13 @@ type Study implements
   # The HTTP URL for this study.
   url: URI!
 
-  # Can the viewer delete this object?
-  viewerCanDelete: Boolean!
+  # Can the viewer admin this object?
+  viewerCanAdmin: Boolean!
 
-  # Can the viewer update this object?
-  viewerCanUpdate: Boolean!
-
-  # Has the viewer appled this appleable.
+  # Has the viewer appled this appleable?
   viewerHasAppled: Boolean!
 
-  # Has the viewer enrolled in this enrollable.
+  # Has the viewer enrolled in this enrollable?
   viewerHasEnrolled: Boolean!
 }
 
