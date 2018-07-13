@@ -15,7 +15,7 @@ import (
 var SignupCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
 })
 
 type SignupHandler struct {

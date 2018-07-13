@@ -125,7 +125,7 @@ func (r *userAssetResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
 	return uri, nil
 }
 

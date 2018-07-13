@@ -42,24 +42,33 @@ type Authenticate struct {
 func (a *Authenticate) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		token, err := myjwt.JWTFromRequest(req)
-		if err != nil {
+		if err != nil && err != myjwt.ErrNoHeader {
 			response := myhttp.UnauthorizedErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
+		var user *data.User
+		if err == myjwt.ErrNoHeader {
+			user, err = data.GetUserCredentialsByLogin(a.Db, "guest")
+			if err != nil {
+				response := myhttp.UnauthorizedErrorResponse("user not found")
+				myhttp.WriteResponseTo(rw, response)
+				return
+			}
+		} else {
+			payload, err := a.AuthSvc.ValidateJWT(token)
+			if err != nil {
+				response := myhttp.UnauthorizedErrorResponse(err.Error())
+				myhttp.WriteResponseTo(rw, response)
+				return
+			}
 
-		payload, err := a.AuthSvc.ValidateJWT(token)
-		if err != nil {
-			response := myhttp.UnauthorizedErrorResponse(err.Error())
-			myhttp.WriteResponseTo(rw, response)
-			return
-		}
-
-		user, err := data.GetUserCredentials(a.Db, payload.Sub)
-		if err != nil {
-			response := myhttp.UnauthorizedErrorResponse("user not found")
-			myhttp.WriteResponseTo(rw, response)
-			return
+			user, err = data.GetUserCredentials(a.Db, payload.Sub)
+			if err != nil {
+				response := myhttp.UnauthorizedErrorResponse("user not found")
+				myhttp.WriteResponseTo(rw, response)
+				return
+			}
 		}
 
 		ctx := myctx.NewUserContext(req.Context(), user)

@@ -92,8 +92,14 @@ func ParseToken(token string) (*JWT, error) {
 	return &JWT{Payload: *payload, Signature: signature}, nil
 }
 
+var ErrNoHeader = errors.New("authorization header not found")
+
 func JWTFromRequest(req *http.Request) (*JWT, error) {
-	auth := strings.SplitN(req.Header.Get("Authorization"), " ", 2)
+	header := req.Header.Get("Authorization")
+	if header == "" {
+		return nil, ErrNoHeader
+	}
+	auth := strings.SplitN(header, " ", 2)
 	if len(auth) != 2 || auth[0] != "Bearer" {
 		mylog.Log.Error("invalid authorization header")
 		return nil, ErrInvalidToken

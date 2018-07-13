@@ -15,9 +15,9 @@ import (
 )
 
 var GraphQLCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
+	AllowedHeaders: []string{"Authorization", "Content-Type"},
 	AllowedMethods: []string{http.MethodOptions, http.MethodPost, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
 })
 
 type GraphQLHandler struct {

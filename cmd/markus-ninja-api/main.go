@@ -51,7 +51,7 @@ func main() {
 	}
 
 	repos := repo.NewRepos(db, svcs)
-	graphQLSchema := graphql.MustParseSchema(
+	schema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
 			Repos: repos,
@@ -65,7 +65,8 @@ func main() {
 
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 
-	graphQLHandler := route.GraphQLHandler{Schema: graphQLSchema, Repos: repos}
+	graphQLHandler := route.GraphQLHandler{Schema: schema, Repos: repos}
+	graphQLSchemaHandler := route.GraphQLSchemaHandler{Schema: schema}
 	graphiQLHandler := route.GraphiQLHandler{}
 	confirmVerificationHandler := route.ConfirmVerificationHandler{db}
 	indexHandler := route.IndexHandler{}
@@ -80,6 +81,9 @@ func main() {
 		authMiddleware.Use,
 		repos.Use,
 	).Then(graphQLHandler)
+	graphQLSchema := middleware.CommonMiddleware.Append(
+		route.GraphQLSchemaCors.Handler,
+	).Then(graphQLSchemaHandler)
 	graphiql := middleware.CommonMiddleware.Append(
 		route.GraphiQLCors.Handler,
 	).Then(graphiQLHandler)
@@ -106,6 +110,7 @@ func main() {
 
 	r.Handle("/", index)
 	r.Handle("/graphql", graphql)
+	r.Handle("/graphql/schema", graphQLSchema)
 	r.Handle("/graphiql", graphiql)
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
