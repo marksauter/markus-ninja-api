@@ -590,14 +590,9 @@ func (r *studyResolver) URL(
 	return uri, nil
 }
 
-func (r *studyResolver) ViewerCanDelete(ctx context.Context) bool {
+func (r *studyResolver) ViewerCanAdmin(ctx context.Context) (bool, error) {
 	study := r.Study.Get()
-	return r.Repos.Study().ViewerCanDelete(ctx, study)
-}
-
-func (r *studyResolver) ViewerCanUpdate(ctx context.Context) bool {
-	study := r.Study.Get()
-	return r.Repos.Study().ViewerCanUpdate(ctx, study)
+	return r.Repos.Study().ViewerCanAdmin(ctx, study)
 }
 
 func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {

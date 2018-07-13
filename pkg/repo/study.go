@@ -469,22 +469,9 @@ func (r *StudyRepo) Update(
 	return &StudyPermit{fieldPermFn, study}, nil
 }
 
-func (r *StudyRepo) ViewerCanDelete(
+func (r *StudyRepo) ViewerCanAdmin(
 	ctx context.Context,
 	s *data.Study,
-) bool {
-	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, s); err != nil {
-		return false
-	}
-	return true
-}
-
-func (r *StudyRepo) ViewerCanUpdate(
-	ctx context.Context,
-	s *data.Study,
-) bool {
-	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
-		return false
-	}
-	return true
+) (bool, error) {
+	return r.permit.ViewerCanAdmin(ctx, s)
 }

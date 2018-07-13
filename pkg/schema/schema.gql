@@ -11,24 +11,6 @@ type Query {
     study: String!
   ): UserAsset
 
-  # A list of studies.
-  allStudies(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for studies returned from the connection.
-    orderBy: StudyOrder
-  ): StudyConnection!
-
   # Lookup node by ID.
   node(
     # The ID of the node.
@@ -105,6 +87,8 @@ type Mutation {
   createLesson(input: CreateLessonInput!): Lesson
   # Creates a new study.
   createStudy(input: CreateStudyInput!): Study
+  # Creates a new user.
+  createUser(input: CreateUserInput!): User
 
   # Deletes an email from the viewer's account.
   deleteEmail(input: DeleteEmailInput!): DeleteEmailPayload
@@ -126,6 +110,9 @@ type Mutation {
 
   # Gives an apple to an Appleable.
   giveApple(input: GiveAppleInput!): Appleable
+
+  # Returns a token for use in authentication.
+  loginUser(input: LoginUserInput!): LoginUserPayload
 
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge

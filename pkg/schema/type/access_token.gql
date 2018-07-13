@@ -1,0 +1,11 @@
+# Represents an access token.
+type AccessToken implements Token {
+  # Identifies the date and time when the token expires.
+  expiresAt: Time!
+
+  # Identifies the date and time when the token was issued.
+  issuedAt: Time!
+
+  # The token used by the client for authentication.
+  token: String!
+}

@@ -36,12 +36,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	creds, err := myhttp.ValidateBasicAuthHeader(req)
-	if err == myhttp.ErrNoAuthHeader {
-		creds = &myhttp.ValidateBasicAuthHeaderOutput{
-			Login:    "guest",
-			Password: "guest",
-		}
-	} else if err != nil {
+	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
