@@ -574,11 +574,11 @@ func (r *userResolver) UpdatedAt() (graphql.Time, error) {
 
 func (r *userResolver) URL() (mygql.URI, error) {
 	var uri mygql.URI
-	login, err := r.User.Login()
+	resourcePath, err := r.ResourcePath()
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, login))
+	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
 	return uri, nil
 }
 

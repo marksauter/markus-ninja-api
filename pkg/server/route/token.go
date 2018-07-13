@@ -14,9 +14,10 @@ import (
 )
 
 var TokenCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+	AllowedHeaders: []string{"Authorization"},
+	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
+	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
+	Debug:          true,
 })
 
 type TokenHandler struct {
@@ -29,7 +30,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
 
-	if req.Method != http.MethodPost {
+	if req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
 		return

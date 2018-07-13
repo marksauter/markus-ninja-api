@@ -348,7 +348,8 @@ func SearchSQL(
 		FROM ` + from + ` AS ` + as + `,
 			to_tsquery('simple',` + args.Append(tsquery) + `) AS query
 		` + strings.Join(joins, " ") + `
-		WHERE document @@ query
+		WHERE CASE ` + args.Append(tsquery) + ` WHEN '*' THEN TRUE
+			ELSE document @@ query END
 		` + strings.Join(whereAnds, " ") + `
 		` + orderBy + `
 		` + limit

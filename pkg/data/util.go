@@ -7,6 +7,9 @@ import (
 )
 
 func ToTsQuery(query string) string {
+	if query == "" || query == "*" {
+		return "*"
+	}
 	words := strings.FieldsFunc(query, queryDelimiter)
 	for i, v := range words {
 		words[i] = v + ":*"

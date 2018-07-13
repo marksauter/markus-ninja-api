@@ -8,7 +8,7 @@ import (
 
 var GraphiQLCors = cors.New(cors.Options{
 	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "localhost:3000"},
+	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
 })
 
 type GraphiQLHandler struct{}

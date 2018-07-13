@@ -183,7 +183,7 @@ bin-clean:
 	rm -rf .go bin
 
 watch:
-	BRANCH=development.local gin -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
+	BRANCH=development.local gin --port 5000 --appPort 5001 -d ./cmd/markus-ninja-api/ run cmd/markus-ninja-api/main.go
 
 login:
 	aws ecr get-login --no-include-email --region us-east-1 | bash
