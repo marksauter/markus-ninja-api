@@ -79,6 +79,9 @@ type Study implements
 
   id: ID!
 
+  # Is this study private?
+  isPrivate: Boolean!
+
   # Returns a list of labels from the current study.
   labels(
     # Returns the elements in the list that come after the specified global ID.
