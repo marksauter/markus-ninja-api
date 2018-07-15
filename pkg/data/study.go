@@ -20,6 +20,7 @@ type Study struct {
 	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
 	Id          mytype.OID         `db:"id" permit:"read"`
 	Name        mytype.URLSafeName `db:"name" permit:"create/read"`
+	Private     pgtype.Bool        `db:"private" permit:"create/read/update"`
 	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
@@ -166,6 +167,7 @@ func getStudy(
 		&row.Description,
 		&row.Id,
 		&row.Name,
+		&row.Private,
 		&row.UpdatedAt,
 		&row.UserId,
 	)
@@ -200,6 +202,7 @@ func getManyStudy(
 			&row.Description,
 			&row.Id,
 			&row.Name,
+			&row.Private,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -223,6 +226,7 @@ const getStudyByIdSQL = `
 		description,
 		id,
 		name,
+		private,
 		updated_at,
 		user_id
 	FROM study
@@ -253,6 +257,7 @@ func GetStudyByApplee(
 		"description",
 		"id",
 		"name",
+		"private",
 		"updated_at",
 		"user_id",
 	}
@@ -277,6 +282,7 @@ func GetStudyByApplee(
 			&row.Description,
 			&row.Id,
 			&row.Name,
+			&row.Private,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -309,6 +315,7 @@ func GetStudyByEnrollee(
 		"enrolled_at",
 		"id",
 		"name",
+		"private",
 		"updated_at",
 		"user_id",
 	}
@@ -333,6 +340,7 @@ func GetStudyByEnrollee(
 			&row.EnrolledAt,
 			&row.Id,
 			&row.Name,
+			&row.Private,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -364,6 +372,7 @@ func GetStudyByTopic(
 		"description",
 		"id",
 		"name",
+		"private",
 		"topiced_at",
 		"updated_at",
 		"user_id",
@@ -388,6 +397,7 @@ func GetStudyByTopic(
 			&row.Description,
 			&row.Id,
 			&row.Name,
+			&row.Private,
 			&row.TopicedAt,
 			&row.UpdatedAt,
 			&row.UserId,
@@ -420,6 +430,7 @@ func GetStudyByUser(
 		"description",
 		"id",
 		"name",
+		"private",
 		"updated_at",
 		"user_id",
 	}
@@ -438,6 +449,7 @@ const getStudyByNameSQL = `
 		description,
 		id,
 		name,
+		private,
 		updated_at,
 		user_id
 	FROM study
@@ -463,6 +475,7 @@ const getStudyByUserAndNameSQL = `
 		s.description,
 		s.id,
 		s.name,
+		s.private,
 		s.updated_at,
 		s.user_id
 	FROM study s
@@ -511,6 +524,10 @@ func CreateStudy(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
+	}
+	if row.Private.Status != pgtype.Undefined {
+		columns = append(columns, "private")
+		values = append(values, args.Append(&row.Private))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -627,6 +644,7 @@ func SearchStudy(
 		"description",
 		"id",
 		"name",
+		"private",
 		"updated_at",
 		"user_id",
 	}
@@ -657,6 +675,9 @@ func UpdateStudy(
 		nameTokens := &pgtype.Text{}
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, studyDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
+	}
+	if row.Private.Status != pgtype.Undefined {
+		sets = append(sets, `private`+"="+args.Append(&row.Private))
 	}
 
 	if len(sets) == 0 {

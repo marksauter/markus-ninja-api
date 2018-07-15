@@ -79,6 +79,13 @@ func (r *StudyPermit) Name() (string, error) {
 	return r.study.Name.String, nil
 }
 
+func (r *StudyPermit) Private() (bool, error) {
+	if ok := r.checkFieldPermission("private"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.study.Private.Bool, nil
+}
+
 func (r *StudyPermit) TopicedAt() time.Time {
 	return r.study.TopicedAt.Time
 }

@@ -250,6 +250,10 @@ func (r *studyResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *studyResolver) IsPrivate(ctx context.Context) (bool, error) {
+	return r.Study.Private()
+}
+
 func (r *studyResolver) Labels(
 	ctx context.Context,
 	args struct {
