@@ -26,7 +26,7 @@ type User struct {
 
 const countUserByAppleableSQL = `
 	SELECT COUNT(*)
-	FROM apple_giver
+	FROM appled
 	WHERE appleable_id = $1
 `
 
@@ -53,7 +53,7 @@ func CountUserByAppleable(
 
 const countUserByEnrollableSQL = `
 	SELECT COUNT(*)
-	FROM enrollee
+	FROM enrolled
 	WHERE enrollable_id = $1
 `
 
@@ -80,8 +80,8 @@ func CountUserByEnrollable(
 
 const countUserByEnrolleeSQL = `
 	SELECT COUNT(*)
-	FROM enrolled_user
-	AND enrollee_id = $1
+	FROM user_enrolled
+	WHERE user_id = $1
 `
 
 func CountUserByEnrollee(

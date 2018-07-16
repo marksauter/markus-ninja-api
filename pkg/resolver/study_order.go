@@ -11,6 +11,7 @@ type StudyOrderField int
 
 const (
 	StudyAdvancedAt StudyOrderField = iota
+	StudyAppledAt
 	StudyCreatedAt
 	StudyName
 	StudyUpdatedAt
@@ -20,6 +21,8 @@ func ParseStudyOrderField(s string) (StudyOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "ADVANCED_AT":
 		return StudyAdvancedAt, nil
+	case "APPLED_AT":
+		return StudyAppledAt, nil
 	case "CREATED_AT":
 		return StudyCreatedAt, nil
 	case "NAME":
@@ -36,6 +39,8 @@ func (f StudyOrderField) String() string {
 	switch f {
 	case StudyAdvancedAt:
 		return "advanced_at"
+	case StudyAppledAt:
+		return "appled_at"
 	case StudyCreatedAt:
 		return "created_at"
 	case StudyName:

@@ -26,21 +26,21 @@ type Study struct {
 	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-const countStudyByAppledSQL = `
+const countStudyByAppleeSQL = `
 	SELECT COUNT(*)
 	FROM study_appled
-	WHERE applee_id = $1
+	WHERE user_id = $1
 `
 
 func CountStudyByApplee(
 	db Queryer,
 	appleeId string,
 ) (n int32, err error) {
-	mylog.Log.WithField("applee_id", appleeId).Info("CountStudyByAppled(applee_id)")
+	mylog.Log.WithField("applee_id", appleeId).Info("CountStudyByApplee(applee_id)")
 	err = prepareQueryRow(
 		db,
-		"countStudyByAppled",
-		countStudyByAppledSQL,
+		"countStudyByApplee",
+		countStudyByAppleeSQL,
 		appleeId,
 	).Scan(&n)
 
@@ -52,7 +52,7 @@ func CountStudyByApplee(
 const countStudyByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM study_enrolled
-	WHERE enrollee_id = $1
+	WHERE user_id = $1
 `
 
 func CountStudyByEnrollee(
@@ -246,7 +246,7 @@ func GetStudyByApplee(
 	userId string,
 	po *PageOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetStudyByAppled(user_id)")
+	mylog.Log.WithField("user_id", userId).Info("GetStudyByApplee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`applee_id = ` + args.Append(userId)}
 
