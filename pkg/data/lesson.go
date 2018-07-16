@@ -29,7 +29,7 @@ type Lesson struct {
 const countLessonByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM lesson_enrolled
-	WHERE enrollee_id = $1
+	WHERE user_id = $1
 `
 
 func CountLessonByEnrollee(

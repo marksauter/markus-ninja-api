@@ -15,12 +15,18 @@ type EnrollableConnection {
   # A list of edges.
   edges: [EnrollableEdge]
 
+  # The number of lessons associated with the enrollable.
+  lessonCount: Int!
+
   # A list of nodes.
   nodes: [Enrollable]
 
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
-  # The number of studies associated with the enroll.
+  # The number of studies associated with the enrollable.
   studyCount: Int!
+
+  # The number of users associated with the enrollable.
+  userCount: Int!
 }

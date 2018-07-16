@@ -59,17 +59,15 @@ func (r *userResolver) Appled(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.NodePermit{}
-
+	permits := make([]repo.NodePermit, 0, pageOptions.Limit())
 	switch appleableType {
 	case AppleableTypeStudy:
 		studies, err := r.Repos.Study().GetByApplee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(studies))
-		for i, l := range studies {
-			permits[i] = l
+		for _, s := range studies {
+			permits = append(permits, s)
 		}
 	default:
 		return nil, fmt.Errorf("invalid type %s for appleable type", appleableType.String())
@@ -256,7 +254,7 @@ func (r *userResolver) Enrolled(
 	if err != nil {
 		return nil, err
 	}
-	permits := []repo.NodePermit{}
+	permits := make([]repo.NodePermit, 0, pageOptions.Limit())
 
 	switch enrollableType {
 	case EnrollableTypeLesson:
@@ -264,27 +262,24 @@ func (r *userResolver) Enrolled(
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(lessons))
-		for i, l := range lessons {
-			permits[i] = l
+		for _, l := range lessons {
+			permits = append(permits, l)
 		}
 	case EnrollableTypeStudy:
 		studies, err := r.Repos.Study().GetByEnrollee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(studies))
-		for i, s := range studies {
-			permits[i] = s
+		for _, s := range studies {
+			permits = append(permits, s)
 		}
 	case EnrollableTypeUser:
 		users, err := r.Repos.User().GetByEnrollee(ctx, id.String, pageOptions)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(users))
-		for i, u := range users {
-			permits[i] = u
+		for _, u := range users {
+			permits = append(permits, u)
 		}
 	}
 	return NewEnrollableConnectionResolver(
