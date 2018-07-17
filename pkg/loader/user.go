@@ -8,6 +8,7 @@ import (
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 )
 
 func NewUserLoader() *UserLoader {
@@ -83,6 +84,7 @@ func (r *UserLoader) Clear(id string) {
 
 func (r *UserLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByLogin.ClearAll()
 }
 
 func (r *UserLoader) Get(
@@ -107,6 +109,7 @@ func (r *UserLoader) GetByLogin(
 	ctx context.Context,
 	id string,
 ) (*data.User, error) {
+	mylog.Log.Debug("UserLoader.GetByLogin()")
 	userData, err := r.batchGetByLogin.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err

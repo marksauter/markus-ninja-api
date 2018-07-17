@@ -927,7 +927,7 @@ func (r *RootResolver) ResetPassword(
 		return false, err
 	}
 
-	if _, err := r.Repos.User().Update(ctx, user); err != nil {
+	if _, err := r.Repos.User().UpdateAccount(ctx, user); err != nil {
 		return false, myerr.UnexpectedError{"failed to update user"}
 	}
 
@@ -1337,16 +1337,67 @@ func (r *RootResolver) UpdateUserAsset(
 	return &userAssetResolver{UserAsset: userAssetPermit, Repos: r.Repos}, nil
 }
 
-type UpdateViewerInput struct {
+type UpdateViewerAccountInput struct {
+	Login       *string
+	NewPassword *string
+	OldPassword *string
+}
+
+func (r *RootResolver) UpdateViewerAccount(
+	ctx context.Context,
+	args struct{ Input UpdateViewerAccountInput },
+) (*userResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+
+	var user *data.User
+	var err error
+	if args.Input.NewPassword != nil && args.Input.OldPassword != nil {
+		user, err = data.GetUserCredentials(db, viewer.Id.String)
+		if err != nil {
+			return nil, err
+		}
+		if err := user.Password.CompareToPassword(*args.Input.OldPassword); err != nil {
+			return nil, errors.New("incorrect password")
+		}
+		if err := user.Password.Set(args.Input.NewPassword); err != nil {
+			mylog.Log.WithError(err).Error("failed to set password")
+			return nil, err
+		}
+		if err := user.Password.CheckStrength(mytype.Strong); err != nil {
+			mylog.Log.WithError(err).Error("password failed strength check")
+			return nil, err
+		}
+	}
+
+	if args.Input.Login != nil {
+		if err := user.Login.Set(args.Input.Login); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user login"}
+		}
+	}
+
+	userPermit, err := r.Repos.User().UpdateAccount(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: userPermit, Repos: r.Repos}, nil
+}
+
+type UpdateViewerProfileInput struct {
 	Bio     *string
 	EmailId *string
-	Login   *string
 	Name    *string
 }
 
-func (r *RootResolver) UpdateViewer(
+func (r *RootResolver) UpdateViewerProfile(
 	ctx context.Context,
-	args struct{ Input UpdateViewerInput },
+	args struct{ Input UpdateViewerProfileInput },
 ) (*userResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
@@ -1363,9 +1414,9 @@ func (r *RootResolver) UpdateViewer(
 			return nil, myerr.UnexpectedError{"failed to set user bio"}
 		}
 	}
-	if args.Input.Login != nil {
-		if err := user.Login.Set(args.Input.Login); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user login"}
+	if args.Input.EmailId != nil && *args.Input.EmailId != "" {
+		if err := user.ProfileEmailId.Set(args.Input.EmailId); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user profile_email_id"}
 		}
 	}
 	if args.Input.Name != nil {
@@ -1374,34 +1425,7 @@ func (r *RootResolver) UpdateViewer(
 		}
 	}
 
-	if args.Input.EmailId != nil {
-		emailPermit, err := r.Repos.Email().Get(ctx, *args.Input.EmailId)
-		if err != nil {
-			return nil, err
-		}
-		ok, err := emailPermit.IsVerified()
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, errors.New("cannot update unverified email")
-		}
-
-		email := &data.Email{}
-		if err := email.Id.Set(args.Input.EmailId); err != nil {
-			return nil, errors.New("invalid email id")
-		}
-		email.Public.Set(true)
-		if err := email.Public.Set(true); err != nil {
-			return nil, errors.New("invalid email public")
-		}
-		_, err = r.Repos.Email().Update(ctx, email)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	userPermit, err := r.Repos.User().Update(ctx, user)
+	userPermit, err := r.Repos.User().UpdateProfile(ctx, user)
 	if err != nil {
 		return nil, err
 	}

@@ -115,6 +115,7 @@ func (r *UserAssetLoader) Clear(id string) {
 func (r *UserAssetLoader) ClearAll() {
 	r.batchGet.ClearAll()
 	r.batchGetByName.ClearAll()
+	r.batchGetByUserStudyAndName.ClearAll()
 }
 
 func (r *UserAssetLoader) Get(

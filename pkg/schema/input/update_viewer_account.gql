@@ -1,0 +1,11 @@
+# Input type for UpdateViewerAccount.
+input UpdateViewerAccountInput {
+  # The viewer's new username used to login.
+  login: String
+
+  # The viewer's new password.
+  newPassword: String
+
+  # The viewer's old password.
+  oldPassword: String
+}

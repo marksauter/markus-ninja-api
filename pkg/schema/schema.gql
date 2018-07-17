@@ -129,7 +129,7 @@ type Mutation {
   # Takes an apple from an Appleable.
   takeApple(input: TakeAppleInput!): Appleable
 
-  # Updates an email's type and/or whether it's public or not.
+  # Updates an email's type.
   updateEmail(input: UpdateEmailInput!): Email
   # Updates the color and/or description of a label.
   updateLabel(input: UpdateLabelInput!): Label
@@ -145,6 +145,8 @@ type Mutation {
   updateTopics(input: UpdateTopicsInput!): UpdateTopicsPayload
   # Updates the name of a user asset.
   updateUserAsset(input: UpdateUserAssetInput!): UserAsset
-  # Updates the bio, email, login, and/or name of the viewer.
-  updateViewer(input: UpdateViewerInput!): User
+  # Updates the login and/or password of the viewer.
+  updateViewerAccount(input: UpdateViewerAccountInput!): User
+  # Updates the bio, email, and/or name of the viewer.
+  updateViewerProfile(input: UpdateViewerProfileInput!): User
 }

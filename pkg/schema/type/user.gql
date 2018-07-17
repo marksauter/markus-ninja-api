@@ -1,5 +1,8 @@
 # Represents a user.
 type User implements Enrollable, Node, UniformResourceLocatable {
+  # Identifies the date and time when the user's account was last updated.
+  accountUpdatedAt: Time!
+
   # A list of studies the user has appled.
   appled(
     # Returns the elements in the list that come after the specified global ID.
@@ -49,7 +52,7 @@ type User implements Enrollable, Node, UniformResourceLocatable {
   createdAt: Time!
 
   # The user's public profile email.
-  email: String!
+  email: Email
 
   # Returns a list of the user's emails.
   emails(
@@ -61,6 +64,9 @@ type User implements Enrollable, Node, UniformResourceLocatable {
 
     # Returns the first n elements form the list.
     first: Int
+
+    # If true, then filter emails by whether they have been verified.
+    isVerified: Boolean
 
     # Returns the last n elements form the list.
     last: Int
@@ -155,6 +161,9 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     orderBy: NotificationOrder
   ): NotificationConnection!
 
+  # Identifies the date and time when the user's profile was last updated.
+  profileUpdatedAt: Time!
+
   # The HTTP path for this user.
   resourcePath: URI!
 
@@ -181,9 +190,6 @@ type User implements Enrollable, Node, UniformResourceLocatable {
     # Ordering options for studies returned from the connection.
     orderBy: StudyOrder
   ): StudyConnection!
-
-  # Identifies the date and time when the object was last updated.
-  updatedAt: Time!
 
   # The HTTP URL for this user.
   url: URI!

@@ -55,14 +55,23 @@ func NewOIDFromShort(objType, short string) (*OID, error) {
 var errInvalidOID = errors.New("invalid OID")
 
 func ParseOID(id string) (*OID, error) {
+	if id == "" {
+		return &OID{Status: pgtype.Null}, nil
+	}
 	v, err := base64.StdEncoding.DecodeString(id)
 	if err != nil {
 		return nil, errInvalidOID
 	}
 	s := string(v)
+	if len(s) < 3 {
+		return nil, errInvalidOID
+	}
 	nStr := s[:3]
 	n, err := strconv.ParseInt(nStr, 10, 16)
 	if err != nil {
+		return nil, errInvalidOID
+	}
+	if len(s) < 3+int(n) {
 		return nil, errInvalidOID
 	}
 	t := s[3 : 3+n]
