@@ -31,52 +31,6 @@ func (r *RootResolver) Asset(
 	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
 }
 
-// func (r *userResolver) AllStudies(
-//   ctx context.Context,
-//   args struct {
-//     After   *string
-//     Before  *string
-//     First   *int32
-//     Last    *int32
-//     OrderBy *OrderArg
-//   },
-// ) (*studyConnectionResolver, error) {
-//   studyOrder, err := ParseStudyOrder(args.OrderBy)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   pageOptions, err := data.NewPageOptions(
-//     args.After,
-//     args.Before,
-//     args.First,
-//     args.Last,
-//     studyOrder,
-//   )
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   studies, err := r.Repos.Study().GetByUser(ctx, id.String, pageOptions)
-//   if err != nil {
-//     return nil, err
-//   }
-//   count, err := r.Repos.Study().CountByUser(ctx, id.String)
-//   if err != nil {
-//     return nil, err
-//   }
-//   resolver, err := NewStudyConnectionResolver(
-//     studies,
-//     pageOptions,
-//     count,
-//     r.Repos,
-//   )
-//   if err != nil {
-//     return nil, err
-//   }
-//   return resolver, nil
-// }
-
 func (r *RootResolver) Node(
 	ctx context.Context,
 	args struct{ Id string },

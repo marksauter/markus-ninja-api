@@ -30,6 +30,13 @@ func (r *UserPermit) Get() *data.User {
 	return user
 }
 
+func (r *UserPermit) AccountUpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("account_updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.user.AccountUpdatedAt.Time, nil
+}
+
 func (r *UserPermit) AppledAt() time.Time {
 	return r.user.AppledAt.Time
 }
@@ -74,11 +81,18 @@ func (r *UserPermit) Name() (string, error) {
 
 }
 
-func (r *UserPermit) PublicEmail() (string, error) {
-	if ok := r.checkFieldPermission("public_email"); !ok {
-		return "", ErrAccessDenied
+func (r *UserPermit) ProfileEmailId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("profile_email_id"); !ok {
+		return nil, ErrAccessDenied
 	}
-	return r.user.PublicEmail.String, nil
+	return &r.user.ProfileEmailId, nil
+}
+
+func (r *UserPermit) ProfileUpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("profile_updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.user.ProfileUpdatedAt.Time, nil
 }
 
 func (r *UserPermit) Roles() []string {
@@ -87,13 +101,6 @@ func (r *UserPermit) Roles() []string {
 		roles[i] = r.String
 	}
 	return roles
-}
-
-func (r *UserPermit) UpdatedAt() (time.Time, error) {
-	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return time.Time{}, ErrAccessDenied
-	}
-	return r.user.UpdatedAt.Time, nil
 }
 
 func NewUserRepo() *UserRepo {
@@ -372,7 +379,7 @@ func (r *UserRepo) Search(
 	return userPermits, nil
 }
 
-func (r *UserRepo) Update(
+func (r *UserRepo) UpdateAccount(
 	ctx context.Context,
 	u *data.User,
 ) (*UserPermit, error) {
@@ -386,7 +393,32 @@ func (r *UserRepo) Update(
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, u); err != nil {
 		return nil, err
 	}
-	user, err := data.UpdateUser(db, u)
+	user, err := data.UpdateUserAccount(db, u)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, user)
+	if err != nil {
+		return nil, err
+	}
+	return &UserPermit{fieldPermFn, user}, nil
+}
+
+func (r *UserRepo) UpdateProfile(
+	ctx context.Context,
+	u *data.User,
+) (*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, u); err != nil {
+		return nil, err
+	}
+	user, err := data.UpdateUserProfile(db, u)
 	if err != nil {
 		return nil, err
 	}

@@ -8,9 +8,6 @@ type Email implements Node {
   # Is the email verified?
   isVerified: Boolean!
 
-  # Identifies whether the email is public or not.
-  public: Boolean!
-
   # Identifies the type of email.
   type: EmailType!
 

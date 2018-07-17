@@ -30,7 +30,6 @@ permissions:
     roles:
       - owner
     fields:
-      - public
       - type
       - verified_at
   - operation: Delete Email
@@ -354,8 +353,8 @@ permissions:
       - id
       - login
       - name
-      - public_email
-      - updated_at
+      - profile_email_id
+      - profile_updated_at
   # Owners can read the whole user.
   - operation: Read User
     authenticated: true
@@ -377,7 +376,7 @@ permissions:
       - login
       - name
       - password
-      - public_email
+      - profile_email_id
   - operation: Delete User
     authenticated: true
     roles:

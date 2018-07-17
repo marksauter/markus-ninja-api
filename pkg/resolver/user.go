@@ -19,6 +19,11 @@ type userResolver struct {
 	Repos *repo.Repos
 }
 
+func (r *userResolver) AccountUpdatedAt() (graphql.Time, error) {
+	t, err := r.User.AccountUpdatedAt()
+	return graphql.Time{t}, err
+}
+
 func (r *userResolver) Appled(
 	ctx context.Context,
 	args struct {
@@ -149,17 +154,28 @@ func (r *userResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *userResolver) Email() (string, error) {
-	return r.User.PublicEmail()
+func (r *userResolver) Email(ctx context.Context) (*emailResolver, error) {
+	id, err := r.User.ProfileEmailId()
+	if err != nil {
+		return nil, err
+	}
+
+	email, err := r.Repos.Email().Get(ctx, id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	return &emailResolver{Email: email, Repos: r.Repos}, nil
 }
 
 func (r *userResolver) Emails(
 	ctx context.Context,
 	args struct {
-		After  *string
-		Before *string
-		First  *int32
-		Last   *int32
+		After      *string
+		Before     *string
+		First      *int32
+		IsVerified *bool
+		Last       *int32
 	},
 ) (*emailConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -187,11 +203,16 @@ func (r *userResolver) Emails(
 	}
 	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	emails, err := r.Repos.Email().GetByUser(ctx, id, pageOptions)
+	filterOptions := make([]data.EmailFilterOption, 0, 1)
+	if args.IsVerified != nil && *args.IsVerified {
+		filterOptions = append(filterOptions, data.EmailIsVerified)
+	}
+
+	emails, err := r.Repos.Email().GetByUser(ctx, id, pageOptions, filterOptions...)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Email().CountByUser(ctx, id.String)
+	count, err := r.Repos.Email().CountByUser(ctx, id.String, filterOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -485,6 +506,11 @@ func (r *userResolver) Name() (string, error) {
 	return r.User.Name()
 }
 
+func (r *userResolver) ProfileUpdatedAt() (graphql.Time, error) {
+	t, err := r.User.ProfileUpdatedAt()
+	return graphql.Time{t}, err
+}
+
 func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
 	login, err := r.User.Login()
@@ -560,11 +586,6 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 	return resolver, nil
-}
-
-func (r *userResolver) UpdatedAt() (graphql.Time, error) {
-	t, err := r.User.UpdatedAt()
-	return graphql.Time{t}, err
 }
 
 func (r *userResolver) URL() (mygql.URI, error) {

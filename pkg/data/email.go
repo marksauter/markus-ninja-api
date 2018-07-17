@@ -12,7 +12,6 @@ import (
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id         mytype.OID         `db:"id" permit:"read"`
-	Public     pgtype.Bool        `db:"public" permit:"read/update"`
 	Type       EmailType          `db:"type" permit:"create/read/update"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -69,7 +68,6 @@ func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email,
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Id,
-		&row.Public,
 		&row.Type,
 		&row.UserId,
 		&row.UpdatedAt,
@@ -104,7 +102,6 @@ func getManyEmail(
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.Id,
-			&row.Public,
 			&row.Type,
 			&row.UserId,
 			&row.UpdatedAt,
@@ -127,7 +124,6 @@ const getEmailByIdSQL = `
 	SELECT
 		created_at,
 		id,
-		public,
 		type,
 		user_id,
 		updated_at,
@@ -146,7 +142,6 @@ const getEmailByValueSQL = `
 	SELECT
 		created_at,
 		id,
-		public,
 		type,
 		user_id,
 		updated_at,
@@ -191,7 +186,6 @@ func GetEmailByUser(
 	selects := []string{
 		"created_at",
 		"id",
-		"public",
 		"type",
 		"user_id",
 		"updated_at",
@@ -311,9 +305,6 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
-	if row.Public.Status != pgtype.Undefined {
-		sets = append(sets, `public`+"="+args.Append(&row.Public))
-	}
 	if row.Type.Status != pgtype.Undefined {
 		sets = append(sets, `type`+"="+args.Append(&row.Type))
 	}

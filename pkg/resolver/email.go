@@ -28,10 +28,6 @@ func (r *emailResolver) IsVerified() (bool, error) {
 	return r.Email.IsVerified()
 }
 
-func (r *emailResolver) Public() (bool, error) {
-	return r.Email.Public()
-}
-
 func (r *emailResolver) Type() (string, error) {
 	return r.Email.Type()
 }

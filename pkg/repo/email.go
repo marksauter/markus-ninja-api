@@ -52,13 +52,6 @@ func (r *EmailPermit) IsVerified() (bool, error) {
 	return r.email.VerifiedAt.Status != pgtype.Null, nil
 }
 
-func (r *EmailPermit) Public() (bool, error) {
-	if ok := r.checkFieldPermission("public"); !ok {
-		return false, ErrAccessDenied
-	}
-	return r.email.Public.Bool, nil
-}
-
 func (r *EmailPermit) Type() (string, error) {
 	if ok := r.checkFieldPermission("type"); !ok {
 		return "", ErrAccessDenied

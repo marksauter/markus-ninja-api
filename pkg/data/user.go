@@ -10,18 +10,19 @@ import (
 )
 
 type User struct {
-	AppledAt     pgtype.Timestamptz `db:"appled_at"`
-	Bio          pgtype.Text        `db:"bio" permit:"read/update"`
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at"`
-	Id           mytype.OID         `db:"id" permit:"read"`
-	Login        pgtype.Varchar     `db:"login" permit:"read/create/update"`
-	Name         pgtype.Text        `db:"name" permit:"read/update"`
-	Password     mytype.Password    `db:"password" permit:"create/update"`
-	PrimaryEmail mytype.Email       `db:"primary_email" permit:"create"`
-	PublicEmail  pgtype.Varchar     `db:"public_email" permit:"read/update"`
-	Roles        pgtype.TextArray   `db:"roles"`
-	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	AccountUpdatedAt pgtype.Timestamptz `db:"account_updated_at" permit:"read"`
+	AppledAt         pgtype.Timestamptz `db:"appled_at"`
+	Bio              pgtype.Text        `db:"bio" permit:"read/update"`
+	CreatedAt        pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrolledAt       pgtype.Timestamptz `db:"enrolled_at"`
+	Id               mytype.OID         `db:"id" permit:"read"`
+	Login            pgtype.Varchar     `db:"login" permit:"read/create/update"`
+	Name             pgtype.Text        `db:"name" permit:"read/update"`
+	Password         mytype.Password    `db:"password" permit:"create/update"`
+	PrimaryEmail     mytype.Email       `db:"primary_email" permit:"create"`
+	ProfileEmailId   mytype.OID         `db:"profile_email_id" permit:"read/update"`
+	ProfileUpdatedAt pgtype.Timestamptz `db:"profile_updated_at" permit:"read"`
+	Roles            pgtype.TextArray   `db:"roles"`
 }
 
 const countUserByAppleableSQL = `
@@ -124,14 +125,15 @@ func CountUserBySearch(
 
 const batchGetUserSQL = `
 	SELECT
+		account_updated_at,
 		bio,
 		created_at,
 		id,
 		login,
 		name,
-		public_email,
-		roles,
-		updated_at
+		profile_email_id,
+		profile_updated_at,
+		roles
 	FROM user_master
 	WHERE id = ANY($1)
 `
@@ -146,14 +148,15 @@ func BatchGetUser(
 
 const batchGetUserByLoginSQL = `
 	SELECT
+		account_updated_at,
 		bio,
 		created_at,
 		id,
 		login,
 		name,
-		public_email,
-		roles,
-		updated_at
+		profile_email_id,
+		profile_updated_at,
+		roles
 	FROM user_master
 	WHERE lower(login) = any($1)
 `
@@ -174,14 +177,15 @@ func getUser(
 ) (*User, error) {
 	var row User
 	err := prepareQueryRow(db, name, sql, arg).Scan(
+		&row.AccountUpdatedAt,
 		&row.Bio,
 		&row.CreatedAt,
 		&row.Id,
 		&row.Login,
 		&row.Name,
-		&row.PublicEmail,
+		&row.ProfileEmailId,
+		&row.ProfileUpdatedAt,
 		&row.Roles,
-		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -209,14 +213,15 @@ func getManyUser(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
+			&row.AccountUpdatedAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
-			&row.PublicEmail,
+			&row.ProfileEmailId,
+			&row.ProfileUpdatedAt,
 			&row.Roles,
-			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
 	}
@@ -233,14 +238,15 @@ func getManyUser(
 
 const getUserByIdSQL = `  
 	SELECT
+		account_updated_at,
 		bio,
 		created_at,
 		id,
 		login,
 		name,
-		public_email,
-		roles,
-		updated_at
+		profile_email_id,
+		profile_updated_at,
+		roles
 	FROM user_master
 	WHERE id = $1
 `
@@ -266,15 +272,16 @@ func GetUserByAppleable(
 	where := []string{`appleable_id = ` + args.Append(appleableId)}
 
 	selects := []string{
+		"account_updated_at",
 		"appled_at",
 		"bio",
 		"created_at",
 		"id",
 		"login",
 		"name",
-		"public_email",
+		"profile_email_id",
+		"profile_updated_at",
 		"roles",
-		"updated_at",
 	}
 	from := "apple_giver"
 	sql := SQL(selects, from, where, &args, po)
@@ -291,15 +298,16 @@ func GetUserByAppleable(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
+			&row.AccountUpdatedAt,
 			&row.AppledAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
-			&row.PublicEmail,
+			&row.ProfileEmailId,
+			&row.ProfileUpdatedAt,
 			&row.Roles,
-			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
 	}
@@ -327,15 +335,16 @@ func GetUserByEnrollee(
 	where := []string{`enrollee_id = ` + args.Append(userId)}
 
 	selects := []string{
+		"account_updated_at",
 		"bio",
 		"created_at",
 		"enrolled_at",
 		"id",
 		"login",
 		"name",
-		"public_email",
+		"profile_email_id",
+		"profile_updated_at",
 		"roles",
-		"updated_at",
 	}
 	from := "enrolled_user"
 	sql := SQL(selects, from, where, &args, po)
@@ -352,15 +361,16 @@ func GetUserByEnrollee(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
+			&row.AccountUpdatedAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.EnrolledAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
-			&row.PublicEmail,
+			&row.ProfileEmailId,
+			&row.ProfileUpdatedAt,
 			&row.Roles,
-			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
 	}
@@ -387,15 +397,16 @@ func GetUserEnrollees(
 	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 
 	selects := []string{
+		"account_updated_at",
 		"bio",
 		"created_at",
 		"enrolled_at",
 		"id",
 		"login",
 		"name",
-		"public_email",
+		"profile_email_id",
+		"profile_updated_at",
 		"roles",
-		"updated_at",
 	}
 	from := "enrollee"
 	sql := SQL(selects, from, where, &args, po)
@@ -412,15 +423,16 @@ func GetUserEnrollees(
 	for dbRows.Next() {
 		var row User
 		dbRows.Scan(
+			&row.AccountUpdatedAt,
 			&row.Bio,
 			&row.CreatedAt,
 			&row.EnrolledAt,
 			&row.Id,
 			&row.Login,
 			&row.Name,
-			&row.PublicEmail,
+			&row.ProfileEmailId,
+			&row.ProfileUpdatedAt,
 			&row.Roles,
-			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
 	}
@@ -437,14 +449,15 @@ func GetUserEnrollees(
 
 const getUserByLoginSQL = `
 	SELECT
+		account_updated_at,
 		bio,
 		created_at,
 		id,
 		login,
 		name,
-		public_email,
-		roles,
-		updated_at
+		profile_email_id,
+		profile_updated_at,
+		roles
 	FROM user_master
 	WHERE LOWER(login) = LOWER($1)
 `
@@ -676,14 +689,15 @@ func SearchUser(
 ) ([]*User, error) {
 	mylog.Log.WithField("query", query).Info("SearchUser(query)")
 	selects := []string{
+		"account_updated_at",
 		"bio",
 		"created_at",
 		"id",
 		"login",
 		"name",
-		"public_email",
+		"profile_email_id",
+		"profile_updated_at",
 		"roles",
-		"updated_at",
 	}
 	from := "user_search_index"
 	sql, args := SearchSQL(selects, from, nil, query, po)
@@ -693,23 +707,17 @@ func SearchUser(
 	return getManyUser(db, psName, sql, args...)
 }
 
-func UpdateUser(
+func UpdateUserAccount(
 	db Queryer,
 	row *User,
 ) (*User, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateUser()")
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateUserAccount()")
 
-	sets := make([]string, 0, 5)
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+	sets := make([]string, 0, 2)
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
-	if row.Bio.Status != pgtype.Undefined {
-		sets = append(sets, `bio`+"="+args.Append(&row.Bio))
-	}
 	if row.Login.Status != pgtype.Undefined {
 		sets = append(sets, `login`+"="+args.Append(&row.Login))
-	}
-	if row.Name.Status != pgtype.Undefined {
-		sets = append(sets, `name`+"="+args.Append(&row.Name))
 	}
 	if row.Password.Status != pgtype.Undefined {
 		sets = append(sets, `password`+"="+args.Append(&row.Password))
@@ -733,7 +741,82 @@ func UpdateUser(
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(&row.Id)
 
-	psName := preparedName("updateUser", sql)
+	psName := preparedName("updateUserAccount", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			mylog.Log.WithError(err).Error("error during scan")
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				return nil, err
+			}
+		}
+		mylog.Log.WithError(err).Error("error during query")
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
+
+	user, err := GetUser(tx, row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
+func UpdateUserProfile(
+	db Queryer,
+	row *User,
+) (*User, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateUserProfile()")
+
+	sets := make([]string, 0, 3)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+
+	if row.Bio.Status != pgtype.Undefined {
+		sets = append(sets, `bio`+"="+args.Append(&row.Bio))
+	}
+	if row.ProfileEmailId.Status != pgtype.Undefined {
+		sets = append(sets, `email_id`+"="+args.Append(&row.ProfileEmailId))
+	}
+	if row.Name.Status != pgtype.Undefined {
+		sets = append(sets, `name`+"="+args.Append(&row.Name))
+	}
+
+	if len(sets) == 0 {
+		return GetUser(db, row.Id.String)
+	}
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	sql := `
+		UPDATE profile
+		SET ` + strings.Join(sets, ",") + `
+		WHERE user_id = ` + args.Append(&row.Id)
+
+	psName := preparedName("updateUserProfile", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
