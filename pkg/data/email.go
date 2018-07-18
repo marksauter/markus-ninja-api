@@ -23,12 +23,21 @@ type EmailFilterOption int
 
 const (
 	EmailIsVerified EmailFilterOption = iota
+	FilterBackup
+	FilterExtra
+	FilterPrimary
 )
 
 func (src EmailFilterOption) String() string {
 	switch src {
 	case EmailIsVerified:
 		return "verified_at IS NOT NULL"
+	case FilterBackup:
+		return "type = 'BACKUP'"
+	case FilterExtra:
+		return "type = 'EXTRA'"
+	case FilterPrimary:
+		return "type = 'PRIMARY'"
 	default:
 		return ""
 	}
@@ -136,6 +145,56 @@ const getEmailByIdSQL = `
 func GetEmail(db Queryer, id string) (*Email, error) {
 	mylog.Log.WithField("id", id).Info("GetEmail(id)")
 	return getEmail(db, "getEmailById", getEmailByIdSQL, id)
+}
+
+const getEmailByUserBackupSQL = `
+	SELECT
+		created_at,
+		id,
+		type,
+		user_id,
+		updated_at,
+		value,
+		verified_at
+	FROM email
+	WHERE user_id = $1 AND type = BACKUP
+`
+
+func GetEmailByUserBackup(db Queryer, userId string) (*Email, error) {
+	mylog.Log.WithField(
+		"user_id", userId,
+	).Info("GetEmailByUserBackup(user_id)")
+	return getEmail(
+		db,
+		"getEmailByUserBackup",
+		getEmailByUserBackupSQL,
+		userId,
+	)
+}
+
+const getEmailByUserPrimarySQL = `
+	SELECT
+		created_at,
+		id,
+		type,
+		user_id,
+		updated_at,
+		value,
+		verified_at
+	FROM email
+	WHERE user_id = $1 AND type = PRIMARY
+`
+
+func GetEmailByUserPrimary(db Queryer, userId string) (*Email, error) {
+	mylog.Log.WithField(
+		"user_id", userId,
+	).Info("GetEmailByUserPrimary(user_id)")
+	return getEmail(
+		db,
+		"getEmailByUserPrimary",
+		getEmailByUserPrimarySQL,
+		userId,
+	)
 }
 
 const getEmailByValueSQL = `

@@ -197,6 +197,42 @@ func (r *EmailRepo) Get(
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
+func (r *EmailRepo) GetByUserBackup(
+	ctx context.Context,
+	userId string,
+) (*EmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	email, err := r.load.GetByUserBackup(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
+	if err != nil {
+		return nil, err
+	}
+	return &EmailPermit{fieldPermFn, email}, nil
+}
+
+func (r *EmailRepo) GetByUserPrimary(
+	ctx context.Context,
+	userId string,
+) (*EmailPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	email, err := r.load.GetByUserPrimary(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
+	if err != nil {
+		return nil, err
+	}
+	return &EmailPermit{fieldPermFn, email}, nil
+}
+
 func (r *EmailRepo) GetByValue(
 	ctx context.Context,
 	value string,

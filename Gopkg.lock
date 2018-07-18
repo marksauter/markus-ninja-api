@@ -126,7 +126,7 @@
     "log",
     "trace"
   ]
-  revision = "ce762577cbd55b7431607a3031cd4a9a1460248f"
+  revision = "bb9738501bd42a6536227b96068349b814379d6e"
 
 [[projects]]
   branch = "master"
@@ -163,12 +163,6 @@
   ]
   revision = "da3231b0b66e2e74cdb779f1d46c5e958ba8be27"
   version = "v3.1.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/jinzhu/copier"
-  packages = ["."]
-  revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -388,6 +382,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ded30d49ac804913498a0b5b84d91af313ad4e7c30aa78ce9c9f605e21405951"
+  inputs-digest = "629c34065a3682d94ea5db7648921ae8896b561f9fe468b5fe2c6f27eaf1f2e0"
   solver-name = "gps-cdcl"
   solver-version = 1

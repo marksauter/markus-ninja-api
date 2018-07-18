@@ -176,6 +176,7 @@ func (r *userResolver) Emails(
 		First      *int32
 		IsVerified *bool
 		Last       *int32
+		Type       *[]string
 	},
 ) (*emailConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -206,6 +207,22 @@ func (r *userResolver) Emails(
 	filterOptions := make([]data.EmailFilterOption, 0, 1)
 	if args.IsVerified != nil && *args.IsVerified {
 		filterOptions = append(filterOptions, data.EmailIsVerified)
+	}
+	if args.Type != nil {
+		for _, t := range *args.Type {
+			emailType, err := data.ParseEmailType(t)
+			if err != nil {
+				return nil, err
+			}
+			switch emailType.Type {
+			case data.BackupEmail:
+				filterOptions = append(filterOptions, data.FilterBackup)
+			case data.ExtraEmail:
+				filterOptions = append(filterOptions, data.FilterExtra)
+			case data.PrimaryEmail:
+				filterOptions = append(filterOptions, data.FilterPrimary)
+			}
+		}
 	}
 
 	emails, err := r.Repos.Email().GetByUser(ctx, id, pageOptions, filterOptions...)

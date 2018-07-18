@@ -1,5 +1,5 @@
-# Input type for LoginUser.
-input LoginUserInput {
+# Input type for DeleteViewerAccount.
+input DeleteViewerAccountInput {
   # The email or username used to login.
   login:    String!
 
