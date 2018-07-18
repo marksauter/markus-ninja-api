@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/badoux/checkmail"
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -487,6 +488,46 @@ func (r *RootResolver) DeleteUserAsset(
 	}, nil
 }
 
+type DeleteViewerAccountInput struct {
+	Login    string
+	Password string
+}
+
+func (r *RootResolver) DeleteViewerAccount(
+	ctx context.Context,
+	args struct{ Input DeleteViewerAccountInput },
+) (*graphql.ID, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	if viewer.Login.String != args.Input.Login {
+		return nil, errors.New("invalid credentials")
+	}
+
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+
+	user, err := data.GetUserCredentialsByLogin(db, args.Input.Login)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := user.Password.CompareToPassword(args.Input.Password); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if err := r.Repos.User().Delete(ctx, user); err != nil {
+		return nil, err
+	}
+
+	id := graphql.ID(user.Id.String)
+	return &id, nil
+}
+
 type DismissInput struct {
 	EnrollableId string
 }
@@ -624,17 +665,17 @@ func (r *RootResolver) LoginUser(
 	if err := checkmail.ValidateFormat(args.Input.Login); err != nil {
 		user, err = data.GetUserCredentialsByLogin(db, args.Input.Login)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("invalid credentials")
 		}
 	} else {
 		user, err = data.GetUserCredentialsByEmail(db, args.Input.Login)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("invalid credentials")
 		}
 	}
 
 	if err := user.Password.CompareToPassword(args.Input.Password); err != nil {
-		return nil, errors.New("passwords do not match")
+		return nil, errors.New("invalid credentials")
 	}
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
@@ -1011,6 +1052,14 @@ func (r *RootResolver) UpdateEmail(
 	ctx context.Context,
 	args struct{ Input UpdateEmailInput },
 ) (*emailResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	emailPermit, err := r.Repos.Email().Get(ctx, args.Input.EmailId)
 	if err != nil {
 		return nil, err
@@ -1022,6 +1071,47 @@ func (r *RootResolver) UpdateEmail(
 	}
 	if !ok {
 		return nil, errors.New("cannot update unverified email")
+	}
+
+	if args.Input.Type != nil {
+		if *args.Input.Type == data.PrimaryEmail.String() {
+			viewer, ok := myctx.UserFromContext(ctx)
+			if !ok {
+				return nil, errors.New("viewer not found")
+			}
+			email, err := r.Repos.Email().GetByUserPrimary(ctx, viewer.Id.String)
+			if err != nil {
+				return nil, myerr.UnexpectedError{"user primary email not found"}
+			}
+			e := email.Get()
+			if err := e.Type.Set(data.ExtraEmail); err != nil {
+				return nil, myerr.UnexpectedError{"failed to set email type"}
+			}
+			_, err = r.Repos.Email().Update(ctx, e)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if *args.Input.Type == data.BackupEmail.String() {
+			viewer, ok := myctx.UserFromContext(ctx)
+			if !ok {
+				return nil, errors.New("viewer not found")
+			}
+			email, err := r.Repos.Email().GetByUserBackup(ctx, viewer.Id.String)
+			if err != nil && err != data.ErrNotFound {
+				return nil, err
+			}
+			if email != nil {
+				e := email.Get()
+				if err := e.Type.Set(data.ExtraEmail); err != nil {
+					return nil, myerr.UnexpectedError{"failed to set email type"}
+				}
+				_, err = r.Repos.Email().Update(ctx, e)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 
 	email := &data.Email{}
@@ -1038,6 +1128,14 @@ func (r *RootResolver) UpdateEmail(
 	if err != nil {
 		return nil, err
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
 }
 

@@ -13,6 +13,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
+const Guest = "guest"
+
 func NewPermitter(repos *Repos) *Permitter {
 	return &Permitter{
 		load:  loader.NewQueryPermLoader(),
@@ -140,6 +142,9 @@ func (r *Permitter) ViewerCanAdmin(
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, &myctx.ErrNotFound{"viewer"}
+	}
+	if viewer.Login.String == Guest {
+		return false, ErrAccessDenied
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
@@ -327,6 +332,9 @@ func (r *Permitter) ViewerCanCreate(
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, &myctx.ErrNotFound{"viewer"}
+	}
+	if viewer.Login.String == Guest {
+		return false, ErrAccessDenied
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {

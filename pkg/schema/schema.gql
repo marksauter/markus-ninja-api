@@ -102,6 +102,8 @@ type Mutation {
   deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
   # Deletes a user asset.
   deleteUserAsset(input: DeleteUserAssetInput!): DeleteUserAssetPayload
+  # Deletes the viewer's account.
+  deleteViewerAccount(input: DeleteViewerAccountInput!): ID
   # Dismisses viewer from an Enrollable.
   dismiss(input: DismissInput!): Enrollable
 

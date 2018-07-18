@@ -812,7 +812,7 @@ func UpdateUserProfile(
 	}
 
 	sql := `
-		UPDATE profile
+		UPDATE user_profile
 		SET ` + strings.Join(sets, ",") + `
 		WHERE user_id = ` + args.Append(&row.Id)
 

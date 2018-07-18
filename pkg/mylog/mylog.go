@@ -1,8 +1,11 @@
 package mylog
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -24,7 +27,7 @@ func New() *Logger {
 	}
 	log.Formatter = &logrus.TextFormatter{ForceColors: forceColors}
 	log.Out = os.Stdout
-	if branch != "production" {
+	if branch == "development.local" {
 		log.SetLevel(logrus.DebugLevel)
 	}
 	return &Logger{log}
@@ -47,19 +50,19 @@ func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
 			"proto":       req.Proto,
 		}).Info("Request Info")
 		l.WithField("user_agent", req.UserAgent()).Info("")
-		// if l.Level >= logrus.DebugLevel {
-		//   body, err := ioutil.ReadAll(req.Body)
-		//   if err != nil {
-		//     l.WithField("error", err).Error("Error reading request body")
-		//   }
-		//   reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
-		//   re_escaped := regexp.MustCompile(`\\n|\\`)
-		//   prettyBody := re_escaped.ReplaceAll(body, nil)
-		//   re_inside_whtsp := regexp.MustCompile(`[\s\p{Zs}]{2,}`)
-		//   prettyBody = re_inside_whtsp.ReplaceAll(prettyBody, []byte{' '})
-		//   l.WithField("body", string(prettyBody)).Debug("")
-		//   req.Body = reqStr
-		// }
+		if l.Level >= logrus.DebugLevel {
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				l.WithField("error", err).Error("Error reading request body")
+			}
+			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
+			re_escaped := regexp.MustCompile(`\\n|\\`)
+			prettyBody := re_escaped.ReplaceAll(body, nil)
+			re_inside_whtsp := regexp.MustCompile(`[\s\p{Zs}]{2,}`)
+			prettyBody = re_inside_whtsp.ReplaceAll(prettyBody, []byte{' '})
+			l.WithField("body", string(prettyBody)).Debug("")
+			req.Body = reqStr
+		}
 		h.ServeHTTP(rw, req)
 	})
 }
