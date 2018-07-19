@@ -1,5 +1,12 @@
 # Represents a user.
-type User implements Enrollable, Node, UniformResourceLocatable {
+type User implements 
+  Enrollable,
+  EventSourceable,
+  EventTargetable,
+  Node,
+  Searchable,
+  UniformResourceLocatable 
+{
   # Identifies the date and time when the user's account was last updated.
   accountUpdatedAt: Time!
 

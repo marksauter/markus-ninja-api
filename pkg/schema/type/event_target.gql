@@ -1,2 +1,0 @@
-# Any referencable object.
-union EventTarget = Lesson | Study | User

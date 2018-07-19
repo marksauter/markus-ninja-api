@@ -31,68 +31,44 @@ func (r *eventResolver) ID() (graphql.ID, error) {
 
 func (r *eventResolver) Source(
 	ctx context.Context,
-) (*eventSourceResolver, error) {
+) (*eventSourceableResolver, error) {
 	id, err := r.Event.SourceId()
 	if err != nil {
 		return nil, err
 	}
-	switch id.Type {
-	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventSourceResolver{Subject: lesson, Repos: r.Repos}, nil
-	case "LessonComment":
-		lessonComment, err := r.Repos.LessonComment().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventSourceResolver{Subject: lessonComment, Repos: r.Repos}, nil
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventSourceResolver{Subject: study, Repos: r.Repos}, nil
-	case "User":
-		user, err := r.Repos.User().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventSourceResolver{Subject: user, Repos: r.Repos}, nil
-	default:
-		return nil, errors.New("invalid source id")
+	permit, err := r.Repos.GetEventSourceable(ctx, id)
+	if err != nil {
+		return nil, err
 	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	eventSourceable, ok := resolver.(eventSourceable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to event sourceable")
+	}
+	return &eventSourceableResolver{eventSourceable}, nil
 }
 
-func (r *eventResolver) Target(ctx context.Context) (*eventTargetResolver, error) {
+func (r *eventResolver) Target(ctx context.Context) (*eventTargetableResolver, error) {
 	id, err := r.Event.TargetId()
 	if err != nil {
 		return nil, err
 	}
-	switch id.Type {
-	case "Lesson":
-		lesson, err := r.Repos.Lesson().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventTargetResolver{Subject: lesson, Repos: r.Repos}, nil
-	case "Study":
-		study, err := r.Repos.Study().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventTargetResolver{Subject: study, Repos: r.Repos}, nil
-	case "User":
-		user, err := r.Repos.User().Get(ctx, id.String)
-		if err != nil {
-			return nil, err
-		}
-		return &eventTargetResolver{Subject: user, Repos: r.Repos}, nil
-	default:
-		return nil, errors.New("invalid target id")
+	permit, err := r.Repos.GetEventTargetable(ctx, id)
+	if err != nil {
+		return nil, err
 	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	eventTargetable, ok := resolver.(eventTargetable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to event targetable")
+	}
+	return &eventTargetableResolver{eventTargetable}, nil
 }
 
 func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {

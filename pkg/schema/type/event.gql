@@ -9,10 +9,10 @@ type Event implements Node {
   id: ID!
 
   # The source of the event.
-  source: EventSource!
+  source: EventSourceable!
 
   # The target of the event.
-  target: EventTarget!
+  target: EventTargetable!
 
   # The user who performed the event.
   user: User!

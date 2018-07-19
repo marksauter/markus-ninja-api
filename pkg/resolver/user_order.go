@@ -11,12 +11,18 @@ type UserOrderField int
 
 const (
 	UserCreatedAt UserOrderField = iota
+	UserEnrolleeCount
+	UserStudyCount
 )
 
 func ParseUserOrderField(s string) (UserOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
 		return UserCreatedAt, nil
+	case "ENROLLEE_COUNT":
+		return UserEnrolleeCount, nil
+	case "STUDY_COUNT":
+		return UserStudyCount, nil
 	default:
 		var f UserOrderField
 		return f, fmt.Errorf("invalid UserOrderField: %q", s)
@@ -27,6 +33,10 @@ func (f UserOrderField) String() string {
 	switch f {
 	case UserCreatedAt:
 		return "created_at"
+	case UserEnrolleeCount:
+		return "enrollee_count"
+	case UserStudyCount:
+		return "study_count"
 	default:
 		return "unknown"
 	}

@@ -11,24 +11,24 @@ type StudyOrderField int
 
 const (
 	StudyAdvancedAt StudyOrderField = iota
+	StudyAppleCount
 	StudyAppledAt
 	StudyCreatedAt
-	StudyName
-	StudyUpdatedAt
+	StudyLessonCount
 )
 
 func ParseStudyOrderField(s string) (StudyOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "ADVANCED_AT":
 		return StudyAdvancedAt, nil
+	case "APPLE_COUNT":
+		return StudyAppleCount, nil
 	case "APPLED_AT":
 		return StudyAppledAt, nil
 	case "CREATED_AT":
 		return StudyCreatedAt, nil
-	case "NAME":
-		return StudyName, nil
-	case "UPDATED_AT":
-		return StudyUpdatedAt, nil
+	case "LESSON_COUNT":
+		return StudyLessonCount, nil
 	default:
 		var f StudyOrderField
 		return f, fmt.Errorf("invalid StudyOrderField: %q", s)
@@ -39,14 +39,14 @@ func (f StudyOrderField) String() string {
 	switch f {
 	case StudyAdvancedAt:
 		return "advanced_at"
+	case StudyAppleCount:
+		return "apple_count"
 	case StudyAppledAt:
 		return "appled_at"
 	case StudyCreatedAt:
 		return "created_at"
-	case StudyName:
-		return "name"
-	case StudyUpdatedAt:
-		return "updated_at"
+	case StudyLessonCount:
+		return "lesson_count"
 	default:
 		return "unknown"
 	}

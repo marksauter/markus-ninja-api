@@ -1,0 +1,4 @@
+# Any object that can be the source of an event.
+interface EventSourceable {
+  id: ID!
+}

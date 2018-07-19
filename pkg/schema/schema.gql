@@ -23,6 +23,8 @@ type Query {
     ids: [ID!]!
   ): [Node]!
 
+  relay: Query!
+
   search(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -42,12 +44,12 @@ type Query {
     # The search string to look for.
     query: String!
 
-    # The types of search items to search within.
+    # The types of search items to search for.
     type: SearchType!
 
     # The ID of the node to search within.
     within: ID
-  ): SearchResultItemConnection!
+  ): SearchableConnection!
 
   # Lookup a given study by the owner and study name.
   study(

@@ -11,6 +11,7 @@ type LessonOrderField int
 
 const (
 	LessonCreatedAt LessonOrderField = iota
+	LessonCommentCount
 	LessonNumber
 	LessonUpdatedAt
 )
@@ -19,6 +20,8 @@ func ParseLessonOrderField(s string) (LessonOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "CREATED_AT":
 		return LessonCreatedAt, nil
+	case "COMMENT_COUNT":
+		return LessonCommentCount, nil
 	case "NUMBER":
 		return LessonNumber, nil
 	case "UPDATED_AT":
@@ -33,6 +36,8 @@ func (f LessonOrderField) String() string {
 	switch f {
 	case LessonCreatedAt:
 		return "created_at"
+	case LessonCommentCount:
+		return "comment_count"
 	case LessonNumber:
 		return "number"
 	case LessonUpdatedAt:

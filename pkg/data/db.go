@@ -322,7 +322,6 @@ func SearchSQL(
 		limit = "LIMIT " + args.Append(po.Limit())
 
 		field := po.Order.Field()
-		orderBy := ""
 		if field != "best_match" {
 			orderBy = as + "." + field
 		} else {

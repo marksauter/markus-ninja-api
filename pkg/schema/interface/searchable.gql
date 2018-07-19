@@ -1,0 +1,4 @@
+# Things that can be searched for.
+interface Searchable {
+  id: ID!
+}

@@ -2,6 +2,7 @@
 type LessonComment implements 
   Authorable,
   Deleteable,
+  EventSourceable,
   Labelable,
   Node,
   StudyNode,

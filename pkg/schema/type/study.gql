@@ -2,7 +2,10 @@
 type Study implements
   Appleable,
   Enrollable,
+  EventSourceable,
+  EventTargetable,
   Node,
+  Searchable,
   Topicable,
   UniformResourceLocatable
 {
