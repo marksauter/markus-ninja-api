@@ -3,17 +3,23 @@ enum SearchOrderField {
   # Order items by advance time.
   ADVANCED_AT
 
+  # Order items by number of apples given.
+  APPLE_COUNT
+
   # Order items by best match to query.
   BEST_MATCH
 
   # Order items by creation time.
   CREATED_AT
 
-  # Order items by number.
-  NUMBER
+  # Order items by number of comments made.
+  COMMENT_COUNT
 
-  # Order items by name.
-  NAME
+  # Order items by number of lessons.
+  LESSON_COUNT
+
+  # Order items by number of studies.
+  STUDY_COUNT
 
   # Order items by update time.
   UPDATED_AT

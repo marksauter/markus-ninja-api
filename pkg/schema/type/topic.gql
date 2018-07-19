@@ -1,5 +1,9 @@
 # Represents a topic.
-type Topic implements Node, UniformResourceLocatable {
+type Topic implements 
+  Node,
+  Searchable,
+  UniformResourceLocatable 
+{
   # Identifies the date and time when the object was created.
   createdAt: Time!
 

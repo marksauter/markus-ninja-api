@@ -80,6 +80,10 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 	return nodes, nil
 }
 
+func (r *RootResolver) Relay() *RootResolver {
+	return r
+}
+
 func (r *RootResolver) Search(
 	ctx context.Context,
 	args struct {
@@ -92,7 +96,7 @@ func (r *RootResolver) Search(
 		Type    string
 		Within  *string
 	},
-) (*searchResultItemConnectionResolver, error) {
+) (*searchableConnectionResolver, error) {
 	var within *mytype.OID
 	if args.Within != nil {
 		var err error
@@ -201,7 +205,7 @@ func (r *RootResolver) Search(
 		}
 	}
 
-	return NewSearchResultItemConnectionResolver(
+	return NewSearchableConnectionResolver(
 		r.Repos,
 		permits,
 		pageOptions,

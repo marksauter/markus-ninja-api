@@ -1,0 +1,4 @@
+# Any object that can be the target of an event.
+interface EventTargetable {
+  id: ID!
+}

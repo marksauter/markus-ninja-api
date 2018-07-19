@@ -214,6 +214,40 @@ func (r *Repos) GetEnrollable(
 	}
 }
 
+func (r *Repos) GetEventSourceable(
+	ctx context.Context,
+	nodeId *mytype.OID,
+) (NodePermit, error) {
+	switch nodeId.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeId.String)
+	case "LessonComment":
+		return r.LessonComment().Get(ctx, nodeId.String)
+	case "Study":
+		return r.Study().Get(ctx, nodeId.String)
+	case "User":
+		return r.User().Get(ctx, nodeId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
+	}
+}
+
+func (r *Repos) GetEventTargetable(
+	ctx context.Context,
+	nodeId *mytype.OID,
+) (NodePermit, error) {
+	switch nodeId.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeId.String)
+	case "Study":
+		return r.Study().Get(ctx, nodeId.String)
+	case "User":
+		return r.User().Get(ctx, nodeId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
+	}
+}
+
 func (r *Repos) GetLabelable(
 	ctx context.Context,
 	labelableId *mytype.OID,

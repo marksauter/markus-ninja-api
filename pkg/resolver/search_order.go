@@ -20,18 +20,8 @@ const (
 
 func ParseSearchOrderField(s string) (SearchOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "ADVANCED_AT":
-		return SearchAdvancedAt, nil
 	case "BEST_MATCH":
 		return SearchBestMatch, nil
-	case "CREATED_AT":
-		return SearchCreatedAt, nil
-	case "NAME":
-		return SearchName, nil
-	case "NUMBER":
-		return SearchNumber, nil
-	case "UPDATED_AT":
-		return SearchUpdatedAt, nil
 	default:
 		var f SearchOrderField
 		return f, fmt.Errorf("invalid SearchOrderField: %q", s)
@@ -40,18 +30,8 @@ func ParseSearchOrderField(s string) (SearchOrderField, error) {
 
 func (f SearchOrderField) String() string {
 	switch f {
-	case SearchAdvancedAt:
-		return "advanced_at"
 	case SearchBestMatch:
 		return "best_match"
-	case SearchCreatedAt:
-		return "created_at"
-	case SearchName:
-		return "name"
-	case SearchNumber:
-		return "number"
-	case SearchUpdatedAt:
-		return "updated_at"
 	default:
 		return "unknown"
 	}
@@ -80,6 +60,16 @@ func ParseSearchOrder(t SearchType, arg *OrderArg) (data.Order, error) {
 		return &SearchOrder{
 			direction: data.DESC,
 			field:     SearchBestMatch,
+		}, nil
+	}
+	if field, err := ParseSearchOrderField(arg.Field); err == nil {
+		direction, err := data.ParseOrderDirection(arg.Direction)
+		if err != nil {
+			return nil, err
+		}
+		return &SearchOrder{
+			direction,
+			field,
 		}, nil
 	}
 	switch t {

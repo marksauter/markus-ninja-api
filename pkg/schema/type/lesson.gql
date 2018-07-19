@@ -2,8 +2,11 @@
 type Lesson implements 
   Authorable,
   Enrollable,
+  EventSourceable,
+  EventTargetable,
   Labelable,
   Node,
+  Searchable,
   StudyNode,
   UniformResourceLocatable,
   Updateable

@@ -1,0 +1,38 @@
+# An edge in a searchable connection.
+type SearchableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Searchable
+
+  # Text matches on the result found.
+  textMatches: [TextMatch]
+}
+
+# A list of results that matched against a search query.
+type SearchableConnection {
+  # A list of edges.
+  edges: [SearchableEdge]
+
+  # The number of lessons that matched the search query.
+  lessonCount: Int!
+
+  # A list of nodes.
+  nodes: [Searchable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies that matched the search query.
+  studyCount: Int!
+
+  # The number of topics that matched the search query.
+  topicCount: Int!
+
+  # The number of users that matched the search query.
+  userCount: Int!
+
+  # The number of user assets that matched the search query.
+  userAssetCount: Int!
+}
