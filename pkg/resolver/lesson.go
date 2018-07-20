@@ -181,6 +181,30 @@ func (r *lessonResolver) Enrollees(
 	return enrolleeConnectionResolver, nil
 }
 
+func (r *lessonResolver) HasNextLesson(ctx context.Context) (bool, error) {
+	studyId, err := r.Lesson.StudyId()
+	if err != nil {
+		return false, err
+	}
+	count, err := r.Repos.Lesson().CountByStudy(ctx, studyId.String)
+	if err != nil {
+		return false, err
+	}
+	number, err := r.Lesson.Number()
+	if err != nil {
+		return false, err
+	}
+	return number < count, nil
+}
+
+func (r *lessonResolver) HasPrevLesson(ctx context.Context) (bool, error) {
+	number, err := r.Lesson.Number()
+	if err != nil {
+		return false, err
+	}
+	return number > 1, nil
+}
+
 func (r *lessonResolver) ID() (graphql.ID, error) {
 	id, err := r.Lesson.ID()
 	return graphql.ID(id.String), err

@@ -687,6 +687,7 @@ func (r *RootResolver) LoginUser(
 
 	return &loginUserPayloadResolver{
 		AccessToken: jwt,
+		Viewer:      user,
 		Repos:       r.Repos,
 	}, nil
 }

@@ -109,12 +109,11 @@ func CountLessonBySearch(
 const countLessonByStudySQL = `
 	SELECT COUNT(*)
 	FROM lesson
-	WHERE user_id = $1 AND study_id = $2
+	WHERE study_id = $1
 `
 
 func CountLessonByStudy(
 	db Queryer,
-	userId,
 	studyId string,
 ) (int32, error) {
 	mylog.Log.WithField(
@@ -125,7 +124,6 @@ func CountLessonByStudy(
 		db,
 		"countLessonByStudy",
 		countLessonByStudySQL,
-		userId,
 		studyId,
 	).Scan(&n)
 
@@ -434,7 +432,6 @@ func GetLessonByUser(
 
 func GetLessonByStudy(
 	db Queryer,
-	userId,
 	studyId string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
@@ -443,7 +440,6 @@ func GetLessonByStudy(
 	).Info("GetLessonByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`user_id = ` + args.Append(userId),
 		`study_id = ` + args.Append(studyId),
 	}
 
@@ -478,12 +474,11 @@ const getLessonByNumberSQL = `
 		updated_at,
 		user_id
 	FROM lesson
-	WHERE user_id = $1 AND study_id = $2 AND number = $3
+	WHERE study_id = $1 AND number = $2
 `
 
 func GetLessonByNumber(
 	db Queryer,
-	userId,
 	studyId string,
 	number int32,
 ) (*Lesson, error) {
@@ -495,7 +490,6 @@ func GetLessonByNumber(
 		db,
 		"getLessonByNumber",
 		getLessonByNumberSQL,
-		userId,
 		studyId,
 		number,
 	)
@@ -513,7 +507,7 @@ const batchGetLessonByNumberSQL = `
 		updated_at,
 		user_id
 	FROM lesson
-	WHERE user_id = $1 AND study_id = $2 AND number = ANY($3)
+	WHERE study_id = $1 AND number = ANY($2)
 `
 
 func BatchGetLessonByNumber(
@@ -530,7 +524,6 @@ func BatchGetLessonByNumber(
 		db,
 		"batchGetLessonByNumber",
 		batchGetLessonByNumberSQL,
-		userId,
 		studyId,
 		numbers,
 	)

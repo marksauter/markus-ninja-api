@@ -77,6 +77,8 @@ func ParseSearchOrder(t SearchType, arg *OrderArg) (data.Order, error) {
 		return ParseLessonOrder(arg)
 	case SearchTypeStudy:
 		return ParseStudyOrder(arg)
+	case SearchTypeTopic:
+		return ParseTopicOrder(arg)
 	case SearchTypeUser:
 		return ParseUserOrder(arg)
 	case SearchTypeUserAsset:

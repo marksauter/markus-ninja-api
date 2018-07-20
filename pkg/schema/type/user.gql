@@ -204,6 +204,9 @@ type User implements
   # The HTTP URL for this user.
   url: URI!
 
+  # Can the viewer enroll in this enrollable.
+  viewerCanEnroll: Boolean!
+
   # Has the viewer enrolled in this enrollable.
   viewerHasEnrolled: Boolean!
 }
