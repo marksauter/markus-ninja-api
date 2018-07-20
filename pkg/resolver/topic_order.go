@@ -11,6 +11,7 @@ type TopicOrderField int
 
 const (
 	TopicTopicedAt TopicOrderField = iota
+	TopicTopicedCount
 	TopicName
 )
 
@@ -18,6 +19,8 @@ func ParseTopicOrderField(s string) (TopicOrderField, error) {
 	switch strings.ToUpper(s) {
 	case "TOPICED_AT":
 		return TopicTopicedAt, nil
+	case "TOPICED_COUNT":
+		return TopicTopicedCount, nil
 	case "NAME":
 		return TopicName, nil
 	default:
@@ -30,6 +33,8 @@ func (f TopicOrderField) String() string {
 	switch f {
 	case TopicTopicedAt:
 		return "created_at"
+	case TopicTopicedCount:
+		return "topiced_count"
 	case TopicName:
 		return "name"
 	default:

@@ -166,7 +166,6 @@ func (r *LessonRepo) CountBySearch(
 
 func (r *LessonRepo) CountByStudy(
 	ctx context.Context,
-	userId,
 	studyId string,
 ) (int32, error) {
 	var n int32
@@ -174,7 +173,7 @@ func (r *LessonRepo) CountByStudy(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByStudy(db, userId, studyId)
+	return data.CountLessonByStudy(db, studyId)
 }
 
 func (r *LessonRepo) CountByUser(
@@ -292,7 +291,6 @@ func (r *LessonRepo) GetByLabel(
 
 func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
-	userId,
 	studyId string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
@@ -303,7 +301,7 @@ func (r *LessonRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByStudy(db, userId, studyId, po)
+	lessons, err := data.GetLessonByStudy(db, studyId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +349,6 @@ func (r *LessonRepo) GetByUser(
 
 func (r *LessonRepo) GetByNumber(
 	ctx context.Context,
-	userId,
 	studyId string,
 	number int32,
 ) (*LessonPermit, error) {
@@ -362,7 +359,7 @@ func (r *LessonRepo) GetByNumber(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lesson, err := data.GetLessonByNumber(db, userId, studyId, number)
+	lesson, err := data.GetLessonByNumber(db, studyId, number)
 	if err != nil {
 		return nil, err
 	}

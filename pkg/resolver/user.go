@@ -615,6 +615,40 @@ func (r *userResolver) URL() (mygql.URI, error) {
 	return uri, nil
 }
 
+func (r *userResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	userId, err := r.User.ID()
+	if err != nil {
+		return false, err
+	}
+
+	if viewer.Id.String == userId.String {
+		return false, err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(userId)
+	enrolled.UserId.Set(viewer.Id)
+	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
+	if err != nil {
+		return false, err
+	}
+	if !canEnroll {
+		return false, nil
+	}
+	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
+		if err == data.ErrNotFound {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
+}
+
 func (r *userResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {

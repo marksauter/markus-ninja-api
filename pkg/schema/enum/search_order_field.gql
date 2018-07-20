@@ -21,6 +21,9 @@ enum SearchOrderField {
   # Order items by number of studies.
   STUDY_COUNT
 
+  # Order items by number of topicables topiced.
+  TOPICED_COUNT
+
   # Order items by update time.
   UPDATED_AT
 }

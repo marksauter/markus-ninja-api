@@ -317,17 +317,12 @@ func (r *studyResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return nil, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
 	}
 	lesson, err := r.Repos.Lesson().GetByNumber(
 		ctx,
-		userId.String,
 		studyId.String,
 		args.Number,
 	)
@@ -347,10 +342,6 @@ func (r *studyResolver) Lessons(
 		OrderBy *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return nil, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -373,7 +364,6 @@ func (r *studyResolver) Lessons(
 
 	lessons, err := r.Repos.Lesson().GetByStudy(
 		ctx,
-		userId.String,
 		studyId.String,
 		pageOptions,
 	)
@@ -382,7 +372,6 @@ func (r *studyResolver) Lessons(
 	}
 	count, err := r.Repos.Lesson().CountByStudy(
 		ctx,
-		userId.String,
 		studyId.String,
 	)
 	if err != nil {
@@ -460,11 +449,6 @@ func (r *studyResolver) LessonComments(
 }
 
 func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
-	userId, err := r.Study.UserId()
-	if err != nil {
-		var count int32
-		return count, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		var count int32
@@ -472,7 +456,6 @@ func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
 	}
 	return r.Repos.Lesson().CountByStudy(
 		ctx,
-		userId.String,
 		studyId.String,
 	)
 }

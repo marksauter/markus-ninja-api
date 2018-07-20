@@ -259,3 +259,16 @@ func (r *EnrolledRepo) Disconnect(
 	}
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
 }
+
+func (r *EnrolledRepo) ViewerCanEnroll(
+	ctx context.Context,
+	e *data.Enrolled,
+) (bool, error) {
+	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, e); err != nil {
+		if err == ErrAccessDenied {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
