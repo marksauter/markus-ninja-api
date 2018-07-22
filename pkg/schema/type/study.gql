@@ -183,11 +183,14 @@ type Study implements
   # Can the viewer admin this object?
   viewerCanAdmin: Boolean!
 
+  # Can the viewer enroll in this enrollable.
+  viewerCanEnroll: Boolean!
+
   # Has the viewer appled this appleable?
   viewerHasAppled: Boolean!
 
-  # Has the viewer enrolled in this enrollable?
-  viewerHasEnrolled: Boolean!
+  # Is the viewer enrolled in this enrollable?
+  viewerIsEnrolled: Boolean!
 }
 
 # An edge type for Study.

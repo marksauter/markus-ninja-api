@@ -144,7 +144,7 @@ func (r *Permitter) ViewerCanAdmin(
 		return false, &myctx.ErrNotFound{"viewer"}
 	}
 	if viewer.Login.String == Guest {
-		return false, ErrAccessDenied
+		return false, nil
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
@@ -334,7 +334,7 @@ func (r *Permitter) ViewerCanCreate(
 		return false, &myctx.ErrNotFound{"viewer"}
 	}
 	if viewer.Login.String == Guest {
-		return false, ErrAccessDenied
+		return false, nil
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {

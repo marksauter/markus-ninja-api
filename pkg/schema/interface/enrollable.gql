@@ -2,6 +2,9 @@
 interface Enrollable {
   id: ID!
 
-  # Has the viewer enrolled in this enrollable.
-  viewerHasEnrolled: Boolean!
+  # Can the viewer enroll in this enrollable.
+  viewerCanEnroll: Boolean!
+
+  # Is the viewer enrolled in this enrollable.
+  viewerIsEnrolled: Boolean!
 }

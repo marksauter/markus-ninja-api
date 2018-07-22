@@ -582,6 +582,45 @@ func (r *studyResolver) ViewerCanAdmin(ctx context.Context) (bool, error) {
 	return r.Repos.Study().ViewerCanAdmin(ctx, study)
 }
 
+func (r *studyResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	userId, err := r.Study.UserId()
+	if err != nil {
+		return false, err
+	}
+
+	if viewer.Id.String == userId.String {
+		return false, err
+	}
+
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return false, err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(studyId)
+	enrolled.UserId.Set(viewer.Id)
+	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
+	if err != nil {
+		return false, err
+	}
+	if !canEnroll {
+		return false, nil
+	}
+	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
+		if err == data.ErrNotFound {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
+}
+
 func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
@@ -605,7 +644,7 @@ func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (r *studyResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+func (r *studyResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")

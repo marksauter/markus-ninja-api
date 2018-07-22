@@ -260,6 +260,31 @@ func (r *EnrolledRepo) Disconnect(
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
 }
 
+func (r *EnrolledRepo) Update(
+	ctx context.Context,
+	e *data.Enrolled,
+) (*EnrolledPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, e); err != nil {
+		return nil, err
+	}
+	enrolled, err := data.UpdateEnrolled(db, e)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolled)
+	if err != nil {
+		return nil, err
+	}
+	return &EnrolledPermit{fieldPermFn, enrolled}, nil
+}
+
 func (r *EnrolledRepo) ViewerCanEnroll(
 	ctx context.Context,
 	e *data.Enrolled,

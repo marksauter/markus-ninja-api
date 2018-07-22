@@ -207,8 +207,8 @@ type User implements
   # Can the viewer enroll in this enrollable.
   viewerCanEnroll: Boolean!
 
-  # Has the viewer enrolled in this enrollable.
-  viewerHasEnrolled: Boolean!
+  # Is the viewer enrolled in this enrollable.
+  viewerIsEnrolled: Boolean!
 }
 
 # An edge type for User.

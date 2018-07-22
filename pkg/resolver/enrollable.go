@@ -8,7 +8,8 @@ import (
 
 type enrollable interface {
 	ID() (graphql.ID, error)
-	ViewerHasEnrolled(ctx context.Context) (bool, error)
+	ViewerCanEnroll(ctx context.Context) (bool, error)
+	ViewerIsEnrolled(ctx context.Context) (bool, error)
 }
 
 type enrollableResolver struct {
