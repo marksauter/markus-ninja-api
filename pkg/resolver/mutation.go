@@ -579,25 +579,61 @@ func (r *RootResolver) Enroll(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, errors.New("queryer not found")
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	enrolled := &data.Enrolled{}
 	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
 		return nil, errors.New("invalid enrollable id")
 	}
-	if err := enrolled.ReasonName.Set(data.ManualReason); err != nil {
-		return nil, errors.New("invalid enrollable reason_name")
-	}
 	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
 		return nil, errors.New("invalid enrollable user_id")
 	}
-	_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
-	if err != nil {
-		return nil, err
+	if _, err := data.GetEnrolledByEnrollableAndUser(
+		db,
+		enrolled.EnrollableId.String,
+		enrolled.UserId.String,
+	); err != nil {
+		if err != data.ErrNotFound {
+			return nil, err
+		}
+		if err := enrolled.ReasonName.Set(data.ManualReason); err != nil {
+			return nil, errors.New("invalid enrollable reason_name")
+		}
+		_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := enrolled.Ignore.Set(false); err != nil {
+			return nil, errors.New("invalid enrollable ignore")
+		}
+		_, err := r.Repos.Enrolled().Update(ctx, enrolled)
+		if err != nil {
+			return nil, err
+		}
 	}
 	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
 	if err != nil {
 		return nil, err
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resolver, err := nodePermitToResolver(permit, r.Repos)
 	if err != nil {
 		return nil, err
@@ -606,6 +642,7 @@ func (r *RootResolver) Enroll(
 	if !ok {
 		return nil, errors.New("cannot convert resolver to enrollable")
 	}
+
 	return &enrollableResolver{enrollable}, nil
 }
 
@@ -646,6 +683,48 @@ func (r *RootResolver) GiveApple(
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
 	return &appleableResolver{appleable}, nil
+}
+
+type IgnoreInput struct {
+	EnrollableId string
+}
+
+func (r *RootResolver) Ignore(
+	ctx context.Context,
+	args struct{ Input IgnoreInput },
+) (*enrollableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	enrolled := &data.Enrolled{}
+	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
+		return nil, errors.New("invalid enrollable id")
+	}
+	if err := enrolled.Ignore.Set(true); err != nil {
+		return nil, errors.New("invalid enrollable ignore")
+	}
+	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid enrollable user_id")
+	}
+	_, err := r.Repos.Enrolled().Update(ctx, enrolled)
+	if err != nil {
+		return nil, err
+	}
+	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	enrollable, ok := resolver.(enrollable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to enrollable")
+	}
+	return &enrollableResolver{enrollable}, nil
 }
 
 type LoginUserInput struct {

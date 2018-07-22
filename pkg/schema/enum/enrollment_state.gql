@@ -1,0 +1,11 @@
+# The possible states of an enrollment.
+enum EnrollmentState {
+  # The User is notified only when participating or @mentioned.
+  DISMISSED
+
+  # The User is notified of all conversations.
+  ENROLLED
+  
+  # The User is never notified.
+  IGNORED
+}

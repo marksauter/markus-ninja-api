@@ -115,6 +115,9 @@ type Mutation {
   # Gives an apple to an Appleable.
   giveApple(input: GiveAppleInput!): Appleable
 
+  # Ignores an Enrollable.
+  ignore(input: IgnoreInput!): Enrollable
+
   # Returns a token for use in authentication.
   loginUser(input: LoginUserInput!): LoginUserPayload
 

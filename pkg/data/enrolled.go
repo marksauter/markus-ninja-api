@@ -14,6 +14,7 @@ type Enrolled struct {
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           pgtype.Int4        `db:"id" permit:"read"`
 	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
+	Ignore       pgtype.Bool        `db:"ignore" permit:"read/update"`
 	ReasonName   pgtype.Varchar     `db:"reason_name" permit:"read"`
 	UserId       mytype.OID         `db:"user_id" permit:"read"`
 }
@@ -362,4 +363,70 @@ func DeleteEnrolledByEnrollableAndUser(
 	}
 
 	return nil
+}
+
+func UpdateEnrolled(
+	db Queryer,
+	row *Enrolled,
+) (*Enrolled, error) {
+	mylog.Log.Info("UpdateEnrolled()")
+	sets := make([]string, 0, 1)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+
+	if row.Ignore.Status != pgtype.Undefined {
+		sets = append(sets, `ignore`+"="+args.Append(&row.Ignore))
+	}
+
+	if len(sets) == 0 {
+		return GetEnrolledByEnrollableAndUser(
+			db,
+			row.EnrollableId.String,
+			row.UserId.String,
+		)
+	}
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	sql := `
+		UPDATE enrolled
+		SET ` + strings.Join(sets, ",") + `
+		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
+			AND user_id = ` + args.Append(row.UserId.String) + `
+	`
+
+	psName := preparedName("updateEnrolled", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	if commandTag.RowsAffected() < 1 {
+		return nil, ErrNotFound
+	}
+
+	enrolled, err := GetEnrolledByEnrollableAndUser(
+		tx,
+		row.EnrollableId.String,
+		row.UserId.String,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
+	}
+
+	return enrolled, nil
 }

@@ -48,6 +48,12 @@ permissions:
     authenticated: true
     roles:
       - user
+  - operation: Update Enrolled
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - ignore
 
 
 

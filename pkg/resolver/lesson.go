@@ -399,6 +399,45 @@ func (r *lessonResolver) ViewerCanUpdate(ctx context.Context) bool {
 	return r.Repos.Lesson().ViewerCanUpdate(ctx, lesson)
 }
 
+func (r *lessonResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	userId, err := r.Lesson.UserId()
+	if err != nil {
+		return false, err
+	}
+
+	if viewer.Id.String == userId.String {
+		return false, err
+	}
+
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return false, err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(lessonId)
+	enrolled.UserId.Set(viewer.Id)
+	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
+	if err != nil {
+		return false, err
+	}
+	if !canEnroll {
+		return false, nil
+	}
+	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
+		if err == data.ErrNotFound {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
+}
+
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
@@ -412,7 +451,7 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	return viewer.Id.String == userId.String, nil
 }
 
-func (r *lessonResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+func (r *lessonResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")

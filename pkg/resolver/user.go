@@ -649,7 +649,7 @@ func (r *userResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (r *userResolver) ViewerHasEnrolled(ctx context.Context) (bool, error) {
+func (r *userResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
