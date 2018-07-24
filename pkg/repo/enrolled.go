@@ -54,6 +54,13 @@ func (r *EnrolledPermit) ID() (n int32, err error) {
 	return
 }
 
+func (r *EnrolledPermit) Status() (*mytype.EnrollmentStatus, error) {
+	if ok := r.checkFieldPermission("status"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.enrolled.Status, nil
+}
+
 func (r *EnrolledPermit) UserId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
@@ -258,6 +265,44 @@ func (r *EnrolledRepo) Disconnect(
 		)
 	}
 	return errors.New("must include either `id` or `enrollable_id` and `user_id` to delete an enrolled")
+}
+
+// Same as Get(), but doesn't use the dataloader, so it always requests from the
+// db.
+func (r *EnrolledRepo) Pull(
+	ctx context.Context,
+	e *data.Enrolled,
+) (*EnrolledPermit, error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	var enrolled *data.Enrolled
+	var err error
+	if e.Id.Status != pgtype.Undefined {
+		enrolled, err = data.GetEnrolled(db, e.Id.Int)
+		if err != nil {
+			return nil, err
+		}
+	} else if e.EnrollableId.Status != pgtype.Undefined &&
+		e.UserId.Status != pgtype.Undefined {
+		enrolled, err = data.GetEnrolledByEnrollableAndUser(db, e.EnrollableId.String, e.UserId.String)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New(
+			"must include either enrolled `id` or `enrollable_id` and `user_id` to get an enrolled",
+		)
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, enrolled)
+	if err != nil {
+		return nil, err
+	}
+	return &EnrolledPermit{fieldPermFn, enrolled}, nil
 }
 
 func (r *EnrolledRepo) Update(

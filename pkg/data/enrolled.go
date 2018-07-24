@@ -11,12 +11,12 @@ import (
 )
 
 type Enrolled struct {
-	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           pgtype.Int4        `db:"id" permit:"read"`
-	EnrollableId mytype.OID         `db:"enrollable_id" permit:"read"`
-	Ignore       pgtype.Bool        `db:"ignore" permit:"read/update"`
-	ReasonName   pgtype.Varchar     `db:"reason_name" permit:"read"`
-	UserId       mytype.OID         `db:"user_id" permit:"read"`
+	CreatedAt    pgtype.Timestamptz      `db:"created_at" permit:"read"`
+	Id           pgtype.Int4             `db:"id" permit:"read"`
+	EnrollableId mytype.OID              `db:"enrollable_id" permit:"read"`
+	ReasonName   pgtype.Varchar          `db:"reason_name" permit:"read"`
+	Status       mytype.EnrollmentStatus `db:"status" permit:"read/update"`
+	UserId       mytype.OID              `db:"user_id" permit:"read"`
 }
 
 const countEnrolledByUserSQL = `
@@ -79,6 +79,7 @@ func getEnrolled(
 		&row.Id,
 		&row.EnrollableId,
 		&row.ReasonName,
+		&row.Status,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -112,6 +113,7 @@ func getManyEnrolled(
 			&row.Id,
 			&row.EnrollableId,
 			&row.ReasonName,
+			&row.Status,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -133,6 +135,7 @@ const getEnrolledSQL = `
 		id,
 		enrollable_id,
 		reason_name,
+		status,
 		user_id
 	FROM enrolled
 	WHERE id = $1
@@ -152,6 +155,7 @@ const getEnrolledByEnrollableAndUserSQL = `
 		id,
 		enrollable_id,
 		reason_name,
+		status,
 		user_id
 	FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
@@ -186,6 +190,7 @@ func GetEnrolledByUser(
 		"id",
 		"enrollable_id",
 		"reason_name",
+		"status",
 		"user_id",
 	}
 	from := "enrolled"
@@ -210,6 +215,7 @@ func GetEnrolledByEnrollable(
 		"id",
 		"enrollable_id",
 		"reason_name",
+		"status",
 		"user_id",
 	}
 	from := "enrolled"
@@ -300,6 +306,11 @@ func CreateEnrolled(
 		return nil, err
 	}
 
+	if row.Status.Status != pgtype.Undefined {
+		enrolled.Status.Set(&row.Status)
+		enrolled, err = UpdateEnrolled(tx, enrolled)
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
@@ -373,11 +384,12 @@ func UpdateEnrolled(
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
-	if row.Ignore.Status != pgtype.Undefined {
-		sets = append(sets, `ignore`+"="+args.Append(&row.Ignore))
+	if row.Status.Status != pgtype.Undefined {
+		sets = append(sets, "status"+"="+args.Append(&row.Status)+"::enrollment_status")
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info("===> no updates")
 		return GetEnrolledByEnrollableAndUser(
 			db,
 			row.EnrollableId.String,

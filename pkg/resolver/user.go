@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -210,16 +211,16 @@ func (r *userResolver) Emails(
 	}
 	if args.Type != nil {
 		for _, t := range *args.Type {
-			emailType, err := data.ParseEmailType(t)
+			emailType, err := mytype.ParseEmailType(t)
 			if err != nil {
 				return nil, err
 			}
-			switch emailType.Type {
-			case data.BackupEmail:
+			switch emailType.V {
+			case mytype.BackupEmail:
 				filterOptions = append(filterOptions, data.FilterBackup)
-			case data.ExtraEmail:
+			case mytype.ExtraEmail:
 				filterOptions = append(filterOptions, data.FilterExtra)
-			case data.PrimaryEmail:
+			case mytype.PrimaryEmail:
 				filterOptions = append(filterOptions, data.FilterPrimary)
 			}
 		}
@@ -383,6 +384,34 @@ func (r *userResolver) Enrollees(
 		return nil, err
 	}
 	return resolver, nil
+}
+
+func (r *userResolver) EnrollmentStatus(ctx context.Context) (string, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return "", errors.New("viewer not found")
+	}
+	id, err := r.User.ID()
+	if err != nil {
+		return "", err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(id)
+	enrolled.UserId.Set(viewer.Id)
+	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return "", err
+		}
+		return mytype.EnrollmentStatusUnenrolled.String(), nil
+	}
+
+	status, err := permit.Status()
+	if err != nil {
+		return "", err
+	}
+	return status.String(), nil
 }
 
 func (r *userResolver) Notifications(
@@ -632,42 +661,5 @@ func (r *userResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(userId)
 	enrolled.UserId.Set(viewer.Id)
-	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
-	if err != nil {
-		return false, err
-	}
-	if !canEnroll {
-		return false, nil
-	}
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
-		if err == data.ErrNotFound {
-			return true, nil
-		}
-		return false, err
-	}
-
-	return false, nil
-}
-
-func (r *userResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	userId, err := r.User.ID()
-	if err != nil {
-		return false, err
-	}
-
-	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(userId)
-	enrolled.UserId.Set(viewer.Id)
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
-		if err == data.ErrNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
+	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }

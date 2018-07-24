@@ -7,9 +7,9 @@ import (
 )
 
 type enrollable interface {
+	EnrollmentStatus(ctx context.Context) (string, error)
 	ID() (graphql.ID, error)
 	ViewerCanEnroll(ctx context.Context) (bool, error)
-	ViewerIsEnrolled(ctx context.Context) (bool, error)
 }
 
 type enrollableResolver struct {

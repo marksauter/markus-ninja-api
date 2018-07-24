@@ -125,7 +125,8 @@
       // Get access token from session storage
       var accessToken = window.sessionStorage.getItem("access_token");
       // if access token is missing, then redirect to root
-      if (accessToken === null) {
+      if (accessToken === null || accessToken === undefined) {
+        window.sessionStorage.removeItem("access_token");
         window.location.replace("/");
       // else render html
       } else {

@@ -1,0 +1,8 @@
+# Input type for UpdateEnrollment.
+input UpdateEnrollmentInput {
+  # The Enrollable ID, for which to change enrollment state.
+  enrollableId: ID!
+
+  # The new status of the enrollment.
+  status: EnrollmentStatus!
+}

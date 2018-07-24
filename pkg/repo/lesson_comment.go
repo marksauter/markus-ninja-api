@@ -121,8 +121,6 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 func (r *LessonCommentRepo) CountByLesson(
 	ctx context.Context,
-	userId,
-	studyId,
 	lessonId string,
 ) (int32, error) {
 	var n int32
@@ -130,12 +128,11 @@ func (r *LessonCommentRepo) CountByLesson(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByLesson(db, userId, studyId, lessonId)
+	return data.CountLessonCommentByLesson(db, lessonId)
 }
 
 func (r *LessonCommentRepo) CountByStudy(
 	ctx context.Context,
-	userId,
 	studyId string,
 ) (int32, error) {
 	var n int32
@@ -143,7 +140,7 @@ func (r *LessonCommentRepo) CountByStudy(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByStudy(db, userId, studyId)
+	return data.CountLessonCommentByStudy(db, studyId)
 }
 
 func (r *LessonCommentRepo) CountByUser(
@@ -201,10 +198,36 @@ func (r *LessonCommentRepo) Get(
 	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
+func (r *LessonCommentRepo) BatchGet(
+	ctx context.Context,
+	ids []string,
+) ([]*LessonCommentPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComments, err := data.BatchGetLessonComment(db, ids)
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
+	if len(lessonComments) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessonComments {
+			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+		}
+	}
+	return lessonCommentPermits, nil
+}
+
 func (r *LessonCommentRepo) GetByLesson(
 	ctx context.Context,
-	userId,
-	studyId,
 	lessonId string,
 	po *data.PageOptions,
 ) ([]*LessonCommentPermit, error) {
@@ -215,7 +238,7 @@ func (r *LessonCommentRepo) GetByLesson(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByLesson(db, userId, studyId, lessonId, po)
+	lessonComments, err := data.GetLessonCommentByLesson(db, lessonId, po)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +257,6 @@ func (r *LessonCommentRepo) GetByLesson(
 
 func (r *LessonCommentRepo) GetByStudy(
 	ctx context.Context,
-	userId,
 	studyId string,
 	po *data.PageOptions,
 ) ([]*LessonCommentPermit, error) {
@@ -245,7 +267,7 @@ func (r *LessonCommentRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByStudy(db, userId, studyId, po)
+	lessonComments, err := data.GetLessonCommentByStudy(db, studyId, po)
 	if err != nil {
 		return nil, err
 	}

@@ -66,21 +66,21 @@ func (r *searchableConnectionResolver) LessonCount() int32 {
 	return r.counts.Lesson
 }
 
-func (r *searchableConnectionResolver) Nodes() (*[]*nodeResolver, error) {
+func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
 	n := len(r.searchables)
-	nodes := make([]*nodeResolver, 0, n)
+	nodes := make([]*searchableResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		searchables := r.searchables[r.pageInfo.start : r.pageInfo.end+1]
-		for _, item := range searchables {
-			resolver, err := nodePermitToResolver(item, r.repos)
+		for _, s := range searchables {
+			resolver, err := nodePermitToResolver(s, r.repos)
 			if err != nil {
 				return nil, err
 			}
-			node, ok := resolver.(node)
+			searchable, ok := resolver.(searchable)
 			if !ok {
-				return nil, errors.New("cannot convert resolver to node")
+				return nil, errors.New("cannot convert resolver to searchable")
 			}
-			nodes = append(nodes, &nodeResolver{node})
+			nodes = append(nodes, &searchableResolver{searchable})
 		}
 	}
 	return &nodes, nil

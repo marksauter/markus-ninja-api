@@ -23,25 +23,21 @@ type LessonComment struct {
 const countLessonCommentByLessonSQL = `
 	SELECT COUNT(*)
 	FROM lesson_comment
-	WHERE user_id = $1 AND study_id = $2 AND lesson_id = $3
+	WHERE lesson_id = $1
 `
 
 func CountLessonCommentByLesson(
 	db Queryer,
-	userId,
-	studyId,
 	lessonId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"lesson_id", lessonId,
-	).Info("CountLessonCommentByLesson(user_id, study_id, lesson_id)")
+	).Info("CountLessonCommentByLesson(lesson_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLessonCommentByLesson",
 		countLessonCommentByLessonSQL,
-		userId,
-		studyId,
 		lessonId,
 	).Scan(&n)
 
@@ -53,23 +49,21 @@ func CountLessonCommentByLesson(
 const countLessonCommentByStudySQL = `
 	SELECT COUNT(*)
 	FROM lesson_comment
-	WHERE user_id = $1 AND study_id = $2
+	WHERE study_id = $1
 `
 
 func CountLessonCommentByStudy(
 	db Queryer,
-	userId,
 	studyId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("CountLessonCommentByStudy(user_id, study_id)")
+	).Info("CountLessonCommentByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLessonCommentByStudy",
 		countLessonCommentByStudySQL,
-		userId,
 		studyId,
 	).Scan(&n)
 
@@ -191,10 +185,35 @@ func GetLessonComment(
 	return getLessonComment(db, "getLessonCommentById", getLessonCommentByIdSQL, id)
 }
 
+const batchGetLessonCommentByIdSQL = `
+	SELECT
+		body,
+		created_at,
+		id,
+		lesson_id,
+		published_at,
+		study_id,
+		updated_at,
+		user_id
+	FROM lesson_comment
+	WHERE id = ANY($1)
+`
+
+func BatchGetLessonComment(
+	db Queryer,
+	ids []string,
+) ([]*LessonComment, error) {
+	mylog.Log.WithField("ids", ids).Info("BatchGetLessonComment(ids)")
+	return getManyLessonComment(
+		db,
+		"batchGetLessonCommentById",
+		batchGetLessonCommentByIdSQL,
+		ids,
+	)
+}
+
 func GetLessonCommentByLesson(
 	db Queryer,
-	userId,
-	studyId,
 	lessonId string,
 	po *PageOptions,
 ) ([]*LessonComment, error) {
@@ -203,8 +222,6 @@ func GetLessonCommentByLesson(
 	).Info("GetLessonCommentByLesson(lesson_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`user_id = ` + args.Append(userId),
-		`study_id = ` + args.Append(studyId),
 		`lesson_id = ` + args.Append(lessonId),
 	}
 
@@ -228,7 +245,6 @@ func GetLessonCommentByLesson(
 
 func GetLessonCommentByStudy(
 	db Queryer,
-	userId,
 	studyId string,
 	po *PageOptions,
 ) ([]*LessonComment, error) {
@@ -237,7 +253,6 @@ func GetLessonCommentByStudy(
 	).Info("GetLessonCommentByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`user_id = ` + args.Append(userId),
 		`study_id = ` + args.Append(studyId),
 	}
 

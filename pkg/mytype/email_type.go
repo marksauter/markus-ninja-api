@@ -1,8 +1,7 @@
-package data
+package mytype
 
 import (
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -32,13 +31,13 @@ func (src EmailTypeValue) String() string {
 
 type EmailType struct {
 	Status pgtype.Status
-	Type   EmailTypeValue
+	V      EmailTypeValue
 }
 
 func NewEmailType(v EmailTypeValue) EmailType {
 	return EmailType{
 		Status: pgtype.Present,
-		Type:   v,
+		V:      v,
 	}
 }
 
@@ -47,17 +46,17 @@ func ParseEmailType(s string) (EmailType, error) {
 	case "BACKUP":
 		return EmailType{
 			Status: pgtype.Present,
-			Type:   BackupEmail,
+			V:      BackupEmail,
 		}, nil
 	case "EXTRA":
 		return EmailType{
 			Status: pgtype.Present,
-			Type:   ExtraEmail,
+			V:      ExtraEmail,
 		}, nil
 	case "PRIMARY":
 		return EmailType{
 			Status: pgtype.Present,
-			Type:   PrimaryEmail,
+			V:      PrimaryEmail,
 		}, nil
 	default:
 		var o EmailType
@@ -66,7 +65,7 @@ func ParseEmailType(s string) (EmailType, error) {
 }
 
 func (src *EmailType) String() string {
-	return src.Type.String()
+	return src.V.String()
 }
 
 func (dst *EmailType) Set(src interface{}) error {
@@ -81,10 +80,10 @@ func (dst *EmailType) Set(src interface{}) error {
 		*dst = *value
 		dst.Status = pgtype.Present
 	case EmailTypeValue:
-		dst.Type = value
+		dst.V = value
 		dst.Status = pgtype.Present
 	case *EmailTypeValue:
-		dst.Type = *value
+		dst.V = *value
 		dst.Status = pgtype.Present
 	case string:
 		t, err := ParseEmailType(value)
@@ -127,11 +126,11 @@ func (src *EmailType) AssignTo(dst interface{}) error {
 	case pgtype.Present:
 		switch v := dst.(type) {
 		case *string:
-			*v = src.Type.String()
+			*v = src.V.String()
 			return nil
 		case *[]byte:
-			*v = make([]byte, len(src.Type.String()))
-			copy(*v, src.Type.String())
+			*v = make([]byte, len(src.V.String()))
+			copy(*v, src.V.String())
 			return nil
 		default:
 			if nextDst, retry := pgtype.GetAssignToDstType(dst); retry {
@@ -163,17 +162,15 @@ func (dst *EmailType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
 
-var errUndefined = errors.New("cannot encode status undefined")
-
 func (src *EmailType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {
 	case pgtype.Null:
 		return nil, nil
 	case pgtype.Undefined:
-		return nil, errUndefined
+		return nil, ErrUndefined
 	}
 
-	return append(buf, src.Type.String()...), nil
+	return append(buf, src.V.String()...), nil
 }
 
 func (src *EmailType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
@@ -203,10 +200,10 @@ func (dst *EmailType) Scan(src interface{}) error {
 func (src *EmailType) Value() (driver.Value, error) {
 	switch src.Status {
 	case pgtype.Present:
-		return src.Type.String(), nil
+		return src.V.String(), nil
 	case pgtype.Null:
 		return nil, nil
 	default:
-		return nil, errUndefined
+		return nil, ErrUndefined
 	}
 }

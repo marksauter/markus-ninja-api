@@ -62,6 +62,9 @@ type Lesson implements
     orderBy: EnrolleeOrder
   ): EnrolleeConnection!
 
+  # Is the viewer dismissed, enrolled, or ignoring this enrollable.
+  enrollmentStatus: EnrollmentStatus!
+
   # Returns a list of events associated with the lesson.
   events(
     # Returns the elements in the list that come after the specified global ID.
@@ -115,6 +118,24 @@ type Lesson implements
   # The study associated with this lesson.
   study: Study!
 
+  # Returns a list of events, comments, etc. associated with the lesson.
+  timeline(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for events returned from the connection.
+    orderBy: EventOrder
+  ): LessonTimelineConnection!
+
   # The title of the lesson.
   title: String!
 
@@ -135,9 +156,6 @@ type Lesson implements
 
   # Did the viewer author this lesson.
   viewerDidAuthor: Boolean!
-
-  # Is the viewer enrolled in this enrollable.
-  viewerIsEnrolled: Boolean!
 }
 
 # An edge type for Lesson.

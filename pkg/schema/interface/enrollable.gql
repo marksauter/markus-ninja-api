@@ -1,10 +1,10 @@
 # Things that can be enrolled in.
 interface Enrollable {
+  # Is the viewer dismissed, enrolled, or ignoring this enrollable.
+  enrollmentStatus: EnrollmentStatus!
+
   id: ID!
 
   # Can the viewer enroll in this enrollable.
   viewerCanEnroll: Boolean!
-
-  # Is the viewer enrolled in this enrollable.
-  viewerIsEnrolled: Boolean!
 }

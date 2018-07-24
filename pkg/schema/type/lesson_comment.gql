@@ -4,6 +4,7 @@ type LessonComment implements
   Deleteable,
   EventSourceable,
   Labelable,
+  LessonTimelineItem,
   Node,
   StudyNode,
   UniformResourceLocatable,

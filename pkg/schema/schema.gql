@@ -106,17 +106,9 @@ type Mutation {
   deleteUserAsset(input: DeleteUserAssetInput!): DeleteUserAssetPayload
   # Deletes the viewer's account.
   deleteViewerAccount(input: DeleteViewerAccountInput!): ID
-  # Dismisses viewer from an Enrollable.
-  dismiss(input: DismissInput!): Enrollable
-
-  # Enrolls viewer in an Enrollable.
-  enroll(input: EnrollInput!): Enrollable
 
   # Gives an apple to an Appleable.
   giveApple(input: GiveAppleInput!): Appleable
-
-  # Ignores an Enrollable.
-  ignore(input: IgnoreInput!): Enrollable
 
   # Returns a token for use in authentication.
   loginUser(input: LoginUserInput!): LoginUserPayload
@@ -138,6 +130,8 @@ type Mutation {
 
   # Updates an email's type.
   updateEmail(input: UpdateEmailInput!): Email
+  # Updates the viewer's enrollment status in an Enrollable.
+  updateEnrollment(input: UpdateEnrollmentInput!): Enrollable
   # Updates the color and/or description of a label.
   updateLabel(input: UpdateLabelInput!): Label
   # Updates the body and/or title of a lesson.

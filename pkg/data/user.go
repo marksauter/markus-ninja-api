@@ -618,7 +618,7 @@ func CreateUser(
 	}
 
 	primaryEmail := &Email{}
-	primaryEmail.Type.Set(PrimaryEmail)
+	primaryEmail.Type.Set(mytype.PrimaryEmail)
 	primaryEmail.UserId.Set(row.Id)
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
 	_, err = CreateEmail(tx, primaryEmail)

@@ -284,8 +284,6 @@ func GetEventByTarget(
 	from := "event.event"
 	sql := SQL(selects, from, where, &args, po)
 
-	mylog.Log.Debug(sql)
-
 	psName := preparedName("getEventsByTarget", sql)
 
 	return getManyEvent(db, psName, sql, args...)
