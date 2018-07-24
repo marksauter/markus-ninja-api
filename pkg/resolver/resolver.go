@@ -3,6 +3,7 @@ package resolver
 import (
 	"errors"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
@@ -80,6 +81,22 @@ func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, er
 			return nil, errors.New("cannot convert permit to userAsset")
 		}
 		return &userAssetResolver{UserAsset: userAsset, Repos: repos}, nil
+	}
+	return nil, nil
+}
+
+func eventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	action, err := event.Action()
+	if err != nil {
+		return nil, err
+	}
+	switch action {
+	case data.CommentedEvent:
+		return &commentedEventResolver{Event: event, Repos: repos}, nil
+	case data.ReferencedEvent:
+		return &referencedEventResolver{Event: event, Repos: repos}, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
 	}
 	return nil, nil
 }

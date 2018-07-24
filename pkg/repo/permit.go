@@ -29,3 +29,8 @@ type TopicablePermit interface {
 	ID() (*mytype.OID, error)
 	TopicedAt() time.Time
 }
+
+type StudyNodePermit interface {
+	ID() (*mytype.OID, error)
+	StudyId() (*mytype.OID, error)
+}

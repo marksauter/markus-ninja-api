@@ -512,7 +512,6 @@ const batchGetLessonByNumberSQL = `
 
 func BatchGetLessonByNumber(
 	db Queryer,
-	userId,
 	studyId string,
 	numbers []int32,
 ) ([]*Lesson, error) {
@@ -793,18 +792,18 @@ func UpdateLesson(
 		return nil, ErrNotFound
 	}
 
-	ParseUpdatedBodyForEvents(
-		tx,
-		&row.UserId,
-		&row.StudyId,
-		&row.Id,
-		&row.Body,
-	)
-
 	lesson, err := GetLesson(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
+
+	ParseUpdatedBodyForEvents(
+		tx,
+		&lesson.UserId,
+		&lesson.StudyId,
+		&lesson.Id,
+		&lesson.Body,
+	)
 
 	if newTx {
 		err = CommitTransaction(tx)

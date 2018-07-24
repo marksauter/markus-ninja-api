@@ -40,11 +40,41 @@ func NewEventLoader() *EventLoader {
 				return results
 			},
 		),
+		batchGetBySourceActionTarget: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						event, err := data.GetEventBySourceActionTarget(db, ks[0], ks[1], ks[2])
+						results[i] = &dataloader.Result{Data: event, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type EventLoader struct {
-	batchGet *dataloader.Loader
+	batchGet                     *dataloader.Loader
+	batchGetBySourceActionTarget *dataloader.Loader
 }
 
 func (r *EventLoader) Clear(id string) {
@@ -54,6 +84,7 @@ func (r *EventLoader) Clear(id string) {
 
 func (r *EventLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetBySourceActionTarget.ClearAll()
 }
 
 func (r *EventLoader) Get(
@@ -68,6 +99,34 @@ func (r *EventLoader) Get(
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+
+	compositeKey := newCompositeKey(
+		event.SourceId.String,
+		event.Action.String,
+		event.TargetId.String,
+	)
+	r.batchGetBySourceActionTarget.Prime(ctx, compositeKey, event)
+
+	return event, nil
+}
+
+func (r *EventLoader) GetBySourceActionTarget(
+	ctx context.Context,
+	sourceId,
+	action,
+	targetId string,
+) (*data.Event, error) {
+	compositeKey := newCompositeKey(sourceId, action, targetId)
+	eventData, err := r.batchGetBySourceActionTarget.Load(ctx, compositeKey)()
+	if err != nil {
+		return nil, err
+	}
+	event, ok := eventData.(*data.Event)
+	if !ok {
+		return nil, fmt.Errorf("wrong type")
+	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(event.Id.String), event)
 
 	return event, nil
 }

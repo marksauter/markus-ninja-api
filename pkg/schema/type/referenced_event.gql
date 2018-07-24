@@ -1,0 +1,29 @@
+# Represents a referenced event on a given subject.
+type ReferencedEvent implements 
+  LessonTimelineEvent,
+  Node,
+  UniformResourceLocatable
+{
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # Is this reference from a different study? 
+  isCrossStudy: Boolean!
+
+  # The HTTP path to this resource.
+  resourcePath: URI!
+
+  # The source of the event.
+  source: EventSourceable!
+
+  # The target of the event.
+  target: EventTargetable!
+
+  # The HTTP URL to this resource.
+  url: URI!
+
+  # The user who performed the event.
+  user: User!
+}

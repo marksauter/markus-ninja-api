@@ -1,6 +1,5 @@
 # Represents a lesson.
 type Lesson implements 
-  Authorable,
   Enrollable,
   EventSourceable,
   EventTargetable,
@@ -11,16 +10,16 @@ type Lesson implements
   UniformResourceLocatable,
   Updateable
 {
-  # The user who authored this body. 
+  # The user who authored this lesson. 
   author: User
 
-  # The body as Markdown.
+  # The lesson body as Markdown.
   body: String!
 
-  # The body rendered to HTML.
+  # The lesson body rendered to HTML.
   bodyHTML: HTML!
 
-  # The body rendered to text.
+  # The lesson body rendered to text.
   bodyText: String!
 
   # Identifies the date and time when the object was created.
@@ -64,24 +63,6 @@ type Lesson implements
 
   # Is the viewer dismissed, enrolled, or ignoring this enrollable.
   enrollmentStatus: EnrollmentStatus!
-
-  # Returns a list of events associated with the lesson.
-  events(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for events returned from the connection.
-    orderBy: EventOrder
-  ): EventConnection!
 
   # Is there a next lesson?
   hasNextLesson: Boolean!

@@ -1,0 +1,4 @@
+# Things that can be commented on.
+interface Commentable {
+  id: ID!
+}

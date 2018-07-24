@@ -3,6 +3,9 @@ type AddLessonCommentPayload {
   # The edge from the lesson's comment connection.
   commentEdge: LessonCommentEdge!
 
+  # The edge from the lesson's timeline connection.
+  lessonTimelineEdge: LessonTimelineEventEdge!
+
   # The lesson commented on.
   lesson: Lesson!
 }

@@ -128,6 +128,14 @@ func (r *RootResolver) AddLessonComment(
 	ctx context.Context,
 	args struct{ Input AddLessonCommentInput },
 ) (*addLessonCommentPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -148,9 +156,42 @@ func (r *RootResolver) AddLessonComment(
 	if err != nil {
 		return nil, err
 	}
+	lessonComment = lessonCommentPermit.Get()
+
+	err = r.Repos.Event().ParseBodyForEvents(
+		ctx,
+		&lessonComment.UserId,
+		&lessonComment.StudyId,
+		&lessonComment.Id,
+		&lessonComment.Body,
+	)
+	if err != nil {
+		return nil, err
+	}
+	event, err := data.NewEvent(
+		data.CommentedEvent,
+		&lessonComment.Id,
+		&lessonComment.LessonId,
+		&lessonComment.UserId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	eventPermit, err := r.Repos.Event().Create(ctx, event)
+	if err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &addLessonCommentPayloadResolver{
 		LessonComment: lessonCommentPermit,
+		Event:         eventPermit,
 		Repos:         r.Repos,
 	}, nil
 }
@@ -424,19 +465,46 @@ func (r *RootResolver) DeleteLessonComment(
 	ctx context.Context,
 	args struct{ Input DeleteLessonCommentInput },
 ) (*deleteLessonCommentPayloadResolver, error) {
-	lessonComment := &data.LessonComment{}
-	if err := lessonComment.Id.Set(args.Input.LessonCommentId); err != nil {
-		return nil, errors.New("invalid lesson_comment id")
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	lessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, args.Input.LessonCommentId)
+	if err != nil {
+		return nil, err
+	}
+	lessonComment := lessonCommentPermit.Get()
+	event, err := r.Repos.Event().GetBySourceActionTarget(
+		ctx,
+		lessonComment.Id.String,
+		data.CommentedEvent,
+		lessonComment.LessonId.String,
+	)
+	eventId, err := event.ID()
+	if err != nil {
+		return nil, err
 	}
 
 	if err := r.Repos.LessonComment().Delete(ctx, lessonComment); err != nil {
 		return nil, err
 	}
 
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &deleteLessonCommentPayloadResolver{
-		LessonCommentId: &lessonComment.Id,
-		LessonId:        &lessonComment.LessonId,
-		Repos:           r.Repos,
+		LessonCommentId:      &lessonComment.Id,
+		LessonTimelineEdgeId: eventId,
+		LessonId:             &lessonComment.LessonId,
+		Repos:                r.Repos,
 	}, nil
 }
 

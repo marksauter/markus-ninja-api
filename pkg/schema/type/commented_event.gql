@@ -1,0 +1,19 @@
+# Represents a commented event on a given subject.
+type CommentedEvent implements 
+  LessonTimelineEvent,
+  Node
+{
+  # The comment assocated with this `commented` event.
+  comment: Comment!
+
+  # The commentable associated with this `commented` event.
+  commentable: Commentable!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The user who performed the event.
+  user: User!
+}

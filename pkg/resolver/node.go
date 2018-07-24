@@ -12,6 +12,11 @@ type nodeResolver struct {
 	node
 }
 
+func (r *nodeResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
+	resolver, ok := r.node.(*commentedEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToEmail() (*emailResolver, bool) {
 	resolver, ok := r.node.(*emailResolver)
 	return resolver, ok
@@ -39,6 +44,11 @@ func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
 
 func (r *nodeResolver) ToNotification() (*notificationResolver, bool) {
 	resolver, ok := r.node.(*notificationResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
+	resolver, ok := r.node.(*referencedEventResolver)
 	return resolver, ok
 }
 

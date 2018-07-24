@@ -192,6 +192,31 @@ func (r *EventRepo) Get(
 	return &EventPermit{fieldPermFn, event}, nil
 }
 
+func (r *EventRepo) GetBySourceActionTarget(
+	ctx context.Context,
+	sourceId,
+	action,
+	targetId string,
+) (*EventPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	event, err := r.load.GetBySourceActionTarget(
+		ctx,
+		sourceId,
+		action,
+		targetId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, event)
+	if err != nil {
+		return nil, err
+	}
+	return &EventPermit{fieldPermFn, event}, nil
+}
+
 func (r *EventRepo) GetBySource(
 	ctx context.Context,
 	sourceId string,
@@ -267,4 +292,21 @@ func (r *EventRepo) Delete(
 		return err
 	}
 	return data.DeleteEvent(db, &event.Id)
+}
+
+func (r *EventRepo) ParseBodyForEvents(
+	ctx context.Context,
+	userId,
+	studyId,
+	sourceId *mytype.OID,
+	body *mytype.Markdown,
+) error {
+	if err := r.CheckConnection(); err != nil {
+		return err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return &myctx.ErrNotFound{"queryer"}
+	}
+	return data.ParseBodyForEvents(db, userId, studyId, sourceId, body)
 }
