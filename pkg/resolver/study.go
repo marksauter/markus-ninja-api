@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -245,6 +246,34 @@ func (r *studyResolver) Enrollees(
 	return enrolleeConnectionResolver, nil
 }
 
+func (r *studyResolver) EnrollmentStatus(ctx context.Context) (string, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return "", errors.New("viewer not found")
+	}
+	id, err := r.Study.ID()
+	if err != nil {
+		return "", err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(id)
+	enrolled.UserId.Set(viewer.Id)
+	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return "", err
+		}
+		return mytype.EnrollmentStatusUnenrolled.String(), nil
+	}
+
+	status, err := permit.Status()
+	if err != nil {
+		return "", err
+	}
+	return status.String(), nil
+}
+
 func (r *studyResolver) ID() (graphql.ID, error) {
 	id, err := r.Study.ID()
 	return graphql.ID(id.String), err
@@ -398,10 +427,6 @@ func (r *studyResolver) LessonComments(
 		Last   *int32
 	},
 ) (*lessonCommentConnectionResolver, error) {
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return nil, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
@@ -421,7 +446,6 @@ func (r *studyResolver) LessonComments(
 
 	lessonComments, err := r.Repos.LessonComment().GetByStudy(
 		ctx,
-		userId.String,
 		studyId.String,
 		pageOptions,
 	)
@@ -430,7 +454,6 @@ func (r *studyResolver) LessonComments(
 	}
 	count, err := r.Repos.LessonComment().CountByStudy(
 		ctx,
-		userId.String,
 		studyId.String,
 	)
 	if err != nil {
@@ -587,15 +610,6 @@ func (r *studyResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return false, err
-	}
-
-	if viewer.Id.String == userId.String {
-		return false, err
-	}
-
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return false, err
@@ -604,21 +618,7 @@ func (r *studyResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(studyId)
 	enrolled.UserId.Set(viewer.Id)
-	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
-	if err != nil {
-		return false, err
-	}
-	if !canEnroll {
-		return false, nil
-	}
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
-		if err == data.ErrNotFound {
-			return true, nil
-		}
-		return false, err
-	}
-
-	return false, nil
+	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }
 
 func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
@@ -635,29 +635,6 @@ func (r *studyResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 	appled.AppleableId.Set(studyId)
 	appled.UserId.Set(viewer.Id)
 	if _, err := r.Repos.Appled().Get(ctx, appled); err != nil {
-		if err == data.ErrNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
-func (r *studyResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	studyId, err := r.Study.ID()
-	if err != nil {
-		return false, err
-	}
-
-	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(studyId)
-	enrolled.UserId.Set(viewer.Id)
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil
 		}

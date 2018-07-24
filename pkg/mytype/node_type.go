@@ -9,57 +9,57 @@ import (
 type NodeType int
 
 const (
-	AppledType NodeType = iota
-	EmailType
-	EnrolledType
-	EventType
-	EVTType
-	LabelType
-	LabeledType
-	LessonType
-	LessonCommentType
-	NotificationType
-	PRTType
-	StudyType
-	TopicType
-	TopicedType
-	UserType
-	UserAssetType
+	AppledNodeType NodeType = iota
+	EmailNodeType
+	EnrolledNodeType
+	EventNodeType
+	EVTNodeType
+	LabelNodeType
+	LabeledNodeType
+	LessonNodeType
+	LessonCommentNodeType
+	NotificationNodeType
+	PRTNodeType
+	StudyNodeType
+	TopicNodeType
+	TopicedNodeType
+	UserNodeType
+	UserAssetNodeType
 )
 
 func (nt NodeType) String() string {
 	switch nt {
-	case AppledType:
+	case AppledNodeType:
 		return "Appled"
-	case EmailType:
+	case EmailNodeType:
 		return "Email"
-	case EnrolledType:
+	case EnrolledNodeType:
 		return "Enrolled"
-	case EventType:
+	case EventNodeType:
 		return "Event"
-	case EVTType:
+	case EVTNodeType:
 		return "EVT"
-	case LabelType:
+	case LabelNodeType:
 		return "Label"
-	case LabeledType:
+	case LabeledNodeType:
 		return "Labeled"
-	case LessonType:
+	case LessonNodeType:
 		return "Lesson"
-	case LessonCommentType:
+	case LessonCommentNodeType:
 		return "LessonComment"
-	case NotificationType:
+	case NotificationNodeType:
 		return "Notification"
-	case PRTType:
+	case PRTNodeType:
 		return "PRT"
-	case StudyType:
+	case StudyNodeType:
 		return "Study"
-	case TopicType:
+	case TopicNodeType:
 		return "Topic"
-	case TopicedType:
+	case TopicedNodeType:
 		return "Topiced"
-	case UserType:
+	case UserNodeType:
 		return "User"
-	case UserAssetType:
+	case UserAssetNodeType:
 		return "UserAsset"
 	default:
 		return "unknown"
@@ -69,37 +69,37 @@ func (nt NodeType) String() string {
 func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
 	case "appled":
-		return AppledType, nil
+		return AppledNodeType, nil
 	case "email":
-		return EmailType, nil
+		return EmailNodeType, nil
 	case "enrolled":
-		return EnrolledType, nil
+		return EnrolledNodeType, nil
 	case "event":
-		return EventType, nil
+		return EventNodeType, nil
 	case "evt":
-		return EVTType, nil
+		return EVTNodeType, nil
 	case "label":
-		return LabelType, nil
+		return LabelNodeType, nil
 	case "labeled":
-		return LabeledType, nil
+		return LabeledNodeType, nil
 	case "lesson":
-		return LessonType, nil
+		return LessonNodeType, nil
 	case "lessoncomment":
-		return LessonCommentType, nil
+		return LessonCommentNodeType, nil
 	case "notification":
-		return NotificationType, nil
+		return NotificationNodeType, nil
 	case "prt":
-		return PRTType, nil
+		return PRTNodeType, nil
 	case "study":
-		return StudyType, nil
+		return StudyNodeType, nil
 	case "topic":
-		return TopicType, nil
+		return TopicNodeType, nil
 	case "topiced":
-		return TopicedType, nil
+		return TopicedNodeType, nil
 	case "user":
-		return UserType, nil
+		return UserNodeType, nil
 	case "userasset":
-		return UserAssetType, nil
+		return UserAssetNodeType, nil
 	default:
 		var t NodeType
 		return t, fmt.Errorf("invalid node type: %q", nodeType)

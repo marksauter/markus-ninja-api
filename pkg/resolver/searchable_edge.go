@@ -32,16 +32,16 @@ func (r *searchableEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *searchableEdgeResolver) Node() (*nodeResolver, error) {
+func (r *searchableEdgeResolver) Node() (*searchableResolver, error) {
 	resolver, err := nodePermitToResolver(r.node, r.repos)
 	if err != nil {
 		return nil, err
 	}
-	node, ok := resolver.(node)
+	searchable, ok := resolver.(searchable)
 	if !ok {
-		return nil, errors.New("cannot convert resolver to node")
+		return nil, errors.New("cannot convert resolver to searchable")
 	}
-	return &nodeResolver{node}, nil
+	return &searchableResolver{searchable}, nil
 }
 
 func (r *searchableEdgeResolver) TextMatches() *[]*textMatchResolver {

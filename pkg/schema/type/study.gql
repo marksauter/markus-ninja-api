@@ -80,6 +80,9 @@ type Study implements
     orderBy: EnrolleeOrder
   ): EnrolleeConnection!
 
+  # Is the viewer dismissed, enrolled, or ignoring this enrollable.
+  enrollmentStatus: EnrollmentStatus!
+
   id: ID!
 
   # Is this study private?
@@ -188,9 +191,6 @@ type Study implements
 
   # Has the viewer appled this appleable?
   viewerHasAppled: Boolean!
-
-  # Is the viewer enrolled in this enrollable?
-  viewerIsEnrolled: Boolean!
 }
 
 # An edge type for Study.

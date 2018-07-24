@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -63,14 +64,6 @@ func (r *lessonResolver) Comments(
 		OrderBy *OrderArg
 	},
 ) (*lessonCommentConnectionResolver, error) {
-	userId, err := r.Lesson.UserId()
-	if err != nil {
-		return nil, err
-	}
-	studyId, err := r.Lesson.StudyId()
-	if err != nil {
-		return nil, err
-	}
 	lessonId, err := r.Lesson.ID()
 	if err != nil {
 		return nil, err
@@ -93,8 +86,6 @@ func (r *lessonResolver) Comments(
 
 	lessonComments, err := r.Repos.LessonComment().GetByLesson(
 		ctx,
-		userId.String,
-		studyId.String,
 		lessonId.String,
 		pageOptions,
 	)
@@ -103,8 +94,6 @@ func (r *lessonResolver) Comments(
 	}
 	count, err := r.Repos.LessonComment().CountByLesson(
 		ctx,
-		userId.String,
-		studyId.String,
 		lessonId.String,
 	)
 	if err != nil {
@@ -179,6 +168,97 @@ func (r *lessonResolver) Enrollees(
 		return nil, err
 	}
 	return enrolleeConnectionResolver, nil
+}
+
+func (r *lessonResolver) EnrollmentStatus(ctx context.Context) (string, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return "", errors.New("viewer not found")
+	}
+	id, err := r.Lesson.ID()
+	if err != nil {
+		return "", err
+	}
+
+	enrolled := &data.Enrolled{}
+	enrolled.EnrollableId.Set(id)
+	enrolled.UserId.Set(viewer.Id)
+	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return "", err
+		}
+		return mytype.EnrollmentStatusUnenrolled.String(), nil
+	}
+
+	status, err := permit.Status()
+	if err != nil {
+		return "", err
+	}
+	return status.String(), nil
+}
+
+func (r *lessonResolver) Events(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*eventConnectionResolver, error) {
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := r.Repos.Event().GetByTarget(
+		ctx,
+		lessonId.String,
+		pageOptions,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Event().CountByTarget(
+		ctx,
+		lessonId.String,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	eventConnectionResolver, err := NewEventConnectionResolver(
+		events,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return eventConnectionResolver, nil
 }
 
 func (r *lessonResolver) HasNextLesson(ctx context.Context) (bool, error) {
@@ -273,69 +353,6 @@ func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) Events(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*eventConnectionResolver, error) {
-	lessonId, err := r.Lesson.ID()
-	if err != nil {
-		return nil, err
-	}
-	eventOrder, err := ParseEventOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		eventOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	events, err := r.Repos.Event().GetByTarget(
-		ctx,
-		lessonId.String,
-		pageOptions,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.Event().CountByTarget(
-		ctx,
-		lessonId.String,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-	)
-	if err != nil {
-		return nil, err
-	}
-	eventConnectionResolver, err := NewEventConnectionResolver(
-		events,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return eventConnectionResolver, nil
-}
-
 func (r *lessonResolver) ResourcePath(
 	ctx context.Context,
 ) (mygql.URI, error) {
@@ -366,6 +383,106 @@ func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 		return nil, err
 	}
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
+
+func (r *lessonResolver) Timeline(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*lessonTimelineConnectionResolver, error) {
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+	eventOrder, err := ParseEventOrder(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := r.Repos.Event().GetByTarget(
+		ctx,
+		lessonId.String,
+		pageOptions,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	commentEvents := make(map[string]int)
+	nodePermits := make([]repo.NodePermit, len(events))
+	for i, event := range events {
+		action, err := event.Action()
+		if err != nil {
+			return nil, err
+		}
+		switch action {
+		case data.CommentedEvent:
+			commentId, err := event.SourceId()
+			if err != nil {
+				return nil, err
+			}
+			commentEvents[commentId.String] = i
+		default:
+			nodePermits[i] = event
+		}
+	}
+
+	commentIds := make([]string, 0, len(commentEvents))
+	for k := range commentEvents {
+		commentIds = append(commentIds, k)
+	}
+	comments, err := r.Repos.LessonComment().BatchGet(ctx, commentIds)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, comment := range comments {
+		commentId, err := comment.ID()
+		if err != nil {
+			return nil, err
+		}
+		nodePermits[commentEvents[commentId.String]] = comment
+	}
+
+	count, err := r.Repos.Event().CountByTarget(
+		ctx,
+		lessonId.String,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewLessonTimelineConnectionResolver(
+		nodePermits,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *lessonResolver) Title() (string, error) {
@@ -404,15 +521,6 @@ func (r *lessonResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.Lesson.UserId()
-	if err != nil {
-		return false, err
-	}
-
-	if viewer.Id.String == userId.String {
-		return false, err
-	}
-
 	lessonId, err := r.Lesson.ID()
 	if err != nil {
 		return false, err
@@ -421,21 +529,7 @@ func (r *lessonResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	enrolled := &data.Enrolled{}
 	enrolled.EnrollableId.Set(lessonId)
 	enrolled.UserId.Set(viewer.Id)
-	canEnroll, err := r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
-	if err != nil {
-		return false, err
-	}
-	if !canEnroll {
-		return false, nil
-	}
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
-		if err == data.ErrNotFound {
-			return true, nil
-		}
-		return false, err
-	}
-
-	return false, nil
+	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }
 
 func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
@@ -449,27 +543,4 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	}
 
 	return viewer.Id.String == userId.String, nil
-}
-
-func (r *lessonResolver) ViewerIsEnrolled(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	lessonId, err := r.Lesson.ID()
-	if err != nil {
-		return false, err
-	}
-
-	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(lessonId)
-	enrolled.UserId.Set(viewer.Id)
-	if _, err := r.Repos.Enrolled().Get(ctx, enrolled); err != nil {
-		if err == data.ErrNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
 }

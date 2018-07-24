@@ -325,7 +325,7 @@ func (r *RootResolver) DeleteEmail(
 		return nil, err
 	}
 
-	if email.Type.Type == data.PrimaryEmail {
+	if email.Type.V == mytype.PrimaryEmail {
 		var newPrimaryEmail *data.Email
 		emails, err := r.Repos.Email().GetByUser(
 			ctx,
@@ -339,14 +339,14 @@ func (r *RootResolver) DeleteEmail(
 		n := len(emails)
 		for i, email := range emails {
 			e := email.Get()
-			if e.Type.Type == data.BackupEmail {
+			if e.Type.V == mytype.BackupEmail {
 				newPrimaryEmail = e
 			}
 			if newPrimaryEmail == nil && i == n-1 {
 				newPrimaryEmail = e
 			}
 		}
-		newPrimaryEmail.Type.Set(data.PrimaryEmail)
+		newPrimaryEmail.Type.Set(mytype.PrimaryEmail)
 		if _, err := r.Repos.Email().Update(ctx, newPrimaryEmail); err != nil {
 			return nil, err
 		}
@@ -528,124 +528,6 @@ func (r *RootResolver) DeleteViewerAccount(
 	return &id, nil
 }
 
-type DismissInput struct {
-	EnrollableId string
-}
-
-func (r *RootResolver) Dismiss(
-	ctx context.Context,
-	args struct{ Input DismissInput },
-) (*enrollableResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-
-	enrolled := &data.Enrolled{}
-	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
-		return nil, errors.New("invalid enrollable id")
-	}
-	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
-		return nil, errors.New("invalid enrollable user_id")
-	}
-	err := r.Repos.Enrolled().Disconnect(ctx, enrolled)
-	if err != nil {
-		return nil, err
-	}
-	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	enrollable, ok := resolver.(enrollable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to enrollable")
-	}
-	return &enrollableResolver{enrollable}, nil
-}
-
-type EnrollInput struct {
-	EnrollableId string
-}
-
-func (r *RootResolver) Enroll(
-	ctx context.Context,
-	args struct{ Input EnrollInput },
-) (*enrollableResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, errors.New("queryer not found")
-	}
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return nil, err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
-	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
-
-	enrolled := &data.Enrolled{}
-	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
-		return nil, errors.New("invalid enrollable id")
-	}
-	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
-		return nil, errors.New("invalid enrollable user_id")
-	}
-	if _, err := data.GetEnrolledByEnrollableAndUser(
-		db,
-		enrolled.EnrollableId.String,
-		enrolled.UserId.String,
-	); err != nil {
-		if err != data.ErrNotFound {
-			return nil, err
-		}
-		if err := enrolled.ReasonName.Set(data.ManualReason); err != nil {
-			return nil, errors.New("invalid enrollable reason_name")
-		}
-		_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		if err := enrolled.Ignore.Set(false); err != nil {
-			return nil, errors.New("invalid enrollable ignore")
-		}
-		_, err := r.Repos.Enrolled().Update(ctx, enrolled)
-		if err != nil {
-			return nil, err
-		}
-	}
-	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	enrollable, ok := resolver.(enrollable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to enrollable")
-	}
-
-	return &enrollableResolver{enrollable}, nil
-}
-
 type GiveAppleInput struct {
 	AppleableId string
 }
@@ -683,48 +565,6 @@ func (r *RootResolver) GiveApple(
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
 	return &appleableResolver{appleable}, nil
-}
-
-type IgnoreInput struct {
-	EnrollableId string
-}
-
-func (r *RootResolver) Ignore(
-	ctx context.Context,
-	args struct{ Input IgnoreInput },
-) (*enrollableResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-
-	enrolled := &data.Enrolled{}
-	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
-		return nil, errors.New("invalid enrollable id")
-	}
-	if err := enrolled.Ignore.Set(true); err != nil {
-		return nil, errors.New("invalid enrollable ignore")
-	}
-	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
-		return nil, errors.New("invalid enrollable user_id")
-	}
-	_, err := r.Repos.Enrolled().Update(ctx, enrolled)
-	if err != nil {
-		return nil, err
-	}
-	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	enrollable, ok := resolver.(enrollable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to enrollable")
-	}
-	return &enrollableResolver{enrollable}, nil
 }
 
 type LoginUserInput struct {
@@ -1154,7 +994,7 @@ func (r *RootResolver) UpdateEmail(
 	}
 
 	if args.Input.Type != nil {
-		if *args.Input.Type == data.PrimaryEmail.String() {
+		if *args.Input.Type == mytype.PrimaryEmail.String() {
 			viewer, ok := myctx.UserFromContext(ctx)
 			if !ok {
 				return nil, errors.New("viewer not found")
@@ -1164,7 +1004,7 @@ func (r *RootResolver) UpdateEmail(
 				return nil, myerr.UnexpectedError{"user primary email not found"}
 			}
 			e := email.Get()
-			if err := e.Type.Set(data.ExtraEmail); err != nil {
+			if err := e.Type.Set(mytype.ExtraEmail); err != nil {
 				return nil, myerr.UnexpectedError{"failed to set email type"}
 			}
 			_, err = r.Repos.Email().Update(ctx, e)
@@ -1172,7 +1012,7 @@ func (r *RootResolver) UpdateEmail(
 				return nil, err
 			}
 		}
-		if *args.Input.Type == data.BackupEmail.String() {
+		if *args.Input.Type == mytype.BackupEmail.String() {
 			viewer, ok := myctx.UserFromContext(ctx)
 			if !ok {
 				return nil, errors.New("viewer not found")
@@ -1183,7 +1023,7 @@ func (r *RootResolver) UpdateEmail(
 			}
 			if email != nil {
 				e := email.Get()
-				if err := e.Type.Set(data.ExtraEmail); err != nil {
+				if err := e.Type.Set(mytype.ExtraEmail); err != nil {
 					return nil, myerr.UnexpectedError{"failed to set email type"}
 				}
 				_, err = r.Repos.Email().Update(ctx, e)
@@ -1217,6 +1057,63 @@ func (r *RootResolver) UpdateEmail(
 	}
 
 	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
+}
+
+type UpdateEnrollmentInput struct {
+	EnrollableId string
+	Status       string
+}
+
+func (r *RootResolver) UpdateEnrollment(
+	ctx context.Context,
+	args struct{ Input UpdateEnrollmentInput },
+) (*enrollableResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	enrolled := &data.Enrolled{}
+	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
+		return nil, errors.New("invalid enrollable id")
+	}
+	if err := enrolled.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid enrollable user_id")
+	}
+	if err := enrolled.Status.Set(args.Input.Status); err != nil {
+		return nil, errors.New("invalid enrolled status")
+	}
+	_, err := r.Repos.Enrolled().Pull(ctx, enrolled)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return nil, err
+		}
+		if err := enrolled.ReasonName.Set(data.ManualReason); err != nil {
+			return nil, errors.New("invalid enrolled status")
+		}
+		_, err := r.Repos.Enrolled().Connect(ctx, enrolled)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, err := r.Repos.Enrolled().Update(ctx, enrolled)
+		if err != nil {
+			return nil, err
+		}
+	}
+	permit, err := r.Repos.GetEnrollable(ctx, &enrolled.EnrollableId)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := nodePermitToResolver(permit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	enrollable, ok := resolver.(enrollable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to enrollable")
+	}
+	return &enrollableResolver{enrollable}, nil
 }
 
 type UpdateLabelInput struct {

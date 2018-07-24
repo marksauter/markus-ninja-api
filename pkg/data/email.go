@@ -12,7 +12,7 @@ import (
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id         mytype.OID         `db:"id" permit:"read"`
-	Type       EmailType          `db:"type" permit:"create/read/update"`
+	Type       mytype.EmailType   `db:"type" permit:"create/read/update"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	Value      pgtype.Varchar     `db:"value" permit:"create/read"`

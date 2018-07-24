@@ -1,5 +1,8 @@
 # Represents a event between two nodes.
-type Event implements Node {
+type Event implements 
+  LessonTimelineItem,
+  Node
+{
   # The action of the event.
   action: String!
 
