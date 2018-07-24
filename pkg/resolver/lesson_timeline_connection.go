@@ -8,14 +8,14 @@ import (
 )
 
 func NewLessonTimelineConnectionResolver(
-	nodes []repo.NodePermit,
+	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
 	repos *repo.Repos,
 ) (*lessonTimelineConnectionResolver, error) {
-	edges := make([]*lessonTimelineItemEdgeResolver, len(nodes))
+	edges := make([]*lessonTimelineEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewLessonTimelineItemEdgeResolver(nodes[i], repos)
+		edge, err := NewLessonTimelineEventEdgeResolver(events[i], repos)
 		if err != nil {
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func NewLessonTimelineConnectionResolver(
 
 	resolver := &lessonTimelineConnectionResolver{
 		edges:      edges,
-		nodes:      nodes,
+		events:     events,
 		pageInfo:   pageInfo,
 		repos:      repos,
 		totalCount: totalCount,
@@ -39,36 +39,36 @@ func NewLessonTimelineConnectionResolver(
 }
 
 type lessonTimelineConnectionResolver struct {
-	edges      []*lessonTimelineItemEdgeResolver
-	nodes      []repo.NodePermit
+	edges      []*lessonTimelineEventEdgeResolver
+	events     []*repo.EventPermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
 	totalCount int32
 }
 
-func (r *lessonTimelineConnectionResolver) Edges() *[]*lessonTimelineItemEdgeResolver {
+func (r *lessonTimelineConnectionResolver) Edges() *[]*lessonTimelineEventEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*lessonTimelineItemEdgeResolver{}
+	return &[]*lessonTimelineEventEdgeResolver{}
 }
 
-func (r *lessonTimelineConnectionResolver) Nodes() (*[]*lessonTimelineItemResolver, error) {
-	n := len(r.nodes)
-	nodes := make([]*lessonTimelineItemResolver, 0, n)
+func (r *lessonTimelineConnectionResolver) Nodes() (*[]*lessonTimelineEventResolver, error) {
+	n := len(r.events)
+	nodes := make([]*lessonTimelineEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
-		items := r.nodes[r.pageInfo.start : r.pageInfo.end+1]
-		for _, i := range items {
-			resolver, err := nodePermitToResolver(i, r.repos)
+		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
+		for _, e := range events {
+			resolver, err := eventPermitToResolver(e, r.repos)
 			if err != nil {
 				return nil, err
 			}
-			item, ok := resolver.(lessonTimelineItem)
+			event, ok := resolver.(lessonTimelineEvent)
 			if !ok {
-				return nil, errors.New("cannot convert resolver to lesson_timeline_item")
+				return nil, errors.New("cannot convert resolver to lesson_timeline_event")
 			}
-			nodes = append(nodes, &lessonTimelineItemResolver{item})
+			nodes = append(nodes, &lessonTimelineEventResolver{event})
 		}
 	}
 	return &nodes, nil

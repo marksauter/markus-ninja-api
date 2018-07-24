@@ -1,10 +1,9 @@
 # Represents a lesson comment.
 type LessonComment implements 
-  Authorable,
+  Comment,
   Deleteable,
   EventSourceable,
   Labelable,
-  LessonTimelineItem,
   Node,
   StudyNode,
   UniformResourceLocatable,

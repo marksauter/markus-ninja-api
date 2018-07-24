@@ -15,7 +15,7 @@ type Markdown struct {
 	String string
 }
 
-var atRef = regexp.MustCompile(`(?:|\s+)@(\w+)(?:\s+|$)`)
+var atRef = regexp.MustCompile(`(?:\W+|\s+|^)@(\w+)(?:\W+|\s+|$)`)
 
 func (src *Markdown) AtRefs() []string {
 	result := atRef.FindAllStringSubmatch(src.String, -1)
@@ -29,7 +29,7 @@ func (src *Markdown) AtRefs() []string {
 	return refs
 }
 
-var numberRef = regexp.MustCompile(`(?:^|\s+)#(\d)(?:\s+|$)`)
+var numberRef = regexp.MustCompile(`(?:\W+|\s+|^)#(\d+)(?:\W+|\s+|$)`)
 
 func (src *Markdown) NumberRefs() ([]int32, error) {
 	result := numberRef.FindAllStringSubmatch(src.String, -1)

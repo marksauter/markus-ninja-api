@@ -1,22 +1,22 @@
-# An edge type for LessonTimelineItem.
-type LessonTimelineItemEdge {
+# An edge type for LessonTimelineEvent.
+type LessonTimelineEventEdge {
   # A cursor for use in pagination.
   cursor: String!
 
-  # The item at the end of the edge.
-  node: LessonTimelineItem
+  # The event at the end of the edge.
+  node: LessonTimelineEvent
 }
 
-# A connection type for LessonTimelineItem.
+# A connection type for LessonTimelineEvent.
 type LessonTimelineConnection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [LessonTimelineItemEdge]
+  edges: [LessonTimelineEventEdge]
 
   # A list of nodes.
-  nodes: [LessonTimelineItem]
+  nodes: [LessonTimelineEvent]
 
   # The total count of items in the connection.
   totalCount: Int!

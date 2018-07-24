@@ -1,0 +1,16 @@
+# Represents a comment.
+interface Comment {
+  # The user who authored this comment. 
+  author: User
+
+  # The comment body as Markdown.
+  body: String!
+
+  # The comment body rendered to HTML.
+  bodyHTML: HTML!
+
+  id: ID!
+
+  # Did the viewer author this comment.
+  viewerDidAuthor: Boolean!
+}

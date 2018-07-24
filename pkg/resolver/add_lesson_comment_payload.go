@@ -10,11 +10,16 @@ type AddLessonCommentPayload = addLessonCommentPayloadResolver
 
 type addLessonCommentPayloadResolver struct {
 	LessonComment *repo.LessonCommentPermit
+	Event         *repo.EventPermit
 	Repos         *repo.Repos
 }
 
 func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResolver, error) {
 	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos)
+}
+
+func (r *addLessonCommentPayloadResolver) LessonTimelineEdge() (*lessonTimelineEventEdgeResolver, error) {
+	return NewLessonTimelineEventEdgeResolver(r.Event, r.Repos)
 }
 
 func (r *addLessonCommentPayloadResolver) Lesson(

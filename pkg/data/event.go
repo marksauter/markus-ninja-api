@@ -29,6 +29,27 @@ type Event struct {
 	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
+func NewEvent(action string, sourceId, targetId, userId *mytype.OID) (*Event, error) {
+	e := &Event{}
+	err := e.Action.Set(action)
+	if err != nil {
+		return nil, err
+	}
+	err = e.SourceId.Set(sourceId)
+	if err != nil {
+		return nil, err
+	}
+	err = e.TargetId.Set(targetId)
+	if err != nil {
+		return nil, err
+	}
+	err = e.UserId.Set(userId)
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
 type EventFilterOption int
 
 const (
@@ -221,6 +242,35 @@ func GetEvent(
 ) (*Event, error) {
 	mylog.Log.WithField("id", id).Info("GetEvent(id)")
 	return getEvent(db, "getEvent", getEventSQL, id)
+}
+
+const getEventBySourceActionTargetSQL = `
+	SELECT
+		action,
+		created_at,
+		id,
+		source_id,
+		target_id,
+		user_id
+	FROM event.event
+	WHERE source_id = $1 AND action = $2 AND target_id = $3
+`
+
+func GetEventBySourceActionTarget(
+	db Queryer,
+	sourceId,
+	action,
+	targetId string,
+) (*Event, error) {
+	mylog.Log.Info("GetEventBySourceActionTarget()")
+	return getEvent(
+		db,
+		"getEventBySourceActionTarget",
+		getEventBySourceActionTargetSQL,
+		sourceId,
+		action,
+		targetId,
+	)
 }
 
 func GetEventBySource(
@@ -545,7 +595,7 @@ func DeleteEvent(
 	db Queryer,
 	id *mytype.OID,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteEvent(id)")
+	mylog.Log.WithField("id", id.String).Info("DeleteEvent(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEvent",
@@ -569,6 +619,7 @@ func ParseBodyForEvents(
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
+	mylog.Log.Debug("ParseBodyForEvents()")
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
@@ -594,7 +645,6 @@ func ParseBodyForEvents(
 	if len(lessonNumberEvents) > 0 {
 		lessons, err := BatchGetLessonByNumber(
 			tx,
-			userId.String,
 			studyId.String,
 			lessonNumberEvents,
 		)
@@ -606,14 +656,14 @@ func ParseBodyForEvents(
 			lessonIds[i] = &l.Id
 		}
 		event.Action.Set(ReferencedEvent)
-		err = BatchCreateEvent(db, event, lessonIds)
+		err = BatchCreateEvent(tx, event, lessonIds)
 		if err != nil {
 			return err
 		}
 	}
 	if len(userEvents) > 0 {
 		users, err := BatchGetUserByLogin(
-			db,
+			tx,
 			userEvents,
 		)
 		if err != nil {
@@ -624,7 +674,7 @@ func ParseBodyForEvents(
 			userIds[i] = &u.Id
 		}
 		event.Action.Set(MentionedEvent)
-		err = BatchCreateEvent(db, event, userIds)
+		err = BatchCreateEvent(tx, event, userIds)
 		if err != nil {
 			return err
 		}
@@ -648,6 +698,7 @@ func ParseUpdatedBodyForEvents(
 	sourceId *mytype.OID,
 	body *mytype.Markdown,
 ) error {
+	mylog.Log.Debug("ParseUpdatedBodyForEvents()")
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
@@ -659,7 +710,7 @@ func ParseUpdatedBodyForEvents(
 
 	newEvents := make(map[string]struct{})
 	oldEvents := make(map[string]struct{})
-	events, err := GetEventBySource(db, sourceId.String, nil)
+	events, err := GetEventBySource(tx, sourceId.String, nil)
 	if err != nil {
 		return err
 	}
@@ -671,10 +722,10 @@ func ParseUpdatedBodyForEvents(
 	if err != nil {
 		return err
 	}
+	mylog.Log.Debug(lessonNumberEvents)
 	if len(lessonNumberEvents) > 0 {
 		lessons, err := BatchGetLessonByNumber(
-			db,
-			userId.String,
+			tx,
 			studyId.String,
 			lessonNumberEvents,
 		)
@@ -689,7 +740,7 @@ func ParseUpdatedBodyForEvents(
 				event.TargetId.Set(l.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = CreateEvent(db, event)
+				_, err = CreateEvent(tx, event)
 				if err != nil {
 					return err
 				}
@@ -704,7 +755,7 @@ func ParseUpdatedBodyForEvents(
 	// }
 	if len(userEvents) > 0 {
 		users, err := BatchGetUserByLogin(
-			db,
+			tx,
 			userEvents,
 		)
 		if err != nil {
@@ -718,7 +769,7 @@ func ParseUpdatedBodyForEvents(
 				event.TargetId.Set(u.Id)
 				event.SourceId.Set(sourceId)
 				event.UserId.Set(userId)
-				_, err = CreateEvent(db, event)
+				_, err = CreateEvent(tx, event)
 				if err != nil {
 					return err
 				}
@@ -727,7 +778,7 @@ func ParseUpdatedBodyForEvents(
 	}
 	for _, event := range events {
 		if _, prs := newEvents[event.TargetId.String]; !prs {
-			err := DeleteEvent(db, &event.Id)
+			err := DeleteEvent(tx, &event.Id)
 			if err != nil {
 				return err
 			}

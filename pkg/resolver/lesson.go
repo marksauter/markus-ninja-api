@@ -198,69 +198,6 @@ func (r *lessonResolver) EnrollmentStatus(ctx context.Context) (string, error) {
 	return status.String(), nil
 }
 
-func (r *lessonResolver) Events(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*eventConnectionResolver, error) {
-	lessonId, err := r.Lesson.ID()
-	if err != nil {
-		return nil, err
-	}
-	eventOrder, err := ParseEventOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		eventOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	events, err := r.Repos.Event().GetByTarget(
-		ctx,
-		lessonId.String,
-		pageOptions,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.Event().CountByTarget(
-		ctx,
-		lessonId.String,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-	)
-	if err != nil {
-		return nil, err
-	}
-	eventConnectionResolver, err := NewEventConnectionResolver(
-		events,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return eventConnectionResolver, nil
-}
-
 func (r *lessonResolver) HasNextLesson(ctx context.Context) (bool, error) {
 	studyId, err := r.Lesson.StudyId()
 	if err != nil {
@@ -399,7 +336,7 @@ func (r *lessonResolver) Timeline(
 	if err != nil {
 		return nil, err
 	}
-	eventOrder, err := ParseEventOrder(nil)
+	eventOrder, err := ParseEventOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -427,42 +364,6 @@ func (r *lessonResolver) Timeline(
 		return nil, err
 	}
 
-	commentEvents := make(map[string]int)
-	nodePermits := make([]repo.NodePermit, len(events))
-	for i, event := range events {
-		action, err := event.Action()
-		if err != nil {
-			return nil, err
-		}
-		switch action {
-		case data.CommentedEvent:
-			commentId, err := event.SourceId()
-			if err != nil {
-				return nil, err
-			}
-			commentEvents[commentId.String] = i
-		default:
-			nodePermits[i] = event
-		}
-	}
-
-	commentIds := make([]string, 0, len(commentEvents))
-	for k := range commentEvents {
-		commentIds = append(commentIds, k)
-	}
-	comments, err := r.Repos.LessonComment().BatchGet(ctx, commentIds)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, comment := range comments {
-		commentId, err := comment.ID()
-		if err != nil {
-			return nil, err
-		}
-		nodePermits[commentEvents[commentId.String]] = comment
-	}
-
 	count, err := r.Repos.Event().CountByTarget(
 		ctx,
 		lessonId.String,
@@ -474,7 +375,7 @@ func (r *lessonResolver) Timeline(
 		return nil, err
 	}
 	resolver, err := NewLessonTimelineConnectionResolver(
-		nodePermits,
+		events,
 		pageOptions,
 		count,
 		r.Repos,

@@ -1,0 +1,4 @@
+# Events that can be a part of a lesson's timeline.
+interface LessonTimelineEvent {
+  id: ID!
+}

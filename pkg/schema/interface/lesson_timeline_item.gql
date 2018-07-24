@@ -1,4 +1,0 @@
-# Items that can be a part of a lesson's timeline.
-interface LessonTimelineItem {
-  id: ID!
-}

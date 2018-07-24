@@ -60,7 +60,7 @@ type EventOrderArg struct {
 func ParseEventOrder(arg *OrderArg) (*EventOrder, error) {
 	if arg == nil {
 		return &EventOrder{
-			direction: data.DESC,
+			direction: data.ASC,
 			field:     EventCreatedAt,
 		}, nil
 	}
