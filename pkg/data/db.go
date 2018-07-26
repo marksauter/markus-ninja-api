@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/rs/xid"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -203,7 +204,11 @@ func (p *PageOptions) QueryDirection() string {
 
 func (p *PageOptions) Limit() int32 {
 	// Assuming one of these is 0, so the sum will be the non-zero field + 1
-	limit := p.First + p.Last + 1
+	limit := p.First + p.Last
+	if limit < 1 {
+		return 0
+	}
+	limit += 1
 	if (p.After != nil && p.First > 0) ||
 		(p.Before != nil && p.Last > 0) {
 		limit = limit + int32(1)
@@ -273,29 +278,29 @@ func SQL(
 	args *pgx.QueryArgs,
 	po *PageOptions,
 ) string {
-	as := string(from[0])
+	fromAlias := xid.New().String()
 	var joins, whereAnds []string
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, as, args)
-		whereAnds = po.whereAnds(as)
+		joins = po.joins(from, fromAlias, args)
+		whereAnds = po.whereAnds(fromAlias)
 		limit = "LIMIT " + args.Append(po.Limit())
 		orderBy = "ORDER BY " +
-			as + "." + po.Order.Field() + " " + po.QueryDirection()
+			fromAlias + "." + po.Order.Field() + " " + po.QueryDirection()
 	}
 	selectsCopy := make([]string, len(selects))
 	for i, s := range selects {
-		selectsCopy[i] = as + "." + s
+		selectsCopy[i] = fromAlias + "." + s
 	}
 	whereCopy := make([]string, len(where))
 	for i, w := range where {
-		whereCopy[i] = as + "." + w
+		whereCopy[i] = fromAlias + "." + w
 	}
 
 	sql := `
 		SELECT 
 		` + strings.Join(selectsCopy, ",") + `
-		FROM ` + from + ` AS ` + as + `
+		FROM ` + from + ` AS ` + fromAlias + `
 		` + strings.Join(joins, " ") + `
 		WHERE ` + strings.Join(whereCopy, " AND ") + `
 		` + strings.Join(whereAnds, " ") + `
@@ -309,23 +314,25 @@ func SearchSQL(
 	selects []string,
 	from string,
 	within *mytype.OID,
-	query string,
+	query,
+	vector string,
 	po *PageOptions,
-) (string, pgx.QueryArgs) {
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	as := string(from[0])
+	args *pgx.QueryArgs,
+) string {
+	fromAlias := xid.New().String()
+	queryAlias := xid.New().String()
 	var joins, whereAnds []string
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, as, &args)
-		whereAnds = po.whereAnds(as)
+		joins = po.joins(from, fromAlias, args)
+		whereAnds = po.whereAnds(fromAlias)
 		limit = "LIMIT " + args.Append(po.Limit())
 
 		field := po.Order.Field()
 		if field != "best_match" {
-			orderBy = as + "." + field
+			orderBy = fromAlias + "." + field
 		} else {
-			orderBy = "ts_rank(document, query)"
+			orderBy = "ts_rank(" + vector + ", " + queryAlias + ")"
 		}
 
 		orderBy = "ORDER BY " + orderBy + " " + po.QueryDirection()
@@ -333,27 +340,26 @@ func SearchSQL(
 	if within != nil {
 		andIn := fmt.Sprintf(
 			"AND %s.%s = %s",
-			as,
+			fromAlias,
 			within.DBVarName(),
 			args.Append(within),
 		)
 		whereAnds = append(whereAnds, andIn)
 	}
 
-	tsquery := ToTsQuery(query)
 	sql := `
 		SELECT 
 		` + strings.Join(selects, ",") + `
-		FROM ` + from + ` AS ` + as + `,
-			to_tsquery('simple',` + args.Append(tsquery) + `) AS query
+		FROM ` + from + ` AS ` + fromAlias + `,
+			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
 		` + strings.Join(joins, " ") + `
-		WHERE CASE ` + args.Append(tsquery) + ` WHEN '*' THEN TRUE
-			ELSE document @@ query END
+		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
+			ELSE ` + vector + ` @@ ` + queryAlias + ` END
 		` + strings.Join(whereAnds, " ") + `
 		` + orderBy + `
 		` + limit
 
-	return ReorderQuery(po, sql), args
+	return ReorderQuery(po, sql)
 }
 
 // Then, we can reorder the items to the originally requested direction.

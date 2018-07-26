@@ -316,7 +316,7 @@ func (r *studyResolver) Labels(
 		if err != nil {
 			return nil, err
 		}
-		labels, err = r.Repos.Label().Search(ctx, *args.Query, pageOptions)
+		labels, err = r.Repos.Label().Search(ctx, studyId, *args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}

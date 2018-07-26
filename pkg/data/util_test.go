@@ -30,7 +30,7 @@ var toTsQueryTests = []struct {
 
 func TestToTsQuery(t *testing.T) {
 	for _, tt := range toTsQueryTests {
-		actual := data.ToTsQuery(tt.s)
+		actual := data.ToPrefixTsQuery(tt.s)
 		if actual != tt.expected {
 			t.Errorf(
 				"ToTsQuery(%s) expected %s actual %s",

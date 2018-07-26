@@ -322,6 +322,9 @@ permissions:
 
 
 
+  # Everyone can read topics.
+  - operation: Read Topic
+
   # Only authenticated users can create topics.
   - operation: Create Topic
     authenticated: true

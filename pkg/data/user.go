@@ -112,7 +112,7 @@ func CountUserBySearch(
 	sql := `
 		SELECT COUNT(*)
 		FROM user_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
 	`
 	psName := preparedName("countUserBySearch", sql)
 
@@ -700,7 +700,8 @@ func SearchUser(
 		"roles",
 	}
 	from := "user_search_index"
-	sql, args := SearchSQL(selects, from, nil, query, po)
+	var args pgx.QueryArgs
+	sql := SearchSQL(selects, from, nil, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchUserIndex", sql)
 

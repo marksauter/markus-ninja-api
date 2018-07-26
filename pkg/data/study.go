@@ -130,7 +130,7 @@ func CountStudyBySearch(
 	sql := `
 		SELECT COUNT(*)
 		FROM study_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
 	`
 	if within != nil {
 		if within.Type != "User" {
@@ -150,6 +150,27 @@ func CountStudyBySearch(
 	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
+
+	return
+}
+
+func CountStudyByTopicSearch(
+	db Queryer,
+	query string,
+) (n int32, err error) {
+	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	if query == "" {
+		query = "*"
+	}
+	sql := `
+		SELECT COUNT(*)
+		FROM study_search_index
+		WHERE topics @@ to_tsquery('simple',` + query + `)
+	`
+	psName := preparedName("countStudyBySearch", sql)
+
+	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
 
 	return
 }
@@ -649,9 +670,40 @@ func SearchStudy(
 		"user_id",
 	}
 	from := "study_search_index"
-	sql, args := SearchSQL(selects, from, within, query, po)
+	var args pgx.QueryArgs
+	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchStudyIndex", sql)
+
+	return getManyStudy(db, psName, sql, args...)
+}
+
+func SearchStudyByTopic(
+	db Queryer,
+	topic,
+	query string,
+	po *PageOptions,
+) ([]*Study, error) {
+	mylog.Log.WithField("topic", topic).Info("SearchStudyByTopic(topic)")
+	selects := []string{
+		"advanced_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"private",
+		"updated_at",
+		"user_id",
+	}
+	from := "study_search_index"
+	var args pgx.QueryArgs
+	sql := SearchSQL([]string{"*"}, from, nil, ToTsQuery(topic), "topics", po, &args)
+	// search within search
+	if strings.TrimSpace(query) != "" {
+		sql = SearchSQL(selects, ToSubQuery(sql), nil, ToPrefixTsQuery(query), "document", po, &args)
+	}
+
+	psName := preparedName("searchStudyByTopicIndex", sql)
 
 	return getManyStudy(db, psName, sql, args...)
 }

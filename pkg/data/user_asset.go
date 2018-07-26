@@ -51,7 +51,7 @@ func CountUserAssetBySearch(
 	sql := `
 		SELECT COUNT(*)
 		FROM user_asset_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
 	`
 	if within != nil {
 		if within.Type != "User" && within.Type != "Study" {
@@ -537,7 +537,8 @@ func SearchUserAsset(
 		"user_id",
 	}
 	from := "user_asset_search_index"
-	sql, args := SearchSQL(selects, from, within, query, po)
+	var args pgx.QueryArgs
+	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchUserAssetIndex", sql)
 

@@ -56,7 +56,7 @@ func CountTopicBySearch(
 	sql := `
 		SELECT COUNT(*)
 		FROM topic_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
 	`
 	if within != nil {
 		if within.Type != "Topicable" {
@@ -388,7 +388,8 @@ func SearchTopic(
 		"updated_at",
 	}
 	from := "topic_search_index"
-	sql, args := SearchSQL(selects, from, nil, query, po)
+	var args pgx.QueryArgs
+	sql := SearchSQL(selects, from, nil, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchTopicIndex", sql)
 
