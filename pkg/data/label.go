@@ -418,26 +418,6 @@ func DeleteLabel(
 	return nil
 }
 
-const refreshLabelSearchIndexSQL = `
-	SELECT refresh_mv_xxx('label_search_index')
-`
-
-func RefreshLabelSearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshLabelSearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshLabelSearchIndex",
-		refreshLabelSearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchLabel(
 	db Queryer,
 	within *mytype.OID,

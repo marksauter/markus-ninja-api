@@ -463,36 +463,6 @@ func (r *StudyRepo) Search(
 	return studyPermits, nil
 }
 
-func (r *StudyRepo) SearchByTopic(
-	ctx context.Context,
-	topic,
-	query string,
-	po *data.PageOptions,
-) ([]*StudyPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	studies, err := data.SearchStudyByTopic(db, topic, query, po)
-	if err != nil {
-		return nil, err
-	}
-	studyPermits := make([]*StudyPermit, len(studies))
-	if len(studies) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range studies {
-			studyPermits[i] = &StudyPermit{fieldPermFn, l}
-		}
-	}
-	return studyPermits, nil
-}
-
 func (r *StudyRepo) Update(
 	ctx context.Context,
 	s *data.Study,

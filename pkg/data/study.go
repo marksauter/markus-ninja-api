@@ -520,7 +520,7 @@ func CreateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
-	mylog.Log.Info("Create()")
+	mylog.Log.Info("CreateStudy()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -624,26 +624,6 @@ func DeleteStudy(
 	return nil
 }
 
-const refreshStudySearchIndexSQL = `
-	SELECT refresh_mv_xxx('study_search_index')
-`
-
-func RefreshStudySearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshStudySearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshStudySearchIndex",
-		refreshStudySearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchStudy(
 	db Queryer,
 	within *mytype.OID,
@@ -651,14 +631,6 @@ func SearchStudy(
 	po *PageOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("query", query).Info("SearchStudy(query)")
-	if within != nil {
-		if within.Type != "User" {
-			return nil, fmt.Errorf(
-				"cannot search for studies within type `%s`",
-				within.Type,
-			)
-		}
-	}
 	selects := []string{
 		"advanced_at",
 		"created_at",
@@ -671,41 +643,64 @@ func SearchStudy(
 	}
 	from := "study_search_index"
 	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	in := within
+	if in != nil {
+		if in.Type != "User" && in.Type != "Topic" {
+			return nil, fmt.Errorf(
+				"cannot search for studies within type `%s`",
+				in.Type,
+			)
+		}
+		if in.Type == "Topic" {
+			topic, err := GetTopic(tx, in.String)
+			if err != nil {
+				return nil, err
+			}
+			from = ToSubQuery(
+				SearchSQL(
+					[]string{"*"},
+					from,
+					nil,
+					ToTsQuery(topic.Name.String),
+					"topics",
+					po,
+					&args,
+				),
+			)
+			// set `in` to nil so that it doesn't affect next call to SearchSQL
+			// TODO: fix this ugliness please
+			in = nil
+		}
+	}
+
+	sql := SearchSQL(selects, from, in, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchStudyIndex", sql)
 
-	return getManyStudy(db, psName, sql, args...)
-}
-
-func SearchStudyByTopic(
-	db Queryer,
-	topic,
-	query string,
-	po *PageOptions,
-) ([]*Study, error) {
-	mylog.Log.WithField("topic", topic).Info("SearchStudyByTopic(topic)")
-	selects := []string{
-		"advanced_at",
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"private",
-		"updated_at",
-		"user_id",
-	}
-	from := "study_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL([]string{"*"}, from, nil, ToTsQuery(topic), "topics", po, &args)
-	// search within search
-	if strings.TrimSpace(query) != "" {
-		sql = SearchSQL(selects, ToSubQuery(sql), nil, ToPrefixTsQuery(query), "document", po, &args)
+	studies, err := getManyStudy(tx, psName, sql, args...)
+	if err != nil {
+		return nil, err
 	}
 
-	psName := preparedName("searchStudyByTopicIndex", sql)
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
+	}
 
-	return getManyStudy(db, psName, sql, args...)
+	return studies, nil
 }
 
 func UpdateStudy(

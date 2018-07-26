@@ -104,7 +104,7 @@ func (r *RootResolver) Search(
 		if err != nil {
 			return nil, err
 		}
-		if within.Type != "User" && within.Type != "Study" {
+		if within.Type != "User" && within.Type != "Study" && within.Type != "Topic" {
 			return nil, fmt.Errorf("cannot search within %s", within.Type)
 		}
 	}
@@ -168,7 +168,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().SearchByTopic(ctx, "color", args.Query, pageOptions)
+		studies, err := r.Repos.Study().Search(ctx, within, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
