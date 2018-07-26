@@ -85,11 +85,14 @@ func CountLabelBySearch(
 	sql := `
 		SELECT COUNT(*)
 		FROM label_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToTsQuery(query)) + `)
+		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
 	`
 	if within != nil {
 		if within.Type != "Study" {
-			// Can only search for labels with studies, so return 0 otherwise.
+			err = fmt.Errorf(
+				"cannot search for labels within type `%s`",
+				within.Type,
+			)
 			return
 		}
 		andIn := fmt.Sprintf(
@@ -437,10 +440,19 @@ func RefreshLabelSearchIndex(
 
 func SearchLabel(
 	db Queryer,
+	within *mytype.OID,
 	query string,
 	po *PageOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField("query", query).Info("Search(query)")
+	if within != nil {
+		if within.Type != "Study" {
+			return nil, fmt.Errorf(
+				"cannot search for labels within type `%s`",
+				within.Type,
+			)
+		}
+	}
 	selects := []string{
 		"color",
 		"created_at",
@@ -452,7 +464,8 @@ func SearchLabel(
 		"updated_at",
 	}
 	from := "label_search_index"
-	sql, args := SearchSQL(selects, from, nil, query, po)
+	var args pgx.QueryArgs
+	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
 
 	psName := preparedName("searchLabelIndex", sql)
 

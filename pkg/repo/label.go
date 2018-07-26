@@ -301,6 +301,7 @@ func (r *LabelRepo) Delete(
 
 func (r *LabelRepo) Search(
 	ctx context.Context,
+	within *mytype.OID,
 	query string,
 	po *data.PageOptions,
 ) ([]*LabelPermit, error) {
@@ -311,7 +312,7 @@ func (r *LabelRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labels, err := data.SearchLabel(db, query, po)
+	labels, err := data.SearchLabel(db, within, query, po)
 	if err != nil {
 		return nil, err
 	}

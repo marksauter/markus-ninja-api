@@ -186,6 +186,18 @@ func (r *StudyRepo) CountBySearch(
 	return data.CountStudyBySearch(db, within, query)
 }
 
+func (r *StudyRepo) CountByTopicSearch(
+	ctx context.Context,
+	query string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountStudyByTopicSearch(db, query)
+}
+
 func (r *StudyRepo) CountByUser(
 	ctx context.Context,
 	userId string,
@@ -435,6 +447,36 @@ func (r *StudyRepo) Search(
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	studies, err := data.SearchStudy(db, within, query, po)
+	if err != nil {
+		return nil, err
+	}
+	studyPermits := make([]*StudyPermit, len(studies))
+	if len(studies) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range studies {
+			studyPermits[i] = &StudyPermit{fieldPermFn, l}
+		}
+	}
+	return studyPermits, nil
+}
+
+func (r *StudyRepo) SearchByTopic(
+	ctx context.Context,
+	topic,
+	query string,
+	po *data.PageOptions,
+) ([]*StudyPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	studies, err := data.SearchStudyByTopic(db, topic, query, po)
 	if err != nil {
 		return nil, err
 	}

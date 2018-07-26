@@ -168,7 +168,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().Search(ctx, within, args.Query, pageOptions)
+		studies, err := r.Repos.Study().SearchByTopic(ctx, "color", args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}

@@ -43,7 +43,7 @@ func (r *topicResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("topics/%s", name))
+	uri = mygql.URI(fmt.Sprintf("/topics/%s", name))
 	return uri, nil
 }
 

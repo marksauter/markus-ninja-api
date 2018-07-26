@@ -10,21 +10,15 @@ import (
 type TopicableOrderField int
 
 const (
-	TopicableAdvancedAt TopicableOrderField = iota
-	TopicableCreatedAt
-	TopicableName
+	TopicableCreatedAt TopicableOrderField = iota
 	TopicableTopicedAt
 	TopicableUpdatedAt
 )
 
 func ParseTopicableOrderField(s string) (TopicableOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "ADVANCED_AT":
-		return TopicableAdvancedAt, nil
 	case "CREATED_AT":
 		return TopicableCreatedAt, nil
-	case "NAME":
-		return TopicableName, nil
 	case "TOPICED_AT":
 		return TopicableTopicedAt, nil
 	case "UPDATED_AT":
@@ -37,12 +31,8 @@ func ParseTopicableOrderField(s string) (TopicableOrderField, error) {
 
 func (f TopicableOrderField) String() string {
 	switch f {
-	case TopicableAdvancedAt:
-		return "advanced_at"
 	case TopicableCreatedAt:
 		return "created_at"
-	case TopicableName:
-		return "name"
 	case TopicableTopicedAt:
 		return "topiced_at"
 	case TopicableUpdatedAt:
