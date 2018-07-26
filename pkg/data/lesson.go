@@ -685,26 +685,6 @@ func DeleteLesson(
 	return nil
 }
 
-const refreshLessonSearchIndexSQL = `
-	SELECT refresh_mv_xxx('lesson_search_index')
-`
-
-func RefreshLessonSearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshLessonSearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshLessonSearchIndex",
-		refreshLessonSearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchLesson(
 	db Queryer,
 	within *mytype.OID,

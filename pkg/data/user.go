@@ -662,26 +662,6 @@ func DeleteUser(
 	return nil
 }
 
-const refreshUserSearchIndexSQL = `
-	SELECT refresh_mv_xxx('user_search_index')
-`
-
-func RefreshUserSearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshUserSearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshUserSearchIndex",
-		refreshUserSearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchUser(
 	db Queryer,
 	query string,

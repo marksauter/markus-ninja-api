@@ -354,26 +354,6 @@ func CreateTopic(
 	return topic, nil
 }
 
-const refreshTopicSearchIndexSQL = `
-	SELECT refresh_mv_xxx('topic_search_index')
-`
-
-func RefreshTopicSearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshTopicSearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshTopicSearchIndex",
-		refreshTopicSearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchTopic(
 	db Queryer,
 	query string,

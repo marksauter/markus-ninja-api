@@ -487,26 +487,6 @@ func DeleteUserAsset(
 	return nil
 }
 
-const refreshUserAssetSearchIndexSQL = `
-	SELECT refresh_mv_xxx('user_asset_search_index')
-`
-
-func RefreshUserAssetSearchIndex(
-	db Queryer,
-) error {
-	mylog.Log.Info("RefreshUserAssetSearchIndex()")
-	_, err := prepareExec(
-		db,
-		"refreshUserAssetSearchIndex",
-		refreshUserAssetSearchIndexSQL,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func SearchUserAsset(
 	db Queryer,
 	within *mytype.OID,

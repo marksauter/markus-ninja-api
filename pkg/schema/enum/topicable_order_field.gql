@@ -3,6 +3,9 @@ enum TopicableOrderField {
   # Order topicables by advance time.
   ADVANCED_AT
 
+  # Order topicables by apple count.
+  APPLE_COUNT
+
   # Order topicables by creation time.
   CREATED_AT
 
