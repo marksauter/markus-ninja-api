@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/badoux/checkmail"
@@ -1367,7 +1368,14 @@ func (r *RootResolver) UpdateTopics(
 	}
 	newTopics := make(map[string]struct{})
 	oldTopics := make(map[string]struct{})
-	invalidTopicNames := validateTopicNames(args.Input.TopicNames)
+	// remove empty strings from topic names
+	topicNames := make([]string, 0, len(args.Input.TopicableId))
+	for _, t := range args.Input.TopicNames {
+		if strings.TrimSpace(t) != "" {
+			topicNames = append(topicNames, t)
+		}
+	}
+	invalidTopicNames := validateTopicNames(topicNames)
 	if len(invalidTopicNames) > 0 {
 		resolver.InvalidNames = invalidTopicNames
 		return resolver, nil
@@ -1385,7 +1393,7 @@ func (r *RootResolver) UpdateTopics(
 		topics[i] = tp.Get()
 		oldTopics[topics[i].Name.String] = struct{}{}
 	}
-	for _, name := range args.Input.TopicNames {
+	for _, name := range topicNames {
 		newTopics[name] = struct{}{}
 		if _, prs := oldTopics[name]; !prs {
 			t := &data.Topic{}

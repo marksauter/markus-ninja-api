@@ -156,7 +156,7 @@ func (r *lessonCommentResolver) ResourcePath(
 		return uri, err
 	}
 	uri = mygql.URI(fmt.Sprintf(
-		"%s/%d#lesson-comment%d",
+		"%s#lesson-comment%d",
 		string(lessonPath),
 		createdAt.Unix(),
 	))

@@ -587,6 +587,15 @@ func CreateStudy(
 		return nil, err
 	}
 
+	e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
+	if err != nil {
+		return nil, err
+	}
+	_, err = CreateEvent(tx, e)
+	if err != nil {
+		return nil, err
+	}
+
 	study, err := GetStudy(tx, row.Id.String)
 	if err != nil {
 		return nil, err
