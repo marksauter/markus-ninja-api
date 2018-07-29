@@ -607,20 +607,7 @@ func CreateLesson(
 	if err != nil {
 		return nil, err
 	}
-	e := &Event{}
-	err = e.Action.Set(CreatedEvent)
-	if err != nil {
-		return nil, err
-	}
-	err = e.SourceId.Set(&row.StudyId)
-	if err != nil {
-		return nil, err
-	}
-	err = e.TargetId.Set(&row.Id)
-	if err != nil {
-		return nil, err
-	}
-	err = e.UserId.Set(&row.UserId)
+	e, err := NewEvent(CreatedEvent, &row.StudyId, &row.Id, &row.UserId)
 	if err != nil {
 		return nil, err
 	}
