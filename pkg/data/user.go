@@ -87,15 +87,15 @@ const countUserByEnrolleeSQL = `
 
 func CountUserByEnrollee(
 	db Queryer,
-	userId string,
+	enrolleeId string,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountUserByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", enrolleeId).Info("CountUserByEnrollee(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countUserByEnrollee",
 		countUserByEnrolleeSQL,
-		userId,
+		enrolleeId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -324,15 +324,15 @@ func GetUserByAppleable(
 
 func GetUserByEnrollee(
 	db Queryer,
-	userId string,
+	enrolleeId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"user_id",
-		userId,
+		enrolleeId,
 	).Info("GetUserByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(enrolleeId)}
 
 	selects := []string{
 		"account_updated_at",
@@ -385,14 +385,14 @@ func GetUserByEnrollee(
 	return rows, nil
 }
 
-func GetUserEnrollees(
+func GetUserByEnrollable(
 	db Queryer,
 	enrollableId string,
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"enrollable_id", enrollableId,
-	).Info("GetUserEnrollees(enrollable_id)")
+	).Info("GetUserByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
 

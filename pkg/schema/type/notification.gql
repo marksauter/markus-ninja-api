@@ -4,7 +4,7 @@ type Notification implements Node {
   createdAt: Time!
 
   # The event that triggered the notification.
-  event: Event!
+  event: NotificationEvent!
 
   id: ID!
 
@@ -13,9 +13,6 @@ type Notification implements Node {
 
   # The reason for receiving this notification.
   reason: String!
-
-  # The study from which the event occured.
-  study: Study!
 
   # Identifies the date and time when the object was last updated.
   updatedAt: Time!

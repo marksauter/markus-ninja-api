@@ -418,10 +418,11 @@ func (r *RootResolver) DeleteLabel(
 	ctx context.Context,
 	args struct{ Input DeleteLabelInput },
 ) (*deleteLabelPayloadResolver, error) {
-	label := &data.Label{}
-	if err := label.Id.Set(args.Input.LabelId); err != nil {
-		return nil, errors.New("invalid label id")
+	labelPermit, err := r.Repos.Label().Get(ctx, args.Input.LabelId)
+	if err != nil {
+		return nil, err
 	}
+	label := labelPermit.Get()
 
 	if err := r.Repos.Label().Delete(ctx, label); err != nil {
 		return nil, err
@@ -442,10 +443,11 @@ func (r *RootResolver) DeleteLesson(
 	ctx context.Context,
 	args struct{ Input DeleteLessonInput },
 ) (*deleteLessonPayloadResolver, error) {
-	lesson := &data.Lesson{}
-	if err := lesson.Id.Set(args.Input.LessonId); err != nil {
-		return nil, errors.New("invalid lesson id")
+	lessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonId)
+	if err != nil {
+		return nil, err
 	}
+	lesson := lessonPermit.Get()
 
 	if err := r.Repos.Lesson().Delete(ctx, lesson); err != nil {
 		return nil, err
@@ -517,10 +519,11 @@ func (r *RootResolver) DeleteStudy(
 	ctx context.Context,
 	args struct{ Input DeleteStudyInput },
 ) (*deleteStudyPayloadResolver, error) {
-	study := &data.Study{}
-	if err := study.Id.Set(args.Input.StudyId); err != nil {
-		return nil, errors.New("invalid study id")
+	studyPermit, err := r.Repos.Study().Get(ctx, args.Input.StudyId)
+	if err != nil {
+		return nil, err
 	}
+	study := studyPermit.Get()
 
 	if err := r.Repos.Study().Delete(ctx, study); err != nil {
 		return nil, err
@@ -541,10 +544,11 @@ func (r *RootResolver) DeleteUserAsset(
 	ctx context.Context,
 	args struct{ Input DeleteUserAssetInput },
 ) (*deleteUserAssetPayloadResolver, error) {
-	userAsset := &data.UserAsset{}
-	if err := userAsset.Id.Set(args.Input.UserAssetId); err != nil {
-		return nil, errors.New("invalid user_asset id")
+	userAssetPermit, err := r.Repos.UserAsset().Get(ctx, args.Input.UserAssetId)
+	if err != nil {
+		return nil, err
 	}
+	userAsset := userAssetPermit.Get()
 
 	if err := r.Repos.UserAsset().Delete(ctx, userAsset); err != nil {
 		return nil, err

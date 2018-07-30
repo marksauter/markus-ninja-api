@@ -441,7 +441,7 @@ func (r *userResolver) Enrollees(
 		return nil, err
 	}
 
-	users, err := r.Repos.User().GetEnrollees(
+	users, err := r.Repos.User().GetByEnrollable(
 		ctx,
 		id.String,
 		pageOptions,
