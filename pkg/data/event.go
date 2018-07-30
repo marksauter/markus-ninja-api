@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	AppledEvent     = "appled"
 	CreatedEvent    = "created"
 	CommentedEvent  = "commented"
 	DeletedEvent    = "deleted"
@@ -53,13 +54,15 @@ func NewEvent(action string, sourceId, targetId, userId *mytype.OID) (*Event, er
 type EventFilterOption int
 
 const (
-	FilterCreateEvents EventFilterOption = iota
+	FilterAppleEvents EventFilterOption = iota
+	FilterCreateEvents
 	FilterCommentEvents
 	FilterDeleteEvents
 	FilterDismissEvents
 	FilterEnrollEvents
 	FilterMentionEvents
 	FilterReferenceEvents
+	GetAppleEvents
 	GetCreateEvents
 	GetCommentEvents
 	GetDeleteEvents
@@ -71,6 +74,8 @@ const (
 
 func (src EventFilterOption) String() string {
 	switch src {
+	case FilterAppleEvents:
+		return `action != '` + AppledEvent + `'`
 	case FilterCreateEvents:
 		return `action != '` + CreatedEvent + `'`
 	case FilterCommentEvents:
@@ -85,6 +90,8 @@ func (src EventFilterOption) String() string {
 		return `action != '` + MentionedEvent + `'`
 	case FilterReferenceEvents:
 		return `action != '` + ReferencedEvent + `'`
+	case GetAppleEvents:
+		return `action = '` + AppledEvent + `'`
 	case GetCreateEvents:
 		return `action = '` + CreatedEvent + `'`
 	case GetCommentEvents:
@@ -629,24 +636,23 @@ func ParseBodyForEvents(
 		defer RollbackTransaction(tx)
 	}
 
-	lessonNumberEvents, err := body.NumberRefs()
+	lessonNumberRefs, err := body.NumberRefs()
 	if err != nil {
 		return err
 	}
-	userEvents := body.AtRefs()
-	// TODO: add support for cross study references
-	// crossStudyEvents, err := body.CrossStudyEvents()
-	// if err != nil {
-	//   return err
-	// }
+	userRefs := body.AtRefs()
+	crossStudyRefs, err := body.CrossStudyRefs()
+	if err != nil {
+		return err
+	}
 	event := &Event{}
 	event.SourceId.Set(sourceId)
 	event.UserId.Set(userId)
-	if len(lessonNumberEvents) > 0 {
+	if len(lessonNumberRefs) > 0 {
 		lessons, err := BatchGetLessonByNumber(
 			tx,
 			studyId.String,
-			lessonNumberEvents,
+			lessonNumberRefs,
 		)
 		if err != nil {
 			return err
@@ -661,10 +667,10 @@ func ParseBodyForEvents(
 			return err
 		}
 	}
-	if len(userEvents) > 0 {
+	if len(userRefs) > 0 {
 		users, err := BatchGetUserByLogin(
 			tx,
-			userEvents,
+			userRefs,
 		)
 		if err != nil {
 			return err
@@ -675,6 +681,26 @@ func ParseBodyForEvents(
 		}
 		event.Action.Set(MentionedEvent)
 		err = BatchCreateEvent(tx, event, userIds)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ref := range crossStudyRefs {
+		lesson, err := GetLessonByOwnerStudyAndNumber(
+			tx,
+			ref.Owner,
+			ref.Name,
+			ref.Number,
+		)
+		if err != nil {
+			return err
+		}
+		event.Action.Set(ReferencedEvent)
+		err = event.TargetId.Set(&lesson.Id)
+		if err != nil {
+			return err
+		}
+		_, err = CreateEvent(tx, event)
 		if err != nil {
 			return err
 		}
@@ -718,16 +744,16 @@ func ParseUpdatedBodyForEvents(
 		oldEvents[event.TargetId.String] = struct{}{}
 	}
 
-	lessonNumberEvents, err := body.NumberRefs()
+	lessonNumberRefs, err := body.NumberRefs()
 	if err != nil {
 		return err
 	}
-	mylog.Log.Debug(lessonNumberEvents)
-	if len(lessonNumberEvents) > 0 {
+	mylog.Log.Debug(lessonNumberRefs)
+	if len(lessonNumberRefs) > 0 {
 		lessons, err := BatchGetLessonByNumber(
 			tx,
 			studyId.String,
-			lessonNumberEvents,
+			lessonNumberRefs,
 		)
 		if err != nil {
 			return err
@@ -747,16 +773,38 @@ func ParseUpdatedBodyForEvents(
 			}
 		}
 	}
-	userEvents := body.AtRefs()
-	// TODO: add support for cross study references
-	// crossStudyEvents, err := body.CrossStudyEvents()
-	// if err != nil {
-	//   return err
-	// }
-	if len(userEvents) > 0 {
+	userRefs := body.AtRefs()
+	crossStudyRefs, err := body.CrossStudyRefs()
+	if err != nil {
+		return err
+	}
+	for _, ref := range crossStudyRefs {
+		lesson, err := GetLessonByOwnerStudyAndNumber(
+			tx,
+			ref.Owner,
+			ref.Name,
+			ref.Number,
+		)
+		if err != nil {
+			return err
+		}
+		newEvents[lesson.Id.String] = struct{}{}
+		if _, prs := oldEvents[lesson.Id.String]; !prs {
+			event := &Event{}
+			event.Action.Set(ReferencedEvent)
+			event.TargetId.Set(lesson.Id)
+			event.SourceId.Set(sourceId)
+			event.UserId.Set(userId)
+			_, err = CreateEvent(tx, event)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(userRefs) > 0 {
 		users, err := BatchGetUserByLogin(
 			tx,
-			userEvents,
+			userRefs,
 		)
 		if err != nil {
 			return err

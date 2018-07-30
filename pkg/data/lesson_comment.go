@@ -370,7 +370,20 @@ func CreateLessonComment(
 		return nil, err
 	}
 
+	err = ParseBodyForEvents(tx, &row.UserId, &row.StudyId, &row.Id, &row.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	lessonComment, err := GetLessonComment(tx, row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+	e, err := NewEvent(CommentedEvent, &row.Id, &row.LessonId, &row.UserId)
+	if err != nil {
+		return nil, err
+	}
+	_, err = CreateEvent(tx, e)
 	if err != nil {
 		return nil, err
 	}
@@ -459,6 +472,14 @@ func UpdateLessonComment(
 	if err != nil {
 		return nil, err
 	}
+
+	ParseUpdatedBodyForEvents(
+		tx,
+		&lessonComment.UserId,
+		&lessonComment.StudyId,
+		&lessonComment.Id,
+		&lessonComment.Body,
+	)
 
 	if newTx {
 		err = CommitTransaction(tx)

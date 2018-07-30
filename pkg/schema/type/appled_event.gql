@@ -1,0 +1,16 @@
+# Represents an appled event on a given subject.
+type AppledEvent implements 
+  UserActivityEvent,
+  Node
+{
+  # The appleable assocated with this `appled` event.
+  appleable: Appleable!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The user who performed the event.
+  user: User!
+}

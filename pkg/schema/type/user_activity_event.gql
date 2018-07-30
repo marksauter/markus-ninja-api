@@ -1,0 +1,23 @@
+# An edge type for UserActivityEvent.
+type UserActivityEventEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The event at the end of the edge.
+  node: UserActivityEvent
+}
+
+# A connection type for UserActivityEvent.
+type UserActivityConnection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [UserActivityEventEdge]
+
+  # A list of nodes.
+  nodes: [UserActivityEvent]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

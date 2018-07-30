@@ -198,6 +198,20 @@ func (r *Repos) GetAppleable(
 	}
 }
 
+func (r *Repos) GetCreateable(
+	ctx context.Context,
+	nodeId *mytype.OID,
+) (NodePermit, error) {
+	switch nodeId.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeId.String)
+	case "Study":
+		return r.Study().Get(ctx, nodeId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for createable id", nodeId.Type)
+	}
+}
+
 func (r *Repos) GetEnrollable(
 	ctx context.Context,
 	enrollableId *mytype.OID,
@@ -228,7 +242,7 @@ func (r *Repos) GetEventSourceable(
 	case "User":
 		return r.User().Get(ctx, nodeId.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for event sourceable id", nodeId.Type)
 	}
 }
 
@@ -244,7 +258,7 @@ func (r *Repos) GetEventTargetable(
 	case "User":
 		return r.User().Get(ctx, nodeId.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for event targetable id", nodeId.Type)
 	}
 }
 

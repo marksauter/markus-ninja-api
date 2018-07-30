@@ -53,7 +53,7 @@ type CrossStudyRef struct {
 	Number int32
 }
 
-var crossStudyRef = regexp.MustCompile(`(?:^|\s+)(\w+)/([\w|-]+)#(\d)(?:\s+|$)`)
+var crossStudyRef = regexp.MustCompile(`(?:\W+|\s+|^)(\w+)/([\w|-]+)#(\d+)(?:\W+|\s+|$)`)
 
 func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
 	result := crossStudyRef.FindAllStringSubmatch(src.String, -1)

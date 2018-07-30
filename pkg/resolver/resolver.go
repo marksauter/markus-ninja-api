@@ -91,6 +91,10 @@ func eventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interfac
 		return nil, err
 	}
 	switch action {
+	case data.AppledEvent:
+		return &appledEventResolver{Event: event, Repos: repos}, nil
+	case data.CreatedEvent:
+		return &createdEventResolver{Event: event, Repos: repos}, nil
 	case data.CommentedEvent:
 		return &commentedEventResolver{Event: event, Repos: repos}, nil
 	case data.ReferencedEvent:

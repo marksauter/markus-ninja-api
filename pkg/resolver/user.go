@@ -25,6 +25,76 @@ func (r *userResolver) AccountUpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *userResolver) Activity(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*userActivityConnectionResolver, error) {
+	userId, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := r.Repos.Event().GetBySource(
+		ctx,
+		userId.String,
+		pageOptions,
+		data.FilterCommentEvents,
+		data.FilterDeleteEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+		data.FilterMentionEvents,
+		data.FilterReferenceEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := r.Repos.Event().CountBySource(
+		ctx,
+		userId.String,
+		data.FilterCommentEvents,
+		data.FilterDeleteEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+		data.FilterMentionEvents,
+		data.FilterReferenceEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewUserActivityConnectionResolver(
+		events,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
+}
+
 func (r *userResolver) Appled(
 	ctx context.Context,
 	args struct {
@@ -329,6 +399,15 @@ func (r *userResolver) Enrolled(
 		studyCount,
 		userCount,
 	)
+}
+
+func (r *userResolver) EnrolleeCount(ctx context.Context) (int32, error) {
+	userId, err := r.User.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.User().CountByEnrollable(ctx, userId.String)
 }
 
 func (r *userResolver) Enrollees(

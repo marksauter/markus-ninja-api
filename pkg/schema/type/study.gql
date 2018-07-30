@@ -1,6 +1,7 @@
 # Represents a study.
 type Study implements
   Appleable,
+  Createable,
   Enrollable,
   EventSourceable,
   EventTargetable,
@@ -61,6 +62,9 @@ type Study implements
 
   # The description of the study rendered to HTML.
   descriptionHTML: HTML!
+
+  # The number of users that have enrolled in this enrollable.
+  enrolleeCount: Int!
 
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
