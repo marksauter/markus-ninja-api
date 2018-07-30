@@ -159,6 +159,7 @@ const getEnrolledByEnrollableAndUserSQL = `
 		user_id
 	FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
+		AND status = 'ENROLLED'
 `
 
 func GetEnrolledByEnrollableAndUser(
@@ -208,7 +209,10 @@ func GetEnrolledByEnrollable(
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("GetEnrolledByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollable_id = ` + args.Append(enrollableId)}
+	where := []string{
+		`enrollable_id = ` + args.Append(enrollableId),
+		`status = 'ENROLLED'`,
+	}
 
 	selects := []string{
 		"created_at",

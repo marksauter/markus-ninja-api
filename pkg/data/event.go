@@ -439,6 +439,10 @@ func CreateEvent(
 		return nil, err
 	}
 
+	if err := CreateNotificationsFromEvent(tx, event); err != nil {
+		return nil, err
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
@@ -773,7 +777,6 @@ func ParseUpdatedBodyForEvents(
 			}
 		}
 	}
-	userRefs := body.AtRefs()
 	crossStudyRefs, err := body.CrossStudyRefs()
 	if err != nil {
 		return err
@@ -801,6 +804,7 @@ func ParseUpdatedBodyForEvents(
 			}
 		}
 	}
+	userRefs := body.AtRefs()
 	if len(userRefs) > 0 {
 		users, err := BatchGetUserByLogin(
 			tx,

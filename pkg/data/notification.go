@@ -16,7 +16,6 @@ type Notification struct {
 	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read/update"`
 	Reason     pgtype.Text        `db:"reason" permit:"read"`
 	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
-	StudyId    mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
@@ -57,34 +56,6 @@ func (src NotificationFilterOption) String() string {
 	}
 }
 
-const countNotificationByStudySQL = `
-	SELECT COUNT(*)
-	FROM notification
-	WHERE user_id = $1 AND study_id = $2
-`
-
-func CountNotificationByStudy(
-	db Queryer,
-	userId,
-	studyId string,
-) (int32, error) {
-	mylog.Log.WithField(
-		"study_id", studyId,
-	).Info("CountNotificationByStudy(study_id)")
-	var n int32
-	err := prepareQueryRow(
-		db,
-		"countNotificationByStudy",
-		countNotificationByStudySQL,
-		userId,
-		studyId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return n, err
-}
-
 const countNotificationByUserSQL = `
 	SELECT COUNT(*)
 	FROM notification
@@ -122,7 +93,6 @@ func getNotification(
 		&row.Id,
 		&row.LastReadAt,
 		&row.Reason,
-		&row.StudyId,
 		&row.UpdatedAt,
 		&row.UserId,
 	)
@@ -157,7 +127,6 @@ func getManyNotification(
 			&row.Id,
 			&row.LastReadAt,
 			&row.Reason,
-			&row.StudyId,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -181,7 +150,6 @@ const getNotificationByIdSQL = `
 		id,
 		last_read_at,
 		reason,
-		study_id,
 		updated_at,
 		user_id
 	FROM notification_master
@@ -194,39 +162,6 @@ func GetNotification(
 ) (*Notification, error) {
 	mylog.Log.WithField("id", id).Info("GetNotification(id)")
 	return getNotification(db, "getNotificationById", getNotificationByIdSQL, id)
-}
-
-func GetNotificationByStudy(
-	db Queryer,
-	userId,
-	studyId string,
-	po *PageOptions,
-) ([]*Notification, error) {
-	mylog.Log.WithField(
-		"study_id", studyId,
-	).Info("GetNotificationByStudy(study_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{
-		`user_id = ` + args.Append(userId),
-		`study_id = ` + args.Append(studyId),
-	}
-
-	selects := []string{
-		"created_at",
-		"event_id",
-		"id",
-		"last_read_at",
-		"reason",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "notification_master"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getNotificationsByStudy", sql)
-
-	return getManyNotification(db, psName, sql, args...)
 }
 
 func GetNotificationByUser(
@@ -244,7 +179,6 @@ func GetNotificationByUser(
 		"id",
 		"last_read_at",
 		"reason",
-		"study_id",
 		"updated_at",
 		"user_id",
 	}
@@ -256,28 +190,22 @@ func GetNotificationByUser(
 	return getManyNotification(db, psName, sql, args...)
 }
 
-type Enroll struct {
-	ReasonName string
-	UserId     string
-}
-
 func BatchCreateNotification(
 	db Queryer,
 	src *Notification,
-	enrolls []*Enroll,
+	enrolleds []*Enrolled,
 ) error {
 	mylog.Log.Info("BatchCreateNotification()")
 
-	notifications := make([][]interface{}, len(enrolls))
-	for i, enroll := range enrolls {
+	notifications := make([][]interface{}, len(enrolleds))
+	for i, enrolled := range enrolleds {
 		id, _ := mytype.NewOID("Notification")
 		src.Id.Set(id)
 		notifications[i] = []interface{}{
 			src.EventId.String,
 			src.Id.String,
-			enroll.ReasonName,
-			src.StudyId.String,
-			enroll.UserId,
+			enrolled.ReasonName.String,
+			enrolled.UserId.String,
 		}
 	}
 
@@ -292,7 +220,7 @@ func BatchCreateNotification(
 
 	copyCount, err := tx.CopyFrom(
 		pgx.Identifier{"notification"},
-		[]string{"event_id", "id", "reason_name", "study_id", "user_id"},
+		[]string{"event_id", "id", "reason_name", "user_id"},
 		pgx.CopyFromRows(notifications),
 	)
 	if err != nil {
@@ -342,10 +270,6 @@ func CreateNotification(
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.Reason))
-	}
-	if row.StudyId.Status != pgtype.Undefined {
-		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -398,6 +322,104 @@ func CreateNotification(
 	}
 
 	return notification, nil
+}
+
+func CreateNotificationsFromEvent(
+	db Queryer,
+	event *Event,
+) error {
+	mylog.Log.Info("CreateNotificationsFromEvent()")
+
+	row := &Notification{}
+	if err := row.EventId.Set(&event.Id); err != nil {
+		return err
+	}
+
+	if event.Action.String == MentionedEvent {
+		if err := row.ReasonName.Set(MentionReason); err != nil {
+			return err
+		}
+		if err := row.UserId.Set(&event.TargetId); err != nil {
+			return err
+		}
+		_, err := CreateNotification(db, row)
+		return err
+	}
+
+	switch event.SourceId.Type {
+	case "LessonComment":
+		if event.Action.String != CommentedEvent {
+			mylog.Log.Debug(
+				"will not notify users when a %s %s %s",
+				event.SourceId.Type,
+				event.Action.String,
+				event.TargetId.Type,
+			)
+			return nil
+		}
+	case "Study":
+		if event.Action.String != CreatedEvent {
+			mylog.Log.Debug(
+				"will not notify users when a %s %s %s",
+				event.SourceId.Type,
+				event.Action.String,
+				event.TargetId.Type,
+			)
+			return nil
+		}
+	case "User":
+		if event.Action.String != CreatedEvent {
+			mylog.Log.Debug(
+				"will not notify users when a %s %s %s",
+				event.SourceId.Type,
+				event.Action.String,
+				event.TargetId.Type,
+			)
+			return nil
+		}
+	default:
+		mylog.Log.Debug(
+			"will not notify users when a %s %s %s",
+			event.SourceId.Type,
+			event.Action.String,
+			event.TargetId.Type,
+		)
+		return nil
+	}
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	enrolleds, err := GetEnrolledByEnrollable(tx, event.TargetId.String, nil)
+	if err != nil {
+		return err
+	}
+	notifiedEnrolleds := make([]*Enrolled, 0, len(enrolleds))
+	for _, enrolled := range enrolleds {
+		if event.UserId.String != enrolled.UserId.String {
+			notifiedEnrolleds = append(notifiedEnrolleds, enrolled)
+		}
+	}
+
+	if err := BatchCreateNotification(tx, row, notifiedEnrolleds); err != nil {
+		return err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	return nil
 }
 
 const deleteNotificationSQl = `

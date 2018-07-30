@@ -65,13 +65,6 @@ func (r *NotificationPermit) Reason() (string, error) {
 	return r.notification.Reason.String, nil
 }
 
-func (r *NotificationPermit) StudyId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("study_id"); !ok {
-		return nil, ErrAccessDenied
-	}
-	return &r.notification.StudyId, nil
-}
-
 func (r *NotificationPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -118,19 +111,6 @@ func (r *NotificationRepo) CheckConnection() error {
 }
 
 // Service methods
-
-func (r *NotificationRepo) CountByStudy(
-	ctx context.Context,
-	userId,
-	studyId string,
-) (int32, error) {
-	var n int32
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
-	}
-	return data.CountNotificationByStudy(db, userId, studyId)
-}
 
 func (r *NotificationRepo) CountByUser(
 	ctx context.Context,
@@ -185,36 +165,6 @@ func (r *NotificationRepo) Get(
 		return nil, err
 	}
 	return &NotificationPermit{fieldPermFn, notification}, nil
-}
-
-func (r *NotificationRepo) GetByStudy(
-	ctx context.Context,
-	userId,
-	studyId string,
-	po *data.PageOptions,
-) ([]*NotificationPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	notifications, err := data.GetNotificationByStudy(db, userId, studyId, po)
-	if err != nil {
-		return nil, err
-	}
-	notificationPermits := make([]*NotificationPermit, len(notifications))
-	if len(notifications) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notifications[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range notifications {
-			notificationPermits[i] = &NotificationPermit{fieldPermFn, l}
-		}
-	}
-	return notificationPermits, nil
 }
 
 func (r *NotificationRepo) GetByUser(
@@ -277,13 +227,13 @@ func (r *NotificationRepo) Update(
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, n); err != nil {
 		return nil, err
 	}
-	study, err := data.UpdateNotification(db, n)
+	notification, err := data.UpdateNotification(db, n)
 	if err != nil {
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notification)
 	if err != nil {
 		return nil, err
 	}
-	return &NotificationPermit{fieldPermFn, study}, nil
+	return &NotificationPermit{fieldPermFn, notification}, nil
 }

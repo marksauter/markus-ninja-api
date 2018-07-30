@@ -1,5 +1,6 @@
 # Represents an created event on a given subject.
 type CreatedEvent implements 
+  NotificationEvent,
   UserActivityEvent,
   Node
 {

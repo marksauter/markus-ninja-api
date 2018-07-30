@@ -1,6 +1,7 @@
 # Represents a commented event on a given subject.
 type CommentedEvent implements 
   LessonTimelineEvent,
+  NotificationEvent,
   Node
 {
   # The comment assocated with this `commented` event.

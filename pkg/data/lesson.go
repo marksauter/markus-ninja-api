@@ -616,25 +616,6 @@ func CreateLesson(
 		return nil, err
 	}
 
-	enrolleds, err := GetEnrolledByEnrollable(tx, row.Id.String, nil)
-	if err != nil {
-		return nil, err
-	}
-	enrolls := make([]*Enroll, len(enrolleds))
-	for i, enrolled := range enrolleds {
-		enrolls[i] = &Enroll{
-			ReasonName: enrolled.ReasonName.String,
-			UserId:     enrolled.UserId.String,
-		}
-	}
-
-	notification := &Notification{}
-	notification.EventId.Set(&e.Id)
-	notification.StudyId.Set(&row.StudyId)
-	if err := BatchCreateNotification(tx, notification, enrolls); err != nil {
-		return nil, err
-	}
-
 	lesson, err := GetLesson(tx, row.Id.String)
 	if err != nil {
 		return nil, err

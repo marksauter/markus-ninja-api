@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -19,16 +20,24 @@ func (r *notificationResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *notificationResolver) Event(ctx context.Context) (*eventResolver, error) {
+func (r *notificationResolver) Event(ctx context.Context) (*notificationEventResolver, error) {
 	eventId, err := r.Notification.EventId()
 	if err != nil {
 		return nil, err
 	}
-	event, err := r.Repos.Event().Get(ctx, eventId.String)
+	e, err := r.Repos.Event().Get(ctx, eventId.String)
 	if err != nil {
 		return nil, err
 	}
-	return &eventResolver{Event: event, Repos: r.Repos}, nil
+	resolver, err := eventPermitToResolver(e, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	event, ok := resolver.(notificationEvent)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to notification event")
+	}
+	return &notificationEventResolver{event}, nil
 }
 
 func (r *notificationResolver) ID() (graphql.ID, error) {
@@ -43,18 +52,6 @@ func (r *notificationResolver) LastReadAt() (graphql.Time, error) {
 
 func (r *notificationResolver) Reason() (string, error) {
 	return r.Notification.Reason()
-}
-
-func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Notification.StudyId()
-	if err != nil {
-		return nil, err
-	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
-	if err != nil {
-		return nil, err
-	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
 func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {

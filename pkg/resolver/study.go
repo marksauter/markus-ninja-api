@@ -231,7 +231,7 @@ func (r *studyResolver) Enrollees(
 	if err != nil {
 		return nil, err
 	}
-	users, err := r.Repos.User().GetEnrollees(
+	users, err := r.Repos.User().GetByEnrollable(
 		ctx,
 		studyId.String,
 		pageOptions,

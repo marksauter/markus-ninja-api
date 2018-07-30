@@ -379,14 +379,6 @@ func CreateLessonComment(
 	if err != nil {
 		return nil, err
 	}
-	e, err := NewEvent(CommentedEvent, &row.Id, &row.LessonId, &row.UserId)
-	if err != nil {
-		return nil, err
-	}
-	_, err = CreateEvent(tx, e)
-	if err != nil {
-		return nil, err
-	}
 
 	if newTx {
 		err = CommitTransaction(tx)

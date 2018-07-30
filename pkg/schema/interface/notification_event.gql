@@ -1,0 +1,4 @@
+# Events that can be a part of a user's notifications.
+interface NotificationEvent {
+  id: ID!
+}
