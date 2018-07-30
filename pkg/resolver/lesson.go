@@ -116,6 +116,15 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonResolver) EnrolleeCount(ctx context.Context) (int32, error) {
+	lessonId, err := r.Lesson.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.User().CountByEnrollable(ctx, lessonId.String)
+}
+
 func (r *lessonResolver) Enrollees(
 	ctx context.Context,
 	args struct {

@@ -12,6 +12,16 @@ type nodeResolver struct {
 	node
 }
 
+func (r *nodeResolver) ToAppledEvent() (*appledEventResolver, bool) {
+	resolver, ok := r.node.(*appledEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToCreatedEvent() (*createdEventResolver, bool) {
+	resolver, ok := r.node.(*createdEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
 	resolver, ok := r.node.(*commentedEventResolver)
 	return resolver, ok

@@ -7,6 +7,7 @@ import (
 )
 
 type enrollable interface {
+	EnrolleeCount(ctx context.Context) (int32, error)
 	EnrollmentStatus(ctx context.Context) (string, error)
 	ID() (graphql.ID, error)
 	ViewerCanEnroll(ctx context.Context) (bool, error)

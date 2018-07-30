@@ -1,5 +1,8 @@
 # Things that can be enrolled in.
 interface Enrollable {
+  # The number of users that have enrolled in this enrollable.
+  enrolleeCount: Int!
+
   # Is the viewer dismissed, enrolled, or ignoring this enrollable.
   enrollmentStatus: EnrollmentStatus!
 

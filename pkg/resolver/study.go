@@ -192,6 +192,15 @@ func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
 	return gqlHTML, nil
 }
 
+func (r *studyResolver) EnrolleeCount(ctx context.Context) (int32, error) {
+	studyId, err := r.Study.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.User().CountByEnrollable(ctx, studyId.String)
+}
+
 func (r *studyResolver) Enrollees(
 	ctx context.Context,
 	args struct {

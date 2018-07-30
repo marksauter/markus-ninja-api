@@ -1,0 +1,4 @@
+# Entities that can be created.
+interface Createable {
+  id: ID!
+}

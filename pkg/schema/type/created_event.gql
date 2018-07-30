@@ -1,0 +1,16 @@
+# Represents an created event on a given subject.
+type CreatedEvent implements 
+  UserActivityEvent,
+  Node
+{
+  # The createable assocated with this `created` event.
+  createable: Createable!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The user who performed the event.
+  user: User!
+}

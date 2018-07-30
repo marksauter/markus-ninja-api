@@ -1,5 +1,6 @@
 # Represents a lesson.
 type Lesson implements 
+  Createable,
   Enrollable,
   EventSourceable,
   EventTargetable,
@@ -42,6 +43,9 @@ type Lesson implements
     # Ordering options for comments returned from the connection.
     orderBy: LessonCommentOrder
   ): LessonCommentConnection!
+
+  # The number of users that have enrolled in this enrollable.
+  enrolleeCount: Int!
 
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
@@ -99,7 +103,7 @@ type Lesson implements
   # The study associated with this lesson.
   study: Study!
 
-  # Returns a list of events, comments, etc. associated with the lesson.
+  # Returns a list of events associated with the lesson.
   timeline(
     # Returns the elements in the list that come after the specified global ID.
     after: String
