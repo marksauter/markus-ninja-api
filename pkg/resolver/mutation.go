@@ -684,6 +684,64 @@ func (r *RootResolver) LoginUser(
 	}, nil
 }
 
+type MarkNotificationAsReadInput struct {
+	NotificationId string
+}
+
+func (r *RootResolver) MarkNotificationAsRead(
+	ctx context.Context,
+	args struct{ Input MarkNotificationAsReadInput },
+) (*notificationEdgeResolver, error) {
+	notification := &data.Notification{}
+	if err := notification.Id.Set(args.Input.NotificationId); err != nil {
+		return nil, errors.New("invalid notification id")
+	}
+	if err := notification.LastReadAt.Set(time.Now()); err != nil {
+		return nil, errors.New("invalid notification last read at")
+	}
+
+	notificationPermit, err := r.Repos.Notification().Update(ctx, notification)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver, err := NewNotificationEdgeResolver(notificationPermit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+
+	return resolver, nil
+}
+
+type MarkNotificationAsUnreadInput struct {
+	NotificationId string
+}
+
+func (r *RootResolver) MarkNotificationAsUnread(
+	ctx context.Context,
+	args struct{ Input MarkNotificationAsUnreadInput },
+) (*notificationEdgeResolver, error) {
+	notification := &data.Notification{}
+	if err := notification.Id.Set(args.Input.NotificationId); err != nil {
+		return nil, errors.New("invalid notification id")
+	}
+	if err := notification.LastReadAt.Set(nil); err != nil {
+		return nil, errors.New("invalid notification last read at")
+	}
+
+	notificationPermit, err := r.Repos.Notification().Update(ctx, notification)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver, err := NewNotificationEdgeResolver(notificationPermit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+
+	return resolver, nil
+}
+
 type MoveLessonInput struct {
 	LessonId string
 	Number   *int32

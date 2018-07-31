@@ -1,0 +1,5 @@
+# Input type for MarkNotificationAsUnread.
+input MarkNotificationAsUnreadInput {
+  # The Notification ID to mark as unread.
+  notificationId: ID!
+}

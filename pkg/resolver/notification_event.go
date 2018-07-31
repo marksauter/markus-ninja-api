@@ -1,11 +1,16 @@
 package resolver
 
 import (
+	"context"
+
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 )
 
 type notificationEvent interface {
 	ID() (graphql.ID, error)
+	ResourcePath(ctx context.Context) (mygql.URI, error)
+	URL(ctx context.Context) (mygql.URI, error)
 }
 type notificationEventResolver struct {
 	notificationEvent

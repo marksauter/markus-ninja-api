@@ -1,0 +1,5 @@
+# Input type for MarkNotificationAsRead.
+input MarkNotificationAsReadInput {
+  # The Notification ID to mark as read.
+  notificationId: ID!
+}

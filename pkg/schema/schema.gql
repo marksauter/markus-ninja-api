@@ -113,6 +113,10 @@ type Mutation {
   # Returns a token for use in authentication.
   loginUser(input: LoginUserInput!): LoginUserPayload
 
+  # Mark notification as read.
+  markNotificationAsRead(input: MarkNotificationAsReadInput!): NotificationEdge
+  # Mark notification as unread.
+  markNotificationAsUnread(input: MarkNotificationAsUnreadInput!): NotificationEdge
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge
 
