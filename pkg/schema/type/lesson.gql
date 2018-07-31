@@ -1,5 +1,6 @@
 # Represents a lesson.
 type Lesson implements 
+  Commentable,
   Createable,
   Enrollable,
   EventSourceable,

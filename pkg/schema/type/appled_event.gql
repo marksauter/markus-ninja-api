@@ -1,5 +1,6 @@
 # Represents an appled event on a given subject.
 type AppledEvent implements 
+  UniformResourceLocatable,
   UserActivityEvent,
   Node
 {
@@ -10,6 +11,12 @@ type AppledEvent implements
   createdAt: Time!
 
   id: ID!
+
+  # The HTTP path to this resource.
+  resourcePath: URI!
+
+  # The HTTP URL to this resource.
+  url: URI!
 
   # The user who performed the event.
   user: User!
