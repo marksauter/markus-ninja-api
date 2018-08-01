@@ -2,6 +2,7 @@ package data
 
 import (
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -16,6 +17,7 @@ type Notification struct {
 	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read/update"`
 	Reason     pgtype.Text        `db:"reason" permit:"read"`
 	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
+	StudyId    mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
@@ -56,6 +58,30 @@ func (src NotificationFilterOption) String() string {
 	}
 }
 
+const countNotificationByStudySQL = `
+	SELECT COUNT(*)
+	FROM notification
+	WHERE study_id = $1
+`
+
+func CountNotificationByStudy(
+	db Queryer,
+	studyId string,
+) (int32, error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountNotificationByStudy(study_id)")
+	var n int32
+	err := prepareQueryRow(
+		db,
+		"countNotificationByStudy",
+		countNotificationByStudySQL,
+		studyId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
 const countNotificationByUserSQL = `
 	SELECT COUNT(*)
 	FROM notification
@@ -93,6 +119,7 @@ func getNotification(
 		&row.Id,
 		&row.LastReadAt,
 		&row.Reason,
+		&row.StudyId,
 		&row.UpdatedAt,
 		&row.UserId,
 	)
@@ -127,6 +154,7 @@ func getManyNotification(
 			&row.Id,
 			&row.LastReadAt,
 			&row.Reason,
+			&row.StudyId,
 			&row.UpdatedAt,
 			&row.UserId,
 		)
@@ -150,6 +178,7 @@ const getNotificationByIdSQL = `
 		id,
 		last_read_at,
 		reason,
+		study_id,
 		updated_at,
 		user_id
 	FROM notification_master
@@ -162,6 +191,33 @@ func GetNotification(
 ) (*Notification, error) {
 	mylog.Log.WithField("id", id).Info("GetNotification(id)")
 	return getNotification(db, "getNotificationById", getNotificationByIdSQL, id)
+}
+
+func GetNotificationByStudy(
+	db Queryer,
+	studyId string,
+	po *PageOptions,
+) ([]*Notification, error) {
+	mylog.Log.WithField("study_id", studyId).Info("GetNotificationByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{`study_id = ` + args.Append(studyId)}
+
+	selects := []string{
+		"created_at",
+		"event_id",
+		"id",
+		"last_read_at",
+		"reason",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "notification_master"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getNotificationsByStudy", sql)
+
+	return getManyNotification(db, psName, sql, args...)
 }
 
 func GetNotificationByUser(
@@ -179,6 +235,7 @@ func GetNotificationByUser(
 		"id",
 		"last_read_at",
 		"reason",
+		"study_id",
 		"updated_at",
 		"user_id",
 	}
@@ -205,6 +262,7 @@ func BatchCreateNotification(
 			src.EventId.String,
 			src.Id.String,
 			enrolled.ReasonName.String,
+			src.StudyId.String,
 			enrolled.UserId.String,
 		}
 	}
@@ -220,7 +278,7 @@ func BatchCreateNotification(
 
 	copyCount, err := tx.CopyFrom(
 		pgx.Identifier{"notification"},
-		[]string{"event_id", "id", "reason_name", "user_id"},
+		[]string{"event_id", "id", "reason_name", "study_id", "user_id"},
 		pgx.CopyFromRows(notifications),
 	)
 	if err != nil {
@@ -270,6 +328,10 @@ func CreateNotification(
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.Reason))
+	}
+	if row.StudyId.Status != pgtype.Undefined {
+		columns = append(columns, "study_id")
+		values = append(values, args.Append(&row.StudyId))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -346,6 +408,15 @@ func CreateNotificationsFromEvent(
 		return err
 	}
 
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
 	switch event.SourceId.Type {
 	case "LessonComment":
 		if event.Action.String != CommentedEvent {
@@ -357,6 +428,11 @@ func CreateNotificationsFromEvent(
 			)
 			return nil
 		}
+		lessonComment, err := GetLessonComment(tx, event.SourceId.String)
+		if err != nil {
+			return err
+		}
+		row.StudyId.Set(&lessonComment.StudyId)
 	case "Study":
 		if event.Action.String != CreatedEvent {
 			mylog.Log.Debug(
@@ -367,8 +443,9 @@ func CreateNotificationsFromEvent(
 			)
 			return nil
 		}
+		row.StudyId.Set(&event.SourceId)
 	case "User":
-		if event.Action.String != CreatedEvent {
+		if event.Action.String != CreatedEvent || event.TargetId.Type != "Study" {
 			mylog.Log.Debug(
 				"will not notify users when a %s %s %s",
 				event.SourceId.Type,
@@ -377,6 +454,7 @@ func CreateNotificationsFromEvent(
 			)
 			return nil
 		}
+		row.StudyId.Set(&event.TargetId)
 	default:
 		mylog.Log.Debug(
 			"will not notify users when a %s %s %s",
@@ -385,15 +463,6 @@ func CreateNotificationsFromEvent(
 			event.TargetId.Type,
 		)
 		return nil
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
 	}
 
 	enrolleds, err := GetEnrolledByEnrollable(tx, event.TargetId.String, nil)
@@ -498,4 +567,64 @@ func UpdateNotification(
 	}
 
 	return notification, nil
+}
+
+const updateNotificationByStudySQl = `
+	UPDATE notification
+	SET last_read_at = $1
+	WHERE study_id = $2
+`
+
+func UpdateNotificationByStudy(
+	db Queryer,
+	studyId string,
+	lastReadAt time.Time,
+) error {
+	mylog.Log.Info("UpdateNotificationByStudy()")
+
+	commandTag, err := prepareExec(
+		db,
+		"updateNotificationsByStudy",
+		updateNotificationByStudySQl,
+		lastReadAt,
+		studyId,
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() < 1 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+const updateNotificationByUserSQl = `
+	UPDATE notification
+	SET last_read_at = $1
+	WHERE user_id = $2
+`
+
+func UpdateNotificationByUser(
+	db Queryer,
+	userId string,
+	lastReadAt time.Time,
+) error {
+	mylog.Log.Info("UpdateNotificationByUser()")
+
+	commandTag, err := prepareExec(
+		db,
+		"updateNotificationsByUser",
+		updateNotificationByUserSQl,
+		lastReadAt,
+		userId,
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() < 1 {
+		return ErrNotFound
+	}
+
+	return nil
 }
