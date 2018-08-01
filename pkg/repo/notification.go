@@ -112,6 +112,18 @@ func (r *NotificationRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *NotificationRepo) CountByStudy(
+	ctx context.Context,
+	studyId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountNotificationByStudy(db, studyId)
+}
+
 func (r *NotificationRepo) CountByUser(
 	ctx context.Context,
 	userId string,
@@ -165,6 +177,35 @@ func (r *NotificationRepo) Get(
 		return nil, err
 	}
 	return &NotificationPermit{fieldPermFn, notification}, nil
+}
+
+func (r *NotificationRepo) GetByStudy(
+	ctx context.Context,
+	studyId string,
+	po *data.PageOptions,
+) ([]*NotificationPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	notifications, err := data.GetNotificationByStudy(db, studyId, po)
+	if err != nil {
+		return nil, err
+	}
+	notificationPermits := make([]*NotificationPermit, len(notifications))
+	if len(notifications) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notifications[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range notifications {
+			notificationPermits[i] = &NotificationPermit{fieldPermFn, l}
+		}
+	}
+	return notificationPermits, nil
 }
 
 func (r *NotificationRepo) GetByUser(
@@ -228,6 +269,56 @@ func (r *NotificationRepo) Update(
 		return nil, err
 	}
 	notification, err := data.UpdateNotification(db, n)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notification)
+	if err != nil {
+		return nil, err
+	}
+	return &NotificationPermit{fieldPermFn, notification}, nil
+}
+
+func (r *NotificationRepo) UpdateByStudy(
+	ctx context.Context,
+	n *data.Notification,
+) (*NotificationPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, n); err != nil {
+		return nil, err
+	}
+	notification, err := data.UpdateNotificationByStudy(db, n.StudyId.String, n.LastReadAt.Time)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, notification)
+	if err != nil {
+		return nil, err
+	}
+	return &NotificationPermit{fieldPermFn, notification}, nil
+}
+
+func (r *NotificationRepo) UpdateByUser(
+	ctx context.Context,
+	n *data.Notification,
+) (*NotificationPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, n); err != nil {
+		return nil, err
+	}
+	notification, err := data.UpdateNotificationByUser(db, n.UserId.String, n.LastReadAt.Time)
 	if err != nil {
 		return nil, err
 	}
