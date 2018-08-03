@@ -691,55 +691,67 @@ type MarkNotificationAsReadInput struct {
 func (r *RootResolver) MarkNotificationAsRead(
 	ctx context.Context,
 	args struct{ Input MarkNotificationAsReadInput },
-) (*notificationEdgeResolver, error) {
+) (*graphql.ID, error) {
 	notification := &data.Notification{}
 	if err := notification.Id.Set(args.Input.NotificationId); err != nil {
 		return nil, errors.New("invalid notification id")
 	}
-	if err := notification.LastReadAt.Set(time.Now()); err != nil {
-		return nil, errors.New("invalid notification last read at")
-	}
 
-	notificationPermit, err := r.Repos.Notification().Update(ctx, notification)
+	err := r.Repos.Notification().Delete(ctx, notification)
 	if err != nil {
 		return nil, err
 	}
 
-	resolver, err := NewNotificationEdgeResolver(notificationPermit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-
-	return resolver, nil
+	id := graphql.ID(notification.Id.String)
+	return &id, nil
 }
 
-type MarkNotificationAsUnreadInput struct {
-	NotificationId string
-}
-
-func (r *RootResolver) MarkNotificationAsUnread(
+func (r *RootResolver) MarkAllNotificationsAsRead(
 	ctx context.Context,
-	args struct{ Input MarkNotificationAsUnreadInput },
-) (*notificationEdgeResolver, error) {
+) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+
 	notification := &data.Notification{}
-	if err := notification.Id.Set(args.Input.NotificationId); err != nil {
-		return nil, errors.New("invalid notification id")
-	}
-	if err := notification.LastReadAt.Set(nil); err != nil {
-		return nil, errors.New("invalid notification last read at")
+	if err := notification.UserId.Set(&viewer.Id); err != nil {
+		return false, errors.New("invalid notification user_id")
 	}
 
-	notificationPermit, err := r.Repos.Notification().Update(ctx, notification)
-	if err != nil {
-		return nil, err
+	if err := r.Repos.Notification().DeleteByUser(ctx, notification); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+type MarkAllStudyNotificationAsReadInput struct {
+	StudyId string
+}
+
+func (r *RootResolver) MarkAllStudyNotificationsAsRead(
+	ctx context.Context,
+	args struct {
+		Input MarkAllStudyNotificationAsReadInput
+	},
+) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
 	}
 
-	resolver, err := NewNotificationEdgeResolver(notificationPermit, r.Repos)
-	if err != nil {
-		return nil, err
+	notification := &data.Notification{}
+	if err := notification.StudyId.Set(args.Input.StudyId); err != nil {
+		return false, errors.New("invalid notification study_id")
+	}
+	if err := notification.UserId.Set(&viewer.Id); err != nil {
+		return false, errors.New("invalid notification user_id")
 	}
 
-	return resolver, nil
+	if err := r.Repos.Notification().DeleteByStudy(ctx, notification); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 type MoveLessonInput struct {

@@ -48,7 +48,7 @@ func (r *UserAssetPermit) Href() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf(
-		"localhost:3000/user/assets/%s/%s",
+		"http://localhost:5000/user/assets/%s/%s",
 		r.userAsset.UserId.Short,
 		key,
 	), nil

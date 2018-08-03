@@ -374,7 +374,7 @@ func CreateUserAsset(
 	row *UserAsset,
 ) (*UserAsset, error) {
 	mylog.Log.Info("CreateUserAsset()")
-	args := pgx.QueryArgs(make([]interface{}, 0, 6))
+	args := pgx.QueryArgs(make([]interface{}, 0, 10))
 
 	var columns, values []string
 
@@ -431,6 +431,8 @@ func CreateUserAsset(
 		INSERT INTO user_asset(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
+
+	mylog.Log.Debug(sql)
 
 	psName := preparedName("createUserAsset", sql)
 
