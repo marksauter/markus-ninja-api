@@ -1,5 +1,5 @@
-# Input type for MarkNotificationAsUnread.
-input MarkNotificationAsUnreadInput {
-  # The Notification ID to mark as unread.
-  notificationId: ID!
+# Input type for MarkAllStuydNotificationAsRead.
+input MarkAllStudyNotificationAsReadInput {
+  # The Study ID for which to mark all notifications as read.
+  studyId: ID!
 }

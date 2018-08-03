@@ -8,14 +8,11 @@ type Notification implements Node {
 
   id: ID!
 
-  # Identifies the date and time when the object was last read.
-  lastReadAt: Time!
-
   # The reason for receiving this notification.
   reason: String!
 
-  # Identifies the date and time when the object was last updated.
-  updatedAt: Time!
+  # The study associated with this notification.
+  study: Study!
 
   # The user who performed the notification.
   user: User!

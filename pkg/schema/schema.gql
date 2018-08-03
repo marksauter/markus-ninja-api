@@ -114,9 +114,11 @@ type Mutation {
   loginUser(input: LoginUserInput!): LoginUserPayload
 
   # Mark notification as read.
-  markNotificationAsRead(input: MarkNotificationAsReadInput!): NotificationEdge
-  # Mark notification as unread.
-  markNotificationAsUnread(input: MarkNotificationAsUnreadInput!): NotificationEdge
+  markNotificationAsRead(input: MarkNotificationAsReadInput!): ID
+  # Mark all viewer's notifications as read.
+  markAllNotificationsAsRead: Boolean!
+  # Mark all viewer's notifications from a study as read.
+  markAllStudyNotificationsAsRead(input: MarkAllStudyNotificationAsReadInput!): Boolean!
   # Moves a lesson to a new numbered position within a study.
   moveLesson(input: MoveLessonInput!): LessonEdge
 

@@ -45,18 +45,20 @@ func (r *notificationResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *notificationResolver) LastReadAt() (graphql.Time, error) {
-	t, err := r.Notification.LastReadAt()
-	return graphql.Time{t}, err
-}
-
 func (r *notificationResolver) Reason() (string, error) {
 	return r.Notification.Reason()
 }
 
-func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {
-	t, err := r.Notification.UpdatedAt()
-	return graphql.Time{t}, err
+func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyId, err := r.Notification.StudyId()
+	if err != nil {
+		return nil, err
+	}
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
 func (r *notificationResolver) User(ctx context.Context) (*userResolver, error) {

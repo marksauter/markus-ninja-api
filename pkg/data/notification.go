@@ -2,7 +2,6 @@ package data
 
 import (
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -14,11 +13,9 @@ type Notification struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EventId    mytype.OID         `db:"event_id" permit:"create/read"`
 	Id         mytype.OID         `db:"id" permit:"read"`
-	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read/update"`
 	Reason     pgtype.Text        `db:"reason" permit:"read"`
 	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
 	StudyId    mytype.OID         `db:"study_id" permit:"create/read"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
@@ -117,10 +114,8 @@ func getNotification(
 		&row.CreatedAt,
 		&row.EventId,
 		&row.Id,
-		&row.LastReadAt,
 		&row.Reason,
 		&row.StudyId,
-		&row.UpdatedAt,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -152,10 +147,8 @@ func getManyNotification(
 			&row.CreatedAt,
 			&row.EventId,
 			&row.Id,
-			&row.LastReadAt,
 			&row.Reason,
 			&row.StudyId,
-			&row.UpdatedAt,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -176,10 +169,8 @@ const getNotificationByIdSQL = `
 		created_at,
 		event_id,
 		id,
-		last_read_at,
 		reason,
 		study_id,
-		updated_at,
 		user_id
 	FROM notification_master
 	WHERE id = $1
@@ -206,10 +197,8 @@ func GetNotificationByStudy(
 		"created_at",
 		"event_id",
 		"id",
-		"last_read_at",
 		"reason",
 		"study_id",
-		"updated_at",
 		"user_id",
 	}
 	from := "notification_master"
@@ -233,10 +222,8 @@ func GetNotificationByUser(
 		"created_at",
 		"event_id",
 		"id",
-		"last_read_at",
 		"reason",
 		"study_id",
-		"updated_at",
 		"user_id",
 	}
 	from := "notification_master"
@@ -417,6 +404,7 @@ func CreateNotificationsFromEvent(
 		defer RollbackTransaction(tx)
 	}
 
+	var enrolleds []*Enrolled
 	switch event.SourceId.Type {
 	case "LessonComment":
 		if event.Action.String != CommentedEvent {
@@ -433,6 +421,10 @@ func CreateNotificationsFromEvent(
 			return err
 		}
 		row.StudyId.Set(&lessonComment.StudyId)
+		enrolleds, err = GetEnrolledByEnrollable(tx, event.TargetId.String, nil)
+		if err != nil {
+			return err
+		}
 	case "Study":
 		if event.Action.String != CreatedEvent {
 			mylog.Log.Debug(
@@ -444,8 +436,12 @@ func CreateNotificationsFromEvent(
 			return nil
 		}
 		row.StudyId.Set(&event.SourceId)
+		enrolleds, err = GetEnrolledByEnrollable(tx, event.SourceId.String, nil)
+		if err != nil {
+			return err
+		}
 	case "User":
-		if event.Action.String != CreatedEvent || event.TargetId.Type != "Study" {
+		if event.Action.String != CreatedEvent && event.TargetId.Type != "Study" {
 			mylog.Log.Debug(
 				"will not notify users when a %s %s %s",
 				event.SourceId.Type,
@@ -455,6 +451,10 @@ func CreateNotificationsFromEvent(
 			return nil
 		}
 		row.StudyId.Set(&event.TargetId)
+		enrolleds, err = GetEnrolledByEnrollable(tx, event.SourceId.String, nil)
+		if err != nil {
+			return err
+		}
 	default:
 		mylog.Log.Debug(
 			"will not notify users when a %s %s %s",
@@ -465,10 +465,6 @@ func CreateNotificationsFromEvent(
 		return nil
 	}
 
-	enrolleds, err := GetEnrolledByEnrollable(tx, event.TargetId.String, nil)
-	if err != nil {
-		return err
-	}
 	notifiedEnrolleds := make([]*Enrolled, 0, len(enrolleds))
 	for _, enrolled := range enrolleds {
 		if event.UserId.String != enrolled.UserId.String {
@@ -501,7 +497,12 @@ func DeleteNotification(
 	id string,
 ) error {
 	mylog.Log.WithField("id", id).Info("DeleteNotification(id)")
-	commandTag, err := prepareExec(db, "deleteNotification", deleteNotificationSQl, id)
+	commandTag, err := prepareExec(
+		db,
+		"deleteNotification",
+		deleteNotificationSQl,
+		id,
+	)
 	if err != nil {
 		return err
 	}
@@ -512,117 +513,54 @@ func DeleteNotification(
 	return nil
 }
 
-func UpdateNotification(
-	db Queryer,
-	row *Notification,
-) (*Notification, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateNotification(id)")
-	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
-	if row.LastReadAt.Status != pgtype.Undefined {
-		sets = append(sets, `last_read_at`+"="+args.Append(&row.LastReadAt))
-	}
-
-	if len(sets) == 0 {
-		return GetNotification(db, row.Id.String)
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	sql := `
-		UPDATE notification
-		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
-	`
-
-	psName := preparedName("updateNotification", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
-	}
-
-	notification, err := GetNotification(tx, row.Id.String)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return notification, nil
-}
-
-const updateNotificationByStudySQl = `
-	UPDATE notification
-	SET last_read_at = $1
-	WHERE study_id = $2
+const deleteNotificationByStudySQl = `
+	DELETE FROM notification
+	WHERE user_id = $1 AND study_id = $2
 `
 
-func UpdateNotificationByStudy(
+func DeleteNotificationByStudy(
 	db Queryer,
+	userId,
 	studyId string,
-	lastReadAt time.Time,
 ) error {
-	mylog.Log.Info("UpdateNotificationByStudy()")
-
+	mylog.Log.WithField("study_id", studyId).Info("DeleteNotificationByStudy(study_id)")
 	commandTag, err := prepareExec(
 		db,
-		"updateNotificationsByStudy",
-		updateNotificationByStudySQl,
-		lastReadAt,
+		"deleteNotificationByStudy",
+		deleteNotificationByStudySQl,
+		userId,
 		studyId,
 	)
 	if err != nil {
 		return err
 	}
-	if commandTag.RowsAffected() < 1 {
+	if commandTag.RowsAffected() != 1 {
 		return ErrNotFound
 	}
 
 	return nil
 }
 
-const updateNotificationByUserSQl = `
-	UPDATE notification
-	SET last_read_at = $1
-	WHERE user_id = $2
+const deleteNotificationByUserSQl = `
+	DELETE FROM notification
+	WHERE user_id = $1
 `
 
-func UpdateNotificationByUser(
+func DeleteNotificationByUser(
 	db Queryer,
 	userId string,
-	lastReadAt time.Time,
 ) error {
-	mylog.Log.Info("UpdateNotificationByUser()")
-
+	mylog.Log.WithField("user_id", userId).Info("DeleteNotificationByUser(user_id)")
 	commandTag, err := prepareExec(
 		db,
-		"updateNotificationsByUser",
-		updateNotificationByUserSQl,
-		lastReadAt,
+		"deleteNotificationByUser",
+		deleteNotificationByUserSQl,
 		userId,
 	)
 	if err != nil {
 		return err
 	}
-	if commandTag.RowsAffected() < 1 {
+	if commandTag.RowsAffected() != 1 {
 		return ErrNotFound
 	}
 
