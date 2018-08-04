@@ -69,12 +69,6 @@ type Lesson implements
   # Is the viewer dismissed, enrolled, or ignoring this enrollable.
   enrollmentStatus: EnrollmentStatus!
 
-  # Is there a next lesson?
-  hasNextLesson: Boolean!
-
-  # Is there a prev lesson?
-  hasPrevLesson: Boolean!
-
   id: ID!
 
   # Returns a list of labels for the current lesson.
