@@ -754,41 +754,6 @@ func (r *RootResolver) MarkAllStudyNotificationsAsRead(
 	return true, nil
 }
 
-type MoveLessonInput struct {
-	LessonId string
-	Number   *int32
-}
-
-func (r *RootResolver) MoveLesson(
-	ctx context.Context,
-	args struct{ Input MoveLessonInput },
-) (*lessonEdgeResolver, error) {
-	lesson := &data.Lesson{}
-	if err := lesson.Id.Set(args.Input.LessonId); err != nil {
-		return nil, errors.New("invalid lesson id")
-	}
-	if args.Input.Number != nil {
-		if *args.Input.Number < 1 {
-			return nil, errors.New("`number` must be greater than 0")
-		}
-		if err := lesson.Number.Set(args.Input.Number); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson number"}
-		}
-	}
-
-	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
-	if err != nil {
-		return nil, err
-	}
-
-	resolver, err := NewLessonEdgeResolver(lessonPermit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-
-	return resolver, nil
-}
-
 type RemoveLabelInput struct {
 	LabelId     string
 	LabelableId string

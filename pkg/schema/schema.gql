@@ -119,8 +119,6 @@ type Mutation {
   markAllNotificationsAsRead: Boolean!
   # Mark all viewer's notifications from a study as read.
   markAllStudyNotificationsAsRead(input: MarkAllStudyNotificationAsReadInput!): Boolean!
-  # Moves a lesson to a new numbered position within a study.
-  moveLesson(input: MoveLessonInput!): LessonEdge
 
   # Removes a label from a labelable.
   removeLabel(input: RemoveLabelInput!): RemoveLabelPayload

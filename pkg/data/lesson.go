@@ -546,10 +546,6 @@ func CreateLesson(
 		columns = append(columns, "body")
 		values = append(values, args.Append(&row.Body))
 	}
-	if row.Number.Status != pgtype.Undefined {
-		columns = append(columns, "number")
-		values = append(values, args.Append(&row.Number))
-	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		columns = append(columns, "published_at")
 		values = append(values, args.Append(&row.PublishedAt))
@@ -698,9 +694,6 @@ func UpdateLesson(
 
 	if row.Body.Status != pgtype.Undefined {
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
-	}
-	if row.Number.Status != pgtype.Undefined {
-		sets = append(sets, `number`+"="+args.Append(&row.Number))
 	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
