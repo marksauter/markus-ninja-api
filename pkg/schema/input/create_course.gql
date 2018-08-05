@@ -1,0 +1,11 @@
+# Input type for CreateCourse.
+input CreateCourseInput {
+  # A brief description of the course.
+  description: String
+
+  # The name of the course.
+  name: String!
+
+  # The ID of the study under which to create the course. 
+  studyId: ID!
+}

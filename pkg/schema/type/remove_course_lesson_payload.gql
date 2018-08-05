@@ -1,0 +1,8 @@
+# Return type for RemoveCourseLesson.
+type RemoveCourseLessonPayload {
+  # The course from which the lesson was removed.
+  course: Course!
+
+  # The edge from the course's lesson connection.
+  lessonEdge: LessonEdge!
+}

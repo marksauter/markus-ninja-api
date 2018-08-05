@@ -1,0 +1,14 @@
+# Properties by which course connections can be ordered.
+enum CourseOrderField {
+  # Order courses by advance time.
+  ADVANCED_AT
+
+  # Order courses by creation time.
+  CREATED_AT
+
+  # Order courses by name.
+  NAME
+
+  # Order courses by update time.
+  UPDATED_AT
+}

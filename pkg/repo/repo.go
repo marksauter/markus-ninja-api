@@ -16,6 +16,8 @@ type key string
 
 const (
 	appledRepoKey        key = "appled"
+	courseRepoKey        key = "course"
+	courseLessonRepoKey  key = "course_lesson"
 	emailRepoKey         key = "email"
 	enrolledRepoKey      key = "enrolled"
 	evtRepoKey           key = "evt"
@@ -57,6 +59,8 @@ func NewRepos(db data.Queryer, svcs *service.Services) *Repos {
 		db: db,
 		lookup: map[key]Repo{
 			appledRepoKey:        NewAppledRepo(),
+			courseRepoKey:        NewCourseRepo(),
+			courseLessonRepoKey:  NewCourseLessonRepo(),
 			emailRepoKey:         NewEmailRepo(),
 			enrolledRepoKey:      NewEnrolledRepo(),
 			evtRepoKey:           NewEVTRepo(),
@@ -93,6 +97,16 @@ func (r *Repos) CloseAll() {
 
 func (r *Repos) Appled() *AppledRepo {
 	repo, _ := r.lookup[appledRepoKey].(*AppledRepo)
+	return repo
+}
+
+func (r *Repos) Course() *CourseRepo {
+	repo, _ := r.lookup[courseRepoKey].(*CourseRepo)
+	return repo
+}
+
+func (r *Repos) CourseLesson() *CourseLessonRepo {
+	repo, _ := r.lookup[courseLessonRepoKey].(*CourseLessonRepo)
 	return repo
 }
 

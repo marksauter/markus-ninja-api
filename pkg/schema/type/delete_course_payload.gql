@@ -1,0 +1,8 @@
+# Return type for DeleteCourse.
+type DeleteCoursePayload {
+  # The deleted course id.
+  deletedCourseId: ID!
+
+  # The parent study of the deleted course.
+  study: Study!
+}

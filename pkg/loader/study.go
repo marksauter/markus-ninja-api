@@ -40,6 +40,35 @@ func NewStudyLoader() *StudyLoader {
 				return results
 			},
 		),
+		batchGetByName: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						ks := splitCompositeKey(key)
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						study, err := data.GetStudyByName(db, ks[0], ks[1])
+						results[i] = &dataloader.Result{Data: study, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 		batchGetByUserAndName: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -74,6 +103,7 @@ func NewStudyLoader() *StudyLoader {
 
 type StudyLoader struct {
 	batchGet              *dataloader.Loader
+	batchGetByName        *dataloader.Loader
 	batchGetByUserAndName *dataloader.Loader
 }
 
@@ -84,6 +114,7 @@ func (r *StudyLoader) Clear(id string) {
 
 func (r *StudyLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByName.ClearAll()
 	r.batchGetByUserAndName.ClearAll()
 }
 
@@ -99,6 +130,26 @@ func (r *StudyLoader) Get(
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+
+	return study, nil
+}
+
+func (r *StudyLoader) GetByName(
+	ctx context.Context,
+	userId,
+	name string,
+) (*data.Study, error) {
+	compositeKey := newCompositeKey(userId, name)
+	studyData, err := r.batchGetByName.Load(ctx, compositeKey)()
+	if err != nil {
+		return nil, err
+	}
+	study, ok := studyData.(*data.Study)
+	if !ok {
+		return nil, fmt.Errorf("wrong type")
+	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(study.Id.String), study)
 
 	return study, nil
 }

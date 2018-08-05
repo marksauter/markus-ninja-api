@@ -1,5 +1,5 @@
-# Represents a study.
-type Study implements
+# Represents a course.
+type Course implements
   Appleable,
   Createable,
   Enrollable,
@@ -7,11 +7,15 @@ type Study implements
   EventTargetable,
   Node,
   Searchable,
+  StudyNode,
   Topicable,
   UniformResourceLocatable
 {
-  # Identifies when the study was advanced at.
+  # Identifies when the course was advanced at.
   advancedAt: Time
+
+  # Identifies when the course was completed at.
+  completedAt: Time
 
   # Returns a list users who have appled this appleable.
   appleGivers(
@@ -31,60 +35,13 @@ type Study implements
     orderBy: AppleGiverOrder
   ): AppleGiverConnection!
 
-  # Returns a single asset from the current study by name.
-  asset(
-    name: String!
-  ): UserAsset
-
-  # Returns a list of assets that the study owns.
-  assets(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for assets returned from the connection.
-    orderBy: UserAssetOrder
-  ): UserAssetConnection!
-
-  # Returns a single course from the current study by number.
-  course(
-    # The number for the course to be returned.
-    number: Int!  
-  ): Course
-
-  # Returns a list of courses from the current study.
-  courses(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Ordering options for courses returned from the connection.
-    orderBy: CourseOrder
-  ): CourseConnection!
-
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
-  # The description of the study.
+  # The description of the course.
   description: String!
 
-  # The description of the study rendered to HTML.
+  # The description of the course rendered to HTML.
   descriptionHTML: HTML!
 
   # The number of users that have enrolled in this enrollable.
@@ -113,34 +70,13 @@ type Study implements
 
   id: ID!
 
-  # Is this study private?
-  isPrivate: Boolean!
-
-  # Returns a list of labels from the current study.
-  labels(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # If provided, search labels by name and description.
-    query: String
-  ): LabelConnection!
-
-  # Returns a single lesson from the current study by number.
+  # Returns a single lesson from the current course by number.
   lesson(
     # The number for the lesson to be returned.
     number: Int!  
   ): Lesson
 
-  # Returns a list of lessons from the current study.
+  # Returns a list of lessons from the current course.
   lessons(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -158,36 +94,25 @@ type Study implements
     orderBy: LessonOrder
   ): LessonConnection!
 
-  lessonComments(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-  ): LessonCommentConnection!
-
-  # How many lessons there are in this study.
+  # How many lessons there are in this course.
   lessonCount: Int!
 
-  # The name of the study.
+  # The name of the course.
   name: String!
 
-  # The study's name with owner.
-  nameWithOwner: String!
-
-  # The owner of the study.
+  # The owner of the course.
   owner: User!
 
-  # The HTTP path for this study.
+  # The HTTP path for this course.
   resourcePath: URI!
 
-  # Returns a list of topics from the current study.
+  # The status of the course.
+  status: CourseStatus!
+
+  # The study associated with this lesson.
+  study: Study!
+
+  # Returns a list of topics from the current course.
   topics(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -205,10 +130,10 @@ type Study implements
     orderBy: TopicOrder
   ): TopicConnection!
 
-  # Identifies when the study was last updated.
+  # Identifies when the course was last updated.
   updatedAt: Time!
 
-  # The HTTP URL for this study.
+  # The HTTP URL for this course.
   url: URI!
 
   # Can the viewer admin this object?
@@ -221,25 +146,25 @@ type Study implements
   viewerHasAppled: Boolean!
 }
 
-# An edge type for Study.
-type StudyEdge implements Edge {
+# An edge type for Course.
+type CourseEdge implements Edge {
   # A cursor for use in pagination.
   cursor: String!
 
   # The item at the end of the edge.
-  node: Study
+  node: Course
 }
 
-# A connection type for Study.
-type StudyConnection implements Connection {
+# A connection type for Course.
+type CourseConnection implements Connection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [StudyEdge]
+  edges: [CourseEdge]
 
   # A list of nodes.
-  nodes: [Study]
+  nodes: [Course]
 
   # The total count of items in the connection.
   totalCount: Int!

@@ -76,6 +76,8 @@ type Query {
 }
 
 type Mutation {
+  # Adds a lesson to a course.
+  addCourseLesson(input: AddCourseLessonInput!): AddCourseLessonPayload
   # Adds an email to the viewer's account.
   addEmail(input: AddEmailInput!): AddEmailPayload
   # Adds a label to a labelable.
@@ -83,6 +85,8 @@ type Mutation {
   # Adds a comment to a lesson.
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
 
+  # Creates a new course.
+  createCourse(input: CreateCourseInput!): Course
   # Creates a new label.
   createLabel(input: CreateLabelInput!): Label
   # Creates a new lesson.
@@ -92,6 +96,8 @@ type Mutation {
   # Creates a new user.
   createUser(input: CreateUserInput!): User
 
+  # Deletes a course.
+  deleteCourse(input: DeleteCourseInput!): DeleteCoursePayload
   # Deletes an email from the viewer's account.
   deleteEmail(input: DeleteEmailInput!): DeleteEmailPayload
   # Deletes a label from a study.
@@ -120,6 +126,8 @@ type Mutation {
   # Mark all viewer's notifications from a study as read.
   markAllStudyNotificationsAsRead(input: MarkAllStudyNotificationAsReadInput!): Boolean!
 
+  # Removes a lesson from a course.
+  removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload
   # Removes a label from a labelable.
   removeLabel(input: RemoveLabelInput!): RemoveLabelPayload
   # Requests an email verification mail to be sent.
@@ -132,6 +140,8 @@ type Mutation {
   # Takes an apple from an Appleable.
   takeApple(input: TakeAppleInput!): Appleable
 
+  # Updates the description and/or name of a course.
+  updateCourse(input: UpdateCourseInput!): Course
   # Updates an email's type.
   updateEmail(input: UpdateEmailInput!): Email
   # Updates the viewer's enrollment status in an Enrollable.
@@ -142,7 +152,7 @@ type Mutation {
   updateLesson(input: UpdateLessonInput!): Lesson
   # Updates the body of a lesson comment.
   updateLessonComment(input: UpdateLessonCommentInput!): LessonComment
-  # Updates the description of a study.
+  # Updates the description and/or name of a study.
   updateStudy(input: UpdateStudyInput!): Study
   # Updates the description of a topic.
   updateTopic(input: UpdateTopicInput!): Topic

@@ -19,6 +19,35 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
+type AddCourseLessonInput struct {
+	CourseId string
+	LessonId string
+}
+
+func (r *RootResolver) AddCourseLesson(
+	ctx context.Context,
+	args struct{ Input AddCourseLessonInput },
+) (*addCourseLessonPayloadResolver, error) {
+	courseLesson := &data.CourseLesson{}
+	if err := courseLesson.CourseId.Set(args.Input.CourseId); err != nil {
+		return nil, errors.New("invalid course lesson course_id")
+	}
+	if err := courseLesson.LessonId.Set(args.Input.LessonId); err != nil {
+		return nil, errors.New("invalid course lesson lesson_id")
+	}
+
+	_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
+	if err != nil {
+		return nil, err
+	}
+
+	return &addCourseLessonPayloadResolver{
+		CourseId: &courseLesson.CourseId,
+		LessonId: &courseLesson.LessonId,
+		Repos:    r.Repos,
+	}, nil
+}
+
 type AddEmailInput struct {
 	Email string
 }
@@ -266,6 +295,43 @@ func (r *RootResolver) CreateLesson(
 	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
 }
 
+type CreateCourseInput struct {
+	Description *string
+	Name        string
+	StudyId     string
+}
+
+func (r *RootResolver) CreateCourse(
+	ctx context.Context,
+	args struct{ Input CreateCourseInput },
+) (*courseResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	course := &data.Course{}
+	if err := course.Description.Set(args.Input.Description); err != nil {
+		return nil, errors.New("invalid course description")
+	}
+	if err := course.Name.Set(args.Input.Name); err != nil {
+		return nil, errors.New("invalid course name")
+	}
+	if err := course.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, errors.New("invalid course study_id")
+	}
+	if err := course.UserId.Set(&viewer.Id); err != nil {
+		return nil, errors.New("invalid course user_id")
+	}
+
+	coursePermit, err := r.Repos.Course().Create(ctx, course)
+	if err != nil {
+		return nil, err
+	}
+
+	return &courseResolver{Course: coursePermit, Repos: r.Repos}, nil
+}
+
 type CreateStudyInput struct {
 	Description *string
 	Name        string
@@ -511,6 +577,31 @@ func (r *RootResolver) DeleteLessonComment(
 	}, nil
 }
 
+type DeleteCourseInput struct {
+	CourseId string
+}
+
+func (r *RootResolver) DeleteCourse(
+	ctx context.Context,
+	args struct{ Input DeleteCourseInput },
+) (*deleteCoursePayloadResolver, error) {
+	coursePermit, err := r.Repos.Course().Get(ctx, args.Input.CourseId)
+	if err != nil {
+		return nil, err
+	}
+	course := coursePermit.Get()
+
+	if err := r.Repos.Course().Delete(ctx, course); err != nil {
+		return nil, err
+	}
+
+	return &deleteCoursePayloadResolver{
+		CourseId: &course.Id,
+		StudyId:  &course.StudyId,
+		Repos:    r.Repos,
+	}, nil
+}
+
 type DeleteStudyInput struct {
 	StudyId string
 }
@@ -752,6 +843,32 @@ func (r *RootResolver) MarkAllStudyNotificationsAsRead(
 		return false, err
 	}
 	return true, nil
+}
+
+type RemoveCourseLessonInput struct {
+	LessonId string
+}
+
+func (r *RootResolver) RemoveCourseLesson(
+	ctx context.Context,
+	args struct{ Input RemoveCourseLessonInput },
+) (*removeCourseLessonPayloadResolver, error) {
+	courseLessonPermit, err := r.Repos.CourseLesson().Get(ctx, args.Input.LessonId)
+	if err != nil {
+		return nil, err
+	}
+	courseLesson := courseLessonPermit.Get()
+
+	err = r.Repos.CourseLesson().Disconnect(ctx, courseLesson)
+	if err != nil {
+		return nil, err
+	}
+
+	return &removeCourseLessonPayloadResolver{
+		CourseId: &courseLesson.CourseId,
+		LessonId: &courseLesson.LessonId,
+		Repos:    r.Repos,
+	}, nil
 }
 
 type RemoveLabelInput struct {
@@ -1318,6 +1435,39 @@ func (r *RootResolver) UpdateLessonComment(
 		LessonComment: lessonCommentPermit,
 		Repos:         r.Repos,
 	}, nil
+}
+
+type UpdateCourseInput struct {
+	Description *string
+	Name        *string
+	CourseId    string
+}
+
+func (r *RootResolver) UpdateCourse(
+	ctx context.Context,
+	args struct{ Input UpdateCourseInput },
+) (*courseResolver, error) {
+	course := &data.Course{}
+	if err := course.Id.Set(args.Input.CourseId); err != nil {
+		return nil, errors.New("invalid course id")
+	}
+
+	if args.Input.Description != nil {
+		if err := course.Description.Set(args.Input.Description); err != nil {
+			return nil, errors.New("invalid course description")
+		}
+	}
+	if args.Input.Name != nil {
+		if err := course.Name.Set(args.Input.Name); err != nil {
+			return nil, errors.New("invalid course name")
+		}
+	}
+
+	coursePermit, err := r.Repos.Course().Update(ctx, course)
+	if err != nil {
+		return nil, err
+	}
+	return &courseResolver{Course: coursePermit, Repos: r.Repos}, nil
 }
 
 type UpdateStudyInput struct {

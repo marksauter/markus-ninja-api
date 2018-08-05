@@ -9,6 +9,11 @@ type eventSourceableResolver struct {
 	eventSourceable
 }
 
+func (r *eventSourceableResolver) ToCourse() (*courseResolver, bool) {
+	resolver, ok := r.eventSourceable.(*courseResolver)
+	return resolver, ok
+}
+
 func (r *eventSourceableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.eventSourceable.(*lessonResolver)
 	return resolver, ok

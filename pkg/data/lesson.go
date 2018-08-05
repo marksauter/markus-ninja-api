@@ -13,17 +13,19 @@ import (
 )
 
 type Lesson struct {
-	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
-	Id          mytype.OID         `db:"id" permit:"read"`
-	LabeledAt   pgtype.Timestamptz `db:"labeled_at"`
-	Number      pgtype.Int4        `db:"number" permit:"read/update"`
-	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
-	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
-	Title       pgtype.Text        `db:"title" permit:"create/read/update"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"create/read/update"`
+	Body         mytype.Markdown    `db:"body" permit:"create/read/update"`
+	CourseId     mytype.OID         `db:"course_id" permit:"read"`
+	CourseNumber pgtype.Int4        `db:"course_number" permit:"read"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at"`
+	Id           mytype.OID         `db:"id" permit:"read"`
+	LabeledAt    pgtype.Timestamptz `db:"labeled_at"`
+	Number       pgtype.Int4        `db:"number" permit:"read"`
+	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read/update"`
+	StudyId      mytype.OID         `db:"study_id" permit:"create/read"`
+	Title        pgtype.Text        `db:"title" permit:"create/read/update"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserId       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 const countLessonByEnrolleeSQL = `
@@ -106,6 +108,32 @@ func CountLessonBySearch(
 	return
 }
 
+const countLessonByCourseSQL = `
+	SELECT COUNT(*)
+	FROM course_lesson
+	WHERE course_id = $1
+`
+
+func CountLessonByCourse(
+	db Queryer,
+	courseId string,
+) (int32, error) {
+	mylog.Log.WithField(
+		"course_id", courseId,
+	).Info("CountLessonByCourse(course_id)")
+	var n int32
+	err := prepareQueryRow(
+		db,
+		"countLessonByCourse",
+		countLessonByCourseSQL,
+		courseId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return n, err
+}
+
 const countLessonByStudySQL = `
 	SELECT COUNT(*)
 	FROM lesson
@@ -165,6 +193,8 @@ func getLesson(
 	var row Lesson
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
+		&row.CourseId,
+		&row.CourseNumber,
 		&row.CreatedAt,
 		&row.Id,
 		&row.Number,
@@ -201,6 +231,8 @@ func getManyLesson(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
+			&row.CourseId,
+			&row.CourseNumber,
 			&row.CreatedAt,
 			&row.Id,
 			&row.Number,
@@ -226,6 +258,8 @@ func getManyLesson(
 const getLessonByIdSQL = `
 	SELECT
 		body,
+		course_id,
+		course_number,
 		created_at,
 		id,
 		number,
@@ -234,7 +268,7 @@ const getLessonByIdSQL = `
 		title,
 		updated_at,
 		user_id
-	FROM lesson
+	FROM lesson_master
 	WHERE id = $1
 `
 
@@ -248,19 +282,21 @@ func GetLesson(
 
 const getLessonByOwnerStudyAndNumberSQL = `
 	SELECT
-		lesson.body,
-		lesson.created_at,
-		lesson.id,
-		lesson.number,
-		lesson.published_at,
-		lesson.study_id,
-		lesson.title,
-		lesson.updated_at,
-		lesson.user_id
-	FROM lesson
+		lesson_master.body,
+		lesson_master.course_id,
+		lesson_master.course_number,
+		lesson_master.created_at,
+		lesson_master.id,
+		lesson_master.number,
+		lesson_master.published_at,
+		lesson_master.study_id,
+		lesson_master.title,
+		lesson_master.updated_at,
+		lesson_master.user_id
+	FROM lesson_master
 	JOIN account ON lower(account.login) = lower($1)
 	JOIN study ON lower(study.name) = lower($2)
-	WHERE lesson.number = $3
+	WHERE lesson_master.number = $3
 `
 
 func GetLessonByOwnerStudyAndNumber(
@@ -291,6 +327,8 @@ func GetLessonByEnrollee(
 
 	selects := []string{
 		"body",
+		"course_id",
+		"coures_number",
 		"created_at",
 		"enrolled_at",
 		"id",
@@ -317,6 +355,8 @@ func GetLessonByEnrollee(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
+			&row.CourseId,
+			&row.CourseNumber,
 			&row.CreatedAt,
 			&row.Id,
 			&row.LabeledAt,
@@ -353,6 +393,8 @@ func GetLessonByLabel(
 
 	selects := []string{
 		"body",
+		"course_id",
+		"course_number",
 		"created_at",
 		"id",
 		"labeled_at",
@@ -379,6 +421,8 @@ func GetLessonByLabel(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
+			&row.CourseId,
+			&row.CourseNumber,
 			&row.CreatedAt,
 			&row.Id,
 			&row.LabeledAt,
@@ -413,6 +457,8 @@ func GetLessonByUser(
 
 	selects := []string{
 		"body",
+		"course_id",
+		"course_number",
 		"created_at",
 		"id",
 		"number",
@@ -422,10 +468,44 @@ func GetLessonByUser(
 		"updated_at",
 		"user_id",
 	}
-	from := "lesson"
+	from := "lesson_master"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByUser", sql)
+
+	return getManyLesson(db, psName, sql, args...)
+}
+
+func GetLessonByCourse(
+	db Queryer,
+	courseId string,
+	po *PageOptions,
+) ([]*Lesson, error) {
+	mylog.Log.WithField(
+		"course_id", courseId,
+	).Info("GetLessonByCourse(course_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{
+		`course_id = ` + args.Append(courseId),
+	}
+
+	selects := []string{
+		"body",
+		"course_id",
+		"course_number",
+		"created_at",
+		"id",
+		"number",
+		"published_at",
+		"study_id",
+		"title",
+		"updated_at",
+		"user_id",
+	}
+	from := "lesson_master"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getLessonsByCourse", sql)
 
 	return getManyLesson(db, psName, sql, args...)
 }
@@ -439,12 +519,12 @@ func GetLessonByStudy(
 		"study_id", studyId,
 	).Info("GetLessonByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{
-		`study_id = ` + args.Append(studyId),
-	}
+	where := []string{`study_id = ` + args.Append(studyId)}
 
 	selects := []string{
 		"body",
+		"course_id",
+		"course_number",
 		"created_at",
 		"id",
 		"number",
@@ -454,7 +534,7 @@ func GetLessonByStudy(
 		"updated_at",
 		"user_id",
 	}
-	from := "lesson"
+	from := "lesson_master"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByStudy", sql)
@@ -465,6 +545,8 @@ func GetLessonByStudy(
 const getLessonByNumberSQL = `
 	SELECT
 		body,
+		course_id,
+		course_number,
 		created_at,
 		id,
 		number,
@@ -473,7 +555,7 @@ const getLessonByNumberSQL = `
 		title,
 		updated_at,
 		user_id
-	FROM lesson
+	FROM lesson_master
 	WHERE study_id = $1 AND number = $2
 `
 
@@ -495,9 +577,11 @@ func GetLessonByNumber(
 	)
 }
 
-const batchGetLessonByNumberSQL = `
+const getLessonByCourseNumberSQL = `
 	SELECT
 		body,
+		course_id,
+		course_number,
 		created_at,
 		id,
 		number,
@@ -506,7 +590,42 @@ const batchGetLessonByNumberSQL = `
 		title,
 		updated_at,
 		user_id
-	FROM lesson
+	FROM lesson_master
+	WHERE course_id = $1 AND course_number = $2
+`
+
+func GetLessonByCourseNumber(
+	db Queryer,
+	courseId string,
+	courseNumber int32,
+) (*Lesson, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"course_id":     courseId,
+		"course_number": courseNumber,
+	}).Info("GetLessonByCourseNumber(course_id, course_number)")
+	return getLesson(
+		db,
+		"getLessonByCourseNumber",
+		getLessonByCourseNumberSQL,
+		courseId,
+		courseNumber,
+	)
+}
+
+const batchGetLessonByNumberSQL = `
+	SELECT
+		body,
+		course_id,
+		course_number,
+		created_at,
+		id,
+		number,
+		published_at,
+		study_id,
+		title,
+		updated_at,
+		user_id
+	FROM lesson_master
 	WHERE study_id = $1 AND number = ANY($2)
 `
 
@@ -666,6 +785,8 @@ func SearchLesson(
 	}
 	selects := []string{
 		"body",
+		"course_id",
+		"course_number",
 		"created_at",
 		"id",
 		"number",
