@@ -27,6 +27,11 @@ func (r *nodeResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToCourse() (*courseResolver, bool) {
+	resolver, ok := r.node.(*courseResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToEmail() (*emailResolver, bool) {
 	resolver, ok := r.node.(*emailResolver)
 	return resolver, ok

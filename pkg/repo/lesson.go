@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -35,6 +36,23 @@ func (r *LessonPermit) Body() (*mytype.Markdown, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.lesson.Body, nil
+}
+
+func (r *LessonPermit) CourseId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("course_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.lesson.CourseId, nil
+}
+
+func (r *LessonPermit) CourseNumber() (*int32, error) {
+	if ok := r.checkFieldPermission("course_number"); !ok {
+		return nil, ErrAccessDenied
+	}
+	if r.lesson.CourseNumber.Status == pgtype.Null {
+		return nil, nil
+	}
+	return &r.lesson.CourseNumber.Int, nil
 }
 
 func (r *LessonPermit) CreatedAt() (time.Time, error) {
@@ -164,6 +182,18 @@ func (r *LessonRepo) CountBySearch(
 	return data.CountLessonBySearch(db, within, query)
 }
 
+func (r *LessonRepo) CountByCourse(
+	ctx context.Context,
+	courseId string,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLessonByCourse(db, courseId)
+}
+
 func (r *LessonRepo) CountByStudy(
 	ctx context.Context,
 	studyId string,
@@ -289,6 +319,35 @@ func (r *LessonRepo) GetByLabel(
 	return lessonPermits, nil
 }
 
+func (r *LessonRepo) GetByCourse(
+	ctx context.Context,
+	courseId string,
+	po *data.PageOptions,
+) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessons, err := data.GetLessonByCourse(db, courseId, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonPermits := make([]*LessonPermit, len(lessons))
+	if len(lessons) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessons {
+			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
+		}
+	}
+	return lessonPermits, nil
+}
+
 func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
 	studyId string,
@@ -345,6 +404,29 @@ func (r *LessonRepo) GetByUser(
 		}
 	}
 	return lessonPermits, nil
+}
+
+func (r *LessonRepo) GetByCourseNumber(
+	ctx context.Context,
+	courseId string,
+	courseNumber int32,
+) (*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lesson, err := data.GetLessonByCourseNumber(db, courseId, courseNumber)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
+	if err != nil {
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
 func (r *LessonRepo) GetByNumber(

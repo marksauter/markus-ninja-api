@@ -382,11 +382,7 @@ func (r *StudyRepo) GetByName(
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	study, err := data.GetStudyByName(db, userId, name)
+	study, err := r.load.GetByName(ctx, userId, name)
 	if err != nil {
 		return nil, err
 	}

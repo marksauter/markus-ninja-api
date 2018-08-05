@@ -1,0 +1,8 @@
+# Return type for AddCourseLesson.
+type AddCourseLessonPayload {
+  # The course added to.
+  course: Course!
+
+  # The edge from the course's lesson connection.
+  lessonEdge: LessonEdge!
+}

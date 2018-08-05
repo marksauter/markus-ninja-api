@@ -10,6 +10,8 @@ type NodeType int
 
 const (
 	AppledNodeType NodeType = iota
+	CourseNodeType
+	CourseLessonNodeType
 	EmailNodeType
 	EnrolledNodeType
 	EventNodeType
@@ -31,6 +33,10 @@ func (nt NodeType) String() string {
 	switch nt {
 	case AppledNodeType:
 		return "Appled"
+	case CourseNodeType:
+		return "Course"
+	case CourseLessonNodeType:
+		return "CourseLesson"
 	case EmailNodeType:
 		return "Email"
 	case EnrolledNodeType:
@@ -70,6 +76,10 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
 	case "appled":
 		return AppledNodeType, nil
+	case "course":
+		return CourseNodeType, nil
+	case "courselesson":
+		return CourseLessonNodeType, nil
 	case "email":
 		return EmailNodeType, nil
 	case "enrolled":

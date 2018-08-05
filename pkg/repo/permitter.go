@@ -148,6 +148,26 @@ func (r *Permitter) ViewerCanAdmin(
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
+	case data.Course:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			course, err := r.repos.Course().load.Get(ctx, node.Id.String)
+			if err != nil {
+				return false, err
+			}
+			userId = &course.UserId
+		}
+		return vid == userId.String, nil
+	case *data.Course:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			course, err := r.repos.Course().load.Get(ctx, node.Id.String)
+			if err != nil {
+				return false, err
+			}
+			userId = &course.UserId
+		}
+		return vid == userId.String, nil
 	case data.Email:
 		userId := &node.UserId
 		if node.UserId.Status == pgtype.Undefined {
@@ -338,6 +358,18 @@ func (r *Permitter) ViewerCanCreate(
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
+	case data.Course:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserId.String, nil
+	case *data.Course:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserId.String, nil
 	case data.Label:
 		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
 		if err != nil {

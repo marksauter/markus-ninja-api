@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
@@ -111,6 +112,22 @@ func (r *lessonResolver) Comments(
 	return lessonCommentConnectionResolver, nil
 }
 
+func (r *lessonResolver) Course(ctx context.Context) (*courseResolver, error) {
+	courseId, err := r.Lesson.CourseId()
+	if err != nil {
+		return nil, err
+	}
+	course, err := r.Repos.Course().Get(ctx, courseId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &courseResolver{Course: course, Repos: r.Repos}, nil
+}
+
+func (r *lessonResolver) CourseNumber() (*int32, error) {
+	return r.Lesson.CourseNumber()
+}
+
 func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Lesson.CreatedAt()
 	return graphql.Time{t}, err
@@ -212,6 +229,15 @@ func (r *lessonResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *lessonResolver) IsCourseLesson() (bool, error) {
+	courseId, err := r.Lesson.CourseId()
+	if err != nil {
+		return false, err
+	}
+
+	return courseId.Status != pgtype.Null, nil
+}
+
 func (r *lessonResolver) Labels(
 	ctx context.Context,
 	args struct {
@@ -268,6 +294,52 @@ func (r *lessonResolver) Labels(
 
 func (r *lessonResolver) Number() (int32, error) {
 	return r.Lesson.Number()
+}
+
+func (r *lessonResolver) NextLesson(ctx context.Context) (*lessonResolver, error) {
+	courseId, err := r.Lesson.CourseId()
+	if err != nil {
+		return nil, err
+	}
+	courseNumber, err := r.Lesson.CourseNumber()
+	if err != nil {
+		return nil, err
+	}
+	if courseNumber == nil {
+		return nil, nil
+	}
+	lesson, err := r.Repos.Lesson().GetByCourseNumber(
+		ctx,
+		courseId.String,
+		*courseNumber+1,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+}
+
+func (r *lessonResolver) PreviousLesson(ctx context.Context) (*lessonResolver, error) {
+	courseId, err := r.Lesson.CourseId()
+	if err != nil {
+		return nil, err
+	}
+	courseNumber, err := r.Lesson.CourseNumber()
+	if err != nil {
+		return nil, err
+	}
+	if courseNumber == nil || *courseNumber <= 1 {
+		return nil, nil
+	}
+	lesson, err := r.Repos.Lesson().GetByCourseNumber(
+		ctx,
+		courseId.String,
+		*courseNumber-1,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) PublishedAt() (graphql.Time, error) {

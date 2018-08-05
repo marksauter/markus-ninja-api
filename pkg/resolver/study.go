@@ -34,13 +34,7 @@ func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 
 func (r *studyResolver) AppleGivers(
 	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
+	args AppleGiversArgs,
 ) (*appleGiverConnectionResolver, error) {
 	appleGiverOrder, err := ParseAppleGiverOrder(args.OrderBy)
 	if err != nil {
@@ -171,6 +165,82 @@ func (r *studyResolver) Assets(
 		return nil, err
 	}
 	return userAssetConnectionResolver, nil
+}
+
+func (r *studyResolver) Course(
+	ctx context.Context,
+	args struct{ Number int32 },
+) (*courseResolver, error) {
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	course, err := r.Repos.Course().GetByNumber(
+		ctx,
+		studyId.String,
+		args.Number,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &courseResolver{Course: course, Repos: r.Repos}, nil
+}
+
+func (r *studyResolver) Courses(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*courseConnectionResolver, error) {
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	courseOrder, err := ParseCourseOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		courseOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	courses, err := r.Repos.Course().GetByStudy(
+		ctx,
+		studyId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Course().CountByStudy(
+		ctx,
+		studyId.String,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewCourseConnectionResolver(
+		courses,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *studyResolver) CreatedAt() (graphql.Time, error) {

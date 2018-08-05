@@ -11,6 +11,47 @@ permissions:
 
 
 
+  # Everyone can read courses.
+  - operation: Read Course
+
+  # Only authenticated users can create courses.
+  - operation: Create Course
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - description
+      - name
+      - study_id
+      - user_id
+  # Only owners can update/delete courses.
+  - operation: Update Course
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - description
+      - name
+      - status
+  - operation: Delete Course
+    authenticated: true
+    roles:
+      - owner
+
+
+
+  # Only authenticated users can connect/disconnect enrolled.
+  - operation: Connect CourseLesson 
+    authenticated: true
+    roles:
+      - user
+  - operation: Disconnect CourseLesson
+    authenticated: true
+    roles:
+      - user
+
+
+
   # Only authenticated users can create emails.
   - operation: Create Email
     authenticated: true

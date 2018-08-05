@@ -1,0 +1,8 @@
+# Input type for AddCourseLesson.
+input AddCourseLessonInput {
+  # The Node ID of the course.
+  courseId: ID!
+
+  # The Node ID of the lesson.
+  lessonId: ID!
+}

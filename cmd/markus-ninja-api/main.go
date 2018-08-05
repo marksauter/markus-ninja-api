@@ -156,6 +156,8 @@ func initDB(conf *myconf.Config) error {
 
 	modelTypes := []interface{}{
 		new(data.Appled),
+		new(data.Course),
+		new(data.CourseLesson),
 		new(data.Email),
 		new(data.Enrolled),
 		new(data.Event),

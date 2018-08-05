@@ -45,6 +45,12 @@ type Lesson implements
     orderBy: LessonCommentOrder
   ): LessonCommentConnection!
 
+  # The course associated with the lesson, if any.
+  course: Course
+
+  # Identifies the lesson's number within its associated course, if any.
+  courseNumber: Int
+
   # The number of users that have enrolled in this enrollable.
   enrolleeCount: Int!
 
@@ -71,6 +77,9 @@ type Lesson implements
 
   id: ID!
 
+  # Is this lesson part of a course?
+  isCourseLesson: Boolean!
+
   # Returns a list of labels for the current lesson.
   labels(
     # Returns the elements in the list that come after the specified global ID.
@@ -89,8 +98,14 @@ type Lesson implements
     orderBy: LabelOrder
   ): LabelConnection!
 
+  # The next lesson within this lesson's course, if any.
+  nextLesson: Lesson
+
   # Identifies the lesson number.
   number: Int!
+
+  # The previous lesson within this lesson's course, if any.
+  previousLesson: Lesson
 
   # Identifies when the lesson was published at.
   publishedAt: Time!

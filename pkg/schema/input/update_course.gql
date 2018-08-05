@@ -1,0 +1,11 @@
+# Input type for UpdateCourse.
+input UpdateCourseInput {
+  # The description of the course.
+  description: String
+
+  # The name of the course.
+  name: String
+
+  # ID of the course.
+  courseId: ID!
+}

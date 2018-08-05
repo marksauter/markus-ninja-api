@@ -75,6 +75,29 @@ func CountCourseByEnrollee(
 	return
 }
 
+const countCourseByStudySQL = `
+	SELECT COUNT(*)
+	FROM course
+	WHERE study_id = $1
+`
+
+func CountCourseByStudy(
+	db Queryer,
+	studyId string,
+) (n int32, err error) {
+	mylog.Log.WithField("study_id", studyId).Info("CountCourseByStudy(study_id)")
+	err = prepareQueryRow(
+		db,
+		"countCourseByStudy",
+		countCourseByStudySQL,
+		studyId,
+	).Scan(&n)
+
+	mylog.Log.WithField("n", n).Info("")
+
+	return
+}
+
 const countCourseByTopicSQL = `
 	SELECT COUNT(*)
 	FROM topiced_course
@@ -466,6 +489,36 @@ func GetCourseByTopic(
 	return rows, nil
 }
 
+func GetCourseByStudy(
+	db Queryer,
+	studyId string,
+	po *PageOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("study_id", studyId).Info("GetCourseByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := []string{`study_id = ` + args.Append(studyId)}
+
+	selects := []string{
+		"advanced_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "course"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getCoursesByStudyId", sql)
+
+	return getManyCourse(db, psName, sql, args...)
+}
+
 func GetCourseByUser(
 	db Queryer,
 	userId string,
@@ -523,6 +576,35 @@ func GetCourseByName(
 		"name":     name,
 	}).Info("GetCourseByName(study_id, name)")
 	return getCourse(db, "getCourseByName", getCourseByNameSQL, studyId, name)
+}
+
+const getCourseByNumberSQL = `
+	SELECT
+		advanced_at,
+		completed_at,
+		created_at,
+		description,
+		id,
+		name,
+		number,
+		status,
+		study_id,
+		updated_at,
+		user_id
+	FROM course
+	WHERE study_id = $1 AND number = $2
+`
+
+func GetCourseByNumber(
+	db Queryer,
+	studyId string,
+	number int32,
+) (*Course, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"number":   number,
+	}).Info("GetCourseByNumber(study_id, number)")
+	return getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyId, number)
 }
 
 const getCourseByStudyAndNameSQL = `
@@ -626,14 +708,14 @@ func CreateCourse(
 		return nil, err
 	}
 
-	e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
-	if err != nil {
-		return nil, err
-	}
-	_, err = CreateEvent(tx, e)
-	if err != nil {
-		return nil, err
-	}
+	// e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
+	// if err != nil {
+	//   return nil, err
+	// }
+	// _, err = CreateEvent(tx, e)
+	// if err != nil {
+	//   return nil, err
+	// }
 
 	course, err := GetCourse(tx, row.Id.String)
 	if err != nil {

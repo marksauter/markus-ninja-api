@@ -1,0 +1,8 @@
+# The possible states of a course.
+enum CourseStatus {
+  # The Course is still advancing.
+  ADVANCING
+  
+  # The Course is completed.
+  COMPLETED
+}

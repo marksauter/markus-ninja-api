@@ -1,0 +1,5 @@
+# Input type for DeleteCourse.
+input DeleteCourseInput {
+  # ID of the course.
+  courseId: ID!
+}
