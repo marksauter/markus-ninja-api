@@ -1,0 +1,8 @@
+# Return type for CreateStudy.
+type CreateStudyPayload {
+  # The edge from the user's study connection.
+  studyEdge: StudyEdge!
+
+  # The user for which the study was created.
+  user: User!
+}

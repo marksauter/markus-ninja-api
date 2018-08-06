@@ -9,6 +9,9 @@ enum CourseOrderField {
   # Order courses by name.
   NAME
 
+  # Order courses by number.
+  NUMBER
+
   # Order courses by update time.
   UPDATED_AT
 }

@@ -86,13 +86,13 @@ type Mutation {
   addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
 
   # Creates a new course.
-  createCourse(input: CreateCourseInput!): Course
+  createCourse(input: CreateCourseInput!): CreateCoursePayload
   # Creates a new label.
-  createLabel(input: CreateLabelInput!): Label
+  createLabel(input: CreateLabelInput!): CreateLabelPayload
   # Creates a new lesson.
-  createLesson(input: CreateLessonInput!): Lesson
+  createLesson(input: CreateLessonInput!): CreateLessonPayload
   # Creates a new study.
-  createStudy(input: CreateStudyInput!): Study
+  createStudy(input: CreateStudyInput!): CreateStudyPayload
   # Creates a new user.
   createUser(input: CreateUserInput!): User
 

@@ -1,0 +1,8 @@
+# Return type for CreateLabel.
+type CreateLabelPayload {
+  # The edge from the study's label connection.
+  labelEdge: LabelEdge!
+
+  # The study for which the label was created.
+  study: Study!
+}

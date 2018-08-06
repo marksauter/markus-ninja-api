@@ -1,6 +1,7 @@
 # Input type for CreateLesson.
 input CreateLessonInput {
   body:     String
+  courseId: String
   studyId:  ID!
   title:    String!
 }

@@ -3,8 +3,8 @@ type DeleteLessonCommentPayload {
   # The deleted lesson id.
   deletedLessonCommentId: ID!
 
-  # The ID of the edge from the lesson's timeline connection.
-  deletedLessonTimelineEdgeId: ID!
+  # The ID of the event from the lesson's timeline connection.
+  deletedLessonTimelineEventId: ID!
 
   # The lesson the deleted lesson comment was for.
   lesson: Lesson!

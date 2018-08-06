@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -24,13 +25,6 @@ func (r *removeCourseLessonPayloadResolver) Course(
 	return &courseResolver{Course: course, Repos: r.Repos}, nil
 }
 
-func (r *removeCourseLessonPayloadResolver) LessonEdge(
-	ctx context.Context,
-) (*lessonEdgeResolver, error) {
-	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonId.String)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewLessonEdgeResolver(lesson, r.Repos)
+func (r *removeCourseLessonPayloadResolver) RemovedLessonId() graphql.ID {
+	return graphql.ID(r.LessonId.String)
 }

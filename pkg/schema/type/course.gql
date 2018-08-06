@@ -100,6 +100,9 @@ type Course implements
   # The name of the course.
   name: String!
 
+  # Identifies the course number.
+  number: Int!
+
   # The owner of the course.
   owner: User!
 
@@ -109,7 +112,7 @@ type Course implements
   # The status of the course.
   status: CourseStatus!
 
-  # The study associated with this lesson.
+  # The study associated with this course.
   study: Study!
 
   # Returns a list of topics from the current course.
