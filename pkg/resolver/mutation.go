@@ -226,75 +226,6 @@ func (r *RootResolver) AddLessonComment(
 	}, nil
 }
 
-type CreateLabelInput struct {
-	Color       string
-	Description *string
-	Name        string
-	StudyId     string
-}
-
-func (r *RootResolver) CreateLabel(
-	ctx context.Context,
-	args struct{ Input CreateLabelInput },
-) (*labelResolver, error) {
-	label := &data.Label{}
-	if err := label.Color.Set(args.Input.Color); err != nil {
-		return nil, err
-	}
-	if err := label.Description.Set(args.Input.Description); err != nil {
-		return nil, err
-	}
-	if err := label.Name.Set(args.Input.Name); err != nil {
-		return nil, err
-	}
-	if err := label.StudyId.Set(args.Input.StudyId); err != nil {
-		return nil, err
-	}
-	labelPermit, err := r.Repos.Label().Create(ctx, label)
-	if err != nil {
-		return nil, err
-	}
-
-	return &labelResolver{Label: labelPermit, Repos: r.Repos}, nil
-}
-
-type CreateLessonInput struct {
-	Body    *string
-	StudyId string
-	Title   string
-}
-
-func (r *RootResolver) CreateLesson(
-	ctx context.Context,
-	args struct{ Input CreateLessonInput },
-) (*lessonResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
-
-	lesson := &data.Lesson{}
-	if err := lesson.Body.Set(args.Input.Body); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson body"}
-	}
-	if err := lesson.StudyId.Set(args.Input.StudyId); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson study_id"}
-	}
-	if err := lesson.Title.Set(args.Input.Title); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson title"}
-	}
-	if err := lesson.UserId.Set(&viewer.Id); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
-	}
-
-	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
-	if err != nil {
-		return nil, err
-	}
-
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
-}
-
 type CreateCourseInput struct {
 	Description *string
 	Name        string
@@ -304,7 +235,7 @@ type CreateCourseInput struct {
 func (r *RootResolver) CreateCourse(
 	ctx context.Context,
 	args struct{ Input CreateCourseInput },
-) (*courseResolver, error) {
+) (*createCoursePayloadResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -329,7 +260,119 @@ func (r *RootResolver) CreateCourse(
 		return nil, err
 	}
 
-	return &courseResolver{Course: coursePermit, Repos: r.Repos}, nil
+	return &createCoursePayloadResolver{
+		Course:  coursePermit,
+		StudyId: &course.StudyId,
+		Repos:   r.Repos,
+	}, nil
+}
+
+type CreateLabelInput struct {
+	Color       string
+	Description *string
+	Name        string
+	StudyId     string
+}
+
+func (r *RootResolver) CreateLabel(
+	ctx context.Context,
+	args struct{ Input CreateLabelInput },
+) (*createLabelPayloadResolver, error) {
+	label := &data.Label{}
+	if err := label.Color.Set(args.Input.Color); err != nil {
+		return nil, err
+	}
+	if err := label.Description.Set(args.Input.Description); err != nil {
+		return nil, err
+	}
+	if err := label.Name.Set(args.Input.Name); err != nil {
+		return nil, err
+	}
+	if err := label.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, err
+	}
+	labelPermit, err := r.Repos.Label().Create(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createLabelPayloadResolver{
+		Label:   labelPermit,
+		StudyId: &label.StudyId,
+		Repos:   r.Repos,
+	}, nil
+}
+
+type CreateLessonInput struct {
+	Body     *string
+	CourseId *string
+	StudyId  string
+	Title    string
+}
+
+func (r *RootResolver) CreateLesson(
+	ctx context.Context,
+	args struct{ Input CreateLessonInput },
+) (*createLessonPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	lesson := &data.Lesson{}
+	if err := lesson.Body.Set(args.Input.Body); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson body"}
+	}
+	if err := lesson.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson study_id"}
+	}
+	if err := lesson.Title.Set(args.Input.Title); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson title"}
+	}
+	if err := lesson.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
+	}
+
+	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
+	if err != nil {
+		return nil, err
+	}
+
+	if args.Input.CourseId != nil {
+		courseLesson := &data.CourseLesson{}
+		if err := courseLesson.CourseId.Set(args.Input.CourseId); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set course lesson course_id"}
+		}
+		if err := courseLesson.LessonId.Set(&lesson.Id); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set course lesson lesson_id"}
+		}
+
+		_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &createLessonPayloadResolver{
+		Lesson:  lessonPermit,
+		StudyId: &lesson.StudyId,
+		Repos:   r.Repos,
+	}, nil
 }
 
 type CreateStudyInput struct {
@@ -340,7 +383,7 @@ type CreateStudyInput struct {
 func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
-) (*studyResolver, error) {
+) (*createStudyPayloadResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -362,7 +405,11 @@ func (r *RootResolver) CreateStudy(
 		return nil, err
 	}
 
-	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
+	return &createStudyPayloadResolver{
+		Study:  studyPermit,
+		UserId: &study.UserId,
+		Repos:  r.Repos,
+	}, nil
 }
 
 type CreateUserInput struct {
@@ -570,10 +617,10 @@ func (r *RootResolver) DeleteLessonComment(
 	}
 
 	return &deleteLessonCommentPayloadResolver{
-		LessonCommentId:      &lessonComment.Id,
-		LessonTimelineEdgeId: eventId,
-		LessonId:             &lessonComment.LessonId,
-		Repos:                r.Repos,
+		LessonCommentId:       &lessonComment.Id,
+		LessonTimelineEventId: eventId,
+		LessonId:              &lessonComment.LessonId,
+		Repos:                 r.Repos,
 	}, nil
 }
 

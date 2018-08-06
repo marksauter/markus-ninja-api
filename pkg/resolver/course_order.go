@@ -15,6 +15,8 @@ const (
 	CourseAppledAt
 	CourseCreatedAt
 	CourseLessonCount
+	CourseName
+	CourseNumber
 )
 
 func ParseCourseOrderField(s string) (CourseOrderField, error) {
@@ -29,6 +31,10 @@ func ParseCourseOrderField(s string) (CourseOrderField, error) {
 		return CourseCreatedAt, nil
 	case "LESSON_COUNT":
 		return CourseLessonCount, nil
+	case "NAME":
+		return CourseName, nil
+	case "NUMBER":
+		return CourseNumber, nil
 	default:
 		var f CourseOrderField
 		return f, fmt.Errorf("invalid CourseOrderField: %q", s)
@@ -47,6 +53,10 @@ func (f CourseOrderField) String() string {
 		return "created_at"
 	case CourseLessonCount:
 		return "lesson_count"
+	case CourseName:
+		return "name"
+	case CourseNumber:
+		return "number"
 	default:
 		return "unknown"
 	}

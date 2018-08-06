@@ -1,0 +1,8 @@
+# Return type for CreateLesson.
+type CreateLessonPayload {
+  # The edge from the study's lesson connection.
+  lessonEdge: LessonEdge!
+
+  # The study for which the lesson was created.
+  study: Study!
+}

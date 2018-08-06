@@ -1,0 +1,8 @@
+# Return type for CreateCourse.
+type CreateCoursePayload {
+  # The edge from the study's course connection.
+  courseEdge: CourseEdge!
+
+  # The study for which the course was created.
+  study: Study!
+}

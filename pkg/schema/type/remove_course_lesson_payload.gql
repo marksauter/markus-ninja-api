@@ -3,6 +3,6 @@ type RemoveCourseLessonPayload {
   # The course from which the lesson was removed.
   course: Course!
 
-  # The edge from the course's lesson connection.
-  lessonEdge: LessonEdge!
+  # The ID of the lesson removed from the course.
+  removedLessonId: ID!
 }

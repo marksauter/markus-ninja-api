@@ -13,12 +13,10 @@ func NewCourseConnectionResolver(
 ) (*courseConnectionResolver, error) {
 	edges := make([]*courseEdgeResolver, len(courses))
 	for i := range edges {
-		id, err := courses[i].ID()
+		edge, err := NewCourseEdgeResolver(courses[i], repos)
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id.String)
-		edge := NewCourseEdgeResolver(cursor, courses[i], repos)
 		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
