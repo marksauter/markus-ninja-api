@@ -17,6 +17,11 @@ func (r *searchableResolver) ToCourse() (*courseResolver, bool) {
 	return resolver, ok
 }
 
+func (r *searchableResolver) ToLabel() (*labelResolver, bool) {
+	resolver, ok := r.searchable.(*labelResolver)
+	return resolver, ok
+}
+
 func (r *searchableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.searchable.(*lessonResolver)
 	return resolver, ok

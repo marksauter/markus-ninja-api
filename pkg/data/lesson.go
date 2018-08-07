@@ -28,6 +28,28 @@ type Lesson struct {
 	UserId       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
+func lessonDelimeter(r rune) bool {
+	return r == ' ' || r == '-' || r == '_'
+}
+
+type LessonFilterOption int
+
+const (
+	LessonIsCourseLesson LessonFilterOption = iota
+	LessonIsNotCourseLesson
+)
+
+func (src LessonFilterOption) String() string {
+	switch src {
+	case LessonIsCourseLesson:
+		return "course_id IS NOT NULL"
+	case LessonIsNotCourseLesson:
+		return "course_id IS NULL"
+	default:
+		return ""
+	}
+}
+
 const countLessonByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM lesson_enrolled
@@ -514,12 +536,21 @@ func GetLessonByStudy(
 	db Queryer,
 	studyId string,
 	po *PageOptions,
+	opts ...LessonFilterOption,
 ) ([]*Lesson, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("GetLessonByStudy(study_id)")
+
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
+	where := append(
+		[]string{`study_id = ` + args.Append(studyId)},
+		ands...,
+	)
 
 	selects := []string{
 		"body",
@@ -718,10 +749,6 @@ func CreateLesson(
 		return nil, err
 	}
 
-	err = ParseBodyForEvents(tx, &row.UserId, &row.StudyId, &row.Id, &row.Body)
-	if err != nil {
-		return nil, err
-	}
 	e, err := NewEvent(CreatedEvent, &row.StudyId, &row.Id, &row.UserId)
 	if err != nil {
 		return nil, err
@@ -732,6 +759,11 @@ func CreateLesson(
 	}
 
 	lesson, err := GetLesson(tx, row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ParseLessonBodyForEvents(tx, lesson)
 	if err != nil {
 		return nil, err
 	}
@@ -860,13 +892,9 @@ func UpdateLesson(
 		return nil, err
 	}
 
-	ParseUpdatedBodyForEvents(
-		tx,
-		&lesson.UserId,
-		&lesson.StudyId,
-		&lesson.Id,
-		&lesson.Body,
-	)
+	if err := ParseLessonBodyForEvents(tx, lesson); err != nil {
+		return nil, err
+	}
 
 	if newTx {
 		err = CommitTransaction(tx)
@@ -879,6 +907,131 @@ func UpdateLesson(
 	return lesson, nil
 }
 
-func lessonDelimeter(r rune) bool {
-	return r == ' ' || r == '-' || r == '_'
+func ParseLessonBodyForEvents(
+	db Queryer,
+	lesson *Lesson,
+) error {
+	mylog.Log.Debug("ParseLessonBodyForEvents()")
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	newEvents := make(map[string]struct{})
+	oldEvents := make(map[string]struct{})
+	events, err := GetEventBySource(tx, lesson.Id.String, nil)
+	if err != nil {
+		return err
+	}
+	for _, event := range events {
+		oldEvents[event.TargetId.String] = struct{}{}
+	}
+
+	lessonNumberRefs, err := lesson.Body.NumberRefs()
+	if err != nil {
+		return err
+	}
+	if len(lessonNumberRefs) > 0 {
+		lessons, err := BatchGetLessonByNumber(
+			tx,
+			lesson.StudyId.String,
+			lessonNumberRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, l := range lessons {
+			if l.Id.String != lesson.Id.String {
+				newEvents[l.Id.String] = struct{}{}
+				if _, prs := oldEvents[l.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(ReferencedEvent)
+					event.TargetId.Set(&l.Id)
+					event.SourceId.Set(&lesson.Id)
+					event.UserId.Set(&lesson.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	crossStudyRefs, err := lesson.Body.CrossStudyRefs()
+	if err != nil {
+		return err
+	}
+	for _, ref := range crossStudyRefs {
+		l, err := GetLessonByOwnerStudyAndNumber(
+			tx,
+			ref.Owner,
+			ref.Name,
+			ref.Number,
+		)
+		if err != nil {
+			return err
+		}
+		if l.Id.String != lesson.Id.String {
+			newEvents[l.Id.String] = struct{}{}
+			if _, prs := oldEvents[l.Id.String]; !prs {
+				event := &Event{}
+				event.Action.Set(ReferencedEvent)
+				event.TargetId.Set(&l.Id)
+				event.SourceId.Set(&lesson.Id)
+				event.UserId.Set(&lesson.UserId)
+				_, err = CreateEvent(tx, event)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	userRefs := lesson.Body.AtRefs()
+	if len(userRefs) > 0 {
+		users, err := BatchGetUserByLogin(
+			tx,
+			userRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, u := range users {
+			if u.Id.String != lesson.UserId.String {
+				newEvents[u.Id.String] = struct{}{}
+				if _, prs := oldEvents[u.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(MentionedEvent)
+					event.TargetId.Set(&u.Id)
+					event.SourceId.Set(&lesson.Id)
+					event.UserId.Set(&lesson.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	for _, event := range events {
+		if _, prs := newEvents[event.TargetId.String]; !prs {
+			err := DeleteEvent(tx, &event.Id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	return nil
 }

@@ -443,11 +443,12 @@ func (r *studyResolver) Lesson(
 func (r *studyResolver) Lessons(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After          *string
+		Before         *string
+		First          *int32
+		IsCourseLesson *bool
+		Last           *int32
+		OrderBy        *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	studyId, err := r.Study.ID()
@@ -470,10 +471,20 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
+	filterOptions := []data.LessonFilterOption{}
+	if args.IsCourseLesson != nil {
+		if *args.IsCourseLesson {
+			filterOptions = append(filterOptions, data.LessonIsCourseLesson)
+		} else {
+			filterOptions = append(filterOptions, data.LessonIsNotCourseLesson)
+		}
+	}
+
 	lessons, err := r.Repos.Lesson().GetByStudy(
 		ctx,
 		studyId.String,
 		pageOptions,
+		filterOptions...,
 	)
 	if err != nil {
 		return nil, err

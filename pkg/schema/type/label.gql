@@ -1,5 +1,12 @@
 # Represents a label.
-type Label implements Deleteable, Node, StudyNode, UniformResourceLocatable, Updateable {
+type Label implements 
+  Deleteable,
+  Node,
+  Searchable,
+  StudyNode,
+  UniformResourceLocatable,
+  Updateable 
+{
   # The color of the label.
   color: String!
 

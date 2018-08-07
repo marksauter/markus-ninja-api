@@ -370,13 +370,12 @@ func CreateLessonComment(
 		return nil, err
 	}
 
-	err = ParseBodyForEvents(tx, &row.UserId, &row.StudyId, &row.Id, &row.Body)
+	lessonComment, err := GetLessonComment(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
 
-	lessonComment, err := GetLessonComment(tx, row.Id.String)
-	if err != nil {
+	if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
 		return nil, err
 	}
 
@@ -465,13 +464,9 @@ func UpdateLessonComment(
 		return nil, err
 	}
 
-	ParseUpdatedBodyForEvents(
-		tx,
-		&lessonComment.UserId,
-		&lessonComment.StudyId,
-		&lessonComment.Id,
-		&lessonComment.Body,
-	)
+	if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
+		return nil, err
+	}
 
 	if newTx {
 		err = CommitTransaction(tx)
@@ -482,4 +477,133 @@ func UpdateLessonComment(
 	}
 
 	return lessonComment, nil
+}
+
+func ParseLessonCommentBodyForEvents(
+	db Queryer,
+	lessonComment *LessonComment,
+) error {
+	mylog.Log.Debug("ParseLessonCommentBodyForEvents()")
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	newEvents := make(map[string]struct{})
+	oldEvents := make(map[string]struct{})
+	events, err := GetEventBySource(tx, lessonComment.Id.String, nil)
+	if err != nil {
+		return err
+	}
+	for _, event := range events {
+		oldEvents[event.TargetId.String] = struct{}{}
+	}
+
+	lessonNumberRefs, err := lessonComment.Body.NumberRefs()
+	if err != nil {
+		return err
+	}
+	if len(lessonNumberRefs) > 0 {
+		lessons, err := BatchGetLessonByNumber(
+			tx,
+			lessonComment.StudyId.String,
+			lessonNumberRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, l := range lessons {
+			if l.Id.String != lessonComment.LessonId.String {
+				newEvents[l.Id.String] = struct{}{}
+				if _, prs := oldEvents[l.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(ReferencedEvent)
+					event.TargetId.Set(&l.Id)
+					event.SourceId.Set(&lessonComment.Id)
+					event.UserId.Set(&lessonComment.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	crossStudyRefs, err := lessonComment.Body.CrossStudyRefs()
+	if err != nil {
+		return err
+	}
+	for _, ref := range crossStudyRefs {
+		lesson, err := GetLessonByOwnerStudyAndNumber(
+			tx,
+			ref.Owner,
+			ref.Name,
+			ref.Number,
+		)
+		if err != nil {
+			return err
+		}
+		if lesson.Id.String != lessonComment.LessonId.String {
+			newEvents[lesson.Id.String] = struct{}{}
+			if _, prs := oldEvents[lesson.Id.String]; !prs {
+				event := &Event{}
+				event.Action.Set(ReferencedEvent)
+				event.TargetId.Set(&lesson.Id)
+				event.SourceId.Set(&lessonComment.Id)
+				event.UserId.Set(&lessonComment.UserId)
+				_, err = CreateEvent(tx, event)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	userRefs := lessonComment.Body.AtRefs()
+	if len(userRefs) > 0 {
+		users, err := BatchGetUserByLogin(
+			tx,
+			userRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, u := range users {
+			if u.Id.String != lessonComment.UserId.String {
+				newEvents[u.Id.String] = struct{}{}
+				if _, prs := oldEvents[u.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(MentionedEvent)
+					event.TargetId.Set(&u.Id)
+					event.SourceId.Set(&lessonComment.Id)
+					event.UserId.Set(&lessonComment.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	for _, event := range events {
+		if _, prs := newEvents[event.TargetId.String]; !prs {
+			err := DeleteEvent(tx, &event.Id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	return nil
 }

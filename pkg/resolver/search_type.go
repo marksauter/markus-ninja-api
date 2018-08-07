@@ -8,7 +8,9 @@ import (
 type SearchType int
 
 const (
-	SearchTypeLesson SearchType = iota
+	SearchTypeCourse SearchType = iota
+	SearchTypeLabel
+	SearchTypeLesson
 	SearchTypeStudy
 	SearchTypeTopic
 	SearchTypeUser
@@ -17,6 +19,10 @@ const (
 
 func ParseSearchType(s string) (SearchType, error) {
 	switch strings.ToUpper(s) {
+	case "COURSE":
+		return SearchTypeCourse, nil
+	case "LABEL":
+		return SearchTypeLabel, nil
 	case "LESSON":
 		return SearchTypeLesson, nil
 	case "STUDY":
@@ -35,6 +41,10 @@ func ParseSearchType(s string) (SearchType, error) {
 
 func (f SearchType) String() string {
 	switch f {
+	case SearchTypeCourse:
+		return "course"
+	case SearchTypeLabel:
+		return "label"
 	case SearchTypeLesson:
 		return "lesson"
 	case SearchTypeStudy:

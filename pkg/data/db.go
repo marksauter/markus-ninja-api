@@ -310,6 +310,36 @@ func SQL(
 	return ReorderQuery(po, sql)
 }
 
+func CountSearchSQL(
+	from string,
+	within *mytype.OID,
+	query,
+	vector string,
+	args *pgx.QueryArgs,
+) string {
+	fromAlias := xid.New().String()
+	queryAlias := xid.New().String()
+	var andIn string
+	if within != nil {
+		andIn = fmt.Sprintf(
+			"AND %s.%s = %s",
+			fromAlias,
+			within.DBVarName(),
+			args.Append(within),
+		)
+	}
+
+	sql := `
+		SELECT count(` + fromAlias + `) 
+		FROM ` + from + ` AS ` + fromAlias + `,
+			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
+		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
+			ELSE ` + vector + ` @@ ` + queryAlias + ` END
+		` + andIn
+
+	return sql
+}
+
 func SearchSQL(
 	selects []string,
 	from string,

@@ -1,25 +1,20 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
-
-type resultItemCounts struct {
-	Lesson    int32
-	Study     int32
-	Topic     int32
-	User      int32
-	UserAsset int32
-}
 
 func NewSearchableConnectionResolver(
 	repos *repo.Repos,
 	searchables []repo.NodePermit,
 	pageOptions *data.PageOptions,
-	counts *resultItemCounts,
+	query string,
+	within *mytype.OID,
 ) (*searchableConnectionResolver, error) {
 	edges := make([]*searchableEdgeResolver, len(searchables))
 	for i := range edges {
@@ -37,21 +32,27 @@ func NewSearchableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &searchableConnectionResolver{
-		counts:      counts,
 		edges:       edges,
 		searchables: searchables,
 		pageInfo:    pageInfo,
 		repos:       repos,
+		query:       query,
+		within:      within,
 	}
 	return resolver, nil
 }
 
 type searchableConnectionResolver struct {
-	counts      *resultItemCounts
 	edges       []*searchableEdgeResolver
 	searchables []repo.NodePermit
 	pageInfo    *pageInfoResolver
 	repos       *repo.Repos
+	query       string
+	within      *mytype.OID
+}
+
+func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
+	return r.repos.Course().CountBySearch(ctx, r.within, r.query)
 }
 
 func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
@@ -62,8 +63,12 @@ func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
 	return &[]*searchableEdgeResolver{}
 }
 
-func (r *searchableConnectionResolver) LessonCount() int32 {
-	return r.counts.Lesson
+func (r *searchableConnectionResolver) LabelCount(ctx context.Context) (int32, error) {
+	return r.repos.Label().CountBySearch(ctx, r.within, r.query)
+}
+
+func (r *searchableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
+	return r.repos.Lesson().CountBySearch(ctx, r.within, r.query)
 }
 
 func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
@@ -90,18 +95,18 @@ func (r *searchableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *searchableConnectionResolver) StudyCount() int32 {
-	return r.counts.Study
+func (r *searchableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	return r.repos.Study().CountBySearch(ctx, r.within, r.query)
 }
 
-func (r *searchableConnectionResolver) TopicCount() int32 {
-	return r.counts.Topic
+func (r *searchableConnectionResolver) TopicCount(ctx context.Context) (int32, error) {
+	return r.repos.Topic().CountBySearch(ctx, r.within, r.query)
 }
 
-func (r *searchableConnectionResolver) UserCount() int32 {
-	return r.counts.User
+func (r *searchableConnectionResolver) UserCount(ctx context.Context) (int32, error) {
+	return r.repos.User().CountBySearch(ctx, r.query)
 }
 
-func (r *searchableConnectionResolver) UserAssetCount() int32 {
-	return r.counts.UserAsset
+func (r *searchableConnectionResolver) UserAssetCount(ctx context.Context) (int32, error) {
+	return r.repos.UserAsset().CountBySearch(ctx, r.within, r.query)
 }

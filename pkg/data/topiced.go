@@ -243,6 +243,8 @@ func CreateTopiced(
 
 	var topicable string
 	switch row.TopicableId.Type {
+	case "Course":
+		topicable = "course"
 	case "Study":
 		topicable = "study"
 	default:

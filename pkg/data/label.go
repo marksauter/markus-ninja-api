@@ -13,7 +13,7 @@ import (
 )
 
 type Label struct {
-	Color       pgtype.Text        `db:"color" permit:"create/read/update"`
+	Color       mytype.Color       `db:"color" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	Id          mytype.OID         `db:"id" permit:"read"`

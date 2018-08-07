@@ -9,10 +9,13 @@ type TopicableType int
 
 const (
 	TopicableTypeStudy TopicableType = iota
+	TopicableTypeCourse
 )
 
 func ParseTopicableType(s string) (TopicableType, error) {
 	switch strings.ToUpper(s) {
+	case "COURSE":
+		return TopicableTypeCourse, nil
 	case "STUDY":
 		return TopicableTypeStudy, nil
 	default:
@@ -23,6 +26,8 @@ func ParseTopicableType(s string) (TopicableType, error) {
 
 func (f TopicableType) String() string {
 	switch f {
+	case TopicableTypeCourse:
+		return "course"
 	case TopicableTypeStudy:
 		return "study"
 	default:

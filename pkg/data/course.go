@@ -150,34 +150,47 @@ func CountCourseBySearch(
 	db Queryer,
 	within *mytype.OID,
 	query string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountCourseBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	sql := `
-		SELECT COUNT(*)
-		FROM course_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
-	`
-	if within != nil {
-		if within.Type != "User" {
-			// Only users 'contain' courses, so return 0 otherwise
-			return
+	var n int32
+	var args pgx.QueryArgs
+	from := "course_search_index"
+	in := within
+	if in != nil {
+		if in.Type != "User" && in.Type != "Topic" {
+			return n, fmt.Errorf(
+				"cannot search for courses within type `%s`",
+				in.Type,
+			)
 		}
-		andIn := fmt.Sprintf(
-			"AND course_search_index.%s = %s",
-			within.DBVarName(),
-			args.Append(within),
-		)
-		sql = sql + andIn
+		if in.Type == "Topic" {
+			topic, err := GetTopic(db, in.String)
+			if err != nil {
+				return n, err
+			}
+			from = ToSubQuery(
+				SearchSQL(
+					[]string{"*"},
+					from,
+					nil,
+					ToTsQuery(topic.Name.String),
+					"topics",
+					nil,
+					&args,
+				),
+			)
+			// set `in` to nil so that it doesn't affect next call to SearchSQL
+			// TODO: fix this ugliness please
+			in = nil
+		}
 	}
+
+	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
 
 	psName := preparedName("countCourseBySearch", sql)
 
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 func CountCourseByTopicSearch(

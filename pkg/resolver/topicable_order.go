@@ -63,6 +63,8 @@ func ParseTopicableOrder(t TopicableType, arg *OrderArg) (data.Order, error) {
 		}, nil
 	}
 	switch t {
+	case TopicableTypeCourse:
+		return ParseCourseOrder(arg)
 	case TopicableTypeStudy:
 		return ParseStudyOrder(arg)
 	default:

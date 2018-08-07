@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/fatih/camelcase"
@@ -88,4 +89,10 @@ func Split(s string, f func(rune) bool) []string {
 		secondSplit[i] = strings.ToLower(v)
 	}
 	return secondSplit
+}
+
+var rxHexColor = regexp.MustCompile(`^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
+
+func IsHexColor(str string) bool {
+	return rxHexColor.MatchString(str)
 }

@@ -128,36 +128,27 @@ func (r *RootResolver) Search(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountBySearch(ctx, within, args.Query)
-	if err != nil {
-		return nil, err
-	}
-	studyCount, err := r.Repos.Study().CountBySearch(ctx, within, args.Query)
-	if err != nil {
-		return nil, err
-	}
-	topicCount, err := r.Repos.Topic().CountBySearch(ctx, within, args.Query)
-	if err != nil {
-		return nil, err
-	}
-	userCount, err := r.Repos.User().CountBySearch(ctx, args.Query)
-	if err != nil {
-		return nil, err
-	}
-	userAssetCount, err := r.Repos.UserAsset().CountBySearch(ctx, within, args.Query)
-	if err != nil {
-		return nil, err
-	}
-	counts := &resultItemCounts{
-		Lesson:    lessonCount,
-		Study:     studyCount,
-		Topic:     topicCount,
-		User:      userCount,
-		UserAsset: userAssetCount,
-	}
 	permits := []repo.NodePermit{}
 
 	switch searchType {
+	case SearchTypeCourse:
+		courses, err := r.Repos.Course().Search(ctx, within, args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(courses))
+		for i, l := range courses {
+			permits[i] = l
+		}
+	case SearchTypeLabel:
+		labels, err := r.Repos.Label().Search(ctx, within, args.Query, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(labels))
+		for i, l := range labels {
+			permits[i] = l
+		}
 	case SearchTypeLesson:
 		lessons, err := r.Repos.Lesson().Search(ctx, within, args.Query, pageOptions)
 		if err != nil {
@@ -209,7 +200,8 @@ func (r *RootResolver) Search(
 		r.Repos,
 		permits,
 		pageOptions,
-		counts,
+		args.Query,
+		within,
 	)
 }
 

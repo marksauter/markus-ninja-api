@@ -12,8 +12,14 @@ type SearchableEdge {
 
 # A list of results that matched against a search query.
 type SearchableConnection {
+  # The number of courses that matched the search query.
+  courseCount: Int!
+
   # A list of edges.
   edges: [SearchableEdge]
+
+  # The number of labels that matched the search query.
+  labelCount: Int!
 
   # The number of lessons that matched the search query.
   lessonCount: Int!

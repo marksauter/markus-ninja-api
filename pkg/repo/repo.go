@@ -325,6 +325,8 @@ func (r *Repos) GetTopicable(
 	topicableId *mytype.OID,
 ) (NodePermit, error) {
 	switch topicableId.Type {
+	case "Course":
+		return r.Course().Get(ctx, topicableId.String)
 	case "Study":
 		return r.Study().Get(ctx, topicableId.String)
 	default:
