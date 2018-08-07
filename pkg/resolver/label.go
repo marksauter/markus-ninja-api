@@ -111,13 +111,21 @@ func (r *labelResolver) Name() (string, error) {
 	return r.Label.Name()
 }
 
-func (r *labelResolver) ResourcePath() (mygql.URI, error) {
+func (r *labelResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
+	study, err := r.Study(ctx)
+	if err != nil {
+		return uri, err
+	}
+	studyPath, err := study.ResourcePath(ctx)
+	if err != nil {
+		return uri, err
+	}
 	name, err := r.Name()
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("labels/%s", name))
+	uri = mygql.URI(fmt.Sprintf("%s/labels/%s", string(studyPath), name))
 	return uri, nil
 }
 
@@ -140,13 +148,13 @@ func (r *labelResolver) UpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *labelResolver) URL() (mygql.URI, error) {
+func (r *labelResolver) URL(ctx context.Context) (mygql.URI, error) {
 	var uri mygql.URI
-	resourcePath, err := r.ResourcePath()
+	resourcePath, err := r.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
 	return uri, nil
 }
 

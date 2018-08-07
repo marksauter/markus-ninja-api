@@ -188,16 +188,6 @@ func (r *RootResolver) AddLessonComment(
 	}
 	lessonComment = lessonCommentPermit.Get()
 
-	err = r.Repos.Event().ParseBodyForEvents(
-		ctx,
-		&lessonComment.UserId,
-		&lessonComment.StudyId,
-		&lessonComment.Id,
-		&lessonComment.Body,
-	)
-	if err != nil {
-		return nil, err
-	}
 	event, err := data.NewEvent(
 		data.CommentedEvent,
 		&lessonComment.Id,
@@ -284,6 +274,9 @@ func (r *RootResolver) CreateLabel(
 	}
 	if err := label.Description.Set(args.Input.Description); err != nil {
 		return nil, err
+	}
+	if len(args.Input.Name) < 1 {
+		return nil, errors.New("name must be at least one character long")
 	}
 	if err := label.Name.Set(args.Input.Name); err != nil {
 		return nil, err
@@ -392,6 +385,9 @@ func (r *RootResolver) CreateStudy(
 	study := &data.Study{}
 	if err := study.Description.Set(args.Input.Description); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set study description"}
+	}
+	if len(args.Input.Name) < 1 {
+		return nil, errors.New("name must be at least one character long")
 	}
 	if err := study.Name.Set(args.Input.Name); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set study name"}

@@ -90,6 +90,15 @@ func (r *topicResolver) Topicables(
 	permits := []repo.NodePermit{}
 
 	switch topicableType {
+	case TopicableTypeCourse:
+		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(courses))
+		for i, l := range courses {
+			permits[i] = l
+		}
 	case TopicableTypeStudy:
 		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions)
 		if err != nil {

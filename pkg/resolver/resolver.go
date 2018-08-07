@@ -21,6 +21,12 @@ func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, er
 		return nil, err
 	}
 	switch id.Type {
+	case "Course":
+		course, ok := p.(*repo.CoursePermit)
+		if !ok {
+			return nil, errors.New("cannot convert permit to course")
+		}
+		return &courseResolver{Course: course, Repos: repos}, nil
 	case "Email":
 		email, ok := p.(*repo.EmailPermit)
 		if !ok {

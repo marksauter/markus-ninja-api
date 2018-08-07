@@ -352,6 +352,7 @@ func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
 	studyId string,
 	po *data.PageOptions,
+	opts ...data.LessonFilterOption,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -360,7 +361,7 @@ func (r *LessonRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByStudy(db, studyId, po)
+	lessons, err := data.GetLessonByStudy(db, studyId, po, opts...)
 	if err != nil {
 		return nil, err
 	}

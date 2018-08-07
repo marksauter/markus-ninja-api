@@ -293,20 +293,3 @@ func (r *EventRepo) Delete(
 	}
 	return data.DeleteEvent(db, &event.Id)
 }
-
-func (r *EventRepo) ParseBodyForEvents(
-	ctx context.Context,
-	userId,
-	studyId,
-	sourceId *mytype.OID,
-	body *mytype.Markdown,
-) error {
-	if err := r.CheckConnection(); err != nil {
-		return err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	return data.ParseBodyForEvents(db, userId, studyId, sourceId, body)
-}

@@ -151,6 +151,10 @@ type Study implements
     # Returns the first n elements form the list.
     first: Int
 
+    # If non-null, filters lessons according to whether they are part of a
+    # course.
+    isCourseLesson: Boolean
+
     # Returns the last n elements form the list.
     last: Int
 
