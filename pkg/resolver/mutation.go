@@ -596,6 +596,9 @@ func (r *RootResolver) DeleteLessonComment(
 		data.CommentedEvent,
 		lessonComment.LessonId.String,
 	)
+	if err != nil {
+		return nil, err
+	}
 	eventId, err := event.ID()
 	if err != nil {
 		return nil, err
@@ -774,6 +777,8 @@ func (r *RootResolver) GiveApple(
 	return &appleableResolver{appleable}, nil
 }
 
+var InvalidCredentialsError = errors.New("invalid credentials")
+
 type LoginUserInput struct {
 	Login    string
 	Password string
@@ -791,24 +796,24 @@ func (r *RootResolver) LoginUser(
 	if err := checkmail.ValidateFormat(args.Input.Login); err != nil {
 		user, err = data.GetUserCredentialsByLogin(db, args.Input.Login)
 		if err != nil {
-			return nil, errors.New("invalid credentials")
+			return nil, InvalidCredentialsError
 		}
 	} else {
 		user, err = data.GetUserCredentialsByEmail(db, args.Input.Login)
 		if err != nil {
-			return nil, errors.New("invalid credentials")
+			return nil, InvalidCredentialsError
 		}
 	}
 
 	if err := user.Password.CompareToPassword(args.Input.Password); err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, InvalidCredentialsError
 	}
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
 	jwt, err := r.Svcs.Auth.SignJWT(&payload)
 	if err != nil {
-		return nil, err
+		return nil, InternalServerError
 	}
 
 	return &loginUserPayloadResolver{

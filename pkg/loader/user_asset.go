@@ -59,7 +59,7 @@ func NewUserAssetLoader() *UserAssetLoader {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						userAsset, err := data.GetUserAssetByName(db, ks[0], ks[1], ks[2])
+						userAsset, err := data.GetUserAssetByName(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: userAsset, Error: err}
 					}(i, key)
 				}
@@ -136,11 +136,10 @@ func (r *UserAssetLoader) Get(
 
 func (r *UserAssetLoader) GetByName(
 	ctx context.Context,
-	userId,
 	studyId,
 	name string,
 ) (*data.UserAsset, error) {
-	compositeKey := newCompositeKey(userId, studyId, name)
+	compositeKey := newCompositeKey(studyId, name)
 	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err

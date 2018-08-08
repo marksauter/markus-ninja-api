@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"regexp"
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -56,11 +55,7 @@ func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
 				l.WithField("error", err).Error("Error reading request body")
 			}
 			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
-			re_escaped := regexp.MustCompile(`\\n|\\`)
-			prettyBody := re_escaped.ReplaceAll(body, nil)
-			re_inside_whtsp := regexp.MustCompile(`[\s\p{Zs}]{2,}`)
-			prettyBody = re_inside_whtsp.ReplaceAll(prettyBody, []byte{' '})
-			l.WithField("body", string(prettyBody)).Debug("")
+			l.WithField("body", string(body)).Debug("")
 			req.Body = reqStr
 		}
 		h.ServeHTTP(rw, req)

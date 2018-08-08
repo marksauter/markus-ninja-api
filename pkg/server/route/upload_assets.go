@@ -2,13 +2,16 @@ package route
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
 
@@ -19,7 +22,8 @@ var UploadAssetsCors = cors.New(cors.Options{
 })
 
 type UploadAssetsHandler struct {
-	Repos *repo.Repos
+	Repos      *repo.Repos
+	StorageSvc *service.StorageService
 }
 
 func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -52,16 +56,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	studyId := req.FormValue("study_id")
-	sid, err := mytype.ParseOID(studyId)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to parse study_id")
-		response := myhttp.InvalidRequestErrorResponse("invalid study_id")
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
-	userAssetPermit, err := h.Repos.UserAsset().Upload(req.Context(), &viewer.Id, sid, file, header)
+	key, err := h.StorageSvc.Upload(&viewer.Id, file, header)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to upload file")
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -69,30 +64,75 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	href, err := userAssetPermit.Href()
+	asset, err := data.NewAssetFromFile(&viewer.Id, key, file, header)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user asset href")
-		response := myhttp.AccessDeniedErrorResponse()
+		mylog.Log.WithError(err).Error("failed to create asset from file")
+		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	assetId, err := userAssetPermit.ID()
+
+	assetPermit, err := h.Repos.Asset().Create(req.Context(), asset)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user asset id")
+		mylog.Log.WithError(err).Error("failed to create asset")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	saveStr := req.FormValue("save")
+	save, err := strconv.ParseBool(saveStr)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to parse form `save`")
+		response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	if save {
+		formStudyId := req.FormValue("study_id")
+		studyId, err := mytype.ParseOID(formStudyId)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to parse form `study_id")
+			response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+
+		userAsset, err := data.NewUserAsset(&viewer.Id, studyId, &asset.Id, header.Filename)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to create user asset")
+			response := myhttp.InternalServerErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+
+		_, err = h.Repos.UserAsset().Create(req.Context(), userAsset)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to create user asset")
+			response := myhttp.InternalServerErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+
+	}
+
+	href, err := assetPermit.Href()
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to get asset href")
 		response := myhttp.AccessDeniedErrorResponse()
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 
-	asset := Asset{
+	assetResponse := Asset{
 		ContentType: contentType,
 		Href:        href,
-		Id:          assetId.Short,
+		Id:          asset.Id.Short,
 		Name:        header.Filename,
 		Size:        header.Size,
 	}
 
-	response := &UploadAssetsSuccessResponse{Asset: asset}
+	response := &UploadAssetsSuccessResponse{Asset: assetResponse}
 	myhttp.WriteResponseTo(rw, response)
 	return
 }
