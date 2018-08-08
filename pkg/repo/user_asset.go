@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"mime/multipart"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -15,7 +13,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type UserAssetPermit struct {
@@ -135,19 +132,15 @@ func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
 	return &r.userAsset.UserId, nil
 }
 
-func NewUserAssetRepo(
-	store *service.StorageService,
-) *UserAssetRepo {
+func NewUserAssetRepo() *UserAssetRepo {
 	return &UserAssetRepo{
-		load:  loader.NewUserAssetLoader(),
-		store: store,
+		load: loader.NewUserAssetLoader(),
 	}
 }
 
 type UserAssetRepo struct {
 	load   *loader.UserAssetLoader
 	permit *Permitter
-	store  *service.StorageService
 }
 
 func (r *UserAssetRepo) Open(p *Permitter) error {
@@ -187,7 +180,6 @@ func (r *UserAssetRepo) CountBySearch(
 
 func (r *UserAssetRepo) CountByStudy(
 	ctx context.Context,
-	userId,
 	studyId string,
 ) (int32, error) {
 	var n int32
@@ -195,7 +187,7 @@ func (r *UserAssetRepo) CountByStudy(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetByStudy(db, userId, studyId)
+	return data.CountUserAssetByStudy(db, studyId)
 }
 
 func (r *UserAssetRepo) CountByUser(
@@ -272,12 +264,13 @@ func (r *UserAssetRepo) Get(
 
 func (r *UserAssetRepo) GetByName(
 	ctx context.Context,
-	userId, studyId, name string,
+	studyId,
+	name string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.GetByName(ctx, userId, studyId, name)
+	userAsset, err := r.load.GetByName(ctx, studyId, name)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +283,9 @@ func (r *UserAssetRepo) GetByName(
 
 func (r *UserAssetRepo) GetByUserStudyAndName(
 	ctx context.Context,
-	userLogin, studyName, name string,
+	userLogin,
+	studyName,
+	name string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -308,7 +303,6 @@ func (r *UserAssetRepo) GetByUserStudyAndName(
 
 func (r *UserAssetRepo) GetByStudy(
 	ctx context.Context,
-	userId *mytype.OID,
 	studyId *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
@@ -320,7 +314,7 @@ func (r *UserAssetRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.GetUserAssetByStudy(db, userId, studyId, po, opts...)
+	userAssets, err := data.GetUserAssetByStudy(db, studyId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -420,58 +414,6 @@ func (r *UserAssetRepo) Update(
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
-}
-
-func (r *UserAssetRepo) Upload(
-	ctx context.Context,
-	userId *mytype.OID,
-	studyId *mytype.OID,
-	file multipart.File,
-	header *multipart.FileHeader,
-) (*UserAssetPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-
-	key, err := r.store.Upload(userId, file, header)
-	if err != nil {
-		return nil, err
-	}
-
-	contentType := header.Header.Get("Content-Type")
-	types := strings.SplitN(contentType, "/", 2)
-
-	userAsset := &data.UserAsset{}
-	if err := userAsset.Key.Set(key); err != nil {
-		return nil, err
-	}
-	if err := userAsset.Name.Set(header.Filename); err != nil {
-		return nil, err
-	}
-	if err := userAsset.OriginalName.Set(header.Filename); err != nil {
-		return nil, err
-	}
-	if err := userAsset.Size.Set(header.Size); err != nil {
-		return nil, err
-	}
-	if err := userAsset.StudyId.Set(studyId); err != nil {
-		return nil, err
-	}
-	if err := userAsset.Subtype.Set(types[1]); err != nil {
-		return nil, err
-	}
-	if err := userAsset.Type.Set(types[0]); err != nil {
-		return nil, err
-	}
-	if err := userAsset.UserId.Set(userId); err != nil {
-		return nil, err
-	}
-
-	if _, err := r.permit.Check(ctx, mytype.CreateAccess, userAsset); err != nil {
-		return nil, err
-	}
-
-	return r.Create(ctx, userAsset)
 }
 
 func (r *UserAssetRepo) ViewerCanDelete(

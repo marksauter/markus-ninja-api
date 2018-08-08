@@ -84,17 +84,12 @@ func (r *studyResolver) Asset(
 	ctx context.Context,
 	args struct{ Name string },
 ) (*userAssetResolver, error) {
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return nil, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
 	}
 	userAsset, err := r.Repos.UserAsset().GetByName(
 		ctx,
-		userId.String,
 		studyId.String,
 		args.Name,
 	)
@@ -130,28 +125,19 @@ func (r *studyResolver) Assets(
 		return nil, err
 	}
 
-	userId, err := r.Study.UserId()
-	if err != nil {
-		return nil, err
-	}
 	studyId, err := r.Study.ID()
 	if err != nil {
 		return nil, err
 	}
 	userAssets, err := r.Repos.UserAsset().GetByStudy(
 		ctx,
-		userId,
 		studyId,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.UserAsset().CountByStudy(
-		ctx,
-		userId.String,
-		studyId.String,
-	)
+	count, err := r.Repos.UserAsset().CountByStudy(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}

@@ -598,7 +598,7 @@ func BatchCreateEvent(
 }
 
 const deleteUserEventSQL = `
-	DELETE FROM event
+	DELETE FROM event.event
 	WHERE id = $1
 `
 

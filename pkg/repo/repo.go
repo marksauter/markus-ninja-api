@@ -9,13 +9,13 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
 type key string
 
 const (
 	appledRepoKey        key = "appled"
+	assetRepoKey         key = "asset"
 	courseRepoKey        key = "course"
 	courseLessonRepoKey  key = "course_lesson"
 	emailRepoKey         key = "email"
@@ -54,11 +54,12 @@ type Repos struct {
 	lookup map[key]Repo
 }
 
-func NewRepos(db data.Queryer, svcs *service.Services) *Repos {
+func NewRepos(db data.Queryer) *Repos {
 	return &Repos{
 		db: db,
 		lookup: map[key]Repo{
 			appledRepoKey:        NewAppledRepo(),
+			assetRepoKey:         NewAssetRepo(),
 			courseRepoKey:        NewCourseRepo(),
 			courseLessonRepoKey:  NewCourseLessonRepo(),
 			emailRepoKey:         NewEmailRepo(),
@@ -75,7 +76,7 @@ func NewRepos(db data.Queryer, svcs *service.Services) *Repos {
 			topicRepoKey:         NewTopicRepo(),
 			topicedRepoKey:       NewTopicedRepo(),
 			userRepoKey:          NewUserRepo(),
-			userAssetRepoKey:     NewUserAssetRepo(svcs.Storage),
+			userAssetRepoKey:     NewUserAssetRepo(),
 		},
 	}
 }
@@ -97,6 +98,11 @@ func (r *Repos) CloseAll() {
 
 func (r *Repos) Appled() *AppledRepo {
 	repo, _ := r.lookup[appledRepoKey].(*AppledRepo)
+	return repo
+}
+
+func (r *Repos) Asset() *AssetRepo {
+	repo, _ := r.lookup[assetRepoKey].(*AssetRepo)
 	return repo
 }
 

@@ -49,7 +49,7 @@ func main() {
 		mylog.Log.WithField("error", err).Fatal("unable to start services")
 	}
 
-	repos := repo.NewRepos(db, svcs)
+	repos := repo.NewRepos(db)
 	schema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
@@ -70,7 +70,7 @@ func main() {
 	tokenHandler := route.TokenHandler{svcs.Auth, db}
 	signupHandler := route.SignupHandler{svcs.Auth, db}
 	uploadHandler := route.UploadHandler{}
-	uploadAssetsHandler := route.UploadAssetsHandler{repos}
+	uploadAssetsHandler := route.UploadAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
 	userAssetsHandler := route.UserAssetsHandler{svcs.Storage}
 
 	graphql := middleware.CommonMiddleware.Append(
@@ -156,6 +156,7 @@ func initDB(conf *myconf.Config) error {
 
 	modelTypes := []interface{}{
 		new(data.Appled),
+		new(data.Asset),
 		new(data.Course),
 		new(data.CourseLesson),
 		new(data.Email),

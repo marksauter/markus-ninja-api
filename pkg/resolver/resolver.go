@@ -10,6 +10,8 @@ import (
 
 var clientURL = "http://localhost:3000"
 
+var InternalServerError = errors.New("something went wrong")
+
 type RootResolver struct {
 	Repos *repo.Repos
 	Svcs  *service.Services

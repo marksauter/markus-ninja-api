@@ -11,6 +11,36 @@ permissions:
 
 
 
+  # Everyone can read the following fields for a asset.
+  - operation: Read Asset
+    fields:
+      - created_at
+      - id
+      - key
+      - name
+      - size
+      - subtype
+      - type
+      - user_id 
+  # Owners can read the whole asset.
+  - operation: Read Asset
+    authenticated: true
+    roles:
+      - owner
+  # Only authenticated users can create assets. 
+  - operation: Create Asset
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - name
+      - size
+      - subtype
+      - type
+      - user_id
+
+
+
   # Everyone can read courses.
   - operation: Read Course
 
