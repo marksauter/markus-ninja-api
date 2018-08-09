@@ -39,6 +39,24 @@ type UserAsset implements
   # The subtype of this asset.
   subtype: String!
 
+  # Returns a list of events associated with the user asset.
+  timeline(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for events returned from the connection.
+    orderBy: EventOrder
+  ): UserAssetTimelineConnection!
+
   # The type of this asset.
   type: String!
 

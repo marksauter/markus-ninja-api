@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
@@ -106,6 +107,70 @@ func (r *userAssetResolver) Study(ctx context.Context) (*studyResolver, error) {
 
 func (r *userAssetResolver) Subtype() (string, error) {
 	return r.UserAsset.Subtype()
+}
+
+func (r *userAssetResolver) Timeline(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*userAssetTimelineConnectionResolver, error) {
+	userAssetId, err := r.UserAsset.ID()
+	if err != nil {
+		return nil, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := r.Repos.Event().GetByTarget(
+		ctx,
+		userAssetId.String,
+		pageOptions,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := r.Repos.Event().CountByTarget(
+		ctx,
+		userAssetId.String,
+		data.FilterCreateEvents,
+		data.FilterDismissEvents,
+		data.FilterEnrollEvents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewUserAssetTimelineConnectionResolver(
+		events,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
 }
 
 func (r *userAssetResolver) Type() (string, error) {

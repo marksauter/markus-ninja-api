@@ -3,6 +3,7 @@ package loader
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
@@ -25,12 +26,17 @@ func NewAssetLoader() *AssetLoader {
 				for i, key := range keys {
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
+						id, err := strconv.ParseInt(key.String(), 10, 64)
+						if err != nil {
+							results[i] = &dataloader.Result{Error: err}
+							return
+						}
 						db, ok := myctx.QueryerFromContext(ctx)
 						if !ok {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						asset, err := data.GetAsset(db, key.String())
+						asset, err := data.GetAsset(db, id)
 						results[i] = &dataloader.Result{Data: asset, Error: err}
 					}(i, key)
 				}
@@ -58,9 +64,10 @@ func (r *AssetLoader) ClearAll() {
 
 func (r *AssetLoader) Get(
 	ctx context.Context,
-	id string,
+	id int64,
 ) (*data.Asset, error) {
-	assetData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+	key := strconv.Itoa(int(id))
+	assetData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
 		return nil, err
 	}

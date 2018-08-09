@@ -15,7 +15,7 @@ type Markdown struct {
 	String string
 }
 
-var atRef = regexp.MustCompile(`(?:\W+|\s+|^)@(\w+)(?:\W+|\s+|$)`)
+var atRef = regexp.MustCompile(`(?:^|\s)@(\w+)(?:\s|$)`)
 
 func (src *Markdown) AtRefs() []string {
 	result := atRef.FindAllStringSubmatch(src.String, -1)
@@ -29,7 +29,21 @@ func (src *Markdown) AtRefs() []string {
 	return refs
 }
 
-var numberRef = regexp.MustCompile(`(?:\W+|\s+|^)#(\d+)(?:\W+|\s+|$)`)
+var assetRef = regexp.MustCompile(`(?:(?:^|\s|\[)\${2})([\w-.]+)(?:\]|\s|$)`)
+
+func (src *Markdown) AssetRefs() []string {
+	result := assetRef.FindAllStringSubmatch(src.String, -1)
+	refs := make([]string, 0, len(result))
+	for _, r := range result {
+		if r[1] != "" {
+			// The group '(\w+)' match will be at position 1 in 'r'
+			refs = append(refs, r[1])
+		}
+	}
+	return refs
+}
+
+var numberRef = regexp.MustCompile(`(?:^|\s)#(\d+)(?:\s|$)`)
 
 func (src *Markdown) NumberRefs() ([]int32, error) {
 	result := numberRef.FindAllStringSubmatch(src.String, -1)
@@ -53,7 +67,7 @@ type CrossStudyRef struct {
 	Number int32
 }
 
-var crossStudyRef = regexp.MustCompile(`(?:\W+|\s+|^)(\w+)/([\w|-]+)#(\d+)(?:\W+|\s+|$)`)
+var crossStudyRef = regexp.MustCompile(`(?:^|\s)(\w+)\/([\w-]+)#(\d+)(?:\s|$)`)
 
 func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
 	result := crossStudyRef.FindAllStringSubmatch(src.String, -1)

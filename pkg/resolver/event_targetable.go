@@ -9,6 +9,11 @@ type eventTargetableResolver struct {
 	eventTargetable
 }
 
+func (r *eventTargetableResolver) ToUserAsset() (*userAssetResolver, bool) {
+	resolver, ok := r.eventTargetable.(*userAssetResolver)
+	return resolver, ok
+}
+
 func (r *eventTargetableResolver) ToCourse() (*courseResolver, bool) {
 	resolver, ok := r.eventTargetable.(*courseResolver)
 	return resolver, ok
