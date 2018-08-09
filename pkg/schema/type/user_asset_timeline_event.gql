@@ -1,0 +1,23 @@
+# An edge type for UserAssetTimelineEvent.
+type UserAssetTimelineEventEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The event at the end of the edge.
+  node: UserAssetTimelineEvent
+}
+
+# A connection type for UserAssetTimelineEvent.
+type UserAssetTimelineConnection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [UserAssetTimelineEventEdge]
+
+  # A list of nodes.
+  nodes: [UserAssetTimelineEvent]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

@@ -50,11 +50,12 @@ func (r *AssetPermit) Href() (string, error) {
 	), nil
 }
 
-func (r *AssetPermit) ID() (*mytype.OID, error) {
+func (r *AssetPermit) ID() (int64, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		var id int64
+		return id, ErrAccessDenied
 	}
-	return &r.asset.Id, nil
+	return r.asset.Id.Int, nil
 }
 
 func (r *AssetPermit) Key() (string, error) {
@@ -172,12 +173,12 @@ func (r *AssetRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, asset); err != nil {
 		return err
 	}
-	return data.DeleteAsset(db, asset.Id.String)
+	return data.DeleteAsset(db, asset.Id.Int)
 }
 
 func (r *AssetRepo) Get(
 	ctx context.Context,
-	id string,
+	id int64,
 ) (*AssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err

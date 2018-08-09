@@ -12,7 +12,7 @@ import (
 
 type Asset struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id        mytype.OID         `db:"id" permit:"read"`
+	Id        pgtype.Int8        `db:"id" permit:"read"`
 	Key       pgtype.Text        `db:"key" permit:"read"`
 	Name      mytype.Filename    `db:"name" permit:"create/read/update"`
 	Size      pgtype.Int8        `db:"size" permit:"create/read"`
@@ -96,7 +96,7 @@ const getAssetByIdSQL = `
 
 func GetAsset(
 	db Queryer,
-	id string,
+	id int64,
 ) (*Asset, error) {
 	mylog.Log.WithField("id", id).Info("GetAsset(id)")
 	return getAsset(db, "getAssetById", getAssetByIdSQL, id)
@@ -110,11 +110,6 @@ func CreateAsset(
 	args := pgx.QueryArgs(make([]interface{}, 0, 10))
 
 	var columns, values []string
-
-	id, _ := mytype.NewOID("Asset")
-	row.Id.Set(id)
-	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
 
 	if row.Key.Status != pgtype.Undefined {
 		columns = append(columns, "key")
@@ -153,11 +148,12 @@ func CreateAsset(
 	sql := `
 		INSERT INTO asset(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
+		RETURNING id
 	`
 
 	psName := preparedName("createAsset", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
+	err = prepareQueryRow(tx, psName, sql, args...).Scan(&row.Id)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -173,7 +169,7 @@ func CreateAsset(
 		return nil, err
 	}
 
-	asset, err := GetAsset(tx, row.Id.String)
+	asset, err := GetAsset(tx, row.Id.Int)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +192,7 @@ const deleteAssetSQL = `
 
 func DeleteAsset(
 	db Queryer,
-	id string,
+	id int64,
 ) error {
 	mylog.Log.WithField("id", id).Info("DeleteAsset(id)")
 	commandTag, err := prepareExec(db, "deleteAsset", deleteAssetSQL, id)

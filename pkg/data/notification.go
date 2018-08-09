@@ -408,7 +408,7 @@ func CreateNotificationsFromEvent(
 	switch event.SourceId.Type {
 	case "LessonComment":
 		if event.Action.String != CommentedEvent {
-			mylog.Log.Debug(
+			mylog.Log.Debugf(
 				"will not notify users when a %s %s %s",
 				event.SourceId.Type,
 				event.Action.String,
@@ -427,7 +427,7 @@ func CreateNotificationsFromEvent(
 		}
 	case "Study":
 		if event.Action.String != CreatedEvent {
-			mylog.Log.Debug(
+			mylog.Log.Debugf(
 				"will not notify users when a %s %s %s",
 				event.SourceId.Type,
 				event.Action.String,
@@ -442,7 +442,7 @@ func CreateNotificationsFromEvent(
 		}
 	case "User":
 		if event.Action.String != CreatedEvent && event.TargetId.Type != "Study" {
-			mylog.Log.Debug(
+			mylog.Log.Debugf(
 				"will not notify users when a %s %s %s",
 				event.SourceId.Type,
 				event.Action.String,
@@ -456,7 +456,7 @@ func CreateNotificationsFromEvent(
 			return err
 		}
 	default:
-		mylog.Log.Debug(
+		mylog.Log.Debugf(
 			"will not notify users when a %s %s %s",
 			event.SourceId.Type,
 			event.Action.String,

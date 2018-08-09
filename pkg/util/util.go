@@ -39,7 +39,9 @@ func StringToInterface(strs []string) []interface{} {
 
 func MarkdownToHTML(input []byte) []byte {
 	unsafe := blackfriday.Run(input)
-	return bluemonday.UGCPolicy().SanitizeBytes(unsafe)
+	p := bluemonday.UGCPolicy()
+	p.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-z-A-Z0-9]+$")).OnElements("code")
+	return p.SanitizeBytes(unsafe)
 }
 
 func MarkdownToText(s string) string {

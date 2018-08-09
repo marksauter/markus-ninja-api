@@ -9,9 +9,11 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type UserAsset struct {
+	AssetId      pgtype.Int8        `db:"asset_id" permit:"create/read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
@@ -28,12 +30,12 @@ type UserAsset struct {
 
 func NewUserAsset(
 	userId,
-	studyId,
-	assetId *mytype.OID,
+	studyId *mytype.OID,
+	assetId int64,
 	name string,
 ) (*UserAsset, error) {
 	userAsset := &UserAsset{}
-	if err := userAsset.Id.Set(assetId); err != nil {
+	if err := userAsset.AssetId.Set(assetId); err != nil {
 		return nil, err
 	}
 	if err := userAsset.Name.Set(name); err != nil {
@@ -158,6 +160,7 @@ func getUserAsset(
 ) (*UserAsset, error) {
 	var row UserAsset
 	err := prepareQueryRow(db, name, sql, args...).Scan(
+		&row.AssetId,
 		&row.CreatedAt,
 		&row.Id,
 		&row.Key,
@@ -197,6 +200,7 @@ func getManyUserAsset(
 	for dbRows.Next() {
 		var row UserAsset
 		dbRows.Scan(
+			&row.AssetId,
 			&row.CreatedAt,
 			&row.Id,
 			&row.Key,
@@ -225,6 +229,7 @@ func getManyUserAsset(
 
 const getUserAssetByIdSQL = `
 	SELECT
+		asset_id,
 		created_at,
 		id,
 		key,
@@ -251,6 +256,7 @@ func GetUserAsset(
 
 const getUserAssetByNameSQL = `
 	SELECT
+		asset_id,
 		created_at,
 		id,
 		key,
@@ -282,8 +288,50 @@ func GetUserAssetByName(
 	)
 }
 
+const batchGetUserAssetByNameSQL = `
+	SELECT
+		asset_id,
+		created_at,
+		id,
+		key,
+		name,
+		original_name,
+		published_at,
+		size,
+		study_id,
+		subtype,
+		type,
+		updated_at,
+		user_id
+	FROM user_asset_master
+	WHERE study_id = $1 AND lower(name) = ANY($2)
+`
+
+func BatchGetUserAssetByName(
+	db Queryer,
+	studyId string,
+	names []string,
+) ([]*UserAsset, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyId,
+		"names":    names,
+	}).Info("BatchGetUserAssetByName(studyId, names)")
+	lowerNames := make([]string, len(names))
+	for i, name := range names {
+		lowerNames[i] = strings.ToLower(name)
+	}
+	return getManyUserAsset(
+		db,
+		"batchGetUserAssetByName",
+		batchGetUserAssetByNameSQL,
+		studyId,
+		lowerNames,
+	)
+}
+
 const getUserAssetByUserStudyAndNameSQL = `
 	SELECT
+		ua.asset_id,
 		ua.created_at,
 		ua.id,
 		ua.key,
@@ -333,6 +381,7 @@ func GetUserAssetByStudy(
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`study_id = ` + args.Append(studyId)}
 	selects := []string{
+		"asset_id",
 		"created_at",
 		"id",
 		"key",
@@ -367,6 +416,7 @@ func GetUserAssetByUser(
 	where := []string{`user_id = ` + args.Append(userId)}
 
 	selects := []string{
+		"asset_id",
 		"created_at",
 		"id",
 		"key",
@@ -397,9 +447,14 @@ func CreateUserAsset(
 
 	var columns, values []string
 
-	if row.Id.Status != pgtype.Undefined {
+	id, _ := mytype.NewOID("UserAsset")
+	row.Id.Set(id)
+	columns = append(columns, "id")
+	values = append(values, args.Append(&row.Id))
+
+	if row.AssetId.Status != pgtype.Undefined {
 		columns = append(columns, "asset_id")
-		values = append(values, args.Append(&row.Id))
+		values = append(values, args.Append(&row.AssetId))
 	}
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
@@ -472,7 +527,7 @@ func CreateUserAsset(
 
 const deleteUserAssetSQL = `
 	DELETE FROM user_asset
-	WHERE asset_id = $1
+	WHERE id = $1
 `
 
 func DeleteUserAsset(
@@ -507,6 +562,7 @@ func SearchUserAsset(
 		}
 	}
 	selects := []string{
+		"asset_id",
 		"created_at",
 		"id",
 		"key",
@@ -561,7 +617,7 @@ func UpdateUserAsset(
 	}
 
 	sql := `
-		UPDATE asset
+		UPDATE user_asset
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String) + `
 	`

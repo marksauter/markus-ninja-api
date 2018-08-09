@@ -2,7 +2,8 @@
 type ReferencedEvent implements 
   LessonTimelineEvent,
   Node,
-  UniformResourceLocatable
+  UniformResourceLocatable,
+  UserAssetTimelineEvent
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!

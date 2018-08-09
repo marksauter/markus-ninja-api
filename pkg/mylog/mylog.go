@@ -1,8 +1,6 @@
 package mylog
 
 import (
-	"bytes"
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -49,15 +47,15 @@ func (l *Logger) AccessMiddleware(h http.Handler) http.Handler {
 			"proto":       req.Proto,
 		}).Info("Request Info")
 		l.WithField("user_agent", req.UserAgent()).Info("")
-		if l.Level >= logrus.DebugLevel {
-			body, err := ioutil.ReadAll(req.Body)
-			if err != nil {
-				l.WithField("error", err).Error("Error reading request body")
-			}
-			reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
-			l.WithField("body", string(body)).Debug("")
-			req.Body = reqStr
-		}
+		// if l.Level >= logrus.DebugLevel {
+		//   body, err := ioutil.ReadAll(req.Body)
+		//   if err != nil {
+		//     l.WithField("error", err).Error("Error reading request body")
+		//   }
+		//   reqStr := ioutil.NopCloser(bytes.NewBuffer(body))
+		//   l.WithField("body", string(body)).Debug("")
+		//   req.Body = reqStr
+		// }
 		h.ServeHTTP(rw, req)
 	})
 }

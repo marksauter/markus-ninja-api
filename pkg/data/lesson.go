@@ -931,6 +931,33 @@ func ParseLessonBodyForEvents(
 		oldEvents[event.TargetId.String] = struct{}{}
 	}
 
+	userAssetRefs := lesson.Body.AssetRefs()
+	if len(userAssetRefs) > 0 {
+		userAssets, err := BatchGetUserAssetByName(
+			tx,
+			lesson.StudyId.String,
+			userAssetRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, a := range userAssets {
+			if a.Id.String != lesson.Id.String {
+				newEvents[a.Id.String] = struct{}{}
+				if _, prs := oldEvents[a.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(ReferencedEvent)
+					event.TargetId.Set(&a.Id)
+					event.SourceId.Set(&lesson.Id)
+					event.UserId.Set(&lesson.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
 	lessonNumberRefs, err := lesson.Body.NumberRefs()
 	if err != nil {
 		return err

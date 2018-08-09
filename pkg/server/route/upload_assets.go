@@ -98,7 +98,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 			return
 		}
 
-		userAsset, err := data.NewUserAsset(&viewer.Id, studyId, &asset.Id, header.Filename)
+		userAsset, err := data.NewUserAsset(&viewer.Id, studyId, asset.Id.Int, header.Filename)
 		if err != nil {
 			mylog.Log.WithError(err).Error("failed to create user asset")
 			response := myhttp.InternalServerErrorResponse(err.Error())
@@ -127,7 +127,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	assetResponse := Asset{
 		ContentType: contentType,
 		Href:        href,
-		Id:          asset.Id.Short,
+		Id:          asset.Id.Int,
 		Name:        header.Filename,
 		Size:        header.Size,
 	}
@@ -140,7 +140,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 type Asset struct {
 	ContentType string `json:"content_type,omitempty"`
 	Href        string `json:"href,omitempty"`
-	Id          string `json:"id,omitempty"`
+	Id          int64  `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Size        int64  `json:"size,omitempty"`
 }

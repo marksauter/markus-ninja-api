@@ -503,6 +503,33 @@ func ParseLessonCommentBodyForEvents(
 		oldEvents[event.TargetId.String] = struct{}{}
 	}
 
+	userAssetRefs := lessonComment.Body.AssetRefs()
+	if len(userAssetRefs) > 0 {
+		userAssets, err := BatchGetUserAssetByName(
+			tx,
+			lessonComment.StudyId.String,
+			userAssetRefs,
+		)
+		if err != nil {
+			return err
+		}
+		for _, a := range userAssets {
+			if a.Id.String != lessonComment.Id.String {
+				newEvents[a.Id.String] = struct{}{}
+				if _, prs := oldEvents[a.Id.String]; !prs {
+					event := &Event{}
+					event.Action.Set(ReferencedEvent)
+					event.TargetId.Set(&a.Id)
+					event.SourceId.Set(&lessonComment.Id)
+					event.UserId.Set(&lessonComment.UserId)
+					_, err = CreateEvent(tx, event)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
 	lessonNumberRefs, err := lessonComment.Body.NumberRefs()
 	if err != nil {
 		return err

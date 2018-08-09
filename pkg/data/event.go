@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -350,7 +351,11 @@ func CreateEvent(
 	db Queryer,
 	row *Event,
 ) (*Event, error) {
-	mylog.Log.Info("CreateEvent()")
+	mylog.Log.WithFields(logrus.Fields{
+		"source": row.SourceId.Type,
+		"action": row.Action.String,
+		"target": row.TargetId.Type,
+	}).Info("CreateEvent()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -397,6 +402,8 @@ func CreateEvent(
 	}
 	var target string
 	switch row.TargetId.Type {
+	case "UserAsset":
+		target = "user_asset"
 	case "Lesson":
 		target = "lesson"
 	case "Study":
@@ -462,6 +469,7 @@ func BatchCreateEvent(
 	mylog.Log.Info("BatchCreateEvent()")
 
 	n := len(targetIds)
+	userAssetEvents := make([][]interface{}, 0, n)
 	lessonEvents := make([][]interface{}, 0, n)
 	studyEvents := make([][]interface{}, 0, n)
 	userEvents := make([][]interface{}, 0, n)
@@ -481,6 +489,8 @@ func BatchCreateEvent(
 			studyEvents = append(studyEvents, event)
 		case "User":
 			userEvents = append(userEvents, event)
+		case "UserAsset":
+			userAssetEvents = append(userAssetEvents, event)
 		default:
 			return fmt.Errorf("invalid type '%s' for event target id", targetId.Type)
 		}
@@ -505,11 +515,37 @@ func BatchCreateEvent(
 		source = "study"
 	case "User":
 		source = "user"
+	case "UserAsset":
+		source = "user_asset"
 	default:
 		return fmt.Errorf("invalid type '%s' for event source id", src.SourceId.Type)
 	}
 
-	var lessonEventCopyCount, studyEventCopyCount, userEventCopyCount int
+	var userAssetEventCopyCount, lessonEventCopyCount, studyEventCopyCount, userEventCopyCount int
+	if len(userAssetEvents) > 0 {
+		userAssetTable := strings.Join(
+			[]string{source, src.Action.String, "user_asset"},
+			"_",
+		)
+		userAssetEventCopyCount, err = tx.CopyFrom(
+			pgx.Identifier{"event", userAssetTable},
+			[]string{"event_id", "target_id", "source_id", "user_id"},
+			pgx.CopyFromRows(userAssetEvents),
+		)
+		if err != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				default:
+					return err
+				case UniqueViolation:
+					mylog.Log.Warn("events already created")
+					return nil
+				}
+			}
+			return err
+		}
+	}
+
 	if len(lessonEvents) > 0 {
 		lessonTable := strings.Join(
 			[]string{source, src.Action.String, "lesson"},
@@ -591,7 +627,7 @@ func BatchCreateEvent(
 
 	mylog.Log.WithField(
 		"n",
-		lessonEventCopyCount+studyEventCopyCount+userEventCopyCount,
+		userAssetEventCopyCount+lessonEventCopyCount+studyEventCopyCount+userEventCopyCount,
 	).Info("created events")
 
 	return nil

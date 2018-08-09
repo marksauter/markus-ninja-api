@@ -2,7 +2,8 @@
 type CommentedEvent implements 
   LessonTimelineEvent,
   NotificationEvent,
-  Node
+  Node,
+  UserAssetTimelineEvent
 {
   # The comment assocated with this `commented` event.
   comment: Comment!
