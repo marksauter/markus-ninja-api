@@ -38,7 +38,6 @@
 // input/create_lesson.gql
 // input/create_study.gql
 // input/create_user.gql
-// input/create_user_asset.gql
 // input/delete_course.gql
 // input/delete_email.gql
 // input/delete_label.gql
@@ -983,26 +982,6 @@ func inputCreate_userGql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "input/create_user.gql", size: 115, mode: os.FileMode(420), modTime: time.Unix(1531490605, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _inputCreate_user_assetGql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x52\x56\xf0\xcc\x2b\x28\x2d\x51\x28\xa9\x2c\x48\x55\x48\xcb\x2f\x52\x70\x2e\x4a\x4d\x2c\x49\x0d\x2d\x4e\x2d\x72\x2c\x2e\x4e\x2d\xd1\xe3\xca\x04\xcb\xa3\x09\x43\x34\x55\x73\x71\xd5\x72\x01\x02\x00\x00\xff\xff\xf0\xfb\x44\x13\x42\x00\x00\x00")
-
-func inputCreate_user_assetGqlBytes() ([]byte, error) {
-	return bindataRead(
-		_inputCreate_user_assetGql,
-		"input/create_user_asset.gql",
-	)
-}
-
-func inputCreate_user_assetGql() (*asset, error) {
-	bytes, err := inputCreate_user_assetGqlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "input/create_user_asset.gql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1533658790, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2342,7 +2321,7 @@ func interfaceUser_asset_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/user_asset_timeline_event.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1533777264, 0)}
+	info := bindataFileInfo{name: "interface/user_asset_timeline_event.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1533778765, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2602,7 +2581,7 @@ func typeCommented_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/commented_event.gql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1533777292, 0)}
+	info := bindataFileInfo{name: "type/commented_event.gql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1533778765, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3162,7 +3141,7 @@ func typeReferenced_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/referenced_event.gql", size: 611, mode: os.FileMode(420), modTime: time.Unix(1533777307, 0)}
+	info := bindataFileInfo{name: "type/referenced_event.gql", size: 611, mode: os.FileMode(420), modTime: time.Unix(1533778765, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3402,7 +3381,7 @@ func typeUser_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_asset.gql", size: 2077, mode: os.FileMode(420), modTime: time.Unix(1533774516, 0)}
+	info := bindataFileInfo{name: "type/user_asset.gql", size: 2077, mode: os.FileMode(420), modTime: time.Unix(1533778765, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3422,7 +3401,7 @@ func typeUser_asset_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_asset_timeline_event.gql", size: 533, mode: os.FileMode(420), modTime: time.Unix(1533777240, 0)}
+	info := bindataFileInfo{name: "type/user_asset_timeline_event.gql", size: 533, mode: os.FileMode(420), modTime: time.Unix(1533778765, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3517,7 +3496,6 @@ var _bindata = map[string]func() (*asset, error){
 	"input/create_lesson.gql": inputCreate_lessonGql,
 	"input/create_study.gql": inputCreate_studyGql,
 	"input/create_user.gql": inputCreate_userGql,
-	"input/create_user_asset.gql": inputCreate_user_assetGql,
 	"input/delete_course.gql": inputDelete_courseGql,
 	"input/delete_email.gql": inputDelete_emailGql,
 	"input/delete_label.gql": inputDelete_labelGql,
@@ -3722,7 +3700,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"create_lesson.gql": &bintree{inputCreate_lessonGql, map[string]*bintree{}},
 		"create_study.gql": &bintree{inputCreate_studyGql, map[string]*bintree{}},
 		"create_user.gql": &bintree{inputCreate_userGql, map[string]*bintree{}},
-		"create_user_asset.gql": &bintree{inputCreate_user_assetGql, map[string]*bintree{}},
 		"delete_course.gql": &bintree{inputDelete_courseGql, map[string]*bintree{}},
 		"delete_email.gql": &bintree{inputDelete_emailGql, map[string]*bintree{}},
 		"delete_label.gql": &bintree{inputDelete_labelGql, map[string]*bintree{}},
