@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -452,8 +453,13 @@ func (r *RootResolver) CreateUserAsset(
 		return nil, errors.New("viewer not found")
 	}
 
+	assetId, err := strconv.ParseInt(args.Input.AssetId, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
 	userAsset := &data.UserAsset{}
-	if err := userAsset.AssetId.Set(args.Input.AssetId); err != nil {
+	if err := userAsset.AssetId.Set(assetId); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user asset asset_id"}
 	}
 	if err := userAsset.Name.Set(args.Input.Name); err != nil {
@@ -638,12 +644,15 @@ func (r *RootResolver) DeleteLessonComment(
 		data.CommentedEvent,
 		lessonComment.LessonId.String,
 	)
-	if err != nil {
+	if err != nil && err != data.ErrNotFound {
 		return nil, err
 	}
-	eventId, err := event.ID()
-	if err != nil {
-		return nil, err
+	var eventId *mytype.OID
+	if event != nil {
+		eventId, err = event.ID()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := r.Repos.LessonComment().Delete(ctx, lessonComment); err != nil {
