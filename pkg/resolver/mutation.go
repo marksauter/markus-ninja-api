@@ -150,15 +150,15 @@ func (r *RootResolver) AddLabel(
 	}, nil
 }
 
-type AddLessonCommentInput struct {
-	Body     string
-	LessonId string
+type AddCommentInput struct {
+	Body          string
+	CommentableId string
 }
 
-func (r *RootResolver) AddLessonComment(
+func (r *RootResolver) AddComment(
 	ctx context.Context,
-	args struct{ Input AddLessonCommentInput },
-) (*addLessonCommentPayloadResolver, error) {
+	args struct{ Input AddCommentInput },
+) (*addCommentPayloadResolver, error) {
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
 		return nil, err

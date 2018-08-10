@@ -1,0 +1,8 @@
+# Input type for AddComment.
+input AddCommentInput {
+  # The text of the comment.
+  body: String!
+
+  # The Node ID of the commentable to comment on.
+  commentableId: ID!
+}

@@ -15,6 +15,10 @@ type AppleablePermit interface {
 	ID() (*mytype.OID, error)
 }
 
+type CommentPermit interface {
+	ID() (*mytype.OID, error)
+}
+
 type EnrollablePermit interface {
 	EnrolledAt() time.Time
 	ID() (*mytype.OID, error)

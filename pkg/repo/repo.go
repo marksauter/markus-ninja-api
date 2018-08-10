@@ -14,27 +14,28 @@ import (
 type key string
 
 const (
-	appledRepoKey        key = "appled"
-	assetRepoKey         key = "asset"
-	courseRepoKey        key = "course"
-	courseLessonRepoKey  key = "course_lesson"
-	emailRepoKey         key = "email"
-	enrolledRepoKey      key = "enrolled"
-	evtRepoKey           key = "evt"
-	labelRepoKey         key = "label"
-	labeledRepoKey       key = "labeled"
-	lessonRepoKey        key = "lesson"
-	lessonCommentRepoKey key = "lesson_comment"
-	notificationRepoKey  key = "notification"
-	permRepoKey          key = "perm"
-	prtRepoKey           key = "prt"
-	eventRepoKey         key = "event"
-	studyRepoKey         key = "study"
-	topicRepoKey         key = "topic"
-	topicableRepoKey     key = "topicable"
-	topicedRepoKey       key = "topiced"
-	userRepoKey          key = "user"
-	userAssetRepoKey     key = "user_asset"
+	appledRepoKey           key = "appled"
+	assetRepoKey            key = "asset"
+	courseRepoKey           key = "course"
+	courseLessonRepoKey     key = "course_lesson"
+	emailRepoKey            key = "email"
+	enrolledRepoKey         key = "enrolled"
+	evtRepoKey              key = "evt"
+	labelRepoKey            key = "label"
+	labeledRepoKey          key = "labeled"
+	lessonRepoKey           key = "lesson"
+	lessonCommentRepoKey    key = "lesson_comment"
+	notificationRepoKey     key = "notification"
+	permRepoKey             key = "perm"
+	prtRepoKey              key = "prt"
+	eventRepoKey            key = "event"
+	studyRepoKey            key = "study"
+	topicRepoKey            key = "topic"
+	topicableRepoKey        key = "topicable"
+	topicedRepoKey          key = "topiced"
+	userRepoKey             key = "user"
+	userAssetRepoKey        key = "user_asset"
+	userAssetCommentRepoKey key = "user_asset_comment"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -58,25 +59,26 @@ func NewRepos(db data.Queryer) *Repos {
 	return &Repos{
 		db: db,
 		lookup: map[key]Repo{
-			appledRepoKey:        NewAppledRepo(),
-			assetRepoKey:         NewAssetRepo(),
-			courseRepoKey:        NewCourseRepo(),
-			courseLessonRepoKey:  NewCourseLessonRepo(),
-			emailRepoKey:         NewEmailRepo(),
-			enrolledRepoKey:      NewEnrolledRepo(),
-			evtRepoKey:           NewEVTRepo(),
-			labelRepoKey:         NewLabelRepo(),
-			labeledRepoKey:       NewLabeledRepo(),
-			lessonRepoKey:        NewLessonRepo(),
-			lessonCommentRepoKey: NewLessonCommentRepo(),
-			notificationRepoKey:  NewNotificationRepo(),
-			prtRepoKey:           NewPRTRepo(),
-			eventRepoKey:         NewEventRepo(),
-			studyRepoKey:         NewStudyRepo(),
-			topicRepoKey:         NewTopicRepo(),
-			topicedRepoKey:       NewTopicedRepo(),
-			userRepoKey:          NewUserRepo(),
-			userAssetRepoKey:     NewUserAssetRepo(),
+			appledRepoKey:           NewAppledRepo(),
+			assetRepoKey:            NewAssetRepo(),
+			courseRepoKey:           NewCourseRepo(),
+			courseLessonRepoKey:     NewCourseLessonRepo(),
+			emailRepoKey:            NewEmailRepo(),
+			enrolledRepoKey:         NewEnrolledRepo(),
+			evtRepoKey:              NewEVTRepo(),
+			labelRepoKey:            NewLabelRepo(),
+			labeledRepoKey:          NewLabeledRepo(),
+			lessonRepoKey:           NewLessonRepo(),
+			lessonCommentRepoKey:    NewLessonCommentRepo(),
+			notificationRepoKey:     NewNotificationRepo(),
+			prtRepoKey:              NewPRTRepo(),
+			eventRepoKey:            NewEventRepo(),
+			studyRepoKey:            NewStudyRepo(),
+			topicRepoKey:            NewTopicRepo(),
+			topicedRepoKey:          NewTopicedRepo(),
+			userRepoKey:             NewUserRepo(),
+			userAssetRepoKey:        NewUserAssetRepo(),
+			userAssetCommentRepoKey: NewUserAssetCommentRepo(),
 		},
 	}
 }
@@ -191,6 +193,11 @@ func (r *Repos) UserAsset() *UserAssetRepo {
 	return repo
 }
 
+func (r *Repos) UserAssetComment() *UserAssetCommentRepo {
+	repo, _ := r.lookup[userAssetCommentRepoKey].(*UserAssetCommentRepo)
+	return repo
+}
+
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		permitter := NewPermitter(r)
@@ -229,6 +236,20 @@ func (r *Repos) GetCreateable(
 		return r.Study().Get(ctx, nodeId.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for createable id", nodeId.Type)
+	}
+}
+
+func (r *Repos) GetCommentable(
+	ctx context.Context,
+	commentableId *mytype.OID,
+) (NodePermit, error) {
+	switch commentableId.Type {
+	case "LessonComment":
+		return r.LessonComment().Get(ctx, commentableId.String)
+	case "UserAssetComment":
+		return r.UserAssetComment().Get(ctx, commentableId.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for commentable id", commentableId.Type)
 	}
 }
 

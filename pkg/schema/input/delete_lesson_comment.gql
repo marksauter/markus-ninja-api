@@ -1,5 +1,5 @@
-# Input type for DeleteLessonComment.
-input DeleteLessonCommentInput {
-  # ID of the lesson comment.
-  lessonCommentId: ID!
+# Input type for DeleteComment.
+input DeleteCommentInput {
+  # ID of the comment.
+  commentId: ID!
 }

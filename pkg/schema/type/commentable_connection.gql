@@ -1,0 +1,26 @@
+# An edge in a commentable connection.
+type CommentableEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Commentable
+
+  # When was the item commented in?
+  commentedAt: Time!
+}
+
+# A list of commentables.
+type CommentableConnection {
+  # A list of edges.
+  edges: [CommentableEdge]
+
+  # A list of nodes.
+  nodes: [Commentable]
+
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # The number of studies associated with the comment.
+  studyCount: Int!
+}

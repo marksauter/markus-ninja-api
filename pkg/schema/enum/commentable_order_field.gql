@@ -1,0 +1,14 @@
+# Properties by which commentable connections can be ordered.
+enum CommentableOrderField {
+  # Order commentables by comment time.
+  COMMENTED_AT
+
+  # Order commentables by creation time.
+  CREATED_AT
+
+  # Order commentables by number.
+  NUMBER
+
+  # Order commentables by update time.
+  UPDATED_AT
+}

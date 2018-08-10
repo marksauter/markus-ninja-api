@@ -1,8 +1,0 @@
-# Input type for AddLessonComment.
-input AddLessonCommentInput {
-  # The text of the comment.
-  body: String!
-
-  # The Node ID of the lesson to comment on.
-  lessonId: ID!
-}

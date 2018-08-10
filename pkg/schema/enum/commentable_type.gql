@@ -1,0 +1,8 @@
+# Represents the individual types of commentables to return.
+enum CommentableType {
+  # Returns lesson comments.
+  LESSON_COMMENT
+
+  # Returns user asset comments.
+  USER_ASSET_COMMENT
+}

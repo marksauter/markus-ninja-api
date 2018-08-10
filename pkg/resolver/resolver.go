@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -89,6 +90,22 @@ func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, er
 			return nil, errors.New("cannot convert permit to userAsset")
 		}
 		return &userAssetResolver{UserAsset: userAsset, Repos: repos}, nil
+	}
+	return nil, nil
+}
+
+func commentPermitToResolver(comment *repo.CommentPermit, repos *repo.Repos) (interface{}, error) {
+	id, err := comment.Id()
+	if err != nil {
+		return nil, err
+	}
+	switch id.Type {
+	case "LessonComment":
+		return &lessonCommentResolver{LessonComment: comment, Repos: repos}, nil
+	case "UserAssetComment":
+		return &userAssetCommentResolver{UserAssetComment: comment, Repos: repos}, nil
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for comment id", commentableId.Type)
 	}
 	return nil, nil
 }

@@ -12,7 +12,12 @@ type commentableResolver struct {
 	commentable
 }
 
-func (r *commentableResolver) ToLesson() (*lessonResolver, bool) {
-	resolver, ok := r.commentable.(*lessonResolver)
+func (r *commentableResolver) ToLessonComment() (*lessonCommentResolver, bool) {
+	resolver, ok := r.commentable.(*lessonCommentResolver)
+	return resolver, ok
+}
+
+func (r *commentableResolver) ToUserAssetComment() (*userAssetCommentResolver, bool) {
+	resolver, ok := r.commentable.(*userAssetCommentResolver)
 	return resolver, ok
 }

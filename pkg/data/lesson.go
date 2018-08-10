@@ -1002,7 +1002,7 @@ func ParseLessonBodyForEvents(
 		if err != nil {
 			return err
 		}
-		if l.Id.String != lesson.Id.String {
+		if l.StudyId.String != lesson.StudyId.String {
 			newEvents[l.Id.String] = struct{}{}
 			if _, prs := oldEvents[l.Id.String]; !prs {
 				event := &Event{}
