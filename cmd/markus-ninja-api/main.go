@@ -71,7 +71,7 @@ func main() {
 	signupHandler := route.SignupHandler{svcs.Auth, db}
 	uploadHandler := route.UploadHandler{}
 	uploadAssetsHandler := route.UploadAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
-	userAssetsHandler := route.UserAssetsHandler{svcs.Storage}
+	userAssetsHandler := route.UserAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
 
 	graphql := middleware.CommonMiddleware.Append(
 		route.GraphQLCors.Handler,
@@ -103,6 +103,8 @@ func main() {
 	).Then(uploadAssetsHandler)
 	userAssets := middleware.CommonMiddleware.Append(
 		route.UserAssetsCors.Handler,
+		authMiddleware.Use,
+		repos.Use,
 	).Then(userAssetsHandler)
 
 	r.Handle("/", index)

@@ -1,0 +1,11 @@
+# Return type for CreateUserAsset.
+type CreateUserAssetPayload {
+  # The edge from the study's user asset connection.
+  userAssetEdge: UserAssetEdge!
+
+  # The owner of the asset.
+  owner: User!
+
+  # The study in which the user asset was created.
+  study: Study!
+}

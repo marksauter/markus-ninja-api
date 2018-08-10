@@ -46,11 +46,40 @@ func NewAssetLoader() *AssetLoader {
 				return results
 			},
 		),
+		batchGetByKey: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						asset, err := data.GetAssetByKey(db, key.String())
+						results[i] = &dataloader.Result{Data: asset, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 	}
 }
 
 type AssetLoader struct {
-	batchGet *dataloader.Loader
+	batchGet      *dataloader.Loader
+	batchGetByKey *dataloader.Loader
 }
 
 func (r *AssetLoader) Clear(id string) {
@@ -60,6 +89,7 @@ func (r *AssetLoader) Clear(id string) {
 
 func (r *AssetLoader) ClearAll() {
 	r.batchGet.ClearAll()
+	r.batchGetByKey.ClearAll()
 }
 
 func (r *AssetLoader) Get(
@@ -68,6 +98,22 @@ func (r *AssetLoader) Get(
 ) (*data.Asset, error) {
 	key := strconv.Itoa(int(id))
 	assetData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
+	if err != nil {
+		return nil, err
+	}
+	asset, ok := assetData.(*data.Asset)
+	if !ok {
+		return nil, fmt.Errorf("wrong type")
+	}
+
+	return asset, nil
+}
+
+func (r *AssetLoader) GetByKey(
+	ctx context.Context,
+	key string,
+) (*data.Asset, error) {
+	assetData, err := r.batchGetByKey.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
 		return nil, err
 	}

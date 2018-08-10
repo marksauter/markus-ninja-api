@@ -95,6 +95,8 @@ type Mutation {
   createStudy(input: CreateStudyInput!): CreateStudyPayload
   # Creates a new user.
   createUser(input: CreateUserInput!): User
+  # Creates a new user asset.
+  createUserAsset(input: CreateUserAssetInput!): CreateUserAssetPayload
 
   # Deletes a course.
   deleteCourse(input: DeleteCourseInput!): DeleteCoursePayload
