@@ -1,6 +1,11 @@
 package route
 
 import (
+	"bytes"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,11 +14,18 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
+
+const (
+	MB = 1 << 20
+)
+
+type Sizer interface {
+	Size() int64
+}
 
 var UploadAssetsCors = cors.New(cors.Options{
 	AllowedHeaders: []string{"Authorization", "Content-Type"},
@@ -32,7 +44,15 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	file, header, err := req.FormFile("file")
+	if err := req.ParseMultipartForm(10 * MB); err != nil {
+		mylog.Log.WithError(err).Error("failed to parse multipart form")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	// Limit upload size
+	req.Body = http.MaxBytesReader(rw, req.Body, 10*MB)
+	file, multipartFileHeader, err := req.FormFile("file")
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get form file")
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -41,41 +61,45 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	}
 	defer file.Close()
 
-	contentType := header.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "image") {
+	// Create a buffer to store the header of the file in
+	fileHeader := make([]byte, 512)
+
+	// Copy the headers into the FileHeader buffer
+	if _, err := file.Read(fileHeader); err != nil {
+		mylog.Log.WithError(err).Error("failed to read file header")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	// Set position back to start.
+	if _, err := file.Seek(0, 0); err != nil {
+		mylog.Log.WithError(err).Error("failed to seek file to start")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	contentType := http.DetectContentType(fileHeader)
+	isImage := strings.HasPrefix(contentType, "image")
+	if !isImage {
 		mylog.Log.WithField("type", contentType).Error("attempt to upload non-image file")
 		response := myhttp.InvalidRequestErrorResponse("file is not an image")
 		myhttp.WriteResponseTo(rw, response)
 		return
+	} else {
+		types := strings.SplitN(contentType, "/", 2)
+		subtype := types[1]
+		if subtype != "png" && subtype != "jpeg" && subtype != "gif" {
+			response := myhttp.InvalidRequestErrorResponse("image files must be of type 'png', 'jpeg', or 'gif'")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
 	}
 
-	viewer, ok := myctx.UserFromContext(req.Context())
-	if !ok {
-		mylog.Log.WithError(err).Error("failed to get user from context")
-		response := myhttp.AccessDeniedErrorResponse()
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-	key, err := h.StorageSvc.Upload(&viewer.Id, file, header)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to upload file")
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
-	asset, err := data.NewAssetFromFile(&viewer.Id, key, file, header)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create asset from file")
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
-	assetPermit, err := h.Repos.Asset().Create(req.Context(), asset)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create asset")
-		response := myhttp.InternalServerErrorResponse(err.Error())
+	fileSize := file.(Sizer).Size()
+	if fileSize > 10*MB {
+		response := myhttp.InvalidRequestErrorResponse("file size must not exceed 10 MB")
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
@@ -89,31 +113,104 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 	if save {
-		formStudyId := req.FormValue("study_id")
-		studyId, err := mytype.ParseOID(formStudyId)
+		img, _, err := image.DecodeConfig(bytes.NewReader(fileHeader))
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to parse form `study_id")
-			response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+			mylog.Log.WithError(err).Error("failed to decode image file")
+			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
+		if img.Width < 400 || img.Height < 400 {
+			response := myhttp.InvalidRequestErrorResponse("saved images must be greater than 400 x 400")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+		if img.Width > 10000 || img.Height > 10000 {
+			response := myhttp.InvalidRequestErrorResponse("saved images must be less than 10000 x 10000")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+	}
 
-		userAsset, err := data.NewUserAsset(&viewer.Id, studyId, asset.Id.Int, header.Filename)
+	viewer, ok := myctx.UserFromContext(req.Context())
+	if !ok {
+		mylog.Log.WithError(err).Error("failed to get user from context")
+		response := myhttp.AccessDeniedErrorResponse()
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+	uploadResponse, err := h.StorageSvc.Upload(&viewer.Id, file, contentType, fileSize)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to upload file")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	var assetPermit *repo.AssetPermit
+	if uploadResponse.IsNewObject {
+		asset, err := data.NewAssetFromFile(
+			&viewer.Id,
+			uploadResponse.Key,
+			file,
+			multipartFileHeader.Filename,
+			contentType,
+			fileSize,
+		)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to create user asset")
+			mylog.Log.WithError(err).Error("failed to create asset from file")
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 
-		_, err = h.Repos.UserAsset().Create(req.Context(), userAsset)
+		assetPermit, err = h.Repos.Asset().Create(req.Context(), asset)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to create user asset")
+			mylog.Log.WithError(err).Error("failed to create asset")
 			response := myhttp.InternalServerErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
+	} else {
+		assetPermit, err = h.Repos.Asset().GetByKey(req.Context(), uploadResponse.Key)
+		if err != nil && err != data.ErrNotFound {
+			mylog.Log.WithError(err).Error("failed to get asset")
+			response := myhttp.InternalServerErrorResponse(err.Error())
+			myhttp.WriteResponseTo(rw, response)
+			return
+		} else if err == data.ErrNotFound {
+			mylog.Log.Info("asset not found")
+			asset, err := data.NewAssetFromFile(
+				&viewer.Id,
+				uploadResponse.Key,
+				file,
+				multipartFileHeader.Filename,
+				contentType,
+				fileSize,
+			)
+			if err != nil {
+				mylog.Log.WithError(err).Error("failed to create asset from file")
+				response := myhttp.InternalServerErrorResponse(err.Error())
+				myhttp.WriteResponseTo(rw, response)
+				return
+			}
 
+			assetPermit, err = h.Repos.Asset().Create(req.Context(), asset)
+			if err != nil {
+				mylog.Log.WithError(err).Error("failed to create asset")
+				response := myhttp.InternalServerErrorResponse(err.Error())
+				myhttp.WriteResponseTo(rw, response)
+				return
+			}
+		}
+	}
+
+	assetId, err := assetPermit.ID()
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to get asset id")
+		response := myhttp.AccessDeniedErrorResponse()
+		myhttp.WriteResponseTo(rw, response)
+		return
 	}
 
 	href, err := assetPermit.Href()
@@ -127,9 +224,9 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	assetResponse := Asset{
 		ContentType: contentType,
 		Href:        href,
-		Id:          asset.Id.Int,
-		Name:        header.Filename,
-		Size:        header.Size,
+		Id:          assetId,
+		Name:        multipartFileHeader.Filename,
+		Size:        fileSize,
 	}
 
 	response := &UploadAssetsSuccessResponse{Asset: assetResponse}

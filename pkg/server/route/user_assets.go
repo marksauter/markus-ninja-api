@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/rs/cors"
 )
@@ -19,6 +20,7 @@ var UserAssetsCors = cors.New(cors.Options{
 })
 
 type UserAssetsHandler struct {
+	Repos      *repo.Repos
 	StorageSvc *service.StorageService
 }
 
@@ -41,7 +43,24 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	}
 
 	key := routeVars["key"]
-	asset, err := h.StorageSvc.Get(uid, key)
+
+	assetPermit, err := h.Repos.Asset().GetByKey(req.Context(), key)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to get asset")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	contentType, err := assetPermit.ContentType()
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to get asset content type")
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
+	asset, err := h.StorageSvc.Get(contentType, uid, key)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get file")
 		response := myhttp.InternalServerErrorResponse(err.Error())

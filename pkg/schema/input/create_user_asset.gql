@@ -1,0 +1,11 @@
+# Input type for CreateUserAsset.
+input CreateUserAssetInput {
+  # The ID of the asset.
+  assetId: ID!
+
+  # The name of the asset.
+  name: String!
+
+  # The ID of the study.
+  studyId: ID!
+}

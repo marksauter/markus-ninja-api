@@ -437,6 +437,48 @@ func (r *RootResolver) CreateUser(
 	return &userResolver{User: userPermit, Repos: r.Repos}, nil
 }
 
+type CreateUserAssetInput struct {
+	AssetId string
+	Name    string
+	StudyId string
+}
+
+func (r *RootResolver) CreateUserAsset(
+	ctx context.Context,
+	args struct{ Input CreateUserAssetInput },
+) (*createUserAssetPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	userAsset := &data.UserAsset{}
+	if err := userAsset.AssetId.Set(args.Input.AssetId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user asset asset_id"}
+	}
+	if err := userAsset.Name.Set(args.Input.Name); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user asset name"}
+	}
+	if err := userAsset.StudyId.Set(args.Input.StudyId); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user asset study_id"}
+	}
+	if err := userAsset.UserId.Set(&viewer.Id); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user asset user_id"}
+	}
+
+	userAssetPermit, err := r.Repos.UserAsset().Create(ctx, userAsset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createUserAssetPayloadResolver{
+		UserAsset: userAssetPermit,
+		StudyId:   &userAsset.StudyId,
+		UserId:    &userAsset.UserId,
+		Repos:     r.Repos,
+	}, nil
+}
+
 type DeleteEmailInput struct {
 	EmailId string
 }

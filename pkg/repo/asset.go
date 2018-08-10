@@ -38,6 +38,18 @@ func (r *AssetPermit) CreatedAt() (time.Time, error) {
 	return r.asset.CreatedAt.Time, nil
 }
 
+func (r *AssetPermit) ContentType() (string, error) {
+	assetType, err := r.Type()
+	if err != nil {
+		return "", err
+	}
+	assetSubtype, err := r.Subtype()
+	if err != nil {
+		return "", err
+	}
+	return assetType + "/" + assetSubtype, nil
+}
+
 func (r *AssetPermit) Href() (string, error) {
 	key, err := r.Key()
 	if err != nil {
@@ -184,6 +196,24 @@ func (r *AssetRepo) Get(
 		return nil, err
 	}
 	asset, err := r.load.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, asset)
+	if err != nil {
+		return nil, err
+	}
+	return &AssetPermit{fieldPermFn, asset}, nil
+}
+
+func (r *AssetRepo) GetByKey(
+	ctx context.Context,
+	key string,
+) (*AssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	asset, err := r.load.GetByKey(ctx, key)
 	if err != nil {
 		return nil, err
 	}

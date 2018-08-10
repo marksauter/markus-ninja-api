@@ -4,9 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"mime"
 	"mime/multipart"
-	"path/filepath"
 	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
@@ -42,10 +40,12 @@ func NewStorageService() (*StorageService, error) {
 }
 
 func (s *StorageService) Get(
+	contentType string,
 	userId *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
 	mylog.Log.WithField("key", key).Info("StorageService.Get()")
+
 	objectName := fmt.Sprintf(
 		"%s/%s/%s/%s",
 		key[:2],
@@ -53,8 +53,14 @@ func (s *StorageService) Get(
 		key[6:8],
 		key[9:],
 	)
-	contentType := mime.TypeByExtension(filepath.Ext(objectName))
-	objectPath := strings.Join([]string{contentType, userId.Short, objectName}, "/")
+	objectPath := strings.Join(
+		[]string{
+			contentType,
+			userId.Short,
+			objectName,
+		},
+		"/",
+	)
 
 	mylog.Log.Info("found object")
 
@@ -65,26 +71,29 @@ func (s *StorageService) Get(
 	)
 }
 
+type UploadResponse struct {
+	Key         string
+	IsNewObject bool
+}
+
 func (s *StorageService) Upload(
 	userId *mytype.OID,
 	file multipart.File,
-	header *multipart.FileHeader,
-) (key string, err error) {
-	mylog.Log.WithField("name", header.Filename).Info("StorageService.Upload()")
+	contentType string,
+	size int64,
+) (*UploadResponse, error) {
+	mylog.Log.Info("StorageService.Upload()")
 	// Hash of the file contents to be used as the s3 object 'key'.
 	hash := sha1.New()
 	io.Copy(hash, file)
-	hashHex := fmt.Sprintf("%x", hash.Sum(nil))
+	key := fmt.Sprintf("%x", hash.Sum(nil))
 
-	contentType := header.Header.Get("Content-Type")
-	ext := filepath.Ext(header.Filename)
 	objectName := fmt.Sprintf(
-		"%s/%s/%s/%s%s",
-		hashHex[:2],
-		hashHex[3:5],
-		hashHex[6:8],
-		hashHex[9:],
-		ext,
+		"%s/%s/%s/%s",
+		key[:2],
+		key[3:5],
+		key[6:8],
+		key[9:],
 	)
 	objectPath := strings.Join([]string{
 		contentType,
@@ -92,20 +101,39 @@ func (s *StorageService) Upload(
 		objectName,
 	}, "/")
 
-	n, err := s.svc.PutObject(
+	_, err := s.svc.StatObject(
 		s.bucket,
 		objectPath,
-		file,
-		header.Size,
-		minio.PutObjectOptions{ContentType: contentType},
+		minio.StatObjectOptions{},
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to put object")
-		return
+		minioError := minio.ToErrorResponse(err)
+		if minioError.Code != "NoSuchKey" {
+			return nil, err
+		} else {
+			n, err := s.svc.PutObject(
+				s.bucket,
+				objectPath,
+				file,
+				size,
+				minio.PutObjectOptions{ContentType: contentType},
+			)
+			if err != nil {
+				mylog.Log.WithError(err).Error("failed to put object")
+				return nil, err
+			}
+
+			mylog.Log.WithField("size", n).Info("Successfully uploaded file")
+
+			return &UploadResponse{
+				Key:         key,
+				IsNewObject: true,
+			}, nil
+		}
 	}
 
-	mylog.Log.WithField("size", n).Info("Successfully uploaded file")
-
-	key = hashHex + ext
-	return
+	return &UploadResponse{
+		Key:         key,
+		IsNewObject: false,
+	}, nil
 }

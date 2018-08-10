@@ -28,3 +28,14 @@ func (r *removeCourseLessonPayloadResolver) Course(
 func (r *removeCourseLessonPayloadResolver) RemovedLessonId() graphql.ID {
 	return graphql.ID(r.LessonId.String)
 }
+
+func (r *removeCourseLessonPayloadResolver) RemovedLessonEdge(
+	ctx context.Context,
+) (*lessonEdgeResolver, error) {
+	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonId.String)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewLessonEdgeResolver(lesson, r.Repos)
+}

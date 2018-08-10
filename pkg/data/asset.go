@@ -25,19 +25,20 @@ func NewAssetFromFile(
 	userId *mytype.OID,
 	storageKey string,
 	file multipart.File,
-	header *multipart.FileHeader,
+	name,
+	contentType string,
+	size int64,
 ) (*Asset, error) {
-	contentType := header.Header.Get("Content-Type")
 	types := strings.SplitN(contentType, "/", 2)
 
 	asset := &Asset{}
 	if err := asset.Key.Set(storageKey); err != nil {
 		return nil, err
 	}
-	if err := asset.Name.Set(header.Filename); err != nil {
+	if err := asset.Name.Set(name); err != nil {
 		return nil, err
 	}
-	if err := asset.Size.Set(header.Size); err != nil {
+	if err := asset.Size.Set(size); err != nil {
 		return nil, err
 	}
 	if err := asset.Subtype.Set(types[1]); err != nil {
@@ -100,6 +101,28 @@ func GetAsset(
 ) (*Asset, error) {
 	mylog.Log.WithField("id", id).Info("GetAsset(id)")
 	return getAsset(db, "getAssetById", getAssetByIdSQL, id)
+}
+
+const getAssetByKeySQL = `
+	SELECT
+		created_at,
+		id,
+		key,
+		name,
+		size,
+		subtype,
+		type,
+		user_id
+	FROM asset
+	WHERE key = $1
+`
+
+func GetAssetByKey(
+	db Queryer,
+	key string,
+) (*Asset, error) {
+	mylog.Log.WithField("key", key).Info("GetAssetByKey(key)")
+	return getAsset(db, "getAssetByKey", getAssetByKeySQL, key)
 }
 
 func CreateAsset(
