@@ -801,6 +801,13 @@ func (r *RootResolver) GiveApple(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	appled := &data.Appled{}
 	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
@@ -809,7 +816,7 @@ func (r *RootResolver) GiveApple(
 	if err := appled.UserId.Set(&viewer.Id); err != nil {
 		return nil, errors.New("invalid appleable user_id")
 	}
-	_, err := r.Repos.Appled().Connect(ctx, appled)
+	_, err = r.Repos.Appled().Connect(ctx, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -825,6 +832,14 @@ func (r *RootResolver) GiveApple(
 	if !ok {
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &appleableResolver{appleable}, nil
 }
 
@@ -1076,16 +1091,14 @@ func (r *RootResolver) RequestEmailVerification(
 		return nil, err
 	}
 
-	resolver := &evtResolver{EVT: evtPermit, Repos: r.Repos}
-
 	if newTx {
 		err := data.CommitTransaction(tx)
 		if err != nil {
-			return resolver, err
+			return nil, err
 		}
 	}
 
-	return resolver, nil
+	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
 }
 
 type RequestPasswordResetInput struct {
@@ -1260,6 +1273,13 @@ func (r *RootResolver) TakeApple(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	appled := &data.Appled{}
 	if err := appled.AppleableId.Set(args.Input.AppleableId); err != nil {
@@ -1268,7 +1288,7 @@ func (r *RootResolver) TakeApple(
 	if err := appled.UserId.Set(&viewer.Id); err != nil {
 		return nil, errors.New("invalid appleable user_id")
 	}
-	err := r.Repos.Appled().Disconnect(ctx, appled)
+	err = r.Repos.Appled().Disconnect(ctx, appled)
 	if err != nil {
 		return nil, err
 	}
@@ -1284,6 +1304,14 @@ func (r *RootResolver) TakeApple(
 	if !ok {
 		return nil, errors.New("cannot convert resolver to appleable")
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &appleableResolver{appleable}, nil
 }
 
