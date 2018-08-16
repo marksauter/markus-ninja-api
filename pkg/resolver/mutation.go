@@ -889,6 +889,20 @@ func (r *RootResolver) LoginUser(
 	}, nil
 }
 
+func (r *RootResolver) LogoutUser(
+	ctx context.Context,
+) (*logoutUserPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	return &logoutUserPayloadResolver{
+		UserId: &viewer.Id,
+		Repos:  r.Repos,
+	}, nil
+}
+
 type MarkNotificationAsReadInput struct {
 	NotificationId string
 }

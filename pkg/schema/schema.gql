@@ -120,6 +120,8 @@ type Mutation {
 
   # Returns a token for use in authentication.
   loginUser(input: LoginUserInput!): LoginUserPayload
+  # Returns the ID of the user that logged out.
+  logoutUser: LogoutUserPayload
 
   # Mark notification as read.
   markNotificationAsRead(input: MarkNotificationAsReadInput!): ID

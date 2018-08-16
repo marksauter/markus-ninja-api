@@ -1,0 +1,5 @@
+# Return type for LogoutUser.
+type LogoutUserPayload {
+  # The ID of the user that logged out.
+  loggedOutUserId: ID!
+}
