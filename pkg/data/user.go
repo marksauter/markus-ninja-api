@@ -55,7 +55,7 @@ func CountUserByAppleable(
 const countUserByEnrollableSQL = `
 	SELECT COUNT(*)
 	FROM enrolled
-	WHERE enrollable_id = $1
+	WHERE enrollable_id = $1 AND status = 'ENROLLED'
 `
 
 func CountUserByEnrollable(
