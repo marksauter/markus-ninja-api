@@ -253,7 +253,7 @@ func GetEvent(
 }
 
 const getEventBySourceActionTargetSQL = `
-	SELECT
+	SELECT DISTINCT ON (source_id, action, target_id)
 		action,
 		created_at,
 		id,

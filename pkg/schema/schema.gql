@@ -11,6 +11,26 @@ type Query {
     study: String!
   ): UserAsset
 
+  # events(
+  #   # Returns the elements in the list that come after the specified global ID.
+  #   after: String
+  #
+  #   # Returns the elements in the list that come before the specified global ID.
+  #   before: String
+  #
+  #   # Returns the first n elements form the list.
+  #   first: Int
+  #
+  #   # Returns the last n elements form the list.
+  #   last: Int
+  #
+  #   # Ordering options for items returned from the connection.
+  #   orderBy: EventOrder
+  #
+  #   # The ID of the node to search within.
+  #   within: ID
+  # ): EventConnection!
+
   # Lookup node by ID.
   node(
     # The ID of the node.

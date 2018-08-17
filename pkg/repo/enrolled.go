@@ -104,25 +104,27 @@ func (r *EnrolledRepo) CheckConnection() error {
 func (r *EnrolledRepo) CountByEnrollable(
 	ctx context.Context,
 	enrollableId string,
+	opts ...data.EnrolledFilterOption,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEnrolledByEnrollable(db, enrollableId)
+	return data.CountEnrolledByEnrollable(db, enrollableId, opts...)
 }
 
 func (r *EnrolledRepo) CountByUser(
 	ctx context.Context,
 	userId string,
+	opts ...data.EnrolledFilterOption,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEnrolledByUser(db, userId)
+	return data.CountEnrolledByUser(db, userId, opts...)
 }
 
 func (r *EnrolledRepo) Connect(
@@ -186,6 +188,7 @@ func (r *EnrolledRepo) GetByEnrollable(
 	ctx context.Context,
 	enrollableId string,
 	po *data.PageOptions,
+	opts ...data.EnrolledFilterOption,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -194,7 +197,7 @@ func (r *EnrolledRepo) GetByEnrollable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	enrolleds, err := data.GetEnrolledByEnrollable(db, enrollableId, po)
+	enrolleds, err := data.GetEnrolledByEnrollable(db, enrollableId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +218,7 @@ func (r *EnrolledRepo) GetByUser(
 	ctx context.Context,
 	userId string,
 	po *data.PageOptions,
+	opts ...data.EnrolledFilterOption,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -223,7 +227,7 @@ func (r *EnrolledRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	enrolleds, err := data.GetEnrolledByUser(db, userId, po)
+	enrolleds, err := data.GetEnrolledByUser(db, userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}

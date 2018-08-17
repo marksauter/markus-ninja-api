@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/sirupsen/logrus"
 )
 
 type Enrolled struct {
@@ -19,6 +20,21 @@ type Enrolled struct {
 	UserId       mytype.OID              `db:"user_id" permit:"read"`
 }
 
+type EnrolledFilterOption int
+
+const (
+	EnrolledIsEnrolled EnrolledFilterOption = iota
+)
+
+func (src EnrolledFilterOption) String() string {
+	switch src {
+	case EnrolledIsEnrolled:
+		return "status IS NOT 'UNENROLLED'"
+	default:
+		return ""
+	}
+}
+
 const countEnrolledByUserSQL = `
 	SELECT COUNT(*)
 	FROM enrolled
@@ -28,15 +44,20 @@ const countEnrolledByUserSQL = `
 func CountEnrolledByUser(
 	db Queryer,
 	userId string,
+	opts ...EnrolledFilterOption,
 ) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountEnrolledByUser()")
 
-	err = prepareQueryRow(
-		db,
-		"countEnrolledByUser",
-		countEnrolledByUserSQL,
-		userId,
-	).Scan(&n)
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	sqlParts := append([]string{countEnrolledByUserSQL}, ands...)
+	sql := strings.Join(sqlParts, " AND enrolled.")
+
+	psName := preparedName("countEnrolledByUser", sql)
+
+	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -52,15 +73,20 @@ const countEnrolledByEnrollableSQL = `
 func CountEnrolledByEnrollable(
 	db Queryer,
 	enrollableId string,
+	opts ...EnrolledFilterOption,
 ) (n int32, err error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("CountEnrolledByEnrollable()")
 
-	err = prepareQueryRow(
-		db,
-		"countEnrolledByEnrollable",
-		countEnrolledByEnrollableSQL,
-		enrollableId,
-	).Scan(&n)
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	sqlParts := append([]string{countEnrolledByEnrollableSQL}, ands...)
+	sql := strings.Join(sqlParts, " AND enrolled.")
+
+	psName := preparedName("CountEnrolledByEnrollable", sql)
+
+	err = prepareQueryRow(db, psName, sql, enrollableId).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -159,7 +185,6 @@ const getEnrolledByEnrollableAndUserSQL = `
 		user_id
 	FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
-		AND status = 'ENROLLED'
 `
 
 func GetEnrolledByEnrollableAndUser(
@@ -167,7 +192,10 @@ func GetEnrolledByEnrollableAndUser(
 	enrollableId,
 	userId string,
 ) (*Enrolled, error) {
-	mylog.Log.Info("GetEnrolledByEnrollableAndUser()")
+	mylog.Log.WithFields(logrus.Fields{
+		"enrollable_id": enrollableId,
+		"user_id":       userId,
+	}).Info("GetEnrolledByEnrollableAndUser(enrollable_id, user_id)")
 	return getEnrolled(
 		db,
 		"getEnrolledByEnrollableAndUser",
@@ -181,10 +209,18 @@ func GetEnrolledByUser(
 	db Queryer,
 	userId string,
 	po *PageOptions,
+	opts ...EnrolledFilterOption,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("user_id", userId).Info("GetEnrolledByUser(user_id)")
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := append(
+		[]string{`user_id = ` + args.Append(userId)},
+		ands...,
+	)
 
 	selects := []string{
 		"created_at",
@@ -206,13 +242,18 @@ func GetEnrolledByEnrollable(
 	db Queryer,
 	enrollableId string,
 	po *PageOptions,
+	opts ...EnrolledFilterOption,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("GetEnrolledByEnrollable(enrollable_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{
-		`enrollable_id = ` + args.Append(enrollableId),
-		`status = 'ENROLLED'`,
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
 	}
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := append(
+		[]string{`enrollable_id = ` + args.Append(enrollableId)},
+		ands...,
+	)
 
 	selects := []string{
 		"created_at",

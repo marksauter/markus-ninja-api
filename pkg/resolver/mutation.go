@@ -1438,6 +1438,13 @@ func (r *RootResolver) UpdateEnrollment(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
 	enrolled := &data.Enrolled{}
 	if err := enrolled.EnrollableId.Set(args.Input.EnrollableId); err != nil {
@@ -1449,8 +1456,7 @@ func (r *RootResolver) UpdateEnrollment(
 	if err := enrolled.Status.Set(args.Input.Status); err != nil {
 		return nil, errors.New("invalid enrolled status")
 	}
-	_, err := r.Repos.Enrolled().Pull(ctx, enrolled)
-	if err != nil {
+	if _, err := r.Repos.Enrolled().Pull(ctx, enrolled); err != nil {
 		if err != data.ErrNotFound {
 			return nil, err
 		}
@@ -1479,6 +1485,14 @@ func (r *RootResolver) UpdateEnrollment(
 	if !ok {
 		return nil, errors.New("cannot convert resolver to enrollable")
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &enrollableResolver{enrollable}, nil
 }
 
