@@ -235,9 +235,12 @@ func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
 	return joins
 }
 
-func (p *PageOptions) whereAnds(as string) []string {
+func (p *PageOptions) whereAnds(from string) []string {
 	var whereAnds []string
 	field := p.Order.Field()
+	if field == "best_match" {
+		field = "created_at"
+	}
 	if p.After != nil {
 		relation := ""
 		switch p.Order.Direction() {
@@ -248,7 +251,7 @@ func (p *PageOptions) whereAnds(as string) []string {
 		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
 			"AND %[1]s.%[2]s %[3]s %[1]s2.%[2]s",
-			as,
+			from,
 			field,
 			relation,
 		))
@@ -263,12 +266,20 @@ func (p *PageOptions) whereAnds(as string) []string {
 		}
 		whereAnds = append(whereAnds, fmt.Sprintf(
 			"AND %[1]s.%[2]s %[3]s %[1]s3.%[2]s",
-			as,
+			from,
 			field,
 			relation,
 		))
 	}
 	return whereAnds
+}
+
+func (p *PageOptions) orderBy(from string) string {
+	field := p.Order.Field()
+	if field == "best_match" {
+		field = "created_at"
+	}
+	return fmt.Sprintf("ORDER BY %s.%s %s", from, field, p.QueryDirection())
 }
 
 func SQL(
@@ -285,8 +296,7 @@ func SQL(
 		joins = po.joins(from, fromAlias, args)
 		whereAnds = po.whereAnds(fromAlias)
 		limit = "LIMIT " + args.Append(po.Limit())
-		orderBy = "ORDER BY " +
-			fromAlias + "." + po.Order.Field() + " " + po.QueryDirection()
+		orderBy = po.orderBy(fromAlias)
 	}
 	selectsCopy := make([]string, len(selects))
 	for i, s := range selects {
@@ -357,15 +367,11 @@ func SearchSQL(
 		joins = po.joins(from, fromAlias, args)
 		whereAnds = po.whereAnds(fromAlias)
 		limit = "LIMIT " + args.Append(po.Limit())
-
-		field := po.Order.Field()
-		if field != "best_match" {
-			orderBy = fromAlias + "." + field
+		if po.Order.Field() == "best_match" && query != "*" {
+			orderBy = fmt.Sprintf("ORDER BY ts_rank(%s.%s, %s)", fromAlias, vector, queryAlias)
 		} else {
-			orderBy = "ts_rank(" + vector + ", " + queryAlias + ")"
+			orderBy = po.orderBy(fromAlias)
 		}
-
-		orderBy = "ORDER BY " + orderBy + " " + po.QueryDirection()
 	}
 	if within != nil {
 		andIn := fmt.Sprintf(
@@ -377,14 +383,18 @@ func SearchSQL(
 		whereAnds = append(whereAnds, andIn)
 	}
 
+	for i, s := range selects {
+		selects[i] = fromAlias + "." + s
+	}
+
 	sql := `
 		SELECT 
-		` + strings.Join(selects, ",") + `
+			` + strings.Join(selects, ",\n\t\t\t") + `
 		FROM ` + from + ` AS ` + fromAlias + `,
 			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
 		` + strings.Join(joins, " ") + `
 		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
-			ELSE ` + vector + ` @@ ` + queryAlias + ` END
+			ELSE ` + fromAlias + `.` + vector + ` @@ ` + queryAlias + ` END
 		` + strings.Join(whereAnds, " ") + `
 		` + orderBy + `
 		` + limit
@@ -395,10 +405,14 @@ func SearchSQL(
 // Then, we can reorder the items to the originally requested direction.
 func ReorderQuery(po *PageOptions, query string) string {
 	if po != nil && po.Last != 0 {
+		field := po.Order.Field()
+		if field == "best_match" {
+			field = "created_at"
+		}
 		return fmt.Sprintf(
 			`SELECT * FROM (%s) reorder_last_query ORDER BY %s %s`,
 			query,
-			po.Order.Field(),
+			field,
 			po.Order.Direction(),
 		)
 	}
