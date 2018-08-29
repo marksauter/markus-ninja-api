@@ -440,21 +440,6 @@ func CreateNotificationsFromEvent(
 		if err != nil {
 			return err
 		}
-	case "User":
-		if event.Action.String != CreatedEvent && event.TargetId.Type != "Study" {
-			mylog.Log.Debugf(
-				"will not notify users when a %s %s %s",
-				event.SourceId.Type,
-				event.Action.String,
-				event.TargetId.Type,
-			)
-			return nil
-		}
-		row.StudyId.Set(&event.TargetId)
-		enrolleds, err = GetEnrolledByEnrollable(tx, event.SourceId.String, nil)
-		if err != nil {
-			return err
-		}
 	default:
 		mylog.Log.Debugf(
 			"will not notify users when a %s %s %s",
