@@ -495,7 +495,13 @@ func ParseLessonCommentBodyForEvents(
 
 	newEvents := make(map[string]struct{})
 	oldEvents := make(map[string]struct{})
-	events, err := GetEventBySource(tx, lessonComment.Id.String, nil)
+	events, err := GetEventBySource(
+		tx,
+		lessonComment.Id.String,
+		nil,
+		GetMentionEvents,
+		GetReferenceEvents,
+	)
 	if err != nil {
 		return err
 	}

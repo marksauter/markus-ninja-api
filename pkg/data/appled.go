@@ -263,15 +263,6 @@ func CreateAppled(
 		return nil, err
 	}
 
-	// e, err := NewEvent(AppledEvent, &row.UserId, &row.AppleableId, &row.UserId)
-	// if err != nil {
-	//   return nil, err
-	// }
-	// _, err = CreateEvent(tx, e)
-	// if err != nil {
-	//   return nil, err
-	// }
-
 	appled, err := GetAppledByAppleableAndUser(
 		tx,
 		row.AppleableId.String,

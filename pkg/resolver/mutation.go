@@ -339,6 +339,20 @@ func (r *RootResolver) CreateLesson(
 	if err != nil {
 		return nil, err
 	}
+	lesson = lessonPermit.Get()
+
+	event, err := data.NewEvent(
+		data.CreatedEvent,
+		&lesson.StudyId,
+		&lesson.Id,
+		&lesson.UserId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		return nil, err
+	}
 
 	if args.Input.CourseId != nil {
 		courseLesson := &data.CourseLesson{}
@@ -378,6 +392,14 @@ func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
 ) (*createStudyPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -400,6 +422,27 @@ func (r *RootResolver) CreateStudy(
 	studyPermit, err := r.Repos.Study().Create(ctx, study)
 	if err != nil {
 		return nil, err
+	}
+	study = studyPermit.Get()
+
+	event, err := data.NewEvent(
+		data.CreatedEvent,
+		&study.UserId,
+		&study.Id,
+		&study.UserId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &createStudyPayloadResolver{
@@ -820,17 +863,26 @@ func (r *RootResolver) GiveApple(
 	if err != nil {
 		return nil, err
 	}
-	permit, err := r.Repos.GetAppleable(ctx, &appled.AppleableId)
+	appleablePermit, err := r.Repos.GetAppleable(ctx, &appled.AppleableId)
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	appleableId, err := appleablePermit.ID()
 	if err != nil {
 		return nil, err
 	}
-	appleable, ok := resolver.(appleable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to appleable")
+
+	event, err := data.NewEvent(
+		data.AppledEvent,
+		&viewer.Id,
+		appleableId,
+		&viewer.Id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		return nil, err
 	}
 
 	if newTx {
@@ -840,6 +892,14 @@ func (r *RootResolver) GiveApple(
 		}
 	}
 
+	resolver, err := nodePermitToResolver(appleablePermit, r.Repos)
+	if err != nil {
+		return nil, err
+	}
+	appleable, ok := resolver.(appleable)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to appleable")
+	}
 	return &appleableResolver{appleable}, nil
 }
 
