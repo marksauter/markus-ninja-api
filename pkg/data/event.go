@@ -8,40 +8,47 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	AppledEvent     = "appled"
-	CreatedEvent    = "created"
-	CommentedEvent  = "commented"
-	DeletedEvent    = "deleted"
-	DismissedEvent  = "dismissed"
-	EnrolledEvent   = "enrolled"
-	MentionedEvent  = "mentioned"
-	ReferencedEvent = "referenced"
+	CourseEvent           = "CourseEvent"
+	LessonCommentEvent    = "LessonCommentEvent"
+	LessonEvent           = "LessonEvent"
+	PublicEvent           = "PublicEvent"
+	UserAssetCommentEvent = "UserAssetCommentEvent"
+	UserAssetEvent        = "UserAssetEvent"
+	StudyEvent            = "StudyEvent"
+	AppledEvent           = "appled"
+	CreatedEvent          = "created"
+	CommentedEvent        = "commented"
+	DeletedEvent          = "deleted"
+	DismissedEvent        = "dismissed"
+	EnrolledEvent         = "enrolled"
+	MentionedEvent        = "mentioned"
+	ReferencedEvent       = "referenced"
 )
 
 type Event struct {
-	Action    pgtype.Text        `db:"action" permit:"read"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id        mytype.OID         `db:"id" permit:"read"`
-	SourceId  mytype.OID         `db:"source_id" permit:"create/read"`
-	TargetId  mytype.OID         `db:"target_id" permit:"create/read"`
+	Payload   pgtype.JSONB       `db:"payload" permit: "read"`
+	Public    pgtype.Bool        `db:"public" permit:"read"`
+	StudyId   mytype.OID         `db:"study_id" permit:"create/read"`
+	Type      pgtype.Varchar     `db:"type" permit:"read"`
 	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func NewEvent(action string, sourceId, targetId, userId *mytype.OID) (*Event, error) {
+func NewEvent(eventType string, public bool, studyId, userId *mytype.OID) (*Event, error) {
 	e := &Event{}
-	err := e.Action.Set(action)
+	err := e.Action.Set(eventType)
 	if err != nil {
 		return nil, err
 	}
-	err = e.SourceId.Set(sourceId)
+	err = e.Public.Set(public)
 	if err != nil {
 		return nil, err
 	}
-	err = e.TargetId.Set(targetId)
+	err = e.StudyId.Set(studyId)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +70,7 @@ const (
 	FilterEnrollEvents
 	FilterMentionEvents
 	FilterReferenceEvents
+	FilterPublicEvents
 	GetAppleEvents
 	GetCreateEvents
 	GetCommentEvents
@@ -91,6 +99,8 @@ func (src EventFilterOption) String() string {
 		return `action != '` + MentionedEvent + `'`
 	case FilterReferenceEvents:
 		return `action != '` + ReferencedEvent + `'`
+	case FilterPublicEvents:
+		return `public != true`
 	case GetAppleEvents:
 		return `action = '` + AppledEvent + `'`
 	case GetCreateEvents:
@@ -114,7 +124,7 @@ func (src EventFilterOption) String() string {
 
 const countEventBySourceSQL = `
 	SELECT COUNT(*)
-	FROM event.event
+	FROM event_master
 	WHERE source_id = $1
 `
 
@@ -130,7 +140,7 @@ func CountEventBySource(
 		ands[i] = o.String()
 	}
 	sqlParts := append([]string{countEventBySourceSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND event.event.")
+	sql := strings.Join(sqlParts, " AND event_master.")
 
 	psName := preparedName("countEventBySource", sql)
 
@@ -143,7 +153,7 @@ func CountEventBySource(
 
 const countEventByTargetSQL = `
 	SELECT COUNT(*)
-	FROM event.event
+	FROM event_master
 	WHERE target_id = $1
 `
 
@@ -159,7 +169,7 @@ func CountEventByTarget(
 		ands[i] = o.String()
 	}
 	sqlParts := append([]string{countEventByTargetSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND event.event.")
+	sql := strings.Join(sqlParts, " AND event_master.")
 
 	psName := preparedName("countEventByTarget", sql)
 
@@ -178,11 +188,12 @@ func getEvent(
 ) (*Event, error) {
 	var row Event
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.Action,
 		&row.CreatedAt,
 		&row.Id,
-		&row.SourceId,
-		&row.TargetId,
+		&row.Payload,
+		&row.Public,
+		&row.StudyId,
+		&row.Type,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -212,11 +223,12 @@ func getManyEvent(
 	for dbRows.Next() {
 		var row Event
 		dbRows.Scan(
-			&row.Action,
 			&row.CreatedAt,
 			&row.Id,
-			&row.SourceId,
-			&row.TargetId,
+			&row.Payload,
+			&row.Public,
+			&row.StudyId,
+			&row.Type,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -234,13 +246,14 @@ func getManyEvent(
 
 const getEventSQL = `
 	SELECT
-		action,
 		created_at,
 		id,
-		source_id,
-		target_id,
+		payload,
+		public,
+		study_id,
+		type,
 		user_id
-	FROM event.event
+	FROM event_master
 	WHERE id = $1
 `
 
@@ -252,97 +265,142 @@ func GetEvent(
 	return getEvent(db, "getEvent", getEventSQL, id)
 }
 
-const getEventBySourceActionTargetSQL = `
-	SELECT DISTINCT ON (source_id, action, target_id)
-		action,
-		created_at,
-		id,
-		source_id,
-		target_id,
-		user_id
-	FROM event.event
-	WHERE source_id = $1 AND action = $2 AND target_id = $3
-`
-
-func GetEventBySourceActionTarget(
+func GetEventByStudy(
 	db Queryer,
-	sourceId,
-	action,
-	targetId string,
-) (*Event, error) {
-	mylog.Log.Info("GetEventBySourceActionTarget()")
-	return getEvent(
-		db,
-		"getEventBySourceActionTarget",
-		getEventBySourceActionTargetSQL,
-		sourceId,
-		action,
-		targetId,
-	)
-}
-
-func GetEventBySource(
-	db Queryer,
-	sourceId string,
+	studyId string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("source_id", sourceId).Info("GetEventBySource(source_id)")
+	mylog.Log.WithField("study_id", studyId).Info("GetEventByStudy(study_id)")
 	ands := make([]string, len(opts))
 	for i, o := range opts {
 		ands[i] = o.String()
 	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := append(
-		[]string{`source_id = ` + args.Append(sourceId)},
+		[]string{`study_id = ` + args.Append(studyId)},
 		ands...,
 	)
 
 	selects := []string{
-		"action",
 		"created_at",
 		"id",
-		"source_id",
-		"target_id",
+		"payload",
+		"public",
+		"study_id",
+		"type",
 		"user_id",
 	}
-	from := "event.event"
+	from := "event_master"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getEventsBySource", sql)
+	psName := preparedName("getEventsByStudy", sql)
 
 	return getManyEvent(db, psName, sql, args...)
 }
 
-func GetEventByTarget(
+func GetLessonEvent(
 	db Queryer,
-	targetId string,
+	studyId,
+	lessonId string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("target_id", targetId).Info("GetEventByTarget(target_id)")
+	mylog.Log.WithField("lesson_id", lessonId, "study_id", studyId).Info("GetLessonEvent(lesson_id, study_id)")
 	ands := make([]string, len(opts))
 	for i, o := range opts {
 		ands[i] = o.String()
 	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := append(
-		[]string{`target_id = ` + args.Append(targetId)},
+		[]string{
+			`study_id = ` + args.Append(studyId),
+			`lesson_id = ` + args.Append(lessonId),
+		},
 		ands...,
 	)
 
 	selects := []string{
-		"action",
 		"created_at",
 		"id",
-		"source_id",
-		"target_id",
+		"payload",
+		"public",
+		"study_id",
+		"type",
 		"user_id",
 	}
-	from := "event.event"
+	from := "event_master"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getEventsByTarget", sql)
+	psName := preparedName("getLessonEvents", sql)
+
+	return getManyEvent(db, psName, sql, args...)
+}
+
+func GetEventByUser(
+	db Queryer,
+	userId string,
+	po *PageOptions,
+	opts ...EventFilterOption,
+) ([]*Event, error) {
+	mylog.Log.WithField("user_id", userId).Info("GetEventByUser(user_id)")
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := append(
+		[]string{`user_id = ` + args.Append(userId)},
+		ands...,
+	)
+
+	selects := []string{
+		"created_at",
+		"id",
+		"payload",
+		"public",
+		"study_id",
+		"type",
+		"user_id",
+	}
+	from := "event_master"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getEventsByUser", sql)
+
+	return getManyEvent(db, psName, sql, args...)
+}
+
+func GetReceivedEventByUser(
+	db Queryer,
+	userId string,
+	po *PageOptions,
+	opts ...EventFilterOption,
+) ([]*Event, error) {
+	mylog.Log.WithField("user_id", userId).Info("GetReceivedEventByUser(user_id)")
+	ands := make([]string, len(opts))
+	for i, o := range opts {
+		ands[i] = o.String()
+	}
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := append(
+		[]string{`received_user_id = ` + args.Append(userId)},
+		ands...,
+	)
+
+	selects := []string{
+		"created_at",
+		"id",
+		"payload",
+		"public",
+		"study_id",
+		"type",
+		"user_id",
+	}
+	from := "received_event_master"
+	sql := SQL(selects, from, where, &args, po)
+
+	psName := preparedName("getReceivedEventsByUser", sql)
 
 	return getManyEvent(db, psName, sql, args...)
 }
@@ -351,11 +409,7 @@ func CreateEvent(
 	db Queryer,
 	row *Event,
 ) (*Event, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"source": row.SourceId.Type,
-		"action": row.Action.String,
-		"target": row.TargetId.Type,
-	}).Info("CreateEvent()")
+	mylog.Log.Info("CreateEvent()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -365,13 +419,17 @@ func CreateEvent(
 	columns = append(columns, "event_id")
 	values = append(values, args.Append(&row.Id))
 
-	if row.SourceId.Status != pgtype.Undefined {
-		columns = append(columns, "source_id")
-		values = append(values, args.Append(&row.SourceId))
+	if row.Public.Status != pgtype.Undefined {
+		columns = append(columns, "public")
+		values = append(values, args.Append(&row.Public))
 	}
-	if row.TargetId.Status != pgtype.Undefined {
-		columns = append(columns, "target_id")
-		values = append(values, args.Append(&row.TargetId))
+	if row.StudyId.Status != pgtype.Undefined {
+		columns = append(columns, "study_id")
+		values = append(values, args.Append(&row.StudyId))
+	}
+	if row.Type.Status != pgtype.Undefined {
+		columns = append(columns, "type")
+		values = append(values, args.Append(&row.Type))
 	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -388,30 +446,11 @@ func CreateEvent(
 	}
 
 	var source string
-	switch row.SourceId.Type {
-	case "Lesson":
+	switch row.Type.String {
+	case LessonEvent:
 		source = "lesson"
-	case "LessonComment":
-		source = "lesson_comment"
-	case "Study":
-		source = "study"
-	case "User":
-		source = "user"
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for event source id", row.SourceId.Type)
-	}
-	var target string
-	switch row.TargetId.Type {
-	case "UserAsset":
-		target = "user_asset"
-	case "Lesson":
-		target = "lesson"
-	case "Study":
-		target = "study"
-	case "User":
-		target = "user"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for event target id", row.TargetId.Type)
 	}
 
 	table := strings.Join(
@@ -634,7 +673,7 @@ func BatchCreateEvent(
 }
 
 const deleteUserEventSQL = `
-	DELETE FROM event.event
+	DELETE FROM event_master
 	WHERE id = $1
 `
 
