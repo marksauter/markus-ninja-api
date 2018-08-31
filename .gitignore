@@ -8,6 +8,7 @@
 
 note
 vendor/*
+log.txt
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
