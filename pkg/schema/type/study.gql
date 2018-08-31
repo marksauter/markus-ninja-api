@@ -3,8 +3,6 @@ type Study implements
   Appleable,
   Createable,
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   Topicable,

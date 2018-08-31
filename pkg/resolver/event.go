@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -15,10 +14,6 @@ type eventResolver struct {
 	Repos *repo.Repos
 }
 
-func (r *eventResolver) Action() (string, error) {
-	return r.Event.Action()
-}
-
 func (r *eventResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Event.CreatedAt()
 	return graphql.Time{t}, err
@@ -29,46 +24,16 @@ func (r *eventResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *eventResolver) Source(
-	ctx context.Context,
-) (*eventSourceableResolver, error) {
-	id, err := r.Event.SourceId()
+func (r *eventResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyId, err := r.Event.StudyId()
 	if err != nil {
 		return nil, err
 	}
-	permit, err := r.Repos.GetEventSourceable(ctx, id)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	eventSourceable, ok := resolver.(eventSourceable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to event sourceable")
-	}
-	return &eventSourceableResolver{eventSourceable}, nil
-}
-
-func (r *eventResolver) Target(ctx context.Context) (*eventTargetableResolver, error) {
-	id, err := r.Event.TargetId()
-	if err != nil {
-		return nil, err
-	}
-	permit, err := r.Repos.GetEventTargetable(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	eventTargetable, ok := resolver.(eventTargetable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to event targetable")
-	}
-	return &eventTargetableResolver{eventTargetable}, nil
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
 func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {

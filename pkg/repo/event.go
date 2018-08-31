@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -30,13 +31,6 @@ func (r *EventPermit) Get() *data.Event {
 	return event
 }
 
-func (r *EventPermit) Action() (string, error) {
-	if ok := r.checkFieldPermission("action"); !ok {
-		return "", ErrAccessDenied
-	}
-	return r.event.Action.String, nil
-}
-
 func (r *EventPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -51,18 +45,32 @@ func (r *EventPermit) ID() (*mytype.OID, error) {
 	return &r.event.Id, nil
 }
 
-func (r *EventPermit) SourceId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("source_id"); !ok {
+func (r *EventPermit) Payload() (*pgtype.JSONB, error) {
+	if ok := r.checkFieldPermission("payload"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.event.SourceId, nil
+	return &r.event.Payload, nil
 }
 
-func (r *EventPermit) TargetId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("target_id"); !ok {
+func (r *EventPermit) Public() (bool, error) {
+	if ok := r.checkFieldPermission("public"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.event.Public.Bool, nil
+}
+
+func (r *EventPermit) StudyId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.event.TargetId, nil
+	return &r.event.StudyId, nil
+}
+
+func (r *EventPermit) Type() (string, error) {
+	if ok := r.checkFieldPermission("type"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.event.Type.String, nil
 }
 
 func (r *EventPermit) UserId() (*mytype.OID, error) {
@@ -105,9 +113,9 @@ func (r *EventRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *EventRepo) CountBySource(
+func (r *EventRepo) CountByLesson(
 	ctx context.Context,
-	sourceId string,
+	lessonId string,
 	opts ...data.EventFilterOption,
 ) (int32, error) {
 	var n int32
@@ -115,12 +123,12 @@ func (r *EventRepo) CountBySource(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventBySource(db, sourceId, opts...)
+	return data.CountEventByLesson(db, lessonId, opts...)
 }
 
-func (r *EventRepo) CountByTarget(
+func (r *EventRepo) CountReceivedByUser(
 	ctx context.Context,
-	targetId string,
+	userId string,
 	opts ...data.EventFilterOption,
 ) (int32, error) {
 	var n int32
@@ -128,7 +136,46 @@ func (r *EventRepo) CountByTarget(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventByTarget(db, targetId, opts...)
+	return data.CountReceivedEventByUser(db, userId, opts...)
+}
+
+func (r *EventRepo) CountByStudy(
+	ctx context.Context,
+	studyId string,
+	opts ...data.EventFilterOption,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEventByStudy(db, studyId, opts...)
+}
+
+func (r *EventRepo) CountByUser(
+	ctx context.Context,
+	userId string,
+	opts ...data.EventFilterOption,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEventByUser(db, userId, opts...)
+}
+
+func (r *EventRepo) CountByUserAsset(
+	ctx context.Context,
+	assetId string,
+	opts ...data.EventFilterOption,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountEventByUserAsset(db, assetId, opts...)
 }
 
 func (r *EventRepo) Create(
@@ -156,24 +203,6 @@ func (r *EventRepo) Create(
 	return &EventPermit{fieldPermFn, event}, nil
 }
 
-func (r *EventRepo) BatchCreate(
-	ctx context.Context,
-	event *data.Event,
-	targetIds []*mytype.OID,
-) error {
-	if err := r.CheckConnection(); err != nil {
-		return err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.CreateAccess, event); err != nil {
-		return err
-	}
-	return data.BatchCreateEvent(db, event, targetIds)
-}
-
 func (r *EventRepo) Get(
 	ctx context.Context,
 	id string,
@@ -192,34 +221,9 @@ func (r *EventRepo) Get(
 	return &EventPermit{fieldPermFn, event}, nil
 }
 
-func (r *EventRepo) GetBySourceActionTarget(
+func (r *EventRepo) GetByLesson(
 	ctx context.Context,
-	sourceId,
-	action,
-	targetId string,
-) (*EventPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	event, err := r.load.GetBySourceActionTarget(
-		ctx,
-		sourceId,
-		action,
-		targetId,
-	)
-	if err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, event)
-	if err != nil {
-		return nil, err
-	}
-	return &EventPermit{fieldPermFn, event}, nil
-}
-
-func (r *EventRepo) GetBySource(
-	ctx context.Context,
-	sourceId string,
+	lessonId string,
 	po *data.PageOptions,
 	opts ...data.EventFilterOption,
 ) ([]*EventPermit, error) {
@@ -230,7 +234,7 @@ func (r *EventRepo) GetBySource(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventBySource(db, sourceId, po, opts...)
+	events, err := data.GetEventByLesson(db, lessonId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -247,9 +251,9 @@ func (r *EventRepo) GetBySource(
 	return eventPermits, nil
 }
 
-func (r *EventRepo) GetByTarget(
+func (r *EventRepo) GetReceivedByUser(
 	ctx context.Context,
-	targetId string,
+	userId string,
 	po *data.PageOptions,
 	opts ...data.EventFilterOption,
 ) ([]*EventPermit, error) {
@@ -260,7 +264,97 @@ func (r *EventRepo) GetByTarget(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventByTarget(db, targetId, po, opts...)
+	events, err := data.GetReceivedEventByUser(db, userId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	eventPermits := make([]*EventPermit, len(events))
+	if len(events) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, events[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range events {
+			eventPermits[i] = &EventPermit{fieldPermFn, l}
+		}
+	}
+	return eventPermits, nil
+}
+
+func (r *EventRepo) GetByStudy(
+	ctx context.Context,
+	studyId string,
+	po *data.PageOptions,
+	opts ...data.EventFilterOption,
+) ([]*EventPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	events, err := data.GetEventByStudy(db, studyId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	eventPermits := make([]*EventPermit, len(events))
+	if len(events) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, events[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range events {
+			eventPermits[i] = &EventPermit{fieldPermFn, l}
+		}
+	}
+	return eventPermits, nil
+}
+
+func (r *EventRepo) GetByUser(
+	ctx context.Context,
+	userId string,
+	po *data.PageOptions,
+	opts ...data.EventFilterOption,
+) ([]*EventPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	events, err := data.GetEventByUser(db, userId, po, opts...)
+	if err != nil {
+		return nil, err
+	}
+	eventPermits := make([]*EventPermit, len(events))
+	if len(events) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, events[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range events {
+			eventPermits[i] = &EventPermit{fieldPermFn, l}
+		}
+	}
+	return eventPermits, nil
+}
+
+func (r *EventRepo) GetByUserAsset(
+	ctx context.Context,
+	userId string,
+	po *data.PageOptions,
+	opts ...data.EventFilterOption,
+) ([]*EventPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	events, err := data.GetEventByUserAsset(db, userId, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -291,5 +385,5 @@ func (r *EventRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, event); err != nil {
 		return err
 	}
-	return data.DeleteEvent(db, &event.Id)
+	return data.DeleteEvent(db, event.Id.String)
 }

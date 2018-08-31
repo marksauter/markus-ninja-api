@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -93,22 +94,178 @@ func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, er
 	return nil, nil
 }
 
-func eventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
-	action, err := event.Action()
+func eventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	eventType, err := event.Type()
 	if err != nil {
 		return nil, err
 	}
-	switch action {
-	case data.AppledEvent:
-		return &appledEventResolver{Event: event, Repos: repos}, nil
-	case data.CreatedEvent:
-		return &createdEventResolver{Event: event, Repos: repos}, nil
-	case data.CommentedEvent:
-		return &commentedEventResolver{Event: event, Repos: repos}, nil
-	case data.ReferencedEvent:
-		return &referencedEventResolver{Event: event, Repos: repos}, nil
+	switch eventType {
+	case data.CourseEvent:
+		return courseEventPermitToResolver(event, repos)
+	case data.LessonCommentEvent:
+		return lessonCommentEventPermitToResolver(event, repos)
+	case data.LessonEvent:
+		return lessonEventPermitToResolver(ctx, event, repos)
+	case data.UserAssetCommentEvent:
+		return userAssetCommentEventPermitToResolver(event, repos)
+	case data.UserAssetEvent:
+		return userAssetEventPermitToResolver(ctx, event, repos)
+	case data.StudyEvent:
+		return studyEventPermitToResolver(event, repos)
 	default:
 		return &eventResolver{Event: event, Repos: repos}, nil
 	}
 	return nil, nil
+}
+
+func courseEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.CourseEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.CourseAppled:
+		return &appledEventResolver{AppleableId: &payload.CourseId, Event: event, Repos: repos}, nil
+	case data.CourseUnappled:
+		return &unappledEventResolver{AppleableId: &payload.CourseId, Event: event, Repos: repos}, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
+}
+
+func lessonCommentEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.LessonCommentEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.LessonCommentCreated:
+		return nil, nil
+	case data.LessonCommentMentioned:
+		return nil, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
+}
+
+func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.LessonEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.LessonAddedToCourse:
+		return nil, nil
+	case data.LessonCreated:
+		return nil, nil
+	case data.LessonCommented:
+		lessonComment, err := repos.LessonComment().Get(ctx, payload.CommentId.String)
+		if err != nil {
+			return nil, err
+		}
+		return &lessonCommentResolver{LessonComment: lessonComment, Repos: repos}, nil
+	case data.LessonLabeled:
+		return nil, nil
+	case data.LessonMentioned:
+		return nil, nil
+	case data.LessonReferenced:
+		return &referencedEventResolver{
+			Event:           event,
+			ReferenceableId: &payload.LessonId,
+			Repos:           repos,
+			SourceId:        &payload.SourceId,
+		}, nil
+	case data.LessonRemovedFromCourse:
+		return nil, nil
+	case data.LessonRenamed:
+		return nil, nil
+	case data.LessonUnlabeled:
+		return nil, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
+}
+
+func studyEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.StudyEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.StudyAppled:
+		return &appledEventResolver{AppleableId: &payload.StudyId, Event: event, Repos: repos}, nil
+	case data.StudyUnappled:
+		return &unappledEventResolver{AppleableId: &payload.StudyId, Event: event, Repos: repos}, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
+}
+
+func userAssetCommentEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.UserAssetCommentEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.UserAssetCommentCreated:
+		return nil, nil
+	case data.UserAssetCommentMentioned:
+		return nil, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
+}
+
+func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+	payload := &data.UserAssetEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.UserAssetCreated:
+		return nil, nil
+	// case data.UserAssetCommented:
+	//   userAssetComment, err := repos.UserAssetComment().Get(ctx, payload.CommentId.String)
+	//   if err != nil {
+	//     return nil, err
+	//   }
+	//   return &userAssetCommentResolver{UserAssetComment: userAssetComment, Repos: repos}
+	case data.UserAssetMentioned:
+		return nil, nil
+	case data.UserAssetReferenced:
+		return &referencedEventResolver{
+			Event:           event,
+			ReferenceableId: &payload.AssetId,
+			Repos:           repos,
+			SourceId:        &payload.SourceId,
+		}, nil
+	case data.UserAssetRenamed:
+		return nil, nil
+	default:
+		return &eventResolver{Event: event, Repos: repos}, nil
+	}
 }

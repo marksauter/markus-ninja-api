@@ -11,8 +11,8 @@ type userAssetTimelineEventResolver struct {
 	userAssetTimelineEvent
 }
 
-func (r *userAssetTimelineEventResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
-	resolver, ok := r.userAssetTimelineEvent.(*commentedEventResolver)
+func (r *userAssetTimelineEventResolver) ToUserAssetComment() (*userAssetCommentResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*userAssetCommentResolver)
 	return resolver, ok
 }
 

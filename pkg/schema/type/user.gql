@@ -1,8 +1,6 @@
 # Represents a user.
 type User implements 
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   UniformResourceLocatable 

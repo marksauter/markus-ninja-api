@@ -157,11 +157,12 @@ permissions:
   # Everyone can read the following fields for an event.
   - operation: Read Event
     fields:
-      - action
       - created_at
       - id
-      - source_id
-      - target_id
+      - payload
+      - public
+      - study_id
+      - type
       - user_id
   # Owners can read the whole event.
   - operation: Read Event
@@ -174,8 +175,10 @@ permissions:
     roles:
       - user
     fields:
-      - source_id
-      - target_id
+      - payload
+      - public
+      - study_id
+      - type
       - user_id
 
 

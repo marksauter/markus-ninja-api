@@ -2,6 +2,7 @@
 type UserAsset implements 
   Deleteable,
   Node,
+  Referenceable,
   Searchable,
   StudyNode,
   UniformResourceLocatable,

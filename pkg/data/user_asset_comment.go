@@ -9,36 +9,36 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
-type LessonComment struct {
+type UserAssetComment struct {
+	AssetId     mytype.OID         `db:"asset_id" permit:"create/read"`
 	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          mytype.OID         `db:"id" permit:"read"`
-	LessonId    mytype.OID         `db:"lesson_id" permit:"create/read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
 	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-const countLessonCommentByLessonSQL = `
+const countUserAssetCommentByAssetSQL = `
 	SELECT COUNT(*)
-	FROM lesson_comment
-	WHERE lesson_id = $1
+	FROM user_asset_comment
+	WHERE asset_id = $1
 `
 
-func CountLessonCommentByLesson(
+func CountUserAssetCommentByAsset(
 	db Queryer,
-	lessonId string,
+	assetId string,
 ) (int32, error) {
 	mylog.Log.WithField(
-		"lesson_id", lessonId,
-	).Info("CountLessonCommentByLesson(lesson_id)")
+		"asset_id", assetId,
+	).Info("CountUserAssetCommentByAsset(asset_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
-		"countLessonCommentByLesson",
-		countLessonCommentByLessonSQL,
-		lessonId,
+		"countUserAssetCommentByAsset",
+		countUserAssetCommentByAssetSQL,
+		assetId,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -46,24 +46,24 @@ func CountLessonCommentByLesson(
 	return n, err
 }
 
-const countLessonCommentByStudySQL = `
+const countUserAssetCommentByStudySQL = `
 	SELECT COUNT(*)
-	FROM lesson_comment
+	FROM user_asset_comment
 	WHERE study_id = $1
 `
 
-func CountLessonCommentByStudy(
+func CountUserAssetCommentByStudy(
 	db Queryer,
 	studyId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("CountLessonCommentByStudy(study_id)")
+	).Info("CountUserAssetCommentByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
-		"countLessonCommentByStudy",
-		countLessonCommentByStudySQL,
+		"countUserAssetCommentByStudy",
+		countUserAssetCommentByStudySQL,
 		studyId,
 	).Scan(&n)
 
@@ -72,24 +72,24 @@ func CountLessonCommentByStudy(
 	return n, err
 }
 
-const countLessonCommentByUserSQL = `
+const countUserAssetCommentByUserSQL = `
 	SELECT COUNT(*)
-	FROM lesson_comment
+	FROM user_asset_comment
 	WHERE user_id = $1
 `
 
-func CountLessonCommentByUser(
+func CountUserAssetCommentByUser(
 	db Queryer,
 	userId string,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"user_id", userId,
-	).Info("CountLessonCommentByUser(user_id)")
+	).Info("CountUserAssetCommentByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
-		"countLessonCommentByUser",
-		countLessonCommentByUserSQL,
+		"countUserAssetCommentByUser",
+		countUserAssetCommentByUserSQL,
 		userId,
 	).Scan(&n)
 
@@ -98,18 +98,18 @@ func CountLessonCommentByUser(
 	return n, err
 }
 
-func getLessonComment(
+func getUserAssetComment(
 	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
-) (*LessonComment, error) {
-	var row LessonComment
+) (*UserAssetComment, error) {
+	var row UserAssetComment
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
 		&row.Id,
-		&row.LessonId,
+		&row.AssetId,
 		&row.PublishedAt,
 		&row.StudyId,
 		&row.UpdatedAt,
@@ -118,20 +118,20 @@ func getLessonComment(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get lesson_comment")
+		mylog.Log.WithError(err).Error("failed to get user_asset_comment")
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-func getManyLessonComment(
+func getManyUserAssetComment(
 	db Queryer,
 	name string,
 	sql string,
 	args ...interface{},
-) ([]*LessonComment, error) {
-	var rows []*LessonComment
+) ([]*UserAssetComment, error) {
+	var rows []*UserAssetComment
 
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
@@ -139,12 +139,12 @@ func getManyLessonComment(
 	}
 
 	for dbRows.Next() {
-		var row LessonComment
+		var row UserAssetComment
 		dbRows.Scan(
 			&row.Body,
 			&row.CreatedAt,
 			&row.Id,
-			&row.LessonId,
+			&row.AssetId,
 			&row.PublishedAt,
 			&row.StudyId,
 			&row.UpdatedAt,
@@ -154,7 +154,7 @@ func getManyLessonComment(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get lesson_comments")
+		mylog.Log.WithError(err).Error("failed to get user_asset_comments")
 		return nil, err
 	}
 
@@ -163,94 +163,94 @@ func getManyLessonComment(
 	return rows, nil
 }
 
-const getLessonCommentByIdSQL = `
+const getUserAssetCommentByIdSQL = `
 	SELECT
 		body,
 		created_at,
 		id,
-		lesson_id,
+		asset_id,
 		published_at,
 		study_id,
 		updated_at,
 		user_id
-	FROM lesson_comment
+	FROM user_asset_comment
 	WHERE id = $1
 `
 
-func GetLessonComment(
+func GetUserAssetComment(
 	db Queryer,
 	id string,
-) (*LessonComment, error) {
-	mylog.Log.WithField("id", id).Info("GetLessonComment(id)")
-	return getLessonComment(db, "getLessonCommentById", getLessonCommentByIdSQL, id)
+) (*UserAssetComment, error) {
+	mylog.Log.WithField("id", id).Info("GetUserAssetComment(id)")
+	return getUserAssetComment(db, "getUserAssetCommentById", getUserAssetCommentByIdSQL, id)
 }
 
-const batchGetLessonCommentByIdSQL = `
+const batchGetUserAssetCommentByIdSQL = `
 	SELECT
 		body,
 		created_at,
 		id,
-		lesson_id,
+		asset_id,
 		published_at,
 		study_id,
 		updated_at,
 		user_id
-	FROM lesson_comment
+	FROM user_asset_comment
 	WHERE id = ANY($1)
 `
 
-func BatchGetLessonComment(
+func BatchGetUserAssetComment(
 	db Queryer,
 	ids []string,
-) ([]*LessonComment, error) {
-	mylog.Log.WithField("ids", ids).Info("BatchGetLessonComment(ids)")
-	return getManyLessonComment(
+) ([]*UserAssetComment, error) {
+	mylog.Log.WithField("ids", ids).Info("BatchGetUserAssetComment(ids)")
+	return getManyUserAssetComment(
 		db,
-		"batchGetLessonCommentById",
-		batchGetLessonCommentByIdSQL,
+		"batchGetUserAssetCommentById",
+		batchGetUserAssetCommentByIdSQL,
 		ids,
 	)
 }
 
-func GetLessonCommentByLesson(
+func GetUserAssetCommentByAsset(
 	db Queryer,
-	lessonId string,
+	assetId string,
 	po *PageOptions,
-) ([]*LessonComment, error) {
+) ([]*UserAssetComment, error) {
 	mylog.Log.WithField(
-		"lesson_id", lessonId,
-	).Info("GetLessonCommentByLesson(lesson_id)")
+		"asset_id", assetId,
+	).Info("GetUserAssetCommentByAsset(asset_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`lesson_id = ` + args.Append(lessonId),
+		`asset_id = ` + args.Append(assetId),
 	}
 
 	selects := []string{
 		"body",
 		"created_at",
 		"id",
-		"lesson_id",
+		"asset_id",
 		"published_at",
 		"study_id",
 		"updated_at",
 		"user_id",
 	}
-	from := "lesson_comment"
+	from := "user_asset_comment"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLessonCommentsByLesson", sql)
+	psName := preparedName("getUserAssetCommentsByAsset", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	return getManyUserAssetComment(db, psName, sql, args...)
 }
 
-func GetLessonCommentByStudy(
+func GetUserAssetCommentByStudy(
 	db Queryer,
 	studyId string,
 	po *PageOptions,
-) ([]*LessonComment, error) {
+) ([]*UserAssetComment, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
-	).Info("GetLessonCommentByStudy(study_id)")
+	).Info("GetUserAssetCommentByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
 		`study_id = ` + args.Append(studyId),
@@ -260,28 +260,28 @@ func GetLessonCommentByStudy(
 		"body",
 		"created_at",
 		"id",
-		"lesson_id",
+		"asset_id",
 		"published_at",
 		"study_id",
 		"updated_at",
 		"user_id",
 	}
-	from := "lesson_comment"
+	from := "user_asset_comment"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLessonCommentsByStudy", sql)
+	psName := preparedName("getUserAssetCommentsByStudy", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	return getManyUserAssetComment(db, psName, sql, args...)
 }
 
-func GetLessonCommentByUser(
+func GetUserAssetCommentByUser(
 	db Queryer,
 	userId string,
 	po *PageOptions,
-) ([]*LessonComment, error) {
+) ([]*UserAssetComment, error) {
 	mylog.Log.WithField(
 		"user_id", userId,
-	).Info("GetLessonCommentByUser(user_id)")
+	).Info("GetUserAssetCommentByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{`user_id = ` + args.Append(userId)}
 
@@ -289,30 +289,30 @@ func GetLessonCommentByUser(
 		"body",
 		"created_at",
 		"id",
-		"lesson_id",
+		"asset_id",
 		"published_at",
 		"study_id",
 		"updated_at",
 		"user_id",
 	}
-	from := "lesson_comment"
+	from := "user_asset_comment"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLessonCommentsByUser", sql)
+	psName := preparedName("getUserAssetCommentsByUser", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	return getManyUserAssetComment(db, psName, sql, args...)
 }
 
-func CreateLessonComment(
+func CreateUserAssetComment(
 	db Queryer,
-	row *LessonComment,
-) (*LessonComment, error) {
-	mylog.Log.Info("CreateLessonComment()")
+	row *UserAssetComment,
+) (*UserAssetComment, error) {
+	mylog.Log.Info("CreateUserAssetComment()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
 
-	id, _ := mytype.NewOID("LessonComment")
+	id, _ := mytype.NewOID("UserAssetComment")
 	row.Id.Set(id)
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
@@ -321,9 +321,9 @@ func CreateLessonComment(
 		columns = append(columns, "body")
 		values = append(values, args.Append(&row.Body))
 	}
-	if row.LessonId.Status != pgtype.Undefined {
-		columns = append(columns, "lesson_id")
-		values = append(values, args.Append(&row.LessonId))
+	if row.AssetId.Status != pgtype.Undefined {
+		columns = append(columns, "asset_id")
+		values = append(values, args.Append(&row.AssetId))
 	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		columns = append(columns, "published_at")
@@ -348,15 +348,15 @@ func CreateLessonComment(
 	}
 
 	sql := `
-		INSERT INTO lesson_comment(` + strings.Join(columns, ",") + `)
+		INSERT INTO user_asset_comment(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
-	psName := preparedName("createLessonComment", sql)
+	psName := preparedName("createUserAssetComment", sql)
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create lesson_comment")
+		mylog.Log.WithError(err).Error("failed to create user_asset_comment")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
@@ -370,24 +370,12 @@ func CreateLessonComment(
 		return nil, err
 	}
 
-	lessonComment, err := GetLessonComment(tx, row.Id.String)
+	userAssetComment, err := GetUserAssetComment(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
 
-	eventPayload, err := NewLessonCommentedPayload(&lessonComment.LessonId, &lessonComment.Id)
-	if err != nil {
-		return nil, err
-	}
-	event, err := NewLessonEvent(eventPayload, &lessonComment.StudyId, &lessonComment.UserId)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := CreateEvent(tx, event); err != nil {
-		return nil, err
-	}
-
-	// if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
+	// if err := ParseUserAssetCommentBodyForEvents(tx, userAssetComment); err != nil {
 	//   return nil, err
 	// }
 
@@ -399,23 +387,23 @@ func CreateLessonComment(
 		}
 	}
 
-	return lessonComment, nil
+	return userAssetComment, nil
 }
 
-const deleteLessonCommentSQL = `
-	DELETE FROM lesson_comment
+const deleteUserAssetCommentSQL = `
+	DELETE FROM user_asset_comment
 	WHERE id = $1
 `
 
-func DeleteLessonComment(
+func DeleteUserAssetComment(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteLessonComment(id)")
+	mylog.Log.WithField("id", id).Info("DeleteUserAssetComment(id)")
 	commandTag, err := prepareExec(
 		db,
-		"deleteLessonComment",
-		deleteLessonCommentSQL,
+		"deleteUserAssetComment",
+		deleteUserAssetCommentSQL,
 		id,
 	)
 	if err != nil {
@@ -428,11 +416,11 @@ func DeleteLessonComment(
 	return nil
 }
 
-func UpdateLessonComment(
+func UpdateUserAssetComment(
 	db Queryer,
-	row *LessonComment,
-) (*LessonComment, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateLessonComment(id)")
+	row *UserAssetComment,
+) (*UserAssetComment, error) {
+	mylog.Log.WithField("id", row.Id.String).Info("UpdateUserAssetComment(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -444,7 +432,7 @@ func UpdateLessonComment(
 	}
 
 	if len(sets) == 0 {
-		return GetLessonComment(db, row.Id.String)
+		return GetUserAssetComment(db, row.Id.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -457,11 +445,11 @@ func UpdateLessonComment(
 	}
 
 	sql := `
-		UPDATE lesson_comment
+		UPDATE user_asset_comment
 		SET ` + strings.Join(sets, ",") + `
 		WHERE id = ` + args.Append(row.Id.String)
 
-	psName := preparedName("updateLessonComment", sql)
+	psName := preparedName("updateUserAssetComment", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
@@ -471,12 +459,12 @@ func UpdateLessonComment(
 		return nil, ErrNotFound
 	}
 
-	lessonComment, err := GetLessonComment(tx, row.Id.String)
+	userAssetComment, err := GetUserAssetComment(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
 
-	// if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
+	// if err := ParseUserAssetCommentBodyForEvents(tx, userAssetComment); err != nil {
 	//   return nil, err
 	// }
 
@@ -488,14 +476,14 @@ func UpdateLessonComment(
 		}
 	}
 
-	return lessonComment, nil
+	return userAssetComment, nil
 }
 
-// func ParseLessonCommentBodyForEvents(
+// func ParseUserAssetCommentBodyForEvents(
 //   db Queryer,
-//   lessonComment *LessonComment,
+//   userAssetComment *UserAssetComment,
 // ) error {
-//   mylog.Log.Debug("ParseLessonCommentBodyForEvents()")
+//   mylog.Log.Debug("ParseUserAssetCommentBodyForEvents()")
 //   tx, err, newTx := BeginTransaction(db)
 //   if err != nil {
 //     mylog.Log.WithError(err).Error("error starting transaction")
@@ -509,7 +497,7 @@ func UpdateLessonComment(
 //   oldEvents := make(map[string]struct{})
 //   events, err := GetEventBySource(
 //     tx,
-//     lessonComment.Id.String,
+//     userAssetComment.Id.String,
 //     nil,
 //     GetMentionEvents,
 //     GetReferenceEvents,
@@ -521,25 +509,25 @@ func UpdateLessonComment(
 //     oldEvents[event.TargetId.String] = struct{}{}
 //   }
 //
-//   userAssetRefs := lessonComment.Body.AssetRefs()
+//   userAssetRefs := userAssetComment.Body.AssetRefs()
 //   if len(userAssetRefs) > 0 {
 //     userAssets, err := BatchGetUserAssetByName(
 //       tx,
-//       lessonComment.StudyId.String,
+//       userAssetComment.StudyId.String,
 //       userAssetRefs,
 //     )
 //     if err != nil {
 //       return err
 //     }
 //     for _, a := range userAssets {
-//       if a.Id.String != lessonComment.Id.String {
+//       if a.Id.String != userAssetComment.Id.String {
 //         newEvents[a.Id.String] = struct{}{}
 //         if _, prs := oldEvents[a.Id.String]; !prs {
 //           event := &Event{}
 //           event.Action.Set(ReferencedEvent)
 //           event.TargetId.Set(&a.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
+//           event.SourceId.Set(&userAssetComment.Id)
+//           event.UserId.Set(&userAssetComment.UserId)
 //           _, err = CreateEvent(tx, event)
 //           if err != nil {
 //             return err
@@ -548,28 +536,28 @@ func UpdateLessonComment(
 //       }
 //     }
 //   }
-//   lessonNumberRefs, err := lessonComment.Body.NumberRefs()
+//   lessonNumberRefs, err := userAssetComment.Body.NumberRefs()
 //   if err != nil {
 //     return err
 //   }
 //   if len(lessonNumberRefs) > 0 {
 //     lessons, err := BatchGetLessonByNumber(
 //       tx,
-//       lessonComment.StudyId.String,
+//       userAssetComment.StudyId.String,
 //       lessonNumberRefs,
 //     )
 //     if err != nil {
 //       return err
 //     }
 //     for _, l := range lessons {
-//       if l.Id.String != lessonComment.LessonId.String {
+//       if l.Id.String != userAssetComment.AssetId.String {
 //         newEvents[l.Id.String] = struct{}{}
 //         if _, prs := oldEvents[l.Id.String]; !prs {
 //           event := &Event{}
 //           event.Action.Set(ReferencedEvent)
 //           event.TargetId.Set(&l.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
+//           event.SourceId.Set(&userAssetComment.Id)
+//           event.UserId.Set(&userAssetComment.UserId)
 //           _, err = CreateEvent(tx, event)
 //           if err != nil {
 //             return err
@@ -578,7 +566,7 @@ func UpdateLessonComment(
 //       }
 //     }
 //   }
-//   crossStudyRefs, err := lessonComment.Body.CrossStudyRefs()
+//   crossStudyRefs, err := userAssetComment.Body.CrossStudyRefs()
 //   if err != nil {
 //     return err
 //   }
@@ -592,14 +580,14 @@ func UpdateLessonComment(
 //     if err != nil {
 //       return err
 //     }
-//     if lesson.Id.String != lessonComment.LessonId.String {
+//     if lesson.Id.String != userAssetComment.AssetId.String {
 //       newEvents[lesson.Id.String] = struct{}{}
 //       if _, prs := oldEvents[lesson.Id.String]; !prs {
 //         event := &Event{}
 //         event.Action.Set(ReferencedEvent)
 //         event.TargetId.Set(&lesson.Id)
-//         event.SourceId.Set(&lessonComment.Id)
-//         event.UserId.Set(&lessonComment.UserId)
+//         event.SourceId.Set(&userAssetComment.Id)
+//         event.UserId.Set(&userAssetComment.UserId)
 //         _, err = CreateEvent(tx, event)
 //         if err != nil {
 //           return err
@@ -607,7 +595,7 @@ func UpdateLessonComment(
 //       }
 //     }
 //   }
-//   userRefs := lessonComment.Body.AtRefs()
+//   userRefs := userAssetComment.Body.AtRefs()
 //   if len(userRefs) > 0 {
 //     users, err := BatchGetUserByLogin(
 //       tx,
@@ -617,14 +605,14 @@ func UpdateLessonComment(
 //       return err
 //     }
 //     for _, u := range users {
-//       if u.Id.String != lessonComment.UserId.String {
+//       if u.Id.String != userAssetComment.UserId.String {
 //         newEvents[u.Id.String] = struct{}{}
 //         if _, prs := oldEvents[u.Id.String]; !prs {
 //           event := &Event{}
 //           event.Action.Set(MentionedEvent)
 //           event.TargetId.Set(&u.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
+//           event.SourceId.Set(&userAssetComment.Id)
+//           event.UserId.Set(&userAssetComment.UserId)
 //           _, err = CreateEvent(tx, event)
 //           if err != nil {
 //             return err

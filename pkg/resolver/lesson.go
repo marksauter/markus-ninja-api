@@ -409,24 +409,22 @@ func (r *lessonResolver) Timeline(
 		return nil, err
 	}
 
-	events, err := r.Repos.Event().GetByTarget(
+	events, err := r.Repos.Event().GetByLesson(
 		ctx,
 		lessonId.String,
 		pageOptions,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
+		data.NotLessonCreatedEvent,
+		data.NotLessonMentionedEvent,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountByTarget(
+	count, err := r.Repos.Event().CountByLesson(
 		ctx,
 		lessonId.String,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
+		data.NotLessonCreatedEvent,
+		data.NotLessonMentionedEvent,
 	)
 	if err != nil {
 		return nil, err

@@ -3,24 +3,20 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type createdEventResolver struct {
-	Event *repo.EventPermit
-	Repos *repo.Repos
+	CreateableId *mytype.OID
+	Event        *repo.EventPermit
+	Repos        *repo.Repos
 }
 
 func (r *createdEventResolver) Createable(ctx context.Context) (*createableResolver, error) {
-	id, err := r.Event.TargetId()
-	if err != nil {
-		return nil, err
-	}
-	permit, err := r.Repos.GetCreateable(ctx, id)
+	permit, err := r.Repos.GetCreateable(ctx, r.CreateableId)
 	if err != nil {
 		return nil, err
 	}
@@ -45,39 +41,16 @@ func (r *createdEventResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *createdEventResolver) ResourcePath(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	id, err := r.Event.TargetId()
+func (r *createdEventResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyId, err := r.Event.StudyId()
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	permit, err := r.Repos.GetEventTargetable(ctx, id)
+	study, err := r.Repos.Study().Get(ctx, studyId.String)
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return uri, err
-	}
-	urlable, ok := resolver.(uniformResourceLocatable)
-	if !ok {
-		return uri, errors.New("cannot convert resolver to uniform_resource_locatable")
-	}
-	return urlable.ResourcePath(ctx)
-}
-
-func (r *createdEventResolver) URL(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
-	if err != nil {
-		return uri, err
-	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
-	return uri, nil
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
 func (r *createdEventResolver) User(ctx context.Context) (*userResolver, error) {

@@ -1,11 +1,4 @@
 # Events that can be a part of a user's notifications.
 interface NotificationEvent {
   id: ID!
-
-  # The HTTP path to this resource.
-  resourcePath: URI!
-
-  # The HTTP URL to this resource.
-  url: URI!
-
 }

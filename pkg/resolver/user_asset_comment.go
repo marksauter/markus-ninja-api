@@ -12,13 +12,25 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type lessonCommentResolver struct {
-	LessonComment *repo.LessonCommentPermit
-	Repos         *repo.Repos
+type userAssetCommentResolver struct {
+	UserAssetComment *repo.UserAssetCommentPermit
+	Repos            *repo.Repos
 }
 
-func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
-	userId, err := r.LessonComment.UserId()
+func (r *userAssetCommentResolver) Asset(ctx context.Context) (*userAssetResolver, error) {
+	userAssetId, err := r.UserAssetComment.AssetId()
+	if err != nil {
+		return nil, err
+	}
+	userAsset, err := r.Repos.UserAsset().Get(ctx, userAssetId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+}
+
+func (r *userAssetCommentResolver) Author(ctx context.Context) (*userResolver, error) {
+	userId, err := r.UserAssetComment.UserId()
 	if err != nil {
 		return nil, err
 	}
@@ -29,41 +41,41 @@ func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, erro
 	return &userResolver{User: user, Repos: r.Repos}, nil
 }
 
-func (r *lessonCommentResolver) Body() (string, error) {
-	body, err := r.LessonComment.Body()
+func (r *userAssetCommentResolver) Body() (string, error) {
+	body, err := r.UserAssetComment.Body()
 	if err != nil {
 		return "", err
 	}
 	return body.String, nil
 }
 
-func (r *lessonCommentResolver) BodyHTML() (mygql.HTML, error) {
-	body, err := r.LessonComment.Body()
+func (r *userAssetCommentResolver) BodyHTML() (mygql.HTML, error) {
+	body, err := r.UserAssetComment.Body()
 	if err != nil {
 		return "", err
 	}
 	return mygql.HTML(body.ToHTML()), nil
 }
 
-func (r *lessonCommentResolver) BodyText() (string, error) {
-	body, err := r.LessonComment.Body()
+func (r *userAssetCommentResolver) BodyText() (string, error) {
+	body, err := r.UserAssetComment.Body()
 	if err != nil {
 		return "", err
 	}
 	return body.ToText(), nil
 }
 
-func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
-	t, err := r.LessonComment.CreatedAt()
+func (r *userAssetCommentResolver) CreatedAt() (graphql.Time, error) {
+	t, err := r.UserAssetComment.CreatedAt()
 	return graphql.Time{t}, err
 }
 
-func (r *lessonCommentResolver) ID() (graphql.ID, error) {
-	id, err := r.LessonComment.ID()
+func (r *userAssetCommentResolver) ID() (graphql.ID, error) {
+	id, err := r.UserAssetComment.ID()
 	return graphql.ID(id.String), err
 }
 
-func (r *lessonCommentResolver) Labels(
+func (r *userAssetCommentResolver) Labels(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -73,7 +85,7 @@ func (r *lessonCommentResolver) Labels(
 		OrderBy *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
-	lessonCommentId, err := r.LessonComment.ID()
+	userAssetCommentId, err := r.UserAssetComment.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +107,13 @@ func (r *lessonCommentResolver) Labels(
 
 	labels, err := r.Repos.Label().GetByLabelable(
 		ctx,
-		lessonCommentId.String,
+		userAssetCommentId.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentId.String)
+	count, err := r.Repos.Label().CountByLabelable(ctx, userAssetCommentId.String)
 	if err != nil {
 		return nil, err
 	}
@@ -117,52 +129,40 @@ func (r *lessonCommentResolver) Labels(
 	return labelConnectionResolver, nil
 }
 
-func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
-	lessonId, err := r.LessonComment.LessonId()
-	if err != nil {
-		return nil, err
-	}
-	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
-	if err != nil {
-		return nil, err
-	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
-}
-
-func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
-	t, err := r.LessonComment.PublishedAt()
+func (r *userAssetCommentResolver) PublishedAt() (*graphql.Time, error) {
+	t, err := r.UserAssetComment.PublishedAt()
 	if err != nil {
 		return nil, err
 	}
 	return &graphql.Time{t}, nil
 }
 
-func (r *lessonCommentResolver) ResourcePath(
+func (r *userAssetCommentResolver) ResourcePath(
 	ctx context.Context,
 ) (mygql.URI, error) {
 	var uri mygql.URI
-	lesson, err := r.Lesson(ctx)
+	userAsset, err := r.Asset(ctx)
 	if err != nil {
 		return uri, err
 	}
-	lessonPath, err := lesson.ResourcePath(ctx)
+	userAssetPath, err := userAsset.ResourcePath(ctx)
 	if err != nil {
 		return uri, err
 	}
-	createdAt, err := r.LessonComment.CreatedAt()
+	createdAt, err := r.UserAssetComment.CreatedAt()
 	if err != nil {
 		return uri, err
 	}
 	uri = mygql.URI(fmt.Sprintf(
-		"%s#lesson-comment%d",
-		string(lessonPath),
+		"%s#asset-comment%d",
+		string(userAssetPath),
 		createdAt.Unix(),
 	))
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.LessonComment.StudyId()
+func (r *userAssetCommentResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyId, err := r.UserAssetComment.StudyId()
 	if err != nil {
 		return nil, err
 	}
@@ -173,12 +173,12 @@ func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, erro
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
-func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
-	t, err := r.LessonComment.UpdatedAt()
+func (r *userAssetCommentResolver) UpdatedAt() (graphql.Time, error) {
+	t, err := r.UserAssetComment.UpdatedAt()
 	return graphql.Time{t}, err
 }
 
-func (r *lessonCommentResolver) URL(
+func (r *userAssetCommentResolver) URL(
 	ctx context.Context,
 ) (mygql.URI, error) {
 	var uri mygql.URI
@@ -190,22 +190,22 @@ func (r *lessonCommentResolver) URL(
 	return uri, nil
 }
 
-func (r *lessonCommentResolver) ViewerCanDelete(ctx context.Context) bool {
-	lessonComment := r.LessonComment.Get()
-	return r.Repos.LessonComment().ViewerCanDelete(ctx, lessonComment)
+func (r *userAssetCommentResolver) ViewerCanDelete(ctx context.Context) bool {
+	userAssetComment := r.UserAssetComment.Get()
+	return r.Repos.UserAssetComment().ViewerCanDelete(ctx, userAssetComment)
 }
 
-func (r *lessonCommentResolver) ViewerCanUpdate(ctx context.Context) bool {
-	lessonComment := r.LessonComment.Get()
-	return r.Repos.LessonComment().ViewerCanUpdate(ctx, lessonComment)
+func (r *userAssetCommentResolver) ViewerCanUpdate(ctx context.Context) bool {
+	userAssetComment := r.UserAssetComment.Get()
+	return r.Repos.UserAssetComment().ViewerCanUpdate(ctx, userAssetComment)
 }
 
-func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
+func (r *userAssetCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.LessonComment.UserId()
+	userId, err := r.UserAssetComment.UserId()
 	if err != nil {
 		return false, err
 	}

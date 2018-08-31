@@ -11,8 +11,8 @@ type lessonTimelineEventResolver struct {
 	lessonTimelineEvent
 }
 
-func (r *lessonTimelineEventResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
-	resolver, ok := r.lessonTimelineEvent.(*commentedEventResolver)
+func (r *lessonTimelineEventResolver) ToLessonComment() (*lessonCommentResolver, bool) {
+	resolver, ok := r.lessonTimelineEvent.(*lessonCommentResolver)
 	return resolver, ok
 }
 

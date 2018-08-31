@@ -228,12 +228,12 @@ func (src *OID) Value() (driver.Value, error) {
 
 func (src *OID) MarshalJSON() ([]byte, error) {
 	switch src.Status {
-	case Present:
+	case pgtype.Present:
 		return json.Marshal(src.String)
-	case Null:
+	case pgtype.Null:
 		return []byte("null"), nil
-	case Undefined:
-		return nil, errUndefined
+	case pgtype.Undefined:
+		return []byte("null"), nil
 	}
 
 	return nil, errBadStatus
@@ -250,7 +250,7 @@ func (dst *OID) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*dst = oid
+	*dst = *oid
 
 	return nil
 }

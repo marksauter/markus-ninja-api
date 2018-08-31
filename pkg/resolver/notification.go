@@ -29,7 +29,7 @@ func (r *notificationResolver) Event(ctx context.Context) (*notificationEventRes
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := eventPermitToResolver(e, r.Repos)
+	resolver, err := eventPermitToResolver(ctx, e, r.Repos)
 	if err != nil {
 		return nil, err
 	}

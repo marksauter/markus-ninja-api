@@ -187,21 +187,6 @@ func (r *RootResolver) AddLessonComment(
 	if err != nil {
 		return nil, err
 	}
-	lessonComment = lessonCommentPermit.Get()
-
-	event, err := data.NewEvent(
-		data.CommentedEvent,
-		&lessonComment.Id,
-		&lessonComment.LessonId,
-		&lessonComment.UserId,
-	)
-	if err != nil {
-		return nil, err
-	}
-	eventPermit, err := r.Repos.Event().Create(ctx, event)
-	if err != nil {
-		return nil, err
-	}
 
 	if newTx {
 		err := data.CommitTransaction(tx)
@@ -212,7 +197,6 @@ func (r *RootResolver) AddLessonComment(
 
 	return &addLessonCommentPayloadResolver{
 		LessonComment: lessonCommentPermit,
-		Event:         eventPermit,
 		Repos:         r.Repos,
 	}, nil
 }
@@ -341,12 +325,11 @@ func (r *RootResolver) CreateLesson(
 	}
 	lesson = lessonPermit.Get()
 
-	event, err := data.NewEvent(
-		data.CreatedEvent,
-		&lesson.StudyId,
-		&lesson.Id,
-		&lesson.UserId,
-	)
+	eventPayload, err := data.NewLessonCreatedPayload(&lesson.Id)
+	if err != nil {
+		return nil, err
+	}
+	event, err := data.NewLessonEvent(eventPayload, &lesson.StudyId, &lesson.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -424,19 +407,6 @@ func (r *RootResolver) CreateStudy(
 		return nil, err
 	}
 	study = studyPermit.Get()
-
-	event, err := data.NewEvent(
-		data.CreatedEvent,
-		&study.UserId,
-		&study.Id,
-		&study.UserId,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
-		return nil, err
-	}
 
 	if newTx {
 		err := data.CommitTransaction(tx)
@@ -681,22 +651,6 @@ func (r *RootResolver) DeleteLessonComment(
 		return nil, err
 	}
 	lessonComment := lessonCommentPermit.Get()
-	event, err := r.Repos.Event().GetBySourceActionTarget(
-		ctx,
-		lessonComment.Id.String,
-		data.CommentedEvent,
-		lessonComment.LessonId.String,
-	)
-	if err != nil && err != data.ErrNotFound {
-		return nil, err
-	}
-	var eventId *mytype.OID
-	if event != nil {
-		eventId, err = event.ID()
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	if err := r.Repos.LessonComment().Delete(ctx, lessonComment); err != nil {
 		return nil, err
@@ -710,10 +664,9 @@ func (r *RootResolver) DeleteLessonComment(
 	}
 
 	return &deleteLessonCommentPayloadResolver{
-		LessonCommentId:       &lessonComment.Id,
-		LessonTimelineEventId: eventId,
-		LessonId:              &lessonComment.LessonId,
-		Repos:                 r.Repos,
+		LessonCommentId: &lessonComment.Id,
+		LessonId:        &lessonComment.LessonId,
+		Repos:           r.Repos,
 	}, nil
 }
 
@@ -725,6 +678,14 @@ func (r *RootResolver) DeleteCourse(
 	ctx context.Context,
 	args struct{ Input DeleteCourseInput },
 ) (*deleteCoursePayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	coursePermit, err := r.Repos.Course().Get(ctx, args.Input.CourseId)
 	if err != nil {
 		return nil, err
@@ -733,6 +694,13 @@ func (r *RootResolver) DeleteCourse(
 
 	if err := r.Repos.Course().Delete(ctx, course); err != nil {
 		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &deleteCoursePayloadResolver{
@@ -750,6 +718,14 @@ func (r *RootResolver) DeleteStudy(
 	ctx context.Context,
 	args struct{ Input DeleteStudyInput },
 ) (*deleteStudyPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	studyPermit, err := r.Repos.Study().Get(ctx, args.Input.StudyId)
 	if err != nil {
 		return nil, err
@@ -758,6 +734,13 @@ func (r *RootResolver) DeleteStudy(
 
 	if err := r.Repos.Study().Delete(ctx, study); err != nil {
 		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &deleteStudyPayloadResolver{
@@ -775,6 +758,14 @@ func (r *RootResolver) DeleteUserAsset(
 	ctx context.Context,
 	args struct{ Input DeleteUserAssetInput },
 ) (*deleteUserAssetPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	userAssetPermit, err := r.Repos.UserAsset().Get(ctx, args.Input.UserAssetId)
 	if err != nil {
 		return nil, err
@@ -783,6 +774,13 @@ func (r *RootResolver) DeleteUserAsset(
 
 	if err := r.Repos.UserAsset().Delete(ctx, userAsset); err != nil {
 		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &deleteUserAssetPayloadResolver{
@@ -872,12 +870,11 @@ func (r *RootResolver) GiveApple(
 		return nil, err
 	}
 
-	event, err := data.NewEvent(
-		data.AppledEvent,
-		&viewer.Id,
-		appleableId,
-		&viewer.Id,
-	)
+	eventPayload, err := data.NewStudyAppledPayload(appleableId)
+	if err != nil {
+		return nil, err
+	}
+	event, err := data.NewStudyEvent(eventPayload, appleableId, &viewer.Id)
 	if err != nil {
 		return nil, err
 	}
