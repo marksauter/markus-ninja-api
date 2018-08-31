@@ -10,8 +10,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 )
 
-func NewEventLoader() *EventLoader {
-	return &EventLoader{
+func NewUserAssetCommentLoader() *UserAssetCommentLoader {
+	return &UserAssetCommentLoader{
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -30,8 +30,8 @@ func NewEventLoader() *EventLoader {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						event, err := data.GetEvent(db, key.String())
-						results[i] = &dataloader.Result{Data: event, Error: err}
+						userAssetComment, err := data.GetUserAssetComment(db, key.String())
+						results[i] = &dataloader.Result{Data: userAssetComment, Error: err}
 					}(i, key)
 				}
 
@@ -43,55 +43,55 @@ func NewEventLoader() *EventLoader {
 	}
 }
 
-type EventLoader struct {
+type UserAssetCommentLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *EventLoader) Clear(id string) {
+func (r *UserAssetCommentLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *EventLoader) ClearAll() {
+func (r *UserAssetCommentLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *EventLoader) Get(
+func (r *UserAssetCommentLoader) Get(
 	ctx context.Context,
 	id string,
-) (*data.Event, error) {
-	eventData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+) (*data.UserAssetComment, error) {
+	userAssetCommentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		return nil, err
 	}
-	event, ok := eventData.(*data.Event)
+	userAssetComment, ok := userAssetCommentData.(*data.UserAssetComment)
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	return event, nil
+	return userAssetComment, nil
 }
 
-func (r *EventLoader) GetMany(
+func (r *UserAssetCommentLoader) GetMany(
 	ctx context.Context,
 	ids *[]string,
-) ([]*data.Event, []error) {
+) ([]*data.UserAssetComment, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
 	}
-	eventData, errs := r.batchGet.LoadMany(ctx, keys)()
+	userAssetCommentData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}
-	events := make([]*data.Event, len(eventData))
-	for i, d := range eventData {
+	userAssetComments := make([]*data.UserAssetComment, len(userAssetCommentData))
+	for i, d := range userAssetCommentData {
 		var ok bool
-		events[i], ok = d.(*data.Event)
+		userAssetComments[i], ok = d.(*data.UserAssetComment)
 		if !ok {
 			return nil, []error{fmt.Errorf("wrong type")}
 		}
 	}
 
-	return events, nil
+	return userAssetComments, nil
 }

@@ -55,30 +55,18 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
-	events, err := r.Repos.Event().GetBySource(
+	events, err := r.Repos.Event().GetByUser(
 		ctx,
 		userId.String,
 		pageOptions,
-		data.FilterCommentEvents,
-		data.FilterDeleteEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-		data.FilterMentionEvents,
-		data.FilterReferenceEvents,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountBySource(
+	count, err := r.Repos.Event().CountByUser(
 		ctx,
 		userId.String,
-		data.FilterCommentEvents,
-		data.FilterDeleteEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
-		data.FilterMentionEvents,
-		data.FilterReferenceEvents,
 	)
 	if err != nil {
 		return nil, err

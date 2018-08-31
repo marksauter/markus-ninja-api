@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -54,13 +55,13 @@ func (r *userActivityConnectionResolver) Edges() *[]*userActivityEventEdgeResolv
 	return &[]*userActivityEventEdgeResolver{}
 }
 
-func (r *userActivityConnectionResolver) Nodes() (*[]*userActivityEventResolver, error) {
+func (r *userActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userActivityEventResolver, error) {
 	n := len(r.events)
 	nodes := make([]*userActivityEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
-			resolver, err := eventPermitToResolver(e, r.repos)
+			resolver, err := eventPermitToResolver(ctx, e, r.repos)
 			if err != nil {
 				return nil, err
 			}

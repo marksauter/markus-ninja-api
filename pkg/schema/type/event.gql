@@ -1,18 +1,12 @@
 # Represents a event between two nodes.
 type Event implements Node {
-  # The action of the event.
-  action: String!
-
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
   id: ID!
 
-  # The source of the event.
-  source: EventSourceable!
-
-  # The target of the event.
-  target: EventTargetable!
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

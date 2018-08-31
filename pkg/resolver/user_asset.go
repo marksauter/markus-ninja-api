@@ -139,24 +139,18 @@ func (r *userAssetResolver) Timeline(
 		return nil, err
 	}
 
-	events, err := r.Repos.Event().GetByTarget(
+	events, err := r.Repos.Event().GetByUserAsset(
 		ctx,
 		userAssetId.String,
 		pageOptions,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountByTarget(
+	count, err := r.Repos.Event().CountByUserAsset(
 		ctx,
 		userAssetId.String,
-		data.FilterCreateEvents,
-		data.FilterDismissEvents,
-		data.FilterEnrollEvents,
 	)
 	if err != nil {
 		return nil, err

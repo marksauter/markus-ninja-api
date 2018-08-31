@@ -596,12 +596,15 @@ func CreateStudy(
 		return nil, err
 	}
 
-	e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
+	eventPayload, err := NewStudyCreatedPayload(&row.Id)
 	if err != nil {
 		return nil, err
 	}
-	_, err = CreateEvent(tx, e)
+	e, err := NewStudyEvent(eventPayload, &row.Id, &row.UserId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err = CreateEvent(tx, e); err != nil {
 		return nil, err
 	}
 

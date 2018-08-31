@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -33,8 +34,8 @@ func (r *userAssetTimelineEventEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *userAssetTimelineEventEdgeResolver) Node() (*userAssetTimelineEventResolver, error) {
-	resolver, err := eventPermitToResolver(r.event, r.repos)
+func (r *userAssetTimelineEventEdgeResolver) Node(ctx context.Context) (*userAssetTimelineEventResolver, error) {
+	resolver, err := eventPermitToResolver(ctx, r.event, r.repos)
 	if err != nil {
 		return nil, err
 	}

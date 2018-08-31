@@ -9,13 +9,13 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type appledEventResolver struct {
+type unappledEventResolver struct {
 	AppleableId *mytype.OID
 	Event       *repo.EventPermit
 	Repos       *repo.Repos
 }
 
-func (r *appledEventResolver) Appleable(ctx context.Context) (*appleableResolver, error) {
+func (r *unappledEventResolver) Appleable(ctx context.Context) (*appleableResolver, error) {
 	permit, err := r.Repos.GetAppleable(ctx, r.AppleableId)
 	if err != nil {
 		return nil, err
@@ -31,17 +31,17 @@ func (r *appledEventResolver) Appleable(ctx context.Context) (*appleableResolver
 	return &appleableResolver{appleable}, nil
 }
 
-func (r *appledEventResolver) CreatedAt() (graphql.Time, error) {
+func (r *unappledEventResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.Event.CreatedAt()
 	return graphql.Time{t}, err
 }
 
-func (r *appledEventResolver) ID() (graphql.ID, error) {
+func (r *unappledEventResolver) ID() (graphql.ID, error) {
 	id, err := r.Event.ID()
 	return graphql.ID(id.String), err
 }
 
-func (r *appledEventResolver) User(ctx context.Context) (*userResolver, error) {
+func (r *unappledEventResolver) User(ctx context.Context) (*userResolver, error) {
 	userId, err := r.Event.UserId()
 	if err != nil {
 		return nil, err

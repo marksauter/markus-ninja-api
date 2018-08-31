@@ -3,8 +3,6 @@ type Course implements
   Appleable,
   Createable,
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   StudyNode,
