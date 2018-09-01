@@ -749,20 +749,20 @@ func CreateLesson(
 		return nil, err
 	}
 
-	eventPayload, err := NewLessonCreatedPayload(&row.Id)
+	lesson, err := GetLesson(tx, row.Id.String)
 	if err != nil {
 		return nil, err
 	}
-	e, err := NewLessonEvent(eventPayload, &row.StudyId, &row.UserId)
+
+	eventPayload, err := NewLessonCreatedPayload(&lesson.Id)
+	if err != nil {
+		return nil, err
+	}
+	e, err := NewLessonEvent(eventPayload, &lesson.StudyId, &lesson.UserId)
 	if err != nil {
 		return nil, err
 	}
 	if _, err = CreateEvent(tx, e); err != nil {
-		return nil, err
-	}
-
-	lesson, err := GetLesson(tx, row.Id.String)
-	if err != nil {
 		return nil, err
 	}
 
@@ -994,7 +994,7 @@ func ParseLessonBodyForEvents(
 			if l.Id.String != lesson.Id.String {
 				newEvents[l.Id.String] = struct{}{}
 				if _, prs := oldEvents[l.Id.String]; !prs {
-					payload, err := NewLessonReferencedPayload(&lesson.Id, &l.Id)
+					payload, err := NewLessonReferencedPayload(&l.Id, &lesson.Id)
 					if err != nil {
 						return err
 					}
@@ -1026,7 +1026,7 @@ func ParseLessonBodyForEvents(
 		if l.Id.String != lesson.Id.String {
 			newEvents[l.Id.String] = struct{}{}
 			if _, prs := oldEvents[l.Id.String]; !prs {
-				payload, err := NewLessonReferencedPayload(&lesson.Id, &l.Id)
+				payload, err := NewLessonReferencedPayload(&l.Id, &lesson.Id)
 				if err != nil {
 					return err
 				}

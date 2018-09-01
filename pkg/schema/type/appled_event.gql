@@ -11,6 +11,9 @@ type AppledEvent implements
 
   id: ID!
 
+  # The study from which the event occurred.
+  study: Study!
+
   # The user who performed the event.
   user: User!
 }

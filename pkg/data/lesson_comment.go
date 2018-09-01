@@ -433,6 +433,21 @@ func UpdateLessonComment(
 	row *LessonComment,
 ) (*LessonComment, error) {
 	mylog.Log.WithField("id", row.Id.String).Info("UpdateLessonComment(id)")
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	oldLessonComment, err := GetLessonComment(tx, row.Id.String)
+	if err != nil {
+		return nil, err
+	}
+
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -444,16 +459,7 @@ func UpdateLessonComment(
 	}
 
 	if len(sets) == 0 {
-		return GetLessonComment(db, row.Id.String)
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
+		return oldLessonComment, nil
 	}
 
 	sql := `
@@ -493,7 +499,8 @@ func UpdateLessonComment(
 
 // func ParseLessonCommentBodyForEvents(
 //   db Queryer,
-//   lessonComment *LessonComment,
+//   newComment *LessonComment,
+//   oldComment *LessonComment,
 // ) error {
 //   mylog.Log.Debug("ParseLessonCommentBodyForEvents()")
 //   tx, err, newTx := BeginTransaction(db)
@@ -506,84 +513,96 @@ func UpdateLessonComment(
 //   }
 //
 //   newEvents := make(map[string]struct{})
-//   oldEvents := make(map[string]struct{})
-//   events, err := GetEventBySource(
+//   oldEvents := make(map[string]string)
+//   events, err := GetEventByLesson(
 //     tx,
-//     lessonComment.Id.String,
+//     newComment.Id.String,
 //     nil,
-//     GetMentionEvents,
-//     GetReferenceEvents,
+//     IsLessonMentionedEvent,
+//     IsLessonReferencedEvent,
 //   )
 //   if err != nil {
 //     return err
 //   }
 //   for _, event := range events {
-//     oldEvents[event.TargetId.String] = struct{}{}
+//     payload := &LessonEventPayload{}
+//     if err := event.Payload.AssignTo(payload); err != nil {
+//       return err
+//     }
+//     if payload.Action == LessonMentioned {
+//       oldEvents[event.UserId.String] = event.Id.String
+//     } else if payload.Action == LessonReferenced {
+//       oldEvents[payload.LessonCommentId.String] = event.Id.String
+//     }
 //   }
 //
-//   userAssetRefs := lessonComment.Body.AssetRefs()
+//   userAssetRefs := newComment.Body.AssetRefs()
 //   if len(userAssetRefs) > 0 {
 //     userAssets, err := BatchGetUserAssetByName(
 //       tx,
-//       lessonComment.StudyId.String,
+//       newComment.StudyId.String,
 //       userAssetRefs,
 //     )
 //     if err != nil {
 //       return err
 //     }
 //     for _, a := range userAssets {
-//       if a.Id.String != lessonComment.Id.String {
+//       if a.Id.String != newComment.Id.String {
 //         newEvents[a.Id.String] = struct{}{}
 //         if _, prs := oldEvents[a.Id.String]; !prs {
-//           event := &Event{}
-//           event.Action.Set(ReferencedEvent)
-//           event.TargetId.Set(&a.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
-//           _, err = CreateEvent(tx, event)
+//           payload, err := NewUserAssetReferencedPayload(&newComment.Id, &a.Id)
 //           if err != nil {
+//             return err
+//           }
+//           event, err := NewUserAssetEvent(payload, &newComment.StudyId, &newComment.UserId)
+//           if err != nil {
+//             return err
+//           }
+//           if _, err = CreateEvent(tx, event); err != nil {
 //             return err
 //           }
 //         }
 //       }
 //     }
 //   }
-//   lessonNumberRefs, err := lessonComment.Body.NumberRefs()
+//   lessonCommentNumberRefs, err := newComment.Body.NumberRefs()
 //   if err != nil {
 //     return err
 //   }
-//   if len(lessonNumberRefs) > 0 {
-//     lessons, err := BatchGetLessonByNumber(
+//   if len(lessonCommentNumberRefs) > 0 {
+//     lessonComments, err := BatchGetLessonCommentByNumber(
 //       tx,
-//       lessonComment.StudyId.String,
-//       lessonNumberRefs,
+//       newComment.StudyId.String,
+//       lessonCommentNumberRefs,
 //     )
 //     if err != nil {
 //       return err
 //     }
-//     for _, l := range lessons {
-//       if l.Id.String != lessonComment.LessonId.String {
+//     for _, l := range lessonComments {
+//       if l.Id.String != newComment.Id.String {
 //         newEvents[l.Id.String] = struct{}{}
 //         if _, prs := oldEvents[l.Id.String]; !prs {
-//           event := &Event{}
-//           event.Action.Set(ReferencedEvent)
-//           event.TargetId.Set(&l.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
-//           _, err = CreateEvent(tx, event)
+//           payload, err := NewLessonCommentReferencedPayload(&newComment.Id, &l.Id)
 //           if err != nil {
+//             return err
+//           }
+//           event, err := NewLessonCommentEvent(payload, &newComment.StudyId, &newComment.UserId)
+//           if err != nil {
+//             return err
+//           }
+//           if _, err = CreateEvent(tx, event); err != nil {
 //             return err
 //           }
 //         }
 //       }
 //     }
 //   }
-//   crossStudyRefs, err := lessonComment.Body.CrossStudyRefs()
+//   crossStudyRefs, err := newComment.Body.CrossStudyRefs()
 //   if err != nil {
 //     return err
 //   }
 //   for _, ref := range crossStudyRefs {
-//     lesson, err := GetLessonByOwnerStudyAndNumber(
+//     l, err := GetLessonCommentByOwnerStudyAndNumber(
 //       tx,
 //       ref.Owner,
 //       ref.Name,
@@ -592,22 +611,24 @@ func UpdateLessonComment(
 //     if err != nil {
 //       return err
 //     }
-//     if lesson.Id.String != lessonComment.LessonId.String {
-//       newEvents[lesson.Id.String] = struct{}{}
-//       if _, prs := oldEvents[lesson.Id.String]; !prs {
-//         event := &Event{}
-//         event.Action.Set(ReferencedEvent)
-//         event.TargetId.Set(&lesson.Id)
-//         event.SourceId.Set(&lessonComment.Id)
-//         event.UserId.Set(&lessonComment.UserId)
-//         _, err = CreateEvent(tx, event)
+//     if l.Id.String != newComment.Id.String {
+//       newEvents[l.Id.String] = struct{}{}
+//       if _, prs := oldEvents[l.Id.String]; !prs {
+//         payload, err := NewLessonCommentReferencedPayload(&newComment.Id, &l.Id)
 //         if err != nil {
+//           return err
+//         }
+//         event, err := NewLessonCommentEvent(payload, &newComment.StudyId, &newComment.UserId)
+//         if err != nil {
+//           return err
+//         }
+//         if _, err = CreateEvent(tx, event); err != nil {
 //           return err
 //         }
 //       }
 //     }
 //   }
-//   userRefs := lessonComment.Body.AtRefs()
+//   userRefs := newComment.Body.AtRefs()
 //   if len(userRefs) > 0 {
 //     users, err := BatchGetUserByLogin(
 //       tx,
@@ -617,25 +638,27 @@ func UpdateLessonComment(
 //       return err
 //     }
 //     for _, u := range users {
-//       if u.Id.String != lessonComment.UserId.String {
+//       if u.Id.String != newComment.UserId.String {
 //         newEvents[u.Id.String] = struct{}{}
 //         if _, prs := oldEvents[u.Id.String]; !prs {
-//           event := &Event{}
-//           event.Action.Set(MentionedEvent)
-//           event.TargetId.Set(&u.Id)
-//           event.SourceId.Set(&lessonComment.Id)
-//           event.UserId.Set(&lessonComment.UserId)
-//           _, err = CreateEvent(tx, event)
+//           payload, err := NewLessonCommentMentionedPayload(&newComment.Id)
 //           if err != nil {
+//             return err
+//           }
+//           event, err := NewLessonCommentEvent(payload, &newComment.StudyId, &newComment.UserId)
+//           if err != nil {
+//             return err
+//           }
+//           if _, err = CreateEvent(tx, event); err != nil {
 //             return err
 //           }
 //         }
 //       }
 //     }
 //   }
-//   for _, event := range events {
-//     if _, prs := newEvents[event.TargetId.String]; !prs {
-//       err := DeleteEvent(tx, &event.Id)
+//   for k, v := range oldEvents {
+//     if _, prs := newEvents[k]; !prs {
+//       err := DeleteEvent(tx, v)
 //       if err != nil {
 //         return err
 //       }

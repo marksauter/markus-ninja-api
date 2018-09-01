@@ -10,13 +10,12 @@ import (
 )
 
 const (
-	CourseEvent           = "CourseEvent"
-	LessonCommentEvent    = "LessonCommentEvent"
-	LessonEvent           = "LessonEvent"
-	PublicEvent           = "PublicEvent"
-	UserAssetCommentEvent = "UserAssetCommentEvent"
-	UserAssetEvent        = "UserAssetEvent"
-	StudyEvent            = "StudyEvent"
+	CourseEvent        = "CourseEvent"
+	LessonCommentEvent = "LessonCommentEvent"
+	LessonEvent        = "LessonEvent"
+	PublicEvent        = "PublicEvent"
+	UserAssetEvent     = "UserAssetEvent"
+	StudyEvent         = "StudyEvent"
 )
 
 type Event struct {
@@ -55,10 +54,6 @@ func NewLessonEvent(payload *LessonEventPayload, studyId, userId *mytype.OID) (*
 	return newEvent(LessonEvent, payload, studyId, userId)
 }
 
-func NewLessonCommentEvent(payload *LessonCommentEventPayload, studyId, userId *mytype.OID) (*Event, error) {
-	return newEvent(LessonCommentEvent, payload, studyId, userId)
-}
-
 func NewStudyEvent(payload *StudyEventPayload, studyId, userId *mytype.OID) (*Event, error) {
 	return newEvent(StudyEvent, payload, studyId, userId)
 }
@@ -75,7 +70,6 @@ const (
 	NotLessonCommentEvent
 	NotLessonEvent
 	NotPublicEvent
-	NotUserAssetCommentEvent
 	NotUserAssetEvent
 	NotStudyEvent
 
@@ -83,7 +77,6 @@ const (
 	IsLessonCommentEvent
 	IsLessonEvent
 	IsPublicEvent
-	IsUserAssetCommentEvent
 	IsUserAssetEvent
 	IsStudyEvent
 
@@ -111,8 +104,6 @@ func (src EventFilterOption) String() string {
 		return `type != '` + LessonEvent + `'`
 	case NotPublicEvent:
 		return `type != '` + PublicEvent + `'`
-	case NotUserAssetCommentEvent:
-		return `type != '` + UserAssetCommentEvent + `'`
 	case NotUserAssetEvent:
 		return `type != '` + UserAssetEvent + `'`
 	case NotStudyEvent:
@@ -125,8 +116,6 @@ func (src EventFilterOption) String() string {
 		return `type = '` + LessonEvent + `'`
 	case IsPublicEvent:
 		return `type = '` + PublicEvent + `'`
-	case IsUserAssetCommentEvent:
-		return `type = '` + UserAssetCommentEvent + `'`
 	case IsUserAssetEvent:
 		return `type = '` + UserAssetEvent + `'`
 	case IsStudyEvent:
@@ -368,7 +357,7 @@ const getEventSQL = `
 		study_id,
 		type,
 		user_id
-	FROM event_master
+	FROM event
 	WHERE id = $1
 `
 
@@ -406,7 +395,7 @@ func GetEventByStudy(
 		"type",
 		"user_id",
 	}
-	from := "event_master"
+	from := "event"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getEventsByStudy", sql)
@@ -474,7 +463,7 @@ func GetEventByUser(
 		"type",
 		"user_id",
 	}
-	from := "event_master"
+	from := "event"
 	sql := SQL(selects, from, where, &args, po)
 
 	psName := preparedName("getEventsByUser", sql)
@@ -622,9 +611,9 @@ func CreateEvent(
 		return nil, err
 	}
 
-	// if err := CreateNotificationsFromEvent(tx, event); err != nil {
-	//   return nil, err
-	// }
+	if err := CreateNotificationsFromEvent(tx, event); err != nil {
+		return nil, err
+	}
 
 	if newTx {
 		err = CommitTransaction(tx)

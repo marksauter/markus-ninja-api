@@ -37,18 +37,18 @@ func (r *NotificationPermit) CreatedAt() (time.Time, error) {
 	return r.notification.CreatedAt.Time, nil
 }
 
-func (r *NotificationPermit) EventId() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("event_id"); !ok {
-		return nil, ErrAccessDenied
-	}
-	return &r.notification.EventId, nil
-}
-
 func (r *NotificationPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.notification.Id, nil
+}
+
+func (r *NotificationPermit) LastReadAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("last_read_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.notification.LastReadAt.Time, nil
 }
 
 func (r *NotificationPermit) Reason() (string, error) {
@@ -58,11 +58,39 @@ func (r *NotificationPermit) Reason() (string, error) {
 	return r.notification.Reason.String, nil
 }
 
+func (r *NotificationPermit) Subject() (string, error) {
+	if ok := r.checkFieldPermission("subject"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.notification.Subject.String, nil
+}
+
+func (r *NotificationPermit) SubjectId() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("subject_id"); !ok {
+		return nil, ErrAccessDenied
+	}
+	return &r.notification.SubjectId, nil
+}
+
 func (r *NotificationPermit) StudyId() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.notification.StudyId, nil
+}
+
+func (r *NotificationPermit) Unread() (bool, error) {
+	if ok := r.checkFieldPermission("unread"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.notification.Unread.Bool, nil
+}
+
+func (r *NotificationPermit) UpdatedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("updated_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.notification.UpdatedAt.Time, nil
 }
 
 func (r *NotificationPermit) UserId() (*mytype.OID, error) {

@@ -325,18 +325,6 @@ func (r *RootResolver) CreateLesson(
 	}
 	lesson = lessonPermit.Get()
 
-	eventPayload, err := data.NewLessonCreatedPayload(&lesson.Id)
-	if err != nil {
-		return nil, err
-	}
-	event, err := data.NewLessonEvent(eventPayload, &lesson.StudyId, &lesson.UserId)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
-		return nil, err
-	}
-
 	if args.Input.CourseId != nil {
 		courseLesson := &data.CourseLesson{}
 		if err := courseLesson.CourseId.Set(args.Input.CourseId); err != nil {
@@ -863,22 +851,6 @@ func (r *RootResolver) GiveApple(
 	}
 	appleablePermit, err := r.Repos.GetAppleable(ctx, &appled.AppleableId)
 	if err != nil {
-		return nil, err
-	}
-	appleableId, err := appleablePermit.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	eventPayload, err := data.NewStudyAppledPayload(appleableId)
-	if err != nil {
-		return nil, err
-	}
-	event, err := data.NewStudyEvent(eventPayload, appleableId, &viewer.Id)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
 		return nil, err
 	}
 
