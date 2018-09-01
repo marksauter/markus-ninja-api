@@ -272,6 +272,18 @@ func CreateAppled(
 		return nil, err
 	}
 
+	eventPayload, err := NewStudyAppledPayload(&appled.AppleableId)
+	if err != nil {
+		return nil, err
+	}
+	event, err := NewStudyEvent(eventPayload, &appled.AppleableId, &appled.UserId)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := CreateEvent(tx, event); err != nil {
+		return nil, err
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {

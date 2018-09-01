@@ -102,12 +102,8 @@ func eventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *
 	switch eventType {
 	case data.CourseEvent:
 		return courseEventPermitToResolver(event, repos)
-	case data.LessonCommentEvent:
-		return lessonCommentEventPermitToResolver(event, repos)
 	case data.LessonEvent:
 		return lessonEventPermitToResolver(ctx, event, repos)
-	case data.UserAssetCommentEvent:
-		return userAssetCommentEventPermitToResolver(event, repos)
 	case data.UserAssetEvent:
 		return userAssetEventPermitToResolver(ctx, event, repos)
 	case data.StudyEvent:
@@ -132,25 +128,6 @@ func courseEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (in
 		return &appledEventResolver{AppleableId: &payload.CourseId, Event: event, Repos: repos}, nil
 	case data.CourseUnappled:
 		return &unappledEventResolver{AppleableId: &payload.CourseId, Event: event, Repos: repos}, nil
-	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
-	}
-}
-
-func lessonCommentEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
-	payload := &data.LessonCommentEventPayload{}
-	eventPayload, err := event.Payload()
-	if err != nil {
-		return nil, err
-	}
-	if err := eventPayload.AssignTo(payload); err != nil {
-		return nil, err
-	}
-	switch payload.Action {
-	case data.LessonCommentCreated:
-		return nil, nil
-	case data.LessonCommentMentioned:
-		return nil, nil
 	default:
 		return &eventResolver{Event: event, Repos: repos}, nil
 	}
@@ -217,25 +194,6 @@ func studyEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (int
 	}
 }
 
-func userAssetCommentEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
-	payload := &data.UserAssetCommentEventPayload{}
-	eventPayload, err := event.Payload()
-	if err != nil {
-		return nil, err
-	}
-	if err := eventPayload.AssignTo(payload); err != nil {
-		return nil, err
-	}
-	switch payload.Action {
-	case data.UserAssetCommentCreated:
-		return nil, nil
-	case data.UserAssetCommentMentioned:
-		return nil, nil
-	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
-	}
-}
-
 func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
 	payload := &data.UserAssetEventPayload{}
 	eventPayload, err := event.Payload()
@@ -248,12 +206,6 @@ func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit
 	switch payload.Action {
 	case data.UserAssetCreated:
 		return nil, nil
-	// case data.UserAssetCommented:
-	//   userAssetComment, err := repos.UserAssetComment().Get(ctx, payload.CommentId.String)
-	//   if err != nil {
-	//     return nil, err
-	//   }
-	//   return &userAssetCommentResolver{UserAssetComment: userAssetComment, Repos: repos}
 	case data.UserAssetMentioned:
 		return nil, nil
 	case data.UserAssetReferenced:

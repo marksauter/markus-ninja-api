@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -20,33 +19,30 @@ func (r *notificationResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *notificationResolver) Event(ctx context.Context) (*notificationEventResolver, error) {
-	eventId, err := r.Notification.EventId()
-	if err != nil {
-		return nil, err
-	}
-	e, err := r.Repos.Event().Get(ctx, eventId.String)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := eventPermitToResolver(ctx, e, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	event, ok := resolver.(notificationEvent)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to notification event")
-	}
-	return &notificationEventResolver{event}, nil
-}
-
 func (r *notificationResolver) ID() (graphql.ID, error) {
 	id, err := r.Notification.ID()
 	return graphql.ID(id.String), err
 }
 
+func (r *notificationResolver) LastReadAt() (graphql.Time, error) {
+	t, err := r.Notification.LastReadAt()
+	return graphql.Time{t}, err
+}
+
 func (r *notificationResolver) Reason() (string, error) {
 	return r.Notification.Reason()
+}
+
+func (r *notificationResolver) Subject(ctx context.Context) (*lessonResolver, error) {
+	subjectId, err := r.Notification.SubjectId()
+	if err != nil {
+		return nil, err
+	}
+	subject, err := r.Repos.Lesson().Get(ctx, subjectId.String)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: subject, Repos: r.Repos}, nil
 }
 
 func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -59,6 +55,11 @@ func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error
 		return nil, err
 	}
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
+
+func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {
+	t, err := r.Notification.UpdatedAt()
+	return graphql.Time{t}, err
 }
 
 func (r *notificationResolver) User(ctx context.Context) (*userResolver, error) {

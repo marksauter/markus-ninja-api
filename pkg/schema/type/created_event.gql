@@ -1,6 +1,5 @@
 # Represents an created event on a given subject.
 type CreatedEvent implements 
-  NotificationEvent,
   UserActivityEvent,
   Node
 {
@@ -11,6 +10,9 @@ type CreatedEvent implements
   createdAt: Time!
 
   id: ID!
+
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

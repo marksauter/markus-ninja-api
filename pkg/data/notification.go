@@ -9,13 +9,21 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 )
 
+const (
+	LessonNotification = "Lesson"
+)
+
 type Notification struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	EventId    mytype.OID         `db:"event_id" permit:"create/read"`
 	Id         mytype.OID         `db:"id" permit:"read"`
+	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read"`
 	Reason     pgtype.Text        `db:"reason" permit:"read"`
 	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
+	Subject    pgtype.Text        `db:"subject" permit:"create/read"`
+	SubjectId  mytype.OID         `db:"subject_id" permit:"create/read"`
 	StudyId    mytype.OID         `db:"study_id" permit:"create/read"`
+	Unread     pgtype.Bool        `db:"unread" permit:"read"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
@@ -112,10 +120,15 @@ func getNotification(
 	var row Notification
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.EventId,
 		&row.Id,
+		&row.LastReadAt,
 		&row.Reason,
+		&row.ReasonName,
+		&row.Subject,
+		&row.SubjectId,
 		&row.StudyId,
+		&row.Unread,
+		&row.UpdatedAt,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -145,10 +158,15 @@ func getManyNotification(
 		var row Notification
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.EventId,
 			&row.Id,
+			&row.LastReadAt,
 			&row.Reason,
+			&row.ReasonName,
+			&row.Subject,
+			&row.SubjectId,
 			&row.StudyId,
+			&row.Unread,
+			&row.UpdatedAt,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -167,10 +185,15 @@ func getManyNotification(
 const getNotificationByIdSQL = `
 	SELECT
 		created_at,
-		event_id,
 		id,
+		last_read_at,
 		reason,
+		reason_name,
+		subject,
+		subject_id,
 		study_id,
+		unread,
+		updated_at,
 		user_id
 	FROM notification_master
 	WHERE id = $1
@@ -195,10 +218,15 @@ func GetNotificationByStudy(
 
 	selects := []string{
 		"created_at",
-		"event_id",
 		"id",
+		"last_read_at",
 		"reason",
+		"reason_name",
+		"subject",
+		"subject_id",
 		"study_id",
+		"unread",
+		"updated_at",
 		"user_id",
 	}
 	from := "notification_master"
@@ -220,10 +248,15 @@ func GetNotificationByUser(
 
 	selects := []string{
 		"created_at",
-		"event_id",
 		"id",
+		"last_read_at",
 		"reason",
+		"reason_name",
+		"subject",
+		"subject_id",
 		"study_id",
+		"unread",
+		"updated_at",
 		"user_id",
 	}
 	from := "notification_master"
@@ -245,10 +278,12 @@ func BatchCreateNotification(
 	for i, enrolled := range enrolleds {
 		id, _ := mytype.NewOID("Notification")
 		src.Id.Set(id)
+		mylog.Log.Debug(enrolled.ReasonName.String)
 		notifications[i] = []interface{}{
-			src.EventId.String,
 			src.Id.String,
 			enrolled.ReasonName.String,
+			src.Subject.String,
+			src.SubjectId.String,
 			src.StudyId.String,
 			enrolled.UserId.String,
 		}
@@ -265,7 +300,7 @@ func BatchCreateNotification(
 
 	copyCount, err := tx.CopyFrom(
 		pgx.Identifier{"notification"},
-		[]string{"event_id", "id", "reason_name", "study_id", "user_id"},
+		[]string{"id", "reason_name", "subject", "subject_id", "study_id", "user_id"},
 		pgx.CopyFromRows(notifications),
 	)
 	if err != nil {
@@ -308,13 +343,17 @@ func CreateNotification(
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.Id))
 
-	if row.EventId.Status != pgtype.Undefined {
-		columns = append(columns, "event_id")
-		values = append(values, args.Append(&row.EventId))
-	}
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.Reason))
+	}
+	if row.Subject.Status != pgtype.Undefined {
+		columns = append(columns, "subject")
+		values = append(values, args.Append(&row.Subject))
+	}
+	if row.SubjectId.Status != pgtype.Undefined {
+		columns = append(columns, "subject_id")
+		values = append(values, args.Append(&row.SubjectId))
 	}
 	if row.StudyId.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
@@ -373,104 +412,92 @@ func CreateNotification(
 	return notification, nil
 }
 
-// func CreateNotificationsFromEvent(
-//   db Queryer,
-//   event *Event,
-// ) error {
-//   mylog.Log.Info("CreateNotificationsFromEvent()")
-//
-//   row := &Notification{}
-//   if err := row.EventId.Set(&event.Id); err != nil {
-//     return err
-//   }
-//
-//   if event.Action.String == MentionedEvent {
-//     if err := row.ReasonName.Set(MentionReason); err != nil {
-//       return err
-//     }
-//     if err := row.UserId.Set(&event.TargetId); err != nil {
-//       return err
-//     }
-//     _, err := CreateNotification(db, row)
-//     return err
-//   }
-//
-//   tx, err, newTx := BeginTransaction(db)
-//   if err != nil {
-//     mylog.Log.WithError(err).Error("error starting transaction")
-//     return err
-//   }
-//   if newTx {
-//     defer RollbackTransaction(tx)
-//   }
-//
-//   var enrolleds []*Enrolled
-//   switch event.SourceId.Type {
-//   case "LessonComment":
-//     if event.Action.String != CommentedEvent {
-//       mylog.Log.Debugf(
-//         "will not notify users when a %s %s %s",
-//         event.SourceId.Type,
-//         event.Action.String,
-//         event.TargetId.Type,
-//       )
-//       return nil
-//     }
-//     lessonComment, err := GetLessonComment(tx, event.SourceId.String)
-//     if err != nil {
-//       return err
-//     }
-//     row.StudyId.Set(&lessonComment.StudyId)
-//     enrolleds, err = GetEnrolledByEnrollable(tx, event.TargetId.String, nil)
-//     if err != nil {
-//       return err
-//     }
-//   case "Study":
-//     if event.Action.String != CreatedEvent {
-//       mylog.Log.Debugf(
-//         "will not notify users when a %s %s %s",
-//         event.SourceId.Type,
-//         event.Action.String,
-//         event.TargetId.Type,
-//       )
-//       return nil
-//     }
-//     row.StudyId.Set(&event.SourceId)
-//     enrolleds, err = GetEnrolledByEnrollable(tx, event.SourceId.String, nil)
-//     if err != nil {
-//       return err
-//     }
-//   default:
-//     mylog.Log.Debugf(
-//       "will not notify users when a %s %s %s",
-//       event.SourceId.Type,
-//       event.Action.String,
-//       event.TargetId.Type,
-//     )
-//     return nil
-//   }
-//
-//   notifiedEnrolleds := make([]*Enrolled, 0, len(enrolleds))
-//   for _, enrolled := range enrolleds {
-//     if event.UserId.String != enrolled.UserId.String {
-//       notifiedEnrolleds = append(notifiedEnrolleds, enrolled)
-//     }
-//   }
-//
-//   if err := BatchCreateNotification(tx, row, notifiedEnrolleds); err != nil {
-//     return err
-//   }
-//
-//   if newTx {
-//     err = CommitTransaction(tx)
-//     if err != nil {
-//       mylog.Log.WithError(err).Error("error during transaction")
-//       return err
-//     }
-//   }
-//
-//   return nil
-// }
+func CreateNotificationsFromEvent(
+	db Queryer,
+	event *Event,
+) error {
+	mylog.Log.Info("CreateNotificationsFromEvent()")
+
+	row := &Notification{}
+	if err := row.StudyId.Set(&event.StudyId); err != nil {
+		return err
+	}
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	var enrolleds []*Enrolled
+	switch event.Type.String {
+	case LessonEvent:
+		payload := &LessonEventPayload{}
+		if err := event.Payload.AssignTo(payload); err != nil {
+			return err
+		}
+		if err := row.Subject.Set(LessonNotification); err != nil {
+			return err
+		}
+		if err := row.SubjectId.Set(&payload.LessonId); err != nil {
+			return err
+		}
+
+		switch payload.Action {
+		case LessonCommented:
+			enrolleds, err = GetEnrolledByEnrollable(tx, payload.LessonId.String, nil)
+			if err != nil {
+				return err
+			}
+		case LessonMentioned:
+			if err := row.ReasonName.Set(MentionReason); err != nil {
+				return err
+			}
+			if err := row.UserId.Set(&event.UserId); err != nil {
+				return err
+			}
+
+			_, err := CreateNotification(tx, row)
+			return err
+		default:
+			mylog.Log.Debugf(
+				"will not notify users when a lesson '%s'",
+				payload.Action,
+			)
+			return nil
+		}
+	default:
+		mylog.Log.Debugf(
+			"will not notify users of %s events",
+			event.Type.String,
+		)
+		return nil
+	}
+
+	notifiedEnrolleds := make([]*Enrolled, 0, len(enrolleds))
+	for _, enrolled := range enrolleds {
+		if event.UserId.String != enrolled.UserId.String {
+			notifiedEnrolleds = append(notifiedEnrolleds, enrolled)
+		}
+	}
+
+	if err := BatchCreateNotification(tx, row, notifiedEnrolleds); err != nil {
+		return err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return err
+		}
+	}
+
+	return nil
+}
 
 const deleteNotificationSQl = `
 	DELETE FROM notification

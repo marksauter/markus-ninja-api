@@ -12,8 +12,14 @@ type ReferencedEvent implements
   # Is this reference from a different study? 
   isCrossStudy: Boolean!
 
+  # The object referenced.
+  referenceable: Referenceable!
+
   # The source lesson of the event.
   source: Lesson!
+
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

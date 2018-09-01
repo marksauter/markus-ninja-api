@@ -10,10 +10,10 @@ import (
 )
 
 type referencedEventResolver struct {
-	Event          *repo.EventPermit
+	Event           *repo.EventPermit
 	ReferenceableId *mytype.OID
-	Repos          *repo.Repos
-	SourceId       *mytype.OID
+	Repos           *repo.Repos
+	SourceId        *mytype.OID
 }
 
 func (r *referencedEventResolver) CreatedAt() (graphql.Time, error) {

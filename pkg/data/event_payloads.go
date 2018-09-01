@@ -26,11 +26,7 @@ const (
 	StudyAppled   = "appled"
 	StudyUnappled = "unappled"
 
-	UserAssetCommentCreated   = "created"
-	UserAssetCommentMentioned = "mentioned"
-
 	UserAssetCreated    = "created"
-	UserAssetCommented  = "commented"
 	UserAssetMentioned  = "mentioned"
 	UserAssetReferenced = "referenced"
 	UserAssetRenamed    = "renamed"
@@ -71,11 +67,6 @@ func NewCourseUnappledPayload(courseId *mytype.OID) (*CourseEventPayload, error)
 type RenamePayload struct {
 	From string `json:"from,omitempty"`
 	To   string `json:"to,omitempty"`
-}
-
-type LessonCommentEventPayload struct {
-	Action    string     `json:"action,omitempty"`
-	CommentId mytype.OID `json:"comment_id,omitempty"`
 }
 
 type LessonEventPayload struct {
@@ -162,17 +153,11 @@ func NewStudyUnappledPayload(studyId *mytype.OID) (*StudyEventPayload, error) {
 	return payload, nil
 }
 
-type UserAssetCommentEventPayload struct {
-	Action    string     `json:"action,omitempty"`
-	CommentId mytype.OID `json:"comment_id,omitempty"`
-}
-
 type UserAssetEventPayload struct {
-	Action    string        `json:"action,omitempty"`
-	AssetId   mytype.OID    `json:"asset_id,omitempty"`
-	CommentId mytype.OID    `json:"comment_id,omitempty"`
-	Rename    RenamePayload `json:"rename,omitempty"`
-	SourceId  mytype.OID    `json:"source_id,omitempty"`
+	Action   string        `json:"action,omitempty"`
+	AssetId  mytype.OID    `json:"asset_id,omitempty"`
+	Rename   RenamePayload `json:"rename,omitempty"`
+	SourceId mytype.OID    `json:"source_id,omitempty"`
 }
 
 func NewUserAssetReferencedPayload(assetId, sourceId *mytype.OID) (*UserAssetEventPayload, error) {
