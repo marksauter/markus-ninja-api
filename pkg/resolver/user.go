@@ -35,6 +35,12 @@ func (r *userResolver) Activity(
 		OrderBy *OrderArg
 	},
 ) (*userActivityConnectionResolver, error) {
+	filters := []data.EventFilterOption{}
+	_, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		filters = append(filters, data.IsPublic)
+	}
+
 	userId, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -55,10 +61,12 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
+	filters = append(filters, data.IsStudyEvent)
 	events, err := r.Repos.Event().GetByUser(
 		ctx,
 		userId.String,
 		pageOptions,
+		filters...,
 	)
 	if err != nil {
 		return nil, err
@@ -67,6 +75,7 @@ func (r *userResolver) Activity(
 	count, err := r.Repos.Event().CountByUser(
 		ctx,
 		userId.String,
+		data.IsStudyEvent,
 	)
 	if err != nil {
 		return nil, err

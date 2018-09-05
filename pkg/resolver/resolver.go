@@ -185,6 +185,8 @@ func studyEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (int
 		return nil, err
 	}
 	switch payload.Action {
+	case data.StudyCreated:
+		return &createdEventResolver{CreateableId: &payload.StudyId, Event: event, Repos: repos}, nil
 	case data.StudyAppled:
 		return &appledEventResolver{AppleableId: &payload.StudyId, Event: event, Repos: repos}, nil
 	case data.StudyUnappled:
