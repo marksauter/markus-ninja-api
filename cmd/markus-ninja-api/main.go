@@ -67,6 +67,7 @@ func main() {
 	graphiQLHandler := route.GraphiQLHandler{}
 	confirmVerificationHandler := route.ConfirmVerificationHandler{db}
 	indexHandler := route.IndexHandler{}
+	previewHandler := route.PreviewHandler{Repos: repos}
 	tokenHandler := route.TokenHandler{svcs.Auth, db}
 	signupHandler := route.SignupHandler{svcs.Auth, db}
 	uploadHandler := route.UploadHandler{}
@@ -88,6 +89,10 @@ func main() {
 		route.ConfirmVerificationCors.Handler,
 	).Then(confirmVerificationHandler)
 	index := middleware.CommonMiddleware.Then(indexHandler)
+	preview := middleware.CommonMiddleware.Append(
+		route.PreviewCors.Handler,
+		authMiddleware.Use,
+	).Then(previewHandler)
 	token := middleware.CommonMiddleware.Append(
 		route.TokenCors.Handler,
 	).Then(tokenHandler)
@@ -111,6 +116,7 @@ func main() {
 	r.Handle("/graphql", graphql)
 	r.Handle("/graphql/schema", graphQLSchema)
 	r.Handle("/graphiql", graphiql)
+	r.Handle("/preview", preview)
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
 	r.Handle("/upload", upload)
