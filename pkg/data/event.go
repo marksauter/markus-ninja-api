@@ -230,7 +230,7 @@ func CountEventByUser(
 const countReceivedEventByUserSQL = `
 	SELECT COUNT(*)
 	FROM received_event_master
-	WHERE user_id = $1
+	WHERE received_user_id = $1
 `
 
 func CountReceivedEventByUser(

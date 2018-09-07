@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -17,6 +16,7 @@ type Enrolled struct {
 	EnrollableId mytype.OID              `db:"enrollable_id" permit:"read"`
 	ReasonName   pgtype.Varchar          `db:"reason_name" permit:"read"`
 	Status       mytype.EnrollmentStatus `db:"status" permit:"read/update"`
+	Type         mytype.EnrollmentType   `db:"type" permit:"read"`
 	UserId       mytype.OID              `db:"user_id" permit:"read"`
 }
 
@@ -106,6 +106,7 @@ func getEnrolled(
 		&row.EnrollableId,
 		&row.ReasonName,
 		&row.Status,
+		&row.Type,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -140,6 +141,7 @@ func getManyEnrolled(
 			&row.EnrollableId,
 			&row.ReasonName,
 			&row.Status,
+			&row.Type,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -162,6 +164,7 @@ const getEnrolledSQL = `
 		enrollable_id,
 		reason_name,
 		status,
+		type,
 		user_id
 	FROM enrolled
 	WHERE id = $1
@@ -182,6 +185,7 @@ const getEnrolledByEnrollableAndUserSQL = `
 		enrollable_id,
 		reason_name,
 		status,
+		type,
 		user_id
 	FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
@@ -228,6 +232,7 @@ func GetEnrolledByUser(
 		"enrollable_id",
 		"reason_name",
 		"status",
+		"type",
 		"user_id",
 	}
 	from := "enrolled"
@@ -261,6 +266,7 @@ func GetEnrolledByEnrollable(
 		"enrollable_id",
 		"reason_name",
 		"status",
+		"type",
 		"user_id",
 	}
 	from := "enrolled"
@@ -288,6 +294,12 @@ func CreateEnrolled(
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.ReasonName))
 	}
+	columns = append(columns, "type")
+	values = append(values, args.Append(row.EnrollableId.Type))
+	if row.Status.Status != pgtype.Undefined {
+		columns = append(columns, "status")
+		values = append(values, args.Append(&row.Status))
+	}
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
@@ -302,24 +314,8 @@ func CreateEnrolled(
 		defer RollbackTransaction(tx)
 	}
 
-	var enrollable string
-	switch row.EnrollableId.Type {
-	case "Lesson":
-		enrollable = "lesson"
-	case "Study":
-		enrollable = "study"
-	case "User":
-		enrollable = "user"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for enrolled enrollable id", row.EnrollableId.Type)
-	}
-
-	table := strings.Join(
-		[]string{enrollable, "enrolled"},
-		"_",
-	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO enrolled(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -349,11 +345,6 @@ func CreateEnrolled(
 	)
 	if err != nil {
 		return nil, err
-	}
-
-	if row.Status.Status != pgtype.Undefined {
-		enrolled.Status.Set(&row.Status)
-		enrolled, err = UpdateEnrolled(tx, enrolled)
 	}
 
 	if newTx {
