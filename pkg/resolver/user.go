@@ -633,6 +633,64 @@ func (r *userResolver) ProfileUpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *userResolver) ReceivedActivity(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*userActivityConnectionResolver, error) {
+	userId, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := r.Repos.Event().GetReceivedByUser(
+		ctx,
+		userId.String,
+		pageOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := r.Repos.Event().CountReceivedByUser(
+		ctx,
+		userId.String,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewUserActivityConnectionResolver(
+		events,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
+}
+
 func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	var uri mygql.URI
 	login, err := r.User.Login()
