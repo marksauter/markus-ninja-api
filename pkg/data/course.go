@@ -157,7 +157,7 @@ func CountCourseBySearch(
 	from := "course_search_index"
 	in := within
 	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
+		if in.Type != "Study" && in.Type != "Topic" {
 			return n, fmt.Errorf(
 				"cannot search for courses within type `%s`",
 				in.Type,
