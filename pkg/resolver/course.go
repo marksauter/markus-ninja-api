@@ -430,6 +430,22 @@ func (r *courseResolver) ViewerCanAdmin(ctx context.Context) (bool, error) {
 	return r.Repos.Course().ViewerCanAdmin(ctx, course)
 }
 
+func (r *courseResolver) ViewerCanApple(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	courseId, err := r.Course.ID()
+	if err != nil {
+		return false, err
+	}
+
+	appled := &data.Appled{}
+	appled.AppleableId.Set(courseId)
+	appled.UserId.Set(viewer.Id)
+	return r.Repos.Appled().ViewerCanApple(ctx, appled)
+}
+
 func (r *courseResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {

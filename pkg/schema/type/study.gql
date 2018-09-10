@@ -216,6 +216,9 @@ type Study implements
   # Can the viewer admin this object?
   viewerCanAdmin: Boolean!
 
+  # Can the viewer apple this appleable.
+  viewerCanApple: Boolean!
+
   # Can the viewer enroll in this enrollable.
   viewerCanEnroll: Boolean!
 
