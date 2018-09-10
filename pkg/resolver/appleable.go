@@ -9,6 +9,7 @@ import (
 type appleable interface {
 	AppleGivers(context.Context, AppleGiversArgs) (*appleGiverConnectionResolver, error)
 	ID() (graphql.ID, error)
+	ViewerCanApple(context.Context) (bool, error)
 	ViewerHasAppled(context.Context) (bool, error)
 }
 

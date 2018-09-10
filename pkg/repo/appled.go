@@ -257,3 +257,16 @@ func (r *AppledRepo) Disconnect(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",
 	)
 }
+
+func (r *AppledRepo) ViewerCanApple(
+	ctx context.Context,
+	e *data.Appled,
+) (bool, error) {
+	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, e); err != nil {
+		if err == ErrAccessDenied {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}

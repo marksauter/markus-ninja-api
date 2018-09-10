@@ -681,6 +681,22 @@ func (r *studyResolver) ViewerCanAdmin(ctx context.Context) (bool, error) {
 	return r.Repos.Study().ViewerCanAdmin(ctx, study)
 }
 
+func (r *studyResolver) ViewerCanApple(ctx context.Context) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
+	studyId, err := r.Study.ID()
+	if err != nil {
+		return false, err
+	}
+
+	appled := &data.Appled{}
+	appled.AppleableId.Set(studyId)
+	appled.UserId.Set(viewer.Id)
+	return r.Repos.Appled().ViewerCanApple(ctx, appled)
+}
+
 func (r *studyResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
