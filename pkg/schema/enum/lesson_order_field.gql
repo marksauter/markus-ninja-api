@@ -3,6 +3,12 @@ enum LessonOrderField {
   # Order lessons by creation time.
   CREATED_AT
 
+  # Order lessons by the number of comments on it.
+  COMMENT_COUNT
+
+  # Order lessons by their number within a course.
+  COURSE_NUMBER
+
   # Order lessons by number.
   NUMBER
 

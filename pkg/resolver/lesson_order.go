@@ -12,6 +12,7 @@ type LessonOrderField int
 const (
 	LessonCreatedAt LessonOrderField = iota
 	LessonCommentCount
+	LessonCourseNumber
 	LessonNumber
 	LessonUpdatedAt
 )
@@ -22,6 +23,8 @@ func ParseLessonOrderField(s string) (LessonOrderField, error) {
 		return LessonCreatedAt, nil
 	case "COMMENT_COUNT":
 		return LessonCommentCount, nil
+	case "COURSE_NUMBER":
+		return LessonCourseNumber, nil
 	case "NUMBER":
 		return LessonNumber, nil
 	case "UPDATED_AT":
@@ -38,6 +41,8 @@ func (f LessonOrderField) String() string {
 		return "created_at"
 	case LessonCommentCount:
 		return "comment_count"
+	case LessonCourseNumber:
+		return "course_number"
 	case LessonNumber:
 		return "number"
 	case LessonUpdatedAt:
