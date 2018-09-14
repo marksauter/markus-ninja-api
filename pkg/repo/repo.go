@@ -211,6 +211,8 @@ func (r *Repos) GetAppleable(
 	appleableId *mytype.OID,
 ) (NodePermit, error) {
 	switch appleableId.Type {
+	case "Course":
+		return r.Course().Get(ctx, appleableId.String)
 	case "Study":
 		return r.Study().Get(ctx, appleableId.String)
 	default:

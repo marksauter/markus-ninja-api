@@ -8,11 +8,14 @@ import (
 type AppleableType int
 
 const (
-	AppleableTypeStudy AppleableType = iota
+	AppleableTypeCourse AppleableType = iota
+	AppleableTypeStudy
 )
 
 func ParseAppleableType(s string) (AppleableType, error) {
 	switch strings.ToUpper(s) {
+	case "COURSE":
+		return AppleableTypeCourse, nil
 	case "STUDY":
 		return AppleableTypeStudy, nil
 	default:
@@ -23,6 +26,8 @@ func ParseAppleableType(s string) (AppleableType, error) {
 
 func (f AppleableType) String() string {
 	switch f {
+	case AppleableTypeCourse:
+		return "course"
 	case AppleableTypeStudy:
 		return "study"
 	default:

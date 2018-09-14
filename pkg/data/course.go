@@ -801,7 +801,7 @@ func SearchCourse(
 
 	in := within
 	if in != nil {
-		if in.Type != "Study" && in.Type != "Topic" {
+		if in.Type != "Study" && in.Type != "Topic" && in.Type != "User" {
 			return nil, fmt.Errorf(
 				"cannot search for courses within type `%s`",
 				in.Type,

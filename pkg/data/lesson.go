@@ -962,7 +962,7 @@ func ParseLessonBodyForEvents(
 			if a.Id.String != lesson.Id.String {
 				newEvents[a.Id.String] = struct{}{}
 				if _, prs := oldEvents[a.Id.String]; !prs {
-					payload, err := NewUserAssetReferencedPayload(&lesson.Id, &a.Id)
+					payload, err := NewUserAssetReferencedPayload(&a.Id, &lesson.Id)
 					if err != nil {
 						return err
 					}

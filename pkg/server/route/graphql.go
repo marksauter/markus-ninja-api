@@ -41,7 +41,7 @@ func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(params.Query) > 3000 {
+	if len(params.Query) > 5000 {
 		http.Error(rw, "Query too large.", http.StatusBadRequest)
 		return
 	}
