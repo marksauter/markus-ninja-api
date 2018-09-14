@@ -61,12 +61,12 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
-	filters = append(filters, data.IsStudyEvent)
+	// filters = append(filters, data.IsCourseEvent, data.IsStudyEvent)
 	events, err := r.Repos.Event().GetByUser(
 		ctx,
 		userId.String,
 		pageOptions,
-		filters...,
+		// filters...,
 	)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,8 @@ func (r *userResolver) Activity(
 	count, err := r.Repos.Event().CountByUser(
 		ctx,
 		userId.String,
-		data.IsStudyEvent,
+		// data.IsCourseEvent,
+		// data.IsStudyEvent,
 	)
 	if err != nil {
 		return nil, err
@@ -128,12 +129,16 @@ func (r *userResolver) Appled(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByApplee(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := make([]repo.NodePermit, 0, pageOptions.Limit())
 	switch appleableType {
+	case AppleableTypeCourse:
+		courses, err := r.Repos.Course().GetByApplee(ctx, id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range courses {
+			permits = append(permits, s)
+		}
 	case AppleableTypeStudy:
 		studies, err := r.Repos.Study().GetByApplee(ctx, id.String, pageOptions)
 		if err != nil {
@@ -150,7 +155,7 @@ func (r *userResolver) Appled(
 		r.Repos,
 		permits,
 		pageOptions,
-		studyCount,
+		id,
 	)
 }
 

@@ -73,8 +73,12 @@ func ParseEnrollableOrder(t EnrollableType, arg *OrderArg) (data.Order, error) {
 		}, nil
 	}
 	switch t {
+	case EnrollableTypeLesson:
+		return ParseLessonOrder(arg)
 	case EnrollableTypeStudy:
 		return ParseStudyOrder(arg)
+	case EnrollableTypeUser:
+		return ParseUserOrder(arg)
 	default:
 		return nil, fmt.Errorf("invalid EnrollableType: %q", t)
 	}

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -14,6 +13,7 @@ type Appled struct {
 	AppleableId mytype.OID         `db:"appleable_id" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Id          pgtype.Int4        `db:"id" permit:"read"`
+	Type        mytype.AppleType   `db:"type" permit:"read"`
 	UserId      mytype.OID         `db:"user_id" permit:"read"`
 }
 
@@ -70,6 +70,7 @@ func getAppled(
 		&row.AppleableId,
 		&row.CreatedAt,
 		&row.Id,
+		&row.Type,
 		&row.UserId,
 	)
 	if err == pgx.ErrNoRows {
@@ -102,6 +103,7 @@ func getManyAppled(
 			&row.AppleableId,
 			&row.CreatedAt,
 			&row.Id,
+			&row.Type,
 			&row.UserId,
 		)
 		rows = append(rows, &row)
@@ -122,6 +124,7 @@ const getAppledSQL = `
 		appleable_id,
 		created_at,
 		id,
+		type,
 		user_id
 	FROM appled
 	WHERE id = $1
@@ -137,6 +140,7 @@ const getAppledByAppleableAndUserSQL = `
 		appleable_id,
 		created_at,
 		id,
+		type,
 		user_id
 	FROM appled
 	WHERE appleable_id = $1 AND user_id = $2
@@ -166,6 +170,7 @@ func GetAppledByUser(
 		"appleable_id",
 		"created_at",
 		"id",
+		"type",
 		"user_id",
 	}
 	from := "appled"
@@ -189,6 +194,7 @@ func GetAppledByAppleable(
 		"appleable_id",
 		"created_at",
 		"id",
+		"type",
 		"user_id",
 	}
 	from := "appled"
@@ -214,6 +220,8 @@ func CreateAppled(
 		columns = append(columns, "appleable_id")
 		values = append(values, args.Append(&row.AppleableId))
 	}
+	columns = append(columns, "type")
+	values = append(values, args.Append(row.AppleableId.Type))
 	if row.UserId.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserId))
@@ -228,20 +236,8 @@ func CreateAppled(
 		defer RollbackTransaction(tx)
 	}
 
-	var appleable string
-	switch row.AppleableId.Type {
-	case "Study":
-		appleable = "study"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for appled appleable id", row.AppleableId.Type)
-	}
-
-	table := strings.Join(
-		[]string{appleable, "appled"},
-		"_",
-	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO appled(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -272,13 +268,30 @@ func CreateAppled(
 		return nil, err
 	}
 
-	eventPayload, err := NewStudyAppledPayload(&appled.AppleableId)
-	if err != nil {
-		return nil, err
-	}
-	event, err := NewStudyEvent(eventPayload, &appled.AppleableId, &appled.UserId)
-	if err != nil {
-		return nil, err
+	event := &Event{}
+	switch appled.Type.V {
+	case mytype.AppleTypeCourse:
+		eventPayload, err := NewCourseAppledPayload(&appled.AppleableId)
+		if err != nil {
+			return nil, err
+		}
+		course, err := GetCourse(tx, appled.AppleableId.String)
+		if err != nil {
+			return nil, err
+		}
+		event, err = NewCourseEvent(eventPayload, &course.StudyId, &appled.UserId)
+		if err != nil {
+			return nil, err
+		}
+	case mytype.AppleTypeStudy:
+		eventPayload, err := NewStudyAppledPayload(&appled.AppleableId)
+		if err != nil {
+			return nil, err
+		}
+		event, err = NewStudyEvent(eventPayload, &appled.AppleableId, &appled.UserId)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if _, err := CreateEvent(tx, event); err != nil {
 		return nil, err

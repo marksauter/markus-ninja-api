@@ -1,16 +1,18 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleableConnectionResolver(
 	repos *repo.Repos,
 	appleables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	userId *mytype.OID,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
 	for i := range edges {
@@ -32,7 +34,7 @@ func NewAppleableConnectionResolver(
 		appleables: appleables,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		userId:     userId,
 	}
 	return resolver, nil
 }
@@ -42,7 +44,11 @@ type appleableConnectionResolver struct {
 	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	userId     *mytype.OID
+}
+
+func (r *appleableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
+	return r.repos.Course().CountByApplee(ctx, r.userId.String)
 }
 
 func (r *appleableConnectionResolver) Edges() *[]*appleableEdgeResolver {
@@ -77,6 +83,6 @@ func (r *appleableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *appleableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+func (r *appleableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	return r.repos.Study().CountByApplee(ctx, r.userId.String)
 }
