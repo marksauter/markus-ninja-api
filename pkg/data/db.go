@@ -282,6 +282,46 @@ func (p *PageOptions) orderBy(from string) string {
 	return fmt.Sprintf("ORDER BY %s.%s %s", from, field, p.QueryDirection())
 }
 
+type WhereFrom = func(string) string
+
+func SQL2(
+	selects []string,
+	from string,
+	where []WhereFrom,
+	args *pgx.QueryArgs,
+	po *PageOptions,
+) string {
+	fromAlias := xid.New().String()
+	var joins, whereAnds []string
+	var limit, orderBy string
+	if po != nil {
+		joins = po.joins(from, fromAlias, args)
+		whereAnds = po.whereAnds(fromAlias)
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = po.orderBy(fromAlias)
+	}
+	selectsCopy := make([]string, len(selects))
+	for i, s := range selects {
+		selectsCopy[i] = fromAlias + "." + s
+	}
+	whereSQL := make([]string, len(where))
+	for i, w := range where {
+		whereSQL[i] = w(fromAlias)
+	}
+
+	sql := `
+		SELECT 
+		` + strings.Join(selectsCopy, ",") + `
+		FROM ` + from + ` AS ` + fromAlias + `
+		` + strings.Join(joins, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
+		` + strings.Join(whereAnds, " ") + `
+		` + orderBy + `
+		` + limit
+
+	return ReorderQuery(po, sql)
+}
+
 func SQL(
 	selects []string,
 	from string,
@@ -417,4 +457,51 @@ func ReorderQuery(po *PageOptions, query string) string {
 		)
 	}
 	return query
+}
+
+type FilterType int
+
+const (
+	EqualFilter FilterType = iota
+	NotEqualFilter
+)
+
+type FilterOption interface {
+	SQL(from string) string
+	Type() FilterType
+}
+
+func JoinFilters(filters []FilterOption) func(from string) string {
+	notFilters := make([]FilterOption, 0, len(filters))
+	isFilters := make([]FilterOption, 0, len(filters))
+
+	for _, f := range filters {
+		// If the filter's value is less than the first is filter, then it is a not
+		// filter
+		if f.Type() == NotEqualFilter {
+			notFilters = append(notFilters, f)
+		} else {
+			isFilters = append(isFilters, f)
+		}
+	}
+
+	return func(from string) string {
+		sql := make([]string, 0, 2)
+		if len(isFilters) > 0 {
+			fs := make([]string, len(isFilters))
+			for i, f := range isFilters {
+				fs[i] = f.SQL(from)
+			}
+			sql = append(sql, fmt.Sprintf("(%s)", strings.Join(fs, " OR ")))
+		}
+		if len(notFilters) > 0 {
+			fs := make([]string, len(notFilters))
+			for i, f := range notFilters {
+				fs[i] = f.SQL(from)
+			}
+			sql = append(sql, fmt.Sprintf("(%s)", strings.Join(fs, " AND ")))
+		}
+
+		return strings.Join(sql, " AND ")
+	}
 }
