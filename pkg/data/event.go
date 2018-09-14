@@ -65,79 +65,84 @@ func NewUserAssetEvent(payload *UserAssetEventPayload, studyId, userId *mytype.O
 type EventFilterOption int
 
 const (
-	// Type filters
+	// Not filters
 	NotCourseEvent EventFilterOption = iota
 	NotLessonCommentEvent
 	NotLessonEvent
 	NotPublicEvent
 	NotUserAssetEvent
 	NotStudyEvent
+	NotLessonCreatedEvent
+	NotLessonMentionedEvent
+	NotLessonReferencedEvent
 
+	// Is filters
 	IsCourseEvent
 	IsLessonCommentEvent
 	IsLessonEvent
 	IsPublicEvent
 	IsUserAssetEvent
 	IsStudyEvent
-
-	// Public filters
 	IsPublic
 	IsPrivate
-
-	// LessonEvent filters
-	NotLessonCreatedEvent
-	NotLessonMentionedEvent
-	NotLessonReferencedEvent
-
 	IsLessonCreatedEvent
 	IsLessonMentionedEvent
 	IsLessonReferencedEvent
 )
 
-func (src EventFilterOption) String() string {
+func (src EventFilterOption) SQL(from string) string {
 	switch src {
 	case NotCourseEvent:
-		return `type != '` + CourseEvent + `'`
+		return from + `.type != '` + CourseEvent + `'`
 	case NotLessonCommentEvent:
-		return `type != '` + LessonCommentEvent + `'`
+		return from + `.type != '` + LessonCommentEvent + `'`
 	case NotLessonEvent:
-		return `type != '` + LessonEvent + `'`
+		return from + `.type != '` + LessonEvent + `'`
 	case NotPublicEvent:
-		return `type != '` + PublicEvent + `'`
+		return from + `.type != '` + PublicEvent + `'`
 	case NotUserAssetEvent:
-		return `type != '` + UserAssetEvent + `'`
+		return from + `.type != '` + UserAssetEvent + `'`
 	case NotStudyEvent:
-		return `type != '` + StudyEvent + `'`
-	case IsCourseEvent:
-		return `type = '` + CourseEvent + `'`
-	case IsLessonCommentEvent:
-		return `type = '` + LessonCommentEvent + `'`
-	case IsLessonEvent:
-		return `type = '` + LessonEvent + `'`
-	case IsPublicEvent:
-		return `type = '` + PublicEvent + `'`
-	case IsUserAssetEvent:
-		return `type = '` + UserAssetEvent + `'`
-	case IsStudyEvent:
-		return `type = '` + StudyEvent + `'`
-	case IsPublic:
-		return `public = true`
-	case IsPrivate:
-		return `public = false`
+		return from + `.type != '` + StudyEvent + `'`
 	case NotLessonCreatedEvent:
-		return `action != '` + LessonCreated + `'`
+		return from + `.action != '` + LessonCreated + `'`
 	case NotLessonMentionedEvent:
-		return `action != '` + LessonMentioned + `'`
+		return from + `.action != '` + LessonMentioned + `'`
 	case NotLessonReferencedEvent:
-		return `action != '` + LessonReferenced + `'`
+		return from + `.action != '` + LessonReferenced + `'`
+
+	case IsCourseEvent:
+		return from + `.type = '` + CourseEvent + `'`
+	case IsLessonCommentEvent:
+		return from + `.type = '` + LessonCommentEvent + `'`
+	case IsLessonEvent:
+		return from + `.type = '` + LessonEvent + `'`
+	case IsPublicEvent:
+		return from + `.type = '` + PublicEvent + `'`
+	case IsUserAssetEvent:
+		return from + `.type = '` + UserAssetEvent + `'`
+	case IsStudyEvent:
+		return from + `.type = '` + StudyEvent + `'`
+	case IsPublic:
+		return from + `.public = true`
+	case IsPrivate:
+		return from + `.public = false`
 	case IsLessonCreatedEvent:
-		return `action = '` + LessonCreated + `'`
+		return from + `.action = '` + LessonCreated + `'`
 	case IsLessonMentionedEvent:
-		return `action = '` + LessonMentioned + `'`
+		return from + `.action = '` + LessonMentioned + `'`
 	case IsLessonReferencedEvent:
-		return `action = '` + LessonReferenced + `'`
+		return from + `.action = '` + LessonReferenced + `'`
 	default:
 		return ""
+	}
+}
+
+func (src EventFilterOption) Type() FilterType {
+	if src < IsCourseEvent {
+		return NotEqualFilter
+	} else {
+		return EqualFilter
 	}
 }
 
@@ -154,12 +159,12 @@ func CountEventByLesson(
 ) (n int32, err error) {
 	mylog.Log.WithField("lesson_id", lessonId).Info("CountEventByLesson()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEventByLessonSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND lesson_event_master.")
+	ands := JoinFilters(filters)("lesson_event_master")
+	sql := strings.Join([]string{countEventByLessonSQL, ands}, " AND ")
 
 	psName := preparedName("countEventByLesson", sql)
 
@@ -182,12 +187,12 @@ func CountEventByStudy(
 ) (n int32, err error) {
 	mylog.Log.WithField("study_id", studyId).Info("CountEventByStudy()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEventByStudySQL}, ands...)
-	sql := strings.Join(sqlParts, " AND event.")
+	ands := JoinFilters(filters)("event")
+	sql := strings.Join([]string{countEventByStudySQL, ands}, " AND ")
 
 	psName := preparedName("countEventByStudy", sql)
 
@@ -211,12 +216,12 @@ func CountEventByUser(
 ) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountEventByUser()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEventByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND event.")
+	ands := JoinFilters(filters)("event")
+	sql := strings.Join([]string{countEventByUserSQL, ands}, " AND ")
 
 	psName := preparedName("countEventByUser", sql)
 
@@ -240,12 +245,12 @@ func CountReceivedEventByUser(
 ) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountReceivedEventByUser()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countReceivedEventByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND received_event_master.")
+	ands := JoinFilters(filters)("event")
+	sql := strings.Join([]string{countReceivedEventByUserSQL, ands}, " AND ")
 
 	psName := preparedName("countReceivedEventByUser", sql)
 
@@ -269,12 +274,12 @@ func CountEventByUserAsset(
 ) (n int32, err error) {
 	mylog.Log.WithField("asset_id", assetId).Info("CountEventByUserAsset()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEventByUserAssetSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND user_asset_event_master.")
+	ands := JoinFilters(filters)("event")
+	sql := strings.Join([]string{countEventByUserAssetSQL, ands}, " AND ")
 
 	psName := preparedName("countEventByUserAsset", sql)
 
@@ -376,14 +381,16 @@ func GetEventByStudy(
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("study_id", studyId).Info("GetEventByStudy(study_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`study_id = ` + args.Append(studyId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.study_id = ` + args.Append(studyId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -396,7 +403,7 @@ func GetEventByStudy(
 		"user_id",
 	}
 	from := "event"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEventsByStudy", sql)
 
@@ -410,14 +417,16 @@ func GetEventByLesson(
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("lesson_id", lessonId).Info("GetEventByLesson(lesson_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`lesson_id = ` + args.Append(lessonId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.lesson_id = ` + args.Append(lessonId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -430,7 +439,7 @@ func GetEventByLesson(
 		"user_id",
 	}
 	from := "lesson_event_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEventByLessons", sql)
 
@@ -444,14 +453,16 @@ func GetEventByUser(
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("user_id", userId).Info("GetEventByUser(user_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`user_id = ` + args.Append(userId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.user_id = ` + args.Append(userId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -464,7 +475,7 @@ func GetEventByUser(
 		"user_id",
 	}
 	from := "event"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEventsByUser", sql)
 
@@ -478,14 +489,16 @@ func GetReceivedEventByUser(
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("user_id", userId).Info("GetReceivedEventByUser(user_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`received_user_id = ` + args.Append(userId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.received_user_id = ` + args.Append(userId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -498,7 +511,7 @@ func GetReceivedEventByUser(
 		"user_id",
 	}
 	from := "received_event_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getReceivedEventsByUser", sql)
 
@@ -512,14 +525,16 @@ func GetEventByUserAsset(
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
 	mylog.Log.WithField("asset_id", assetId).Info("GetEventByUserAsset(asset_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`asset_id = ` + args.Append(assetId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.asset_id = ` + args.Append(assetId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -532,7 +547,7 @@ func GetEventByUserAsset(
 		"user_id",
 	}
 	from := "user_asset_event_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEventByUserAssets", sql)
 
