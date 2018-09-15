@@ -304,9 +304,12 @@ func SQL2(
 	for i, s := range selects {
 		selectsCopy[i] = fromAlias + "." + s
 	}
-	whereSQL := make([]string, len(where))
-	for i, w := range where {
-		whereSQL[i] = w(fromAlias)
+	whereSQL := make([]string, 0, len(where))
+	for _, w := range where {
+		and := w(fromAlias)
+		if and != "" {
+			whereSQL = append(whereSQL, and)
+		}
 	}
 
 	sql := `

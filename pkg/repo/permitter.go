@@ -148,6 +148,26 @@ func (r *Permitter) ViewerCanAdmin(
 	}
 	vid := viewer.Id.String
 	switch node := node.(type) {
+	case data.Appled:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			appled, err := r.repos.Appled().load.Get(ctx, node.Id.Int)
+			if err != nil {
+				return false, err
+			}
+			userId = &appled.UserId
+		}
+		return vid == userId.String, nil
+	case *data.Appled:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			appled, err := r.repos.Appled().load.Get(ctx, node.Id.Int)
+			if err != nil {
+				return false, err
+			}
+			userId = &appled.UserId
+		}
+		return vid == userId.String, nil
 	case data.Course:
 		userId := &node.UserId
 		if node.UserId.Status == pgtype.Undefined {
@@ -186,6 +206,26 @@ func (r *Permitter) ViewerCanAdmin(
 				return false, err
 			}
 			userId = &email.UserId
+		}
+		return vid == userId.String, nil
+	case data.Enrolled:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.Id.Int)
+			if err != nil {
+				return false, err
+			}
+			userId = &enrolled.UserId
+		}
+		return vid == userId.String, nil
+	case *data.Enrolled:
+		userId := &node.UserId
+		if node.UserId.Status == pgtype.Undefined {
+			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.Id.Int)
+			if err != nil {
+				return false, err
+			}
+			userId = &enrolled.UserId
 		}
 		return vid == userId.String, nil
 	case data.EVT:
@@ -228,6 +268,27 @@ func (r *Permitter) ViewerCanAdmin(
 			return false, err
 		}
 		return vid == study.UserId.String, nil
+	// TODO: figure out the permissions for labeled data type
+	// case data.Labeled:
+	//   userId := &node.UserId
+	//   if node.UserId.Status == pgtype.Undefined {
+	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.Id.Int)
+	//     if err != nil {
+	//       return false, err
+	//     }
+	//     userId = &labeled.UserId
+	//   }
+	//   return vid == userId.String, nil
+	// case *data.Labeled:
+	//   userId := &node.UserId
+	//   if node.UserId.Status == pgtype.Undefined {
+	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.Id.Int)
+	//     if err != nil {
+	//       return false, err
+	//     }
+	//     userId = &labeled.UserId
+	//   }
+	//   return vid == userId.String, nil
 	case data.Lesson:
 		userId := &node.UserId
 		if node.UserId.Status == pgtype.Undefined {
@@ -312,6 +373,27 @@ func (r *Permitter) ViewerCanAdmin(
 			userId = &study.UserId
 		}
 		return vid == userId.String, nil
+	// TODO: figure out the permissions for topiced data type
+	// case data.Topiced:
+	//   userId := &node.UserId
+	//   if node.UserId.Status == pgtype.Undefined {
+	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.Id.Int)
+	//     if err != nil {
+	//       return false, err
+	//     }
+	//     userId = &topiced.UserId
+	//   }
+	//   return vid == userId.String, nil
+	// case *data.Topiced:
+	//   userId := &node.UserId
+	//   if node.UserId.Status == pgtype.Undefined {
+	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.Id.Int)
+	//     if err != nil {
+	//       return false, err
+	//     }
+	//     userId = &topiced.UserId
+	//   }
+	//   return vid == userId.String, nil
 	case data.User:
 		return vid == node.Id.String, nil
 	case *data.User:

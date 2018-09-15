@@ -61,12 +61,12 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
-	// filters = append(filters, data.IsCourseEvent, data.IsStudyEvent)
+	filters = append(filters, data.IsCourseEvent, data.IsStudyEvent)
 	events, err := r.Repos.Event().GetByUser(
 		ctx,
 		userId.String,
 		pageOptions,
-		// filters...,
+		filters...,
 	)
 	if err != nil {
 		return nil, err
@@ -75,8 +75,8 @@ func (r *userResolver) Activity(
 	count, err := r.Repos.Event().CountByUser(
 		ctx,
 		userId.String,
-		// data.IsCourseEvent,
-		// data.IsStudyEvent,
+		data.IsCourseEvent,
+		data.IsStudyEvent,
 	)
 	if err != nil {
 		return nil, err
@@ -279,7 +279,7 @@ func (r *userResolver) Emails(
 
 	filterOptions := make([]data.EmailFilterOption, 0, 1)
 	if args.IsVerified != nil && *args.IsVerified {
-		filterOptions = append(filterOptions, data.EmailIsVerified)
+		filterOptions = append(filterOptions, data.IsVerifiedEmail)
 	}
 	if args.Type != nil {
 		for _, t := range *args.Type {
@@ -289,11 +289,11 @@ func (r *userResolver) Emails(
 			}
 			switch emailType.V {
 			case mytype.BackupEmail:
-				filterOptions = append(filterOptions, data.FilterBackup)
+				filterOptions = append(filterOptions, data.IsBackupEmail)
 			case mytype.ExtraEmail:
-				filterOptions = append(filterOptions, data.FilterExtra)
+				filterOptions = append(filterOptions, data.IsExtraEmail)
 			case mytype.PrimaryEmail:
-				filterOptions = append(filterOptions, data.FilterPrimary)
+				filterOptions = append(filterOptions, data.IsPrimaryEmail)
 			}
 		}
 	}

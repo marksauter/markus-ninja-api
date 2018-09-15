@@ -146,7 +146,7 @@ func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, r
 	case data.LessonAddedToCourse:
 		return nil, nil
 	case data.LessonCreated:
-		return nil, nil
+		return &createdEventResolver{CreateableId: &payload.LessonId, Event: event, Repos: repos}, nil
 	case data.LessonCommented:
 		lessonComment, err := repos.LessonComment().Get(ctx, payload.CommentId.String)
 		if err != nil {
@@ -207,7 +207,7 @@ func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit
 	}
 	switch payload.Action {
 	case data.UserAssetCreated:
-		return nil, nil
+		return &createdEventResolver{CreateableId: &payload.AssetId, Event: event, Repos: repos}, nil
 	case data.UserAssetMentioned:
 		return nil, nil
 	case data.UserAssetReferenced:

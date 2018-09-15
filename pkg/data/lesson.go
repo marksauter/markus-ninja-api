@@ -35,18 +35,26 @@ func lessonDelimeter(r rune) bool {
 type LessonFilterOption int
 
 const (
-	LessonIsCourseLesson LessonFilterOption = iota
-	LessonIsNotCourseLesson
+	NotCourseLesson LessonFilterOption = iota
+	IsCourseLesson
 )
 
-func (src LessonFilterOption) String() string {
+func (src LessonFilterOption) SQL(from string) string {
 	switch src {
-	case LessonIsCourseLesson:
-		return "course_id IS NOT NULL"
-	case LessonIsNotCourseLesson:
-		return "course_id IS NULL"
+	case NotCourseLesson:
+		return from + ".course_id IS NULL"
+	case IsCourseLesson:
+		return from + ".course_id IS NOT NULL"
 	default:
 		return ""
+	}
+}
+
+func (src LessonFilterOption) Type() FilterType {
+	if src < IsCourseLesson {
+		return NotEqualFilter
+	} else {
+		return EqualFilter
 	}
 }
 
@@ -165,20 +173,26 @@ const countLessonByStudySQL = `
 func CountLessonByStudy(
 	db Queryer,
 	studyId string,
+	opts ...LessonFilterOption,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("CountLessonByStudy(study_id)")
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonByStudy",
-		countLessonByStudySQL,
-		studyId,
-	).Scan(&n)
 
-	mylog.Log.WithField("n", n).Info("")
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
+	ands := JoinFilters(filters)("lesson")
+	sql := countLessonByStudySQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
+	psName := preparedName("countLessonByStudy", sql)
+
+	err := prepareQueryRow(db, psName, sql, studyId).Scan(&n)
 	return n, err
 }
 
@@ -541,15 +555,16 @@ func GetLessonByStudy(
 	mylog.Log.WithField(
 		"study_id", studyId,
 	).Info("GetLessonByStudy(study_id)")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`study_id = ` + args.Append(studyId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.study_id = ` + args.Append(studyId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -566,7 +581,7 @@ func GetLessonByStudy(
 		"user_id",
 	}
 	from := "lesson_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getLessonsByStudy", sql)
 

@@ -27,42 +27,6 @@ type Notification struct {
 	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-type NotificationFilterOption int
-
-const (
-	FilterAuthorNotifications NotificationFilterOption = iota
-	FilterCommentNotifications
-	FilterManualNotifications
-	FilterMentionNotifications
-	GetAuthorNotifications
-	GetCommentNotifications
-	GetManualNotifications
-	GetMentionNotifications
-)
-
-func (src NotificationFilterOption) String() string {
-	switch src {
-	case FilterAuthorNotifications:
-		return `reason_name != '` + AuthorReason + `'`
-	case FilterCommentNotifications:
-		return `reason_name != '` + CommentReason + `'`
-	case FilterManualNotifications:
-		return `reason_name != '` + ManualReason + `'`
-	case FilterMentionNotifications:
-		return `reason_name != '` + MentionReason + `'`
-	case GetAuthorNotifications:
-		return `reason_name = '` + AuthorReason + `'`
-	case GetCommentNotifications:
-		return `reason_name = '` + CommentReason + `'`
-	case GetManualNotifications:
-		return `reason_name = '` + ManualReason + `'`
-	case GetMentionNotifications:
-		return `reason_name = '` + MentionReason + `'`
-	default:
-		return ""
-	}
-}
-
 const countNotificationByStudySQL = `
 	SELECT COUNT(*)
 	FROM notification

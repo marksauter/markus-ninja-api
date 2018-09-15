@@ -164,12 +164,14 @@ func CountEventByLesson(
 		filters[i] = o
 	}
 	ands := JoinFilters(filters)("lesson_event_master")
-	sql := strings.Join([]string{countEventByLessonSQL, ands}, " AND ")
+	sql := countEventByLessonSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEventByLesson", sql)
 
 	err = prepareQueryRow(db, psName, sql, lessonId).Scan(&n)
-	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
@@ -192,7 +194,10 @@ func CountEventByStudy(
 		filters[i] = o
 	}
 	ands := JoinFilters(filters)("event")
-	sql := strings.Join([]string{countEventByStudySQL, ands}, " AND ")
+	sql := countEventByStudySQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEventByStudy", sql)
 
@@ -221,7 +226,10 @@ func CountEventByUser(
 		filters[i] = o
 	}
 	ands := JoinFilters(filters)("event")
-	sql := strings.Join([]string{countEventByUserSQL, ands}, " AND ")
+	sql := countEventByUserSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEventByUser", sql)
 
@@ -250,7 +258,10 @@ func CountReceivedEventByUser(
 		filters[i] = o
 	}
 	ands := JoinFilters(filters)("event")
-	sql := strings.Join([]string{countReceivedEventByUserSQL, ands}, " AND ")
+	sql := countReceivedEventByUserSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countReceivedEventByUser", sql)
 
@@ -279,7 +290,10 @@ func CountEventByUserAsset(
 		filters[i] = o
 	}
 	ands := JoinFilters(filters)("event")
-	sql := strings.Join([]string{countEventByUserAssetSQL, ands}, " AND ")
+	sql := countEventByUserAssetSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEventByUserAsset", sql)
 

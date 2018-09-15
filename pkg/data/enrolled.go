@@ -23,16 +23,20 @@ type Enrolled struct {
 type EnrolledFilterOption int
 
 const (
-	EnrolledIsEnrolled EnrolledFilterOption = iota
+	NotUnenrolled EnrolledFilterOption = iota
 )
 
-func (src EnrolledFilterOption) String() string {
+func (src EnrolledFilterOption) SQL(from string) string {
 	switch src {
-	case EnrolledIsEnrolled:
-		return "status IS NOT 'UNENROLLED'"
+	case NotUnenrolled:
+		return from + ".status IS NOT 'UNENROLLED'"
 	default:
 		return ""
 	}
+}
+
+func (src EnrolledFilterOption) Type() FilterType {
+	return NotEqualFilter
 }
 
 const countEnrolledByUserSQL = `
@@ -48,12 +52,15 @@ func CountEnrolledByUser(
 ) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountEnrolledByUser()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEnrolledByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND enrolled.")
+	ands := JoinFilters(filters)("enrolled")
+	sql := countEnrolledByUserSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEnrolledByUser", sql)
 
@@ -77,12 +84,15 @@ func CountEnrolledByEnrollable(
 ) (n int32, err error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("CountEnrolledByEnrollable()")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEnrolledByEnrollableSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND enrolled.")
+	ands := JoinFilters(filters)("enrolled")
+	sql := countEnrolledByEnrollableSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("CountEnrolledByEnrollable", sql)
 
@@ -216,14 +226,16 @@ func GetEnrolledByUser(
 	opts ...EnrolledFilterOption,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("user_id", userId).Info("GetEnrolledByUser(user_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`user_id = ` + args.Append(userId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.user_id = ` + args.Append(userId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -236,7 +248,7 @@ func GetEnrolledByUser(
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEnrolledsByUser", sql)
 
@@ -250,14 +262,16 @@ func GetEnrolledByEnrollable(
 	opts ...EnrolledFilterOption,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("enrollable_id", enrollableId).Info("GetEnrolledByEnrollable(enrollable_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`enrollable_id = ` + args.Append(enrollableId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.enrollable_id = ` + args.Append(enrollableId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -270,7 +284,7 @@ func GetEnrolledByEnrollable(
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEnrolledsByEnrollable", sql)
 
