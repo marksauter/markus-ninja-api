@@ -282,7 +282,7 @@ func (r *RootResolver) CreateLabel(
 }
 
 type CreateLessonInput struct {
-	Body     *string
+	Body     string
 	CourseId *string
 	StudyId  string
 	Title    string
@@ -512,7 +512,7 @@ func (r *RootResolver) DeleteEmail(
 	n, err := r.Repos.Email().CountByUser(
 		ctx,
 		email.UserId.String,
-		data.EmailIsVerified,
+		data.IsVerifiedEmail,
 	)
 	if err != nil {
 		return nil, err
@@ -531,7 +531,7 @@ func (r *RootResolver) DeleteEmail(
 			ctx,
 			&email.UserId,
 			nil,
-			data.EmailIsVerified,
+			data.IsVerifiedEmail,
 		)
 		if err != nil {
 			return nil, err

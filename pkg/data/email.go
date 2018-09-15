@@ -22,25 +22,29 @@ type Email struct {
 type EmailFilterOption int
 
 const (
-	EmailIsVerified EmailFilterOption = iota
-	FilterBackup
-	FilterExtra
-	FilterPrimary
+	IsVerifiedEmail EmailFilterOption = iota
+	IsBackupEmail
+	IsExtraEmail
+	IsPrimaryEmail
 )
 
-func (src EmailFilterOption) String() string {
+func (src EmailFilterOption) SQL(from string) string {
 	switch src {
-	case EmailIsVerified:
-		return "verified_at IS NOT NULL"
-	case FilterBackup:
-		return "type = 'BACKUP'"
-	case FilterExtra:
-		return "type = 'EXTRA'"
-	case FilterPrimary:
-		return "type = 'PRIMARY'"
+	case IsVerifiedEmail:
+		return from + ".verified_at IS NOT NULL"
+	case IsBackupEmail:
+		return from + ".type = 'BACKUP'"
+	case IsExtraEmail:
+		return from + ".type = 'EXTRA'"
+	case IsPrimaryEmail:
+		return from + ".type = 'PRIMARY'"
 	default:
 		return ""
 	}
+}
+
+func (src EmailFilterOption) Type() FilterType {
+	return EqualFilter
 }
 
 const countEmailByUserSQL = `
@@ -56,12 +60,15 @@ func CountEmailByUser(
 ) (n int32, err error) {
 	mylog.Log.WithField("user_id", userId).Info("CountEmailByUser(user_id) Email")
 
-	ands := make([]string, len(opts))
+	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
-		ands[i] = o.String()
+		filters[i] = o
 	}
-	sqlParts := append([]string{countEmailByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND email.")
+	ands := JoinFilters(filters)("email")
+	sql := countEmailByUserSQL
+	if len(ands) > 0 {
+		sql = strings.Join([]string{sql, ands}, " AND ")
+	}
 
 	psName := preparedName("countEmailByUser", sql)
 
@@ -231,15 +238,16 @@ func GetEmailByUser(
 	mylog.Log.WithField(
 		"user_id", userId.String,
 	).Info("GetEmailByUser(userId)")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
-	}
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	filters := make([]FilterOption, len(opts))
+	for i, o := range opts {
+		filters[i] = o
+	}
 	where := append(
-		[]string{`user_id = ` + args.Append(userId)},
-		ands...,
+		[]WhereFrom{func(from string) string {
+			return from + `.user_id = ` + args.Append(userId)
+		}},
+		JoinFilters(filters),
 	)
 
 	selects := []string{
@@ -252,7 +260,7 @@ func GetEmailByUser(
 		"verified_at",
 	}
 	from := "email"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL2(selects, from, where, &args, po)
 
 	psName := preparedName("getEmailByUser", sql)
 

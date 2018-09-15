@@ -58,16 +58,20 @@ func userAssetDelimeter(r rune) bool {
 type UserAssetFilterOption int
 
 const (
-	UserAssetIsImage UserAssetFilterOption = iota
+	IsImageUserAsset UserAssetFilterOption = iota
 )
 
-func (src UserAssetFilterOption) String() string {
+func (src UserAssetFilterOption) SQL(from string) string {
 	switch src {
-	case UserAssetIsImage:
-		return `type = 'image'`
+	case IsImageUserAsset:
+		return from + `.type = 'image'`
 	default:
 		return ""
 	}
+}
+
+func (src UserAssetFilterOption) Type() FilterType {
+	return EqualFilter
 }
 
 func CountUserAssetBySearch(

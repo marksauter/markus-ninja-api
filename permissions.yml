@@ -8,6 +8,11 @@ permissions:
     authenticated: true
     roles:
       - user
+  # Owners can read the appled.
+  - operation: Read Appled
+    authenticated: true
+    roles:
+      - owner
 
 
 
@@ -118,11 +123,16 @@ permissions:
   - operation: Disconnect Enrolled
     authenticated: true
     roles:
-      - user
+      - owner
+  # Owners can read the enrolled.
+  - operation: Read Enrolled
+    authenticated: true
+    roles:
+      - owner
   - operation: Update Enrolled
     authenticated: true
     roles:
-      - user
+      - owner
     fields:
       - status
 
@@ -133,13 +143,6 @@ permissions:
     fields:
       - email_id
       - user_id
-  # Only owners can update email verification tokens.
-  - operation: Update EVT
-    authenticated: true
-    roles:
-      - owner
-    fields:
-      - verified_at
   # Admins can read the following fields for an email verification token.
   - operation: Read EVT
     authenticated: true
@@ -150,6 +153,13 @@ permissions:
       - expires_at
       - issued_at
       - user_id
+      - verified_at
+  # Only owners can update email verification tokens.
+  - operation: Update EVT
+    authenticated: true
+    roles:
+      - owner
+    fields:
       - verified_at
 
 
@@ -229,6 +239,11 @@ permissions:
     roles:
       - owner
   - operation: Disconnect Labeled
+    authenticated: true
+    roles:
+      - owner
+  # Owners can read the labeled.
+  - operation: Read Labeled
     authenticated: true
     roles:
       - owner
@@ -422,6 +437,11 @@ permissions:
     roles:
       - owner
   - operation: Disconnect Topiced
+    authenticated: true
+    roles:
+      - owner
+  # Owners can read the topiced.
+  - operation: Read Topiced
     authenticated: true
     roles:
       - owner

@@ -460,9 +460,9 @@ func (r *studyResolver) Lessons(
 	filterOptions := []data.LessonFilterOption{}
 	if args.IsCourseLesson != nil {
 		if *args.IsCourseLesson {
-			filterOptions = append(filterOptions, data.LessonIsCourseLesson)
+			filterOptions = append(filterOptions, data.IsCourseLesson)
 		} else {
-			filterOptions = append(filterOptions, data.LessonIsNotCourseLesson)
+			filterOptions = append(filterOptions, data.NotCourseLesson)
 		}
 	}
 
