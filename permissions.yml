@@ -254,6 +254,8 @@ permissions:
   - operation: Read Lesson
     fields:
       - body
+      - course_id
+      - course_number
       - created_at
       - id
       - number
