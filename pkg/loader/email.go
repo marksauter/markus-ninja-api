@@ -164,9 +164,9 @@ func (r *EmailLoader) Get(
 
 func (r *EmailLoader) GetByUserPrimary(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (*data.Email, error) {
-	emailData, err := r.batchGetByUserPrimary.Load(ctx, dataloader.StringKey(userId))()
+	emailData, err := r.batchGetByUserPrimary.Load(ctx, dataloader.StringKey(userID))()
 	if err != nil {
 		return nil, err
 	}
@@ -175,16 +175,16 @@ func (r *EmailLoader) GetByUserPrimary(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
+	r.batchGet.Prime(ctx, dataloader.StringKey(email.ID.String), email)
 
 	return email, nil
 }
 
 func (r *EmailLoader) GetByUserBackup(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (*data.Email, error) {
-	emailData, err := r.batchGetByUserBackup.Load(ctx, dataloader.StringKey(userId))()
+	emailData, err := r.batchGetByUserBackup.Load(ctx, dataloader.StringKey(userID))()
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (r *EmailLoader) GetByUserBackup(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
+	r.batchGet.Prime(ctx, dataloader.StringKey(email.ID.String), email)
 
 	return email, nil
 }
@@ -211,7 +211,7 @@ func (r *EmailLoader) GetByValue(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
+	r.batchGet.Prime(ctx, dataloader.StringKey(email.ID.String), email)
 
 	return email, nil
 }

@@ -9,8 +9,8 @@ import (
 
 type createUserAssetPayloadResolver struct {
 	UserAsset *repo.UserAssetPermit
-	StudyId   *mytype.OID
-	UserId    *mytype.OID
+	StudyID   *mytype.OID
+	UserID    *mytype.OID
 	Repos     *repo.Repos
 }
 
@@ -19,7 +19,7 @@ func (r *createUserAssetPayloadResolver) UserAssetEdge() (*userAssetEdgeResolver
 }
 
 func (r *createUserAssetPayloadResolver) Owner(ctx context.Context) (*userResolver, error) {
-	user, err := r.Repos.User().Get(ctx, r.UserId.String)
+	user, err := r.Repos.User().Get(ctx, r.UserID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (r *createUserAssetPayloadResolver) Owner(ctx context.Context) (*userResolv
 }
 
 func (r *createUserAssetPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}

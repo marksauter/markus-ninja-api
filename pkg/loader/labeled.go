@@ -107,7 +107,7 @@ func (r *LabeledLoader) Get(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(labeled.LabelableId.String, labeled.LabelId.String)
+	compositeKey := newCompositeKey(labeled.LabelableID.String, labeled.LabelID.String)
 	r.batchGetByLabelableAndLabel.Prime(ctx, compositeKey, labeled)
 
 	return labeled, nil
@@ -115,10 +115,10 @@ func (r *LabeledLoader) Get(
 
 func (r *LabeledLoader) GetByLabelableAndLabel(
 	ctx context.Context,
-	labelableId,
-	userId string,
+	labelableID,
+	userID string,
 ) (*data.Labeled, error) {
-	compositeKey := newCompositeKey(labelableId, userId)
+	compositeKey := newCompositeKey(labelableID, userID)
 	labeledData, err := r.batchGetByLabelableAndLabel.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *LabeledLoader) GetByLabelableAndLabel(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	key := strconv.Itoa(int(labeled.Id.Int))
+	key := strconv.Itoa(int(labeled.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), labeled)
 
 	return labeled, nil

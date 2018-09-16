@@ -57,7 +57,7 @@ func (r *AssetPermit) Href() (string, error) {
 	}
 	return fmt.Sprintf(
 		"http://localhost:5000/user/assets/%s/%s",
-		r.asset.UserId.Short,
+		r.asset.UserID.Short,
 		key,
 	), nil
 }
@@ -67,7 +67,7 @@ func (r *AssetPermit) ID() (int64, error) {
 		var id int64
 		return id, ErrAccessDenied
 	}
-	return r.asset.Id.Int, nil
+	return r.asset.ID.Int, nil
 }
 
 func (r *AssetPermit) Key() (string, error) {
@@ -106,11 +106,11 @@ func (r *AssetPermit) Type() (string, error) {
 	return r.asset.Type.String, nil
 }
 
-func (r *AssetPermit) UserId() (*mytype.OID, error) {
+func (r *AssetPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.asset.UserId, nil
+	return &r.asset.UserID, nil
 }
 
 func NewAssetRepo() *AssetRepo {
@@ -185,7 +185,7 @@ func (r *AssetRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, asset); err != nil {
 		return err
 	}
-	return data.DeleteAsset(db, asset.Id.Int)
+	return data.DeleteAsset(db, asset.ID.Int)
 }
 
 func (r *AssetRepo) Get(

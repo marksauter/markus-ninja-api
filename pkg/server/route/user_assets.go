@@ -33,8 +33,8 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 
 	routeVars := mux.Vars(req)
 
-	userId := routeVars["user_id"]
-	uid, err := mytype.NewOIDFromShort("User", userId)
+	userID := routeVars["user_id"]
+	uid, err := mytype.NewOIDFromShort("User", userID)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create new oid")
 		response := myhttp.InternalServerErrorResponse(err.Error())

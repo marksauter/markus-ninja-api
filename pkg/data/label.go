@@ -16,12 +16,12 @@ type Label struct {
 	Color       mytype.Color       `db:"color" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
-	Id          mytype.OID         `db:"id" permit:"read"`
+	ID          mytype.OID         `db:"id" permit:"read"`
 	IsDefault   pgtype.Bool        `db:"is_default" permit:"read"`
-	LabelableId mytype.OID         `db:"labelable_id"`
+	LabelableID mytype.OID         `db:"labelable_id"`
 	LabeledAt   pgtype.Timestamptz `db:"labeled_at"`
 	Name        pgtype.Text        `db:"name" permit:"create/read"`
-	StudyId     mytype.OID         `db:"study_id" permit:"create/read"`
+	StudyID     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
@@ -33,17 +33,17 @@ const countLabelByLabelableSQL = `
 
 func CountLabelByLabelable(
 	db Queryer,
-	labelableId string,
+	labelableID string,
 ) (int32, error) {
 	mylog.Log.WithField(
-		"labelable_id", labelableId,
+		"labelable_id", labelableID,
 	).Info("CountLabelByLabelable(labelable_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLabelByLabelable",
 		countLabelByLabelableSQL,
-		labelableId,
+		labelableID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -59,15 +59,15 @@ const countLabelByStudySQL = `
 
 func CountLabelByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountLabelByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("CountLabelByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLabelByStudy",
 		countLabelByStudySQL,
-		studyId,
+		studyID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -113,10 +113,10 @@ func getLabel(
 		&row.Color,
 		&row.CreatedAt,
 		&row.Description,
-		&row.Id,
+		&row.ID,
 		&row.IsDefault,
 		&row.Name,
-		&row.StudyId,
+		&row.StudyID,
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -148,10 +148,10 @@ func getManyLabel(
 			&row.Color,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.IsDefault,
 			&row.Name,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -167,7 +167,7 @@ func getManyLabel(
 	return rows, nil
 }
 
-const getLabelByIdSQL = `
+const getLabelByIDSQL = `
 	SELECT
 		color,
 		created_at,
@@ -186,19 +186,19 @@ func GetLabel(
 	id string,
 ) (*Label, error) {
 	mylog.Log.WithField("id", id).Info("GetLabel(id)")
-	return getLabel(db, "getLabelById", getLabelByIdSQL, id)
+	return getLabel(db, "getLabelByID", getLabelByIDSQL, id)
 }
 
 func GetLabelByLabelable(
 	db Queryer,
-	labelableId string,
+	labelableID string,
 	po *PageOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField(
-		"labelable_id", labelableId,
+		"labelable_id", labelableID,
 	).Info("GetLabelByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`labelable_id = ` + args.Append(labelableId)}
+	where := []string{`labelable_id = ` + args.Append(labelableID)}
 
 	selects := []string{
 		"color",
@@ -214,7 +214,7 @@ func GetLabelByLabelable(
 	from := "labelable_label"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLabelsByLabelableId", sql)
+	psName := preparedName("getLabelsByLabelableID", sql)
 
 	var rows []*Label
 
@@ -229,11 +229,11 @@ func GetLabelByLabelable(
 			&row.Color,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.IsDefault,
 			&row.LabeledAt,
 			&row.Name,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
 		)
 		rows = append(rows, &row)
@@ -251,12 +251,12 @@ func GetLabelByLabelable(
 
 func GetLabelByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	po *PageOptions,
 ) ([]*Label, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetLabelByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("GetLabelByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
+	where := []string{`study_id = ` + args.Append(studyID)}
 
 	selects := []string{
 		"color",
@@ -271,7 +271,7 @@ func GetLabelByStudy(
 	from := "label"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getLabelsByStudyId", sql)
+	psName := preparedName("getLabelsByStudyID", sql)
 
 	return getManyLabel(db, psName, sql, args...)
 }
@@ -310,9 +310,9 @@ func CreateLabel(
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Label")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Color.Status != pgtype.Undefined {
 		columns = append(columns, "color")
@@ -334,9 +334,9 @@ func CreateLabel(
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -371,7 +371,7 @@ func CreateLabel(
 		return nil, err
 	}
 
-	label, err := GetLabel(tx, row.Id.String)
+	label, err := GetLabel(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +446,7 @@ func UpdateLabel(
 	db Queryer,
 	row *Label,
 ) (*Label, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateLabel(id)")
+	mylog.Log.WithField("id", row.ID.String).Info("UpdateLabel(id)")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -455,7 +455,7 @@ func UpdateLabel(
 	}
 
 	if len(sets) == 0 {
-		return GetLabel(db, row.Id.String)
+		return GetLabel(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -470,7 +470,7 @@ func UpdateLabel(
 	sql := `
 		UPDATE label
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateLabel", sql)
@@ -483,7 +483,7 @@ func UpdateLabel(
 		return nil, ErrNotFound
 	}
 
-	label, err := GetLabel(tx, row.Id.String)
+	label, err := GetLabel(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}

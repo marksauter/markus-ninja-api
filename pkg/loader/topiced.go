@@ -107,7 +107,7 @@ func (r *TopicedLoader) Get(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(topiced.TopicableId.String, topiced.TopicId.String)
+	compositeKey := newCompositeKey(topiced.TopicableID.String, topiced.TopicID.String)
 	r.batchGetByTopicableAndTopic.Prime(ctx, compositeKey, topiced)
 
 	return topiced, nil
@@ -115,10 +115,10 @@ func (r *TopicedLoader) Get(
 
 func (r *TopicedLoader) GetByTopicableAndTopic(
 	ctx context.Context,
-	topicableId,
-	userId string,
+	topicableID,
+	userID string,
 ) (*data.Topiced, error) {
-	compositeKey := newCompositeKey(topicableId, userId)
+	compositeKey := newCompositeKey(topicableID, userID)
 	topicedData, err := r.batchGetByTopicableAndTopic.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *TopicedLoader) GetByTopicableAndTopic(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	key := strconv.Itoa(int(topiced.Id.Int))
+	key := strconv.Itoa(int(topiced.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), topiced)
 
 	return topiced, nil

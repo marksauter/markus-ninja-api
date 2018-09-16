@@ -10,13 +10,13 @@ import (
 )
 
 type createdEventResolver struct {
-	CreateableId *mytype.OID
+	CreateableID *mytype.OID
 	Event        *repo.EventPermit
 	Repos        *repo.Repos
 }
 
 func (r *createdEventResolver) Createable(ctx context.Context) (*createableResolver, error) {
-	permit, err := r.Repos.GetCreateable(ctx, r.CreateableId)
+	permit, err := r.Repos.GetCreateable(ctx, r.CreateableID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,11 @@ func (r *createdEventResolver) ID() (graphql.ID, error) {
 }
 
 func (r *createdEventResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Event.StudyId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +54,11 @@ func (r *createdEventResolver) Study(ctx context.Context) (*studyResolver, error
 }
 
 func (r *createdEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

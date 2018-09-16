@@ -10,11 +10,11 @@ import (
 )
 
 type Appled struct {
-	AppleableId mytype.OID         `db:"appleable_id" permit:"read"`
+	AppleableID mytype.OID         `db:"appleable_id" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          pgtype.Int4        `db:"id" permit:"read"`
+	ID          pgtype.Int4        `db:"id" permit:"read"`
 	Type        mytype.AppleType   `db:"type" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"read"`
+	UserID      mytype.OID         `db:"user_id" permit:"read"`
 }
 
 const countAppledByUserSQL = `
@@ -23,14 +23,14 @@ const countAppledByUserSQL = `
 	WHERE user_id = $1
 `
 
-func CountAppledByUser(db Queryer, userId string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountAppledByUser()")
+func CountAppledByUser(db Queryer, userID string) (n int32, err error) {
+	mylog.Log.WithField("user_id", userID).Info("CountAppledByUser()")
 
 	err = prepareQueryRow(
 		db,
 		"countAppledByUser",
 		countAppledByUserSQL,
-		userId,
+		userID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -44,14 +44,14 @@ const countAppledByAppleableSQL = `
 	WHERE appleable_id = $1
 `
 
-func CountAppledByAppleable(db Queryer, appleableId string) (n int32, err error) {
-	mylog.Log.WithField("appleable_id", appleableId).Info("CountAppledByAppleable()")
+func CountAppledByAppleable(db Queryer, appleableID string) (n int32, err error) {
+	mylog.Log.WithField("appleable_id", appleableID).Info("CountAppledByAppleable()")
 
 	err = prepareQueryRow(
 		db,
 		"countAppledByAppleable",
 		countAppledByAppleableSQL,
-		appleableId,
+		appleableID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -67,11 +67,11 @@ func getAppled(
 ) (*Appled, error) {
 	var row Appled
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.AppleableId,
+		&row.AppleableID,
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Type,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -100,11 +100,11 @@ func getManyAppled(
 	for dbRows.Next() {
 		var row Appled
 		dbRows.Scan(
-			&row.AppleableId,
+			&row.AppleableID,
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Type,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -146,25 +146,25 @@ const getAppledByAppleableAndUserSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func GetAppledByAppleableAndUser(db Queryer, appleableId, userId string) (*Appled, error) {
+func GetAppledByAppleableAndUser(db Queryer, appleableID, userID string) (*Appled, error) {
 	mylog.Log.Info("GetAppledByAppleableAndUser()")
 	return getAppled(
 		db,
 		"getAppledByAppleableAndUser",
 		getAppledByAppleableAndUserSQL,
-		appleableId,
-		userId,
+		appleableID,
+		userID,
 	)
 }
 
 func GetAppledByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetAppledByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetAppledByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := []string{`user_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"appleable_id",
@@ -183,12 +183,12 @@ func GetAppledByUser(
 
 func GetAppledByAppleable(
 	db Queryer,
-	appleableId string,
+	appleableID string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("appleable_id", appleableId).Info("GetAppledByAppleable(appleable_id)")
+	mylog.Log.WithField("appleable_id", appleableID).Info("GetAppledByAppleable(appleable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`appleable_id = ` + args.Append(appleableId)}
+	where := []string{`appleable_id = ` + args.Append(appleableID)}
 
 	selects := []string{
 		"appleable_id",
@@ -216,15 +216,15 @@ func CreateAppled(
 
 	var columns, values []string
 
-	if row.AppleableId.Status != pgtype.Undefined {
+	if row.AppleableID.Status != pgtype.Undefined {
 		columns = append(columns, "appleable_id")
-		values = append(values, args.Append(&row.AppleableId))
+		values = append(values, args.Append(&row.AppleableID))
 	}
 	columns = append(columns, "type")
-	values = append(values, args.Append(row.AppleableId.Type))
-	if row.UserId.Status != pgtype.Undefined {
+	values = append(values, args.Append(row.AppleableID.Type))
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -261,8 +261,8 @@ func CreateAppled(
 
 	appled, err := GetAppledByAppleableAndUser(
 		tx,
-		row.AppleableId.String,
-		row.UserId.String,
+		row.AppleableID.String,
+		row.UserID.String,
 	)
 	if err != nil {
 		return nil, err
@@ -271,24 +271,24 @@ func CreateAppled(
 	event := &Event{}
 	switch appled.Type.V {
 	case mytype.AppleTypeCourse:
-		eventPayload, err := NewCourseAppledPayload(&appled.AppleableId)
+		eventPayload, err := NewCourseAppledPayload(&appled.AppleableID)
 		if err != nil {
 			return nil, err
 		}
-		course, err := GetCourse(tx, appled.AppleableId.String)
+		course, err := GetCourse(tx, appled.AppleableID.String)
 		if err != nil {
 			return nil, err
 		}
-		event, err = NewCourseEvent(eventPayload, &course.StudyId, &appled.UserId)
+		event, err = NewCourseEvent(eventPayload, &course.StudyID, &appled.UserID)
 		if err != nil {
 			return nil, err
 		}
 	case mytype.AppleTypeStudy:
-		eventPayload, err := NewStudyAppledPayload(&appled.AppleableId)
+		eventPayload, err := NewStudyAppledPayload(&appled.AppleableID)
 		if err != nil {
 			return nil, err
 		}
-		event, err = NewStudyEvent(eventPayload, &appled.AppleableId, &appled.UserId)
+		event, err = NewStudyEvent(eventPayload, &appled.AppleableID, &appled.UserID)
 		if err != nil {
 			return nil, err
 		}

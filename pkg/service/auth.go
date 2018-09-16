@@ -10,7 +10,7 @@ import (
 )
 
 type AuthServiceConfig struct {
-	KeyId string
+	KeyID string
 }
 
 func NewAuthService(svc kmsiface.KMSAPI, conf *AuthServiceConfig) *AuthService {
@@ -29,7 +29,7 @@ func (s *AuthService) SignJWT(p *myjwt.Payload) (*myjwt.JWT, error) {
 	jwt := myjwt.JWT{Payload: *p}
 
 	params := &kms.EncryptInput{
-		KeyId:     aws.String(s.conf.KeyId),
+		KeyId:     aws.String(s.conf.KeyID),
 		Plaintext: []byte(jwt.GetPlainText()),
 	}
 

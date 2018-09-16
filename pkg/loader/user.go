@@ -119,7 +119,7 @@ func (r *UserLoader) GetByLogin(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(user.Id.String), user)
+	r.batchGet.Prime(ctx, dataloader.StringKey(user.ID.String), user)
 
 	return user, nil
 }

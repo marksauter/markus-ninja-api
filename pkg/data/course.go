@@ -19,14 +19,14 @@ type Course struct {
 	CreatedAt   pgtype.Timestamptz  `db:"created_at" permit:"read"`
 	Description pgtype.Text         `db:"description" permit:"create/read/update"`
 	EnrolledAt  pgtype.Timestamptz  `db:"enrolled_at"`
-	Id          mytype.OID          `db:"id" permit:"read"`
+	ID          mytype.OID          `db:"id" permit:"read"`
 	Name        mytype.URLSafeName  `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
 	Status      mytype.CourseStatus `db:"status" permit:"read/update"`
-	StudyId     mytype.OID          `db:"study_id" permit:"create/read"`
+	StudyID     mytype.OID          `db:"study_id" permit:"create/read"`
 	TopicedAt   pgtype.Timestamptz  `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz  `db:"updated_at" permit:"read"`
-	UserId      mytype.OID          `db:"user_id" permit:"create/read"`
+	UserID      mytype.OID          `db:"user_id" permit:"create/read"`
 }
 
 const countCourseByAppleeSQL = `
@@ -37,14 +37,14 @@ const countCourseByAppleeSQL = `
 
 func CountCourseByApplee(
 	db Queryer,
-	appleeId string,
+	appleeID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("applee_id", appleeId).Info("CountCourseByApplee(applee_id)")
+	mylog.Log.WithField("applee_id", appleeID).Info("CountCourseByApplee(applee_id)")
 	err = prepareQueryRow(
 		db,
 		"countCourseByApplee",
 		countCourseByAppleeSQL,
-		appleeId,
+		appleeID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -60,14 +60,14 @@ const countCourseByEnrolleeSQL = `
 
 func CountCourseByEnrollee(
 	db Queryer,
-	enrolleeId string,
+	enrolleeID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("enrollee_id", enrolleeId).Info("CountCourseByEnrollee(enrollee_id)")
+	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountCourseByEnrollee(enrollee_id)")
 	err = prepareQueryRow(
 		db,
 		"countCourseByEnrollee",
 		countCourseByEnrolleeSQL,
-		enrolleeId,
+		enrolleeID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -83,14 +83,14 @@ const countCourseByStudySQL = `
 
 func CountCourseByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountCourseByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("CountCourseByStudy(study_id)")
 	err = prepareQueryRow(
 		db,
 		"countCourseByStudy",
 		countCourseByStudySQL,
-		studyId,
+		studyID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -106,16 +106,16 @@ const countCourseByTopicSQL = `
 
 func CountCourseByTopic(
 	db Queryer,
-	topicId string,
+	topicID string,
 ) (n int32, err error) {
 	mylog.Log.WithField(
-		"topic_id", topicId,
+		"topic_id", topicID,
 	).Info("CountCourseByTopic(topic_id)")
 	err = prepareQueryRow(
 		db,
 		"countCourseByTopic",
 		countCourseByTopicSQL,
-		topicId,
+		topicID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -131,14 +131,14 @@ const countCourseByUserSQL = `
 
 func CountCourseByUser(
 	db Queryer,
-	userId string,
+	userID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountCourseByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("CountCourseByUser(user_id)")
 	err = prepareQueryRow(
 		db,
 		"countCourseByUser",
 		countCourseByUserSQL,
-		userId,
+		userID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -226,13 +226,13 @@ func getCourse(
 		&row.CompletedAt,
 		&row.CreatedAt,
 		&row.Description,
-		&row.Id,
+		&row.ID,
 		&row.Name,
 		&row.Number,
 		&row.Status,
-		&row.StudyId,
+		&row.StudyID,
 		&row.UpdatedAt,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -264,13 +264,13 @@ func getManyCourse(
 			&row.CompletedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Number,
 			&row.Status,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -285,7 +285,7 @@ func getManyCourse(
 	return rows, nil
 }
 
-const getCourseByIdSQL = `
+const getCourseByIDSQL = `
 	SELECT
 		advanced_at,
 		completed_at,
@@ -307,17 +307,17 @@ func GetCourse(
 	id string,
 ) (*Course, error) {
 	mylog.Log.WithField("id", id).Info("GetCourse(id)")
-	return getCourse(db, "getCourseById", getCourseByIdSQL, id)
+	return getCourse(db, "getCourseByID", getCourseByIDSQL, id)
 }
 
 func GetCourseByApplee(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByApplee(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetCourseByApplee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`applee_id = ` + args.Append(userId)}
+	where := []string{`applee_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"advanced_at",
@@ -353,13 +353,13 @@ func GetCourseByApplee(
 			&row.CompletedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Number,
 			&row.Status,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -376,12 +376,12 @@ func GetCourseByApplee(
 
 func GetCourseByEnrollee(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetCourseByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"advanced_at",
@@ -417,13 +417,13 @@ func GetCourseByEnrollee(
 			&row.CreatedAt,
 			&row.Description,
 			&row.EnrolledAt,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Number,
 			&row.Status,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -440,12 +440,12 @@ func GetCourseByEnrollee(
 
 func GetCourseByTopic(
 	db Queryer,
-	topicId string,
+	topicID string,
 	po *PageOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("GetCourseByTopic(topic_id)")
+	mylog.Log.WithField("topic_id", topicID).Info("GetCourseByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicId)}
+	where := []string{`topic_id = ` + args.Append(topicID)}
 
 	selects := []string{
 		"advanced_at",
@@ -480,14 +480,14 @@ func GetCourseByTopic(
 			&row.CompletedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Number,
 			&row.Status,
-			&row.StudyId,
+			&row.StudyID,
 			&row.TopicedAt,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -504,12 +504,12 @@ func GetCourseByTopic(
 
 func GetCourseByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	po *PageOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetCourseByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("GetCourseByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
+	where := []string{`study_id = ` + args.Append(studyID)}
 
 	selects := []string{
 		"advanced_at",
@@ -527,19 +527,19 @@ func GetCourseByStudy(
 	from := "course"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getCoursesByStudyId", sql)
+	psName := preparedName("getCoursesByStudyID", sql)
 
 	return getManyCourse(db, psName, sql, args...)
 }
 
 func GetCourseByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetCourseByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := []string{`user_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"advanced_at",
@@ -557,7 +557,7 @@ func GetCourseByUser(
 	from := "course"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getCoursesByUserId", sql)
+	psName := preparedName("getCoursesByUserID", sql)
 
 	return getManyCourse(db, psName, sql, args...)
 }
@@ -581,14 +581,14 @@ const getCourseByNameSQL = `
 
 func GetCourseByName(
 	db Queryer,
-	studyId,
+	studyID,
 	name string,
 ) (*Course, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
+		"study_id": studyID,
 		"name":     name,
 	}).Info("GetCourseByName(study_id, name)")
-	return getCourse(db, "getCourseByName", getCourseByNameSQL, studyId, name)
+	return getCourse(db, "getCourseByName", getCourseByNameSQL, studyID, name)
 }
 
 const getCourseByNumberSQL = `
@@ -610,14 +610,14 @@ const getCourseByNumberSQL = `
 
 func GetCourseByNumber(
 	db Queryer,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*Course, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
+		"study_id": studyID,
 		"number":   number,
 	}).Info("GetCourseByNumber(study_id, number)")
-	return getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyId, number)
+	return getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyID, number)
 }
 
 const getCourseByStudyAndNameSQL = `
@@ -660,9 +660,9 @@ func CreateCourse(
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Course")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Description.Status != pgtype.Undefined {
 		columns = append(columns, "description")
@@ -680,13 +680,13 @@ func CreateCourse(
 		columns = append(columns, "number")
 		values = append(values, args.Append(&row.Number))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -721,7 +721,7 @@ func CreateCourse(
 		return nil, err
 	}
 
-	// e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
+	// e, err := NewEvent(CreatedEvent, &row.UserID, &row.ID, &row.UserID)
 	// if err != nil {
 	//   return nil, err
 	// }
@@ -730,7 +730,7 @@ func CreateCourse(
 	//   return nil, err
 	// }
 
-	course, err := GetCourse(tx, row.Id.String)
+	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -853,7 +853,7 @@ func UpdateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateCourse(id)")
+	mylog.Log.WithField("id", row.ID.String).Info("UpdateCourse(id)")
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -871,7 +871,7 @@ func UpdateCourse(
 	}
 
 	if len(sets) == 0 {
-		return GetCourse(db, row.Id.String)
+		return GetCourse(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -886,7 +886,7 @@ func UpdateCourse(
 	sql := `
 		UPDATE course
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateCourse", sql)
@@ -910,7 +910,7 @@ func UpdateCourse(
 		return nil, ErrNotFound
 	}
 
-	course, err := GetCourse(tx, row.Id.String)
+	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}

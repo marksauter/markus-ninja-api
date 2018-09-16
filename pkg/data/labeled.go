@@ -12,9 +12,9 @@ import (
 
 type Labeled struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          pgtype.Int4        `db:"id" permit:"read"`
-	LabelId     mytype.OID         `db:"label_id" permit:"read"`
-	LabelableId mytype.OID         `db:"labelable_id" permit:"read"`
+	ID          pgtype.Int4        `db:"id" permit:"read"`
+	LabelID     mytype.OID         `db:"label_id" permit:"read"`
+	LabelableID mytype.OID         `db:"labelable_id" permit:"read"`
 }
 
 const countLabeledByLabelSQL = `
@@ -25,15 +25,15 @@ const countLabeledByLabelSQL = `
 
 func CountLabeledByLabel(
 	db Queryer,
-	labelId string,
+	labelID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("label_id", labelId).Info("CountLabeledByLabel()")
+	mylog.Log.WithField("label_id", labelID).Info("CountLabeledByLabel()")
 
 	err = prepareQueryRow(
 		db,
 		"countLabeledByLabel",
 		countLabeledByLabelSQL,
-		labelId,
+		labelID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -49,15 +49,15 @@ const countLabeledByLabelableSQL = `
 
 func CountLabeledByLabelable(
 	db Queryer,
-	labelableId string,
+	labelableID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("labelable_id", labelableId).Info("CountLabeledByLabelable()")
+	mylog.Log.WithField("labelable_id", labelableID).Info("CountLabeledByLabelable()")
 
 	err = prepareQueryRow(
 		db,
 		"countLabeledByLabelable",
 		countLabeledByLabelableSQL,
-		labelableId,
+		labelableID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -74,9 +74,9 @@ func getLabeled(
 	var row Labeled
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
-		&row.LabelId,
-		&row.LabelableId,
+		&row.ID,
+		&row.LabelID,
+		&row.LabelableID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -106,9 +106,9 @@ func getManyLabeled(
 		var row Labeled
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
-			&row.LabelId,
-			&row.LabelableId,
+			&row.ID,
+			&row.LabelID,
+			&row.LabelableID,
 		)
 		rows = append(rows, &row)
 	}
@@ -153,27 +153,27 @@ const getLabeledByLabelableAndLabelSQL = `
 
 func GetLabeledByLabelableAndLabel(
 	db Queryer,
-	labelableId,
-	labelId string,
+	labelableID,
+	labelID string,
 ) (*Labeled, error) {
 	mylog.Log.Info("GetLabeledByLabelableAndLabel()")
 	return getLabeled(
 		db,
 		"getLabeledByLabelableAndLabel",
 		getLabeledByLabelableAndLabelSQL,
-		labelableId,
-		labelId,
+		labelableID,
+		labelID,
 	)
 }
 
 func GetLabeledByLabel(
 	db Queryer,
-	labelId string,
+	labelID string,
 	po *PageOptions,
 ) ([]*Labeled, error) {
-	mylog.Log.WithField("label_id", labelId).Info("GetLabeledByLabel(label_id)")
+	mylog.Log.WithField("label_id", labelID).Info("GetLabeledByLabel(label_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`label_id = ` + args.Append(labelId)}
+	where := []string{`label_id = ` + args.Append(labelID)}
 
 	selects := []string{
 		"created_at",
@@ -191,12 +191,12 @@ func GetLabeledByLabel(
 
 func GetLabeledByLabelable(
 	db Queryer,
-	labelableId string,
+	labelableID string,
 	po *PageOptions,
 ) ([]*Labeled, error) {
-	mylog.Log.WithField("labelable_id", labelableId).Info("GetLabeledByLabelable(labelable_id)")
+	mylog.Log.WithField("labelable_id", labelableID).Info("GetLabeledByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`labelable_id = ` + args.Append(labelableId)}
+	where := []string{`labelable_id = ` + args.Append(labelableID)}
 
 	selects := []string{
 		"created_at",
@@ -219,19 +219,19 @@ func CreateLabeled(
 	row Labeled,
 ) (*Labeled, error) {
 	mylog.Log.WithField(
-		"labelable", row.LabelableId.Type,
+		"labelable", row.LabelableID.Type,
 	).Info("CreateLabeled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
 
-	if row.LabelId.Status != pgtype.Undefined {
+	if row.LabelID.Status != pgtype.Undefined {
 		columns = append(columns, "label_id")
-		values = append(values, args.Append(&row.LabelId))
+		values = append(values, args.Append(&row.LabelID))
 	}
-	if row.LabelableId.Status != pgtype.Undefined {
+	if row.LabelableID.Status != pgtype.Undefined {
 		columns = append(columns, "labelable_id")
-		values = append(values, args.Append(&row.LabelableId))
+		values = append(values, args.Append(&row.LabelableID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -244,13 +244,13 @@ func CreateLabeled(
 	}
 
 	var labelable string
-	switch row.LabelableId.Type {
+	switch row.LabelableID.Type {
 	case "Lesson":
 		labelable = "lesson"
 	case "LessonComment":
 		labelable = "lesson_comment"
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for labeled labelable id", row.LabelableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for labeled labelable id", row.LabelableID.Type)
 	}
 
 	table := strings.Join(
@@ -282,8 +282,8 @@ func CreateLabeled(
 
 	labeled, err := GetLabeledByLabelableAndLabel(
 		tx,
-		row.LabelableId.String,
-		row.LabelId.String,
+		row.LabelableID.String,
+		row.LabelID.String,
 	)
 	if err != nil {
 		return nil, err
@@ -303,28 +303,28 @@ func CreateLabeled(
 func BatchCreateLabeled(
 	db Queryer,
 	src *Labeled,
-	labelableIds []*mytype.OID,
+	labelableIDs []*mytype.OID,
 ) error {
 	mylog.Log.Info("BatchCreateLabeled()")
 
-	n := len(labelableIds)
+	n := len(labelableIDs)
 	lessonLabeleds := make([][]interface{}, 0, n)
 	lessonCommentLabeleds := make([][]interface{}, 0, n)
-	for _, labelableId := range labelableIds {
+	for _, labelableID := range labelableIDs {
 		id, _ := mytype.NewOID("Labeled")
-		src.Id.Set(id)
+		src.ID.Set(id)
 		labeled := []interface{}{
-			src.LabelId.String,
-			labelableId.String,
-			src.Id.Int,
+			src.LabelID.String,
+			labelableID.String,
+			src.ID.Int,
 		}
-		switch labelableId.Type {
+		switch labelableID.Type {
 		case "Lesson":
 			lessonLabeleds = append(lessonLabeleds, labeled)
 		case "LessonComment":
 			lessonCommentLabeleds = append(lessonCommentLabeleds, labeled)
 		default:
-			return fmt.Errorf("invalid type '%s' for labeled labelable id", labelableId.Type)
+			return fmt.Errorf("invalid type '%s' for labeled labelable id", labelableID.Type)
 		}
 	}
 

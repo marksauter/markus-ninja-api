@@ -8,15 +8,15 @@ import (
 )
 
 type addCourseLessonPayloadResolver struct {
-	CourseId *mytype.OID
-	LessonId *mytype.OID
+	CourseID *mytype.OID
+	LessonID *mytype.OID
 	Repos    *repo.Repos
 }
 
 func (r *addCourseLessonPayloadResolver) Course(
 	ctx context.Context,
 ) (*courseResolver, error) {
-	course, err := r.Repos.Course().Get(ctx, r.CourseId.String)
+	course, err := r.Repos.Course().Get(ctx, r.CourseID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (r *addCourseLessonPayloadResolver) Course(
 func (r *addCourseLessonPayloadResolver) LessonEdge(
 	ctx context.Context,
 ) (*lessonEdgeResolver, error) {
-	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonID.String)
 	if err != nil {
 		return nil, err
 	}

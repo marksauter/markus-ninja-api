@@ -10,13 +10,13 @@ import (
 )
 
 type unappledEventResolver struct {
-	AppleableId *mytype.OID
+	AppleableID *mytype.OID
 	Event       *repo.EventPermit
 	Repos       *repo.Repos
 }
 
 func (r *unappledEventResolver) Appleable(ctx context.Context) (*appleableResolver, error) {
-	permit, err := r.Repos.GetAppleable(ctx, r.AppleableId)
+	permit, err := r.Repos.GetAppleable(ctx, r.AppleableID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,11 @@ func (r *unappledEventResolver) ID() (graphql.ID, error) {
 }
 
 func (r *unappledEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

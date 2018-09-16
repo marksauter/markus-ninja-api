@@ -11,17 +11,17 @@ import (
 type DeleteEmailPayload = deleteEmailPayloadResolver
 
 type deleteEmailPayloadResolver struct {
-	EmailId *mytype.OID
-	UserId  *mytype.OID
+	EmailID *mytype.OID
+	UserID  *mytype.OID
 	Repos   *repo.Repos
 }
 
-func (r *deleteEmailPayloadResolver) DeletedEmailId() graphql.ID {
-	return graphql.ID(r.EmailId.String)
+func (r *deleteEmailPayloadResolver) DeletedEmailID() graphql.ID {
+	return graphql.ID(r.EmailID.String)
 }
 
 func (r *deleteEmailPayloadResolver) User(ctx context.Context) (*userResolver, error) {
-	user, err := r.Repos.User().Get(ctx, r.UserId.String)
+	user, err := r.Repos.User().Get(ctx, r.UserID.String)
 	if err != nil {
 		return nil, err
 	}

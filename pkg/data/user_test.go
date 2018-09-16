@@ -24,14 +24,14 @@ func TestDataUsersLifeCycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	userId := output.Id.String
+	userID := output.ID.String
 
 	user, err := data.GetUserCredentialsByLogin(testDb.DB, input.Login.String)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if user.Id.String != userId {
-		t.Errorf("Expected %v, got %v", userId, user.Id)
+	if user.ID.String != userID {
+		t.Errorf("Expected %v, got %v", userID, user.ID)
 	}
 	if bytes.Compare(user.Password.Bytes, input.Password.Bytes) != 0 {
 		t.Errorf("Expected %v, got %v", input.Password.Bytes, user.Password.Bytes)
@@ -40,12 +40,12 @@ func TestDataUsersLifeCycle(t *testing.T) {
 		t.Errorf("Expected %v, got %v", input.PrimaryEmail.String, user.PrimaryEmail.String)
 	}
 
-	user, err = data.GetUser(testDb.DB, output.Id.String)
+	user, err = data.GetUser(testDb.DB, output.ID.String)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if user.Id.String != userId {
-		t.Errorf("Expected %v, got %v", userId, user.Id)
+	if user.ID.String != userID {
+		t.Errorf("Expected %v, got %v", userID, user.ID)
 	}
 	if user.Login.String != input.Login.String {
 		t.Errorf("Expected %v, got %v", input.Login.String, user.Login.String)
@@ -98,7 +98,7 @@ func BenchmarkDataGetUser(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := data.GetUser(testDb.DB, output.Id.String)
+		_, err := data.GetUser(testDb.DB, output.ID.String)
 		if err != nil {
 			b.Fatal(err)
 		}

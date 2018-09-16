@@ -20,46 +20,46 @@ const (
 
 type Event struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id        mytype.OID         `db:"id" permit:"read"`
+	ID        mytype.OID         `db:"id" permit:"read"`
 	Payload   pgtype.JSONB       `db:"payload" permit:"create/read"`
 	Public    pgtype.Bool        `db:"public" permit:"create/read"`
-	StudyId   mytype.OID         `db:"study_id" permit:"create/read"`
+	StudyID   mytype.OID         `db:"study_id" permit:"create/read"`
 	Type      pgtype.Varchar     `db:"type" permit:"create/read"`
-	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func newEvent(eventType string, payload interface{}, studyId, userId *mytype.OID) (*Event, error) {
+func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID) (*Event, error) {
 	e := &Event{}
 	if err := e.Payload.Set(payload); err != nil {
 		return nil, err
 	}
-	if err := e.StudyId.Set(studyId); err != nil {
+	if err := e.StudyID.Set(studyID); err != nil {
 		return nil, err
 	}
 	if err := e.Type.Set(eventType); err != nil {
 		return nil, err
 	}
-	if err := e.UserId.Set(userId); err != nil {
+	if err := e.UserID.Set(userID); err != nil {
 		return nil, err
 	}
 
 	return e, nil
 }
 
-func NewCourseEvent(payload *CourseEventPayload, studyId, userId *mytype.OID) (*Event, error) {
-	return newEvent(CourseEvent, payload, studyId, userId)
+func NewCourseEvent(payload *CourseEventPayload, studyID, userID *mytype.OID) (*Event, error) {
+	return newEvent(CourseEvent, payload, studyID, userID)
 }
 
-func NewLessonEvent(payload *LessonEventPayload, studyId, userId *mytype.OID) (*Event, error) {
-	return newEvent(LessonEvent, payload, studyId, userId)
+func NewLessonEvent(payload *LessonEventPayload, studyID, userID *mytype.OID) (*Event, error) {
+	return newEvent(LessonEvent, payload, studyID, userID)
 }
 
-func NewStudyEvent(payload *StudyEventPayload, studyId, userId *mytype.OID) (*Event, error) {
-	return newEvent(StudyEvent, payload, studyId, userId)
+func NewStudyEvent(payload *StudyEventPayload, studyID, userID *mytype.OID) (*Event, error) {
+	return newEvent(StudyEvent, payload, studyID, userID)
 }
 
-func NewUserAssetEvent(payload *UserAssetEventPayload, studyId, userId *mytype.OID) (*Event, error) {
-	return newEvent(UserAssetEvent, payload, studyId, userId)
+func NewUserAssetEvent(payload *UserAssetEventPayload, studyID, userID *mytype.OID) (*Event, error) {
+	return newEvent(UserAssetEvent, payload, studyID, userID)
 }
 
 type EventFilterOption int
@@ -154,10 +154,10 @@ const countEventByLessonSQL = `
 
 func CountEventByLesson(
 	db Queryer,
-	lessonId string,
+	lessonID string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("lesson_id", lessonId).Info("CountEventByLesson()")
+	mylog.Log.WithField("lesson_id", lessonID).Info("CountEventByLesson()")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -171,7 +171,7 @@ func CountEventByLesson(
 
 	psName := preparedName("countEventByLesson", sql)
 
-	err = prepareQueryRow(db, psName, sql, lessonId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, lessonID).Scan(&n)
 
 	return
 }
@@ -184,10 +184,10 @@ const countEventByStudySQL = `
 
 func CountEventByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountEventByStudy()")
+	mylog.Log.WithField("study_id", studyID).Info("CountEventByStudy()")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -201,7 +201,7 @@ func CountEventByStudy(
 
 	psName := preparedName("countEventByStudy", sql)
 
-	err = prepareQueryRow(db, psName, sql, studyId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, studyID).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -216,10 +216,10 @@ const countEventByUserSQL = `
 
 func CountEventByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountEventByUser()")
+	mylog.Log.WithField("user_id", userID).Info("CountEventByUser()")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -233,7 +233,7 @@ func CountEventByUser(
 
 	psName := preparedName("countEventByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, userID).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -248,10 +248,10 @@ const countReceivedEventByUserSQL = `
 
 func CountReceivedEventByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountReceivedEventByUser()")
+	mylog.Log.WithField("user_id", userID).Info("CountReceivedEventByUser()")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -265,7 +265,7 @@ func CountReceivedEventByUser(
 
 	psName := preparedName("countReceivedEventByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, userID).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -280,10 +280,10 @@ const countEventByUserAssetSQL = `
 
 func CountEventByUserAsset(
 	db Queryer,
-	assetId string,
+	assetID string,
 	opts ...EventFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("asset_id", assetId).Info("CountEventByUserAsset()")
+	mylog.Log.WithField("asset_id", assetID).Info("CountEventByUserAsset()")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -297,7 +297,7 @@ func CountEventByUserAsset(
 
 	psName := preparedName("countEventByUserAsset", sql)
 
-	err = prepareQueryRow(db, psName, sql, assetId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, assetID).Scan(&n)
 	mylog.Log.WithField("n", n).Info("")
 
 	return
@@ -312,12 +312,12 @@ func getEvent(
 	var row Event
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Payload,
 		&row.Public,
-		&row.StudyId,
+		&row.StudyID,
 		&row.Type,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -347,12 +347,12 @@ func getManyEvent(
 		var row Event
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Payload,
 			&row.Public,
-			&row.StudyId,
+			&row.StudyID,
 			&row.Type,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -390,11 +390,11 @@ func GetEvent(
 
 func GetEventByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetEventByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("GetEventByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -402,7 +402,7 @@ func GetEventByStudy(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.study_id = ` + args.Append(studyId)
+			return from + `.study_id = ` + args.Append(studyID)
 		}},
 		JoinFilters(filters),
 	)
@@ -426,11 +426,11 @@ func GetEventByStudy(
 
 func GetEventByLesson(
 	db Queryer,
-	lessonId string,
+	lessonID string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("lesson_id", lessonId).Info("GetEventByLesson(lesson_id)")
+	mylog.Log.WithField("lesson_id", lessonID).Info("GetEventByLesson(lesson_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -438,7 +438,7 @@ func GetEventByLesson(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.lesson_id = ` + args.Append(lessonId)
+			return from + `.lesson_id = ` + args.Append(lessonID)
 		}},
 		JoinFilters(filters),
 	)
@@ -462,11 +462,11 @@ func GetEventByLesson(
 
 func GetEventByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetEventByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetEventByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -474,7 +474,7 @@ func GetEventByUser(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.user_id = ` + args.Append(userId)
+			return from + `.user_id = ` + args.Append(userID)
 		}},
 		JoinFilters(filters),
 	)
@@ -498,11 +498,11 @@ func GetEventByUser(
 
 func GetReceivedEventByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetReceivedEventByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetReceivedEventByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -510,7 +510,7 @@ func GetReceivedEventByUser(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.received_user_id = ` + args.Append(userId)
+			return from + `.received_user_id = ` + args.Append(userID)
 		}},
 		JoinFilters(filters),
 	)
@@ -534,11 +534,11 @@ func GetReceivedEventByUser(
 
 func GetEventByUserAsset(
 	db Queryer,
-	assetId string,
+	assetID string,
 	po *PageOptions,
 	opts ...EventFilterOption,
 ) ([]*Event, error) {
-	mylog.Log.WithField("asset_id", assetId).Info("GetEventByUserAsset(asset_id)")
+	mylog.Log.WithField("asset_id", assetID).Info("GetEventByUserAsset(asset_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -546,7 +546,7 @@ func GetEventByUserAsset(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.asset_id = ` + args.Append(assetId)
+			return from + `.asset_id = ` + args.Append(assetID)
 		}},
 		JoinFilters(filters),
 	)
@@ -578,9 +578,9 @@ func CreateEvent(
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Event")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Payload.Status != pgtype.Undefined {
 		columns = append(columns, "payload")
@@ -590,17 +590,17 @@ func CreateEvent(
 		columns = append(columns, "public")
 		values = append(values, args.Append(&row.Public))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
 	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, "type")
 		values = append(values, args.Append(&row.Type))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -629,13 +629,14 @@ func CreateEvent(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.Errorf("error code %v", pgErr.Code)
 				return nil, err
 			}
 		}
 		return nil, err
 	}
 
-	event, err := GetEvent(tx, row.Id.String)
+	event, err := GetEvent(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}

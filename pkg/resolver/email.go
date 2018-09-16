@@ -33,11 +33,11 @@ func (r *emailResolver) Type() (string, error) {
 }
 
 func (r *emailResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Email.UserId()
+	userID, err := r.Email.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

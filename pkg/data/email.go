@@ -11,9 +11,9 @@ import (
 
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id         mytype.OID         `db:"id" permit:"read"`
+	ID         mytype.OID         `db:"id" permit:"read"`
 	Type       mytype.EmailType   `db:"type" permit:"create/read/update"`
-	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	Value      pgtype.Varchar     `db:"value" permit:"create/read"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
@@ -55,10 +55,10 @@ const countEmailByUserSQL = `
 
 func CountEmailByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	opts ...EmailFilterOption,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountEmailByUser(user_id) Email")
+	mylog.Log.WithField("user_id", userID).Info("CountEmailByUser(user_id) Email")
 
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -72,7 +72,7 @@ func CountEmailByUser(
 
 	psName := preparedName("countEmailByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
+	err = prepareQueryRow(db, psName, sql, userID).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
 
@@ -83,9 +83,9 @@ func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email,
 	var row Email
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Type,
-		&row.UserId,
+		&row.UserID,
 		&row.UpdatedAt,
 		&row.Value,
 		&row.VerifiedAt,
@@ -117,9 +117,9 @@ func getManyEmail(
 		var row Email
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Type,
-			&row.UserId,
+			&row.UserID,
 			&row.UpdatedAt,
 			&row.Value,
 			&row.VerifiedAt,
@@ -136,7 +136,7 @@ func getManyEmail(
 	return rows, nil
 }
 
-const getEmailByIdSQL = `
+const getEmailByIDSQL = `
 	SELECT
 		created_at,
 		id,
@@ -151,7 +151,7 @@ const getEmailByIdSQL = `
 
 func GetEmail(db Queryer, id string) (*Email, error) {
 	mylog.Log.WithField("id", id).Info("GetEmail(id)")
-	return getEmail(db, "getEmailById", getEmailByIdSQL, id)
+	return getEmail(db, "getEmailByID", getEmailByIDSQL, id)
 }
 
 const getEmailByUserBackupSQL = `
@@ -167,15 +167,15 @@ const getEmailByUserBackupSQL = `
 	WHERE user_id = $1 AND type = BACKUP
 `
 
-func GetEmailByUserBackup(db Queryer, userId string) (*Email, error) {
+func GetEmailByUserBackup(db Queryer, userID string) (*Email, error) {
 	mylog.Log.WithField(
-		"user_id", userId,
+		"user_id", userID,
 	).Info("GetEmailByUserBackup(user_id)")
 	return getEmail(
 		db,
 		"getEmailByUserBackup",
 		getEmailByUserBackupSQL,
-		userId,
+		userID,
 	)
 }
 
@@ -192,15 +192,15 @@ const getEmailByUserPrimarySQL = `
 	WHERE user_id = $1 AND type = PRIMARY
 `
 
-func GetEmailByUserPrimary(db Queryer, userId string) (*Email, error) {
+func GetEmailByUserPrimary(db Queryer, userID string) (*Email, error) {
 	mylog.Log.WithField(
-		"user_id", userId,
+		"user_id", userID,
 	).Info("GetEmailByUserPrimary(user_id)")
 	return getEmail(
 		db,
 		"getEmailByUserPrimary",
 		getEmailByUserPrimarySQL,
-		userId,
+		userID,
 	)
 }
 
@@ -231,13 +231,13 @@ func GetEmailByValue(db Queryer, email string) (*Email, error) {
 
 func GetEmailByUser(
 	db Queryer,
-	userId *mytype.OID,
+	userID *mytype.OID,
 	po *PageOptions,
 	opts ...EmailFilterOption,
 ) ([]*Email, error) {
 	mylog.Log.WithField(
-		"user_id", userId.String,
-	).Info("GetEmailByUser(userId)")
+		"user_id", userID.String,
+	).Info("GetEmailByUser(userID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
 	for i, o := range opts {
@@ -245,7 +245,7 @@ func GetEmailByUser(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.user_id = ` + args.Append(userId)
+			return from + `.user_id = ` + args.Append(userID)
 		}},
 		JoinFilters(filters),
 	)
@@ -275,17 +275,17 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Email")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, `id`)
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
 		values = append(values, args.Append(&row.Type))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 	if row.Value.Status != pgtype.Undefined {
 		columns = append(columns, `value`)
@@ -325,7 +325,7 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 		return nil, err
 	}
 
-	email, err := GetEmail(tx, row.Id.String)
+	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	}
 
 	if len(sets) == 0 {
-		return GetEmail(db, row.Id.String)
+		return GetEmail(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -395,7 +395,7 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	sql := `
 		UPDATE email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateEmail", sql)
@@ -408,7 +408,7 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 		return nil, ErrNotFound
 	}
 
-	email, err := GetEmail(tx, row.Id.String)
+	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}

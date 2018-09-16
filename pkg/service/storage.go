@@ -41,7 +41,7 @@ func NewStorageService() (*StorageService, error) {
 
 func (s *StorageService) Get(
 	contentType string,
-	userId *mytype.OID,
+	userID *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
 	mylog.Log.WithField("key", key).Info("StorageService.Get()")
@@ -56,7 +56,7 @@ func (s *StorageService) Get(
 	objectPath := strings.Join(
 		[]string{
 			contentType,
-			userId.Short,
+			userID.Short,
 			objectName,
 		},
 		"/",
@@ -77,7 +77,7 @@ type UploadResponse struct {
 }
 
 func (s *StorageService) Upload(
-	userId *mytype.OID,
+	userID *mytype.OID,
 	file multipart.File,
 	contentType string,
 	size int64,
@@ -97,7 +97,7 @@ func (s *StorageService) Upload(
 	)
 	objectPath := strings.Join([]string{
 		contentType,
-		userId.Short,
+		userID.Short,
 		objectName,
 	}, "/")
 

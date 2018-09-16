@@ -11,21 +11,21 @@ import (
 type DeleteCoursePayload = deleteCoursePayloadResolver
 
 type deleteCoursePayloadResolver struct {
-	CourseId *mytype.OID
-	StudyId  *mytype.OID
+	CourseID *mytype.OID
+	StudyID  *mytype.OID
 	Repos    *repo.Repos
 }
 
-func (r *deleteCoursePayloadResolver) DeletedCourseId(
+func (r *deleteCoursePayloadResolver) DeletedCourseID(
 	ctx context.Context,
 ) graphql.ID {
-	return graphql.ID(r.CourseId.String)
+	return graphql.ID(r.CourseID.String)
 }
 
 func (r *deleteCoursePayloadResolver) Study(
 	ctx context.Context,
 ) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}

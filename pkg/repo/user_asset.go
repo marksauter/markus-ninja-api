@@ -46,7 +46,7 @@ func (r *UserAssetPermit) Href() (string, error) {
 	}
 	return fmt.Sprintf(
 		"http://localhost:5000/user/assets/%s/%s",
-		r.userAsset.UserId.Short,
+		r.userAsset.UserID.Short,
 		key,
 	), nil
 }
@@ -55,7 +55,7 @@ func (r *UserAssetPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.userAsset.Id, nil
+	return &r.userAsset.ID, nil
 }
 
 func (r *UserAssetPermit) Key() (string, error) {
@@ -97,11 +97,11 @@ func (r *UserAssetPermit) Size() (int64, error) {
 	return r.userAsset.Size.Int, nil
 }
 
-func (r *UserAssetPermit) StudyId() (*mytype.OID, error) {
+func (r *UserAssetPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.userAsset.StudyId, nil
+	return &r.userAsset.StudyID, nil
 }
 
 func (r *UserAssetPermit) Subtype() (string, error) {
@@ -125,11 +125,11 @@ func (r *UserAssetPermit) UpdatedAt() (time.Time, error) {
 	return r.userAsset.UpdatedAt.Time, nil
 }
 
-func (r *UserAssetPermit) UserId() (*mytype.OID, error) {
+func (r *UserAssetPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.userAsset.UserId, nil
+	return &r.userAsset.UserID, nil
 }
 
 func NewUserAssetRepo() *UserAssetRepo {
@@ -180,26 +180,26 @@ func (r *UserAssetRepo) CountBySearch(
 
 func (r *UserAssetRepo) CountByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetByStudy(db, studyId)
+	return data.CountUserAssetByStudy(db, studyID)
 }
 
 func (r *UserAssetRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetByUser(db, userId)
+	return data.CountUserAssetByUser(db, userID)
 }
 
 func (r *UserAssetRepo) Create(
@@ -241,7 +241,7 @@ func (r *UserAssetRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, userAsset); err != nil {
 		return err
 	}
-	return data.DeleteUserAsset(db, userAsset.Id.String)
+	return data.DeleteUserAsset(db, userAsset.ID.String)
 }
 
 func (r *UserAssetRepo) Get(
@@ -264,13 +264,13 @@ func (r *UserAssetRepo) Get(
 
 func (r *UserAssetRepo) GetByName(
 	ctx context.Context,
-	studyId,
+	studyID,
 	name string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	userAsset, err := r.load.GetByName(ctx, studyId, name)
+	userAsset, err := r.load.GetByName(ctx, studyID, name)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +303,7 @@ func (r *UserAssetRepo) GetByUserStudyAndName(
 
 func (r *UserAssetRepo) GetByStudy(
 	ctx context.Context,
-	studyId *mytype.OID,
+	studyID *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
 ) ([]*UserAssetPermit, error) {
@@ -314,7 +314,7 @@ func (r *UserAssetRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.GetUserAssetByStudy(db, studyId, po, opts...)
+	userAssets, err := data.GetUserAssetByStudy(db, studyID, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (r *UserAssetRepo) GetByStudy(
 
 func (r *UserAssetRepo) GetByUser(
 	ctx context.Context,
-	userId *mytype.OID,
+	userID *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.UserAssetFilterOption,
 ) ([]*UserAssetPermit, error) {
@@ -344,7 +344,7 @@ func (r *UserAssetRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.GetUserAssetByUser(db, userId, po, opts...)
+	userAssets, err := data.GetUserAssetByUser(db, userID, po, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -12,17 +12,17 @@ import (
 
 type Asset struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id        pgtype.Int8        `db:"id" permit:"read"`
+	ID        pgtype.Int8        `db:"id" permit:"read"`
 	Key       pgtype.Text        `db:"key" permit:"read"`
 	Name      mytype.Filename    `db:"name" permit:"create/read/update"`
 	Size      pgtype.Int8        `db:"size" permit:"create/read"`
 	Subtype   pgtype.Text        `db:"subtype" permit:"create/read"`
 	Type      pgtype.Text        `db:"type" permit:"create/read"`
-	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewAssetFromFile(
-	userId *mytype.OID,
+	userID *mytype.OID,
 	storageKey string,
 	file multipart.File,
 	name,
@@ -47,7 +47,7 @@ func NewAssetFromFile(
 	if err := asset.Type.Set(types[0]); err != nil {
 		return nil, err
 	}
-	if err := asset.UserId.Set(userId); err != nil {
+	if err := asset.UserID.Set(userID); err != nil {
 		return nil, err
 	}
 
@@ -63,13 +63,13 @@ func getAsset(
 	var row Asset
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Key,
 		&row.Name,
 		&row.Size,
 		&row.Subtype,
 		&row.Type,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -81,7 +81,7 @@ func getAsset(
 	return &row, nil
 }
 
-const getAssetByIdSQL = `
+const getAssetByIDSQL = `
 	SELECT
 		created_at,
 		id,
@@ -100,7 +100,7 @@ func GetAsset(
 	id int64,
 ) (*Asset, error) {
 	mylog.Log.WithField("id", id).Info("GetAsset(id)")
-	return getAsset(db, "getAssetById", getAssetByIdSQL, id)
+	return getAsset(db, "getAssetByID", getAssetByIDSQL, id)
 }
 
 const getAssetByKeySQL = `
@@ -154,9 +154,9 @@ func CreateAsset(
 		columns = append(columns, "type")
 		values = append(values, args.Append(&row.Type))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -176,7 +176,7 @@ func CreateAsset(
 
 	psName := preparedName("createAsset", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(&row.Id)
+	err = prepareQueryRow(tx, psName, sql, args...).Scan(&row.ID)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -192,7 +192,7 @@ func CreateAsset(
 		return nil, err
 	}
 
-	asset, err := GetAsset(tx, row.Id.Int)
+	asset, err := GetAsset(tx, row.ID.Int)
 	if err != nil {
 		return nil, err
 	}

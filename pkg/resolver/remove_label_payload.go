@@ -12,15 +12,15 @@ import (
 type RemoveLabelPayload = removeLabelPayloadResolver
 
 type removeLabelPayloadResolver struct {
-	LabelId     *mytype.OID
-	LabelableId *mytype.OID
+	LabelID     *mytype.OID
+	LabelableID *mytype.OID
 	Repos       *repo.Repos
 }
 
 func (r *removeLabelPayloadResolver) Labelable(
 	ctx context.Context,
 ) (*labelableResolver, error) {
-	permit, err := r.Repos.GetLabelable(ctx, r.LabelableId)
+	permit, err := r.Repos.GetLabelable(ctx, r.LabelableID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,6 +36,6 @@ func (r *removeLabelPayloadResolver) Labelable(
 	return &labelableResolver{labelable}, nil
 }
 
-func (r *removeLabelPayloadResolver) RemovedLabelId() graphql.ID {
-	return graphql.ID(r.LabelId.String)
+func (r *removeLabelPayloadResolver) RemovedLabelID() graphql.ID {
+	return graphql.ID(r.LabelID.String)
 }

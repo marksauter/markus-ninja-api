@@ -41,7 +41,7 @@ func (r *userResolver) Activity(
 		filters = append(filters, data.IsPublic)
 	}
 
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (r *userResolver) Activity(
 	filters = append(filters, data.IsCourseEvent, data.IsStudyEvent)
 	events, err := r.Repos.Event().GetByUser(
 		ctx,
-		userId.String,
+		userID.String,
 		pageOptions,
 		filters...,
 	)
@@ -74,7 +74,7 @@ func (r *userResolver) Activity(
 
 	count, err := r.Repos.Event().CountByUser(
 		ctx,
-		userId.String,
+		userID.String,
 		data.IsCourseEvent,
 		data.IsStudyEvent,
 	)
@@ -228,7 +228,7 @@ func (r *userResolver) CreatedAt() (graphql.Time, error) {
 }
 
 func (r *userResolver) Email(ctx context.Context) (*emailResolver, error) {
-	id, err := r.User.ProfileEmailId()
+	id, err := r.User.ProfileEmailID()
 	if err != nil {
 		return nil, err
 	}
@@ -404,12 +404,12 @@ func (r *userResolver) Enrolled(
 }
 
 func (r *userResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		var n int32
 		return n, err
 	}
-	return r.Repos.User().CountByEnrollable(ctx, userId.String)
+	return r.Repos.User().CountByEnrollable(ctx, userID.String)
 }
 
 func (r *userResolver) Enrollees(
@@ -478,8 +478,8 @@ func (r *userResolver) EnrollmentStatus(ctx context.Context) (string, error) {
 	}
 
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(id)
-	enrolled.UserId.Set(viewer.Id)
+	enrolled.EnrollableID.Set(id)
+	enrolled.UserID.Set(viewer.ID)
 	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
 	if err != nil {
 		if err != data.ErrNotFound {
@@ -505,7 +505,7 @@ func (r *userResolver) Notifications(
 		OrderBy *OrderArg
 	},
 ) (*notificationConnectionResolver, error) {
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -527,13 +527,13 @@ func (r *userResolver) Notifications(
 
 	notifications, err := r.Repos.Notification().GetByUser(
 		ctx,
-		userId.String,
+		userID.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Notification().CountByUser(ctx, userId.String)
+	count, err := r.Repos.Notification().CountByUser(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +572,7 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return viewer.Id.String == id.String, nil
+	return viewer.ID.String == id.String, nil
 }
 
 func (r *userResolver) Lessons(
@@ -648,7 +648,7 @@ func (r *userResolver) ReceivedActivity(
 		OrderBy *OrderArg
 	},
 ) (*userActivityConnectionResolver, error) {
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -670,7 +670,7 @@ func (r *userResolver) ReceivedActivity(
 
 	events, err := r.Repos.Event().GetReceivedByUser(
 		ctx,
-		userId.String,
+		userID.String,
 		pageOptions,
 	)
 	if err != nil {
@@ -679,7 +679,7 @@ func (r *userResolver) ReceivedActivity(
 
 	count, err := r.Repos.Event().CountReceivedByUser(
 		ctx,
-		userId.String,
+		userID.String,
 	)
 	if err != nil {
 		return nil, err
@@ -710,12 +710,12 @@ func (r *userResolver) Study(
 	ctx context.Context,
 	args struct{ Name string },
 ) (*studyResolver, error) {
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
 	}
 
-	study, err := r.Repos.Study().GetByName(ctx, userId.String, args.Name)
+	study, err := r.Repos.Study().GetByName(ctx, userID.String, args.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -788,17 +788,17 @@ func (r *userResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.User.ID()
+	userID, err := r.User.ID()
 	if err != nil {
 		return false, err
 	}
 
-	if viewer.Id.String == userId.String {
+	if viewer.ID.String == userID.String {
 		return false, err
 	}
 
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(userId)
-	enrolled.UserId.Set(viewer.Id)
+	enrolled.EnrollableID.Set(userID)
+	enrolled.UserID.Set(viewer.ID)
 	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }

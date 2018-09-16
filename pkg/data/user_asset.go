@@ -13,38 +13,38 @@ import (
 )
 
 type UserAsset struct {
-	AssetId      pgtype.Int8        `db:"asset_id" permit:"create/read"`
+	AssetID      pgtype.Int8        `db:"asset_id" permit:"create/read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id           mytype.OID         `db:"id" permit:"read"`
+	ID           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
 	OriginalName mytype.Filename    `db:"original_name" permit:"create/read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"create/read"`
-	StudyId      mytype.OID         `db:"study_id" permit:"create/read"`
+	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
 	Subtype      pgtype.Text        `db:"subtype" permit:"create/read"`
 	Type         pgtype.Text        `db:"type" permit:"create/read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId       mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func NewUserAsset(
-	userId,
-	studyId *mytype.OID,
-	assetId int64,
+	userID,
+	studyID *mytype.OID,
+	assetID int64,
 	name string,
 ) (*UserAsset, error) {
 	userAsset := &UserAsset{}
-	if err := userAsset.AssetId.Set(assetId); err != nil {
+	if err := userAsset.AssetID.Set(assetID); err != nil {
 		return nil, err
 	}
 	if err := userAsset.Name.Set(name); err != nil {
 		return nil, err
 	}
-	if err := userAsset.StudyId.Set(studyId); err != nil {
+	if err := userAsset.StudyID.Set(studyID); err != nil {
 		return nil, err
 	}
-	if err := userAsset.UserId.Set(userId); err != nil {
+	if err := userAsset.UserID.Set(userID); err != nil {
 		return nil, err
 	}
 
@@ -116,15 +116,15 @@ const countUserAssetByStudySQL = `
 
 func CountUserAssetByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountUserAssetByStudy(study_id)")
+	mylog.Log.WithField("study_id", studyID).Info("CountUserAssetByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countUserAssetByStudy",
 		countUserAssetByStudySQL,
-		studyId,
+		studyID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -140,15 +140,15 @@ const countUserAssetByUserSQL = `
 
 func CountUserAssetByUser(
 	db Queryer,
-	userId string,
+	userID string,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountUserAssetByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("CountUserAssetByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countUserAssetByUser",
 		countUserAssetByUserSQL,
-		userId,
+		userID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -164,19 +164,19 @@ func getUserAsset(
 ) (*UserAsset, error) {
 	var row UserAsset
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.AssetId,
+		&row.AssetID,
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Key,
 		&row.Name,
 		&row.OriginalName,
 		&row.PublishedAt,
 		&row.Size,
-		&row.StudyId,
+		&row.StudyID,
 		&row.Subtype,
 		&row.Type,
 		&row.UpdatedAt,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -204,19 +204,19 @@ func getManyUserAsset(
 	for dbRows.Next() {
 		var row UserAsset
 		dbRows.Scan(
-			&row.AssetId,
+			&row.AssetID,
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Key,
 			&row.Name,
 			&row.OriginalName,
 			&row.PublishedAt,
 			&row.Size,
-			&row.StudyId,
+			&row.StudyID,
 			&row.Subtype,
 			&row.Type,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -231,7 +231,7 @@ func getManyUserAsset(
 	return rows, nil
 }
 
-const getUserAssetByIdSQL = `
+const getUserAssetByIDSQL = `
 	SELECT
 		asset_id,
 		created_at,
@@ -255,7 +255,7 @@ func GetUserAsset(
 	id string,
 ) (*UserAsset, error) {
 	mylog.Log.WithField("id", id).Info("GetUserAsset(id)")
-	return getUserAsset(db, "getUserAssetById", getUserAssetByIdSQL, id)
+	return getUserAsset(db, "getUserAssetByID", getUserAssetByIDSQL, id)
 }
 
 const getUserAssetByNameSQL = `
@@ -279,7 +279,7 @@ const getUserAssetByNameSQL = `
 
 func GetUserAssetByName(
 	db Queryer,
-	studyId,
+	studyID,
 	name string,
 ) (*UserAsset, error) {
 	mylog.Log.WithField("name", name).Info("GetUserAssetByName(name)")
@@ -287,7 +287,7 @@ func GetUserAssetByName(
 		db,
 		"getUserAssetByName",
 		getUserAssetByNameSQL,
-		studyId,
+		studyID,
 		name,
 	)
 }
@@ -313,13 +313,13 @@ const batchGetUserAssetByNameSQL = `
 
 func BatchGetUserAssetByName(
 	db Queryer,
-	studyId string,
+	studyID string,
 	names []string,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
+		"study_id": studyID,
 		"names":    names,
-	}).Info("BatchGetUserAssetByName(studyId, names)")
+	}).Info("BatchGetUserAssetByName(studyID, names)")
 	lowerNames := make([]string, len(names))
 	for i, name := range names {
 		lowerNames[i] = strings.ToLower(name)
@@ -328,7 +328,7 @@ func BatchGetUserAssetByName(
 		db,
 		"batchGetUserAssetByName",
 		batchGetUserAssetByNameSQL,
-		studyId,
+		studyID,
 		lowerNames,
 	)
 }
@@ -375,15 +375,15 @@ func GetUserAssetByUserStudyAndName(
 
 func GetUserAssetByStudy(
 	db Queryer,
-	studyId *mytype.OID,
+	studyID *mytype.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
-		"study_id", studyId.String,
-	).Info("GetUserAssetByStudy(studyId)")
+		"study_id", studyID.String,
+	).Info("GetUserAssetByStudy(studyID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
+	where := []string{`study_id = ` + args.Append(studyID)}
 	selects := []string{
 		"asset_id",
 		"created_at",
@@ -409,15 +409,15 @@ func GetUserAssetByStudy(
 
 func GetUserAssetByUser(
 	db Queryer,
-	userId *mytype.OID,
+	userID *mytype.OID,
 	po *PageOptions,
 	opts ...UserAssetFilterOption,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
-		"user_id", userId.String,
-	).Info("GetUserAssetByUser(userId)")
+		"user_id", userID.String,
+	).Info("GetUserAssetByUser(userID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := []string{`user_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"asset_id",
@@ -452,13 +452,13 @@ func CreateUserAsset(
 	var columns, values []string
 
 	id, _ := mytype.NewOID("UserAsset")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
-	if row.AssetId.Status != pgtype.Undefined {
+	if row.AssetID.Status != pgtype.Undefined {
 		columns = append(columns, "asset_id")
-		values = append(values, args.Append(&row.AssetId))
+		values = append(values, args.Append(&row.AssetID))
 	}
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
@@ -472,13 +472,13 @@ func CreateUserAsset(
 		columns = append(columns, "published_at")
 		values = append(values, args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -513,7 +513,7 @@ func CreateUserAsset(
 		return nil, err
 	}
 
-	userAsset, err := GetUserAsset(tx, row.Id.String)
+	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +608,7 @@ func UpdateUserAsset(
 	}
 
 	if len(sets) == 0 {
-		return GetUserAsset(db, row.Id.String)
+		return GetUserAsset(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -623,7 +623,7 @@ func UpdateUserAsset(
 	sql := `
 		UPDATE user_asset
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateUserAsset", sql)
@@ -647,7 +647,7 @@ func UpdateUserAsset(
 		return nil, ErrNotFound
 	}
 
-	userAsset, err := GetUserAsset(tx, row.Id.String)
+	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}

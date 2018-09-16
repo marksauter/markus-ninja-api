@@ -104,7 +104,7 @@ func (r *AppledLoader) Get(ctx context.Context, id int32) (*data.Appled, error) 
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(appled.AppleableId.String, appled.UserId.String)
+	compositeKey := newCompositeKey(appled.AppleableID.String, appled.UserID.String)
 	r.batchGetByAppleableAndUser.Prime(ctx, compositeKey, appled)
 
 	return appled, nil
@@ -112,10 +112,10 @@ func (r *AppledLoader) Get(ctx context.Context, id int32) (*data.Appled, error) 
 
 func (r *AppledLoader) GetByAppleableAndUser(
 	ctx context.Context,
-	appleableId,
-	userId string,
+	appleableID,
+	userID string,
 ) (*data.Appled, error) {
-	compositeKey := newCompositeKey(appleableId, userId)
+	compositeKey := newCompositeKey(appleableID, userID)
 	appledData, err := r.batchGetByAppleableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (r *AppledLoader) GetByAppleableAndUser(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	key := strconv.Itoa(int(appled.Id.Int))
+	key := strconv.Itoa(int(appled.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), appled)
 
 	return appled, nil

@@ -88,9 +88,9 @@ type CourseLessonLoader struct {
 	batchGetByCourseAndNumber *dataloader.Loader
 }
 
-func (r *CourseLessonLoader) Clear(lessonId string) {
+func (r *CourseLessonLoader) Clear(lessonID string) {
 	ctx := context.Background()
-	r.batchGet.Clear(ctx, dataloader.StringKey(lessonId))
+	r.batchGet.Clear(ctx, dataloader.StringKey(lessonID))
 }
 
 func (r *CourseLessonLoader) ClearAll() {
@@ -100,9 +100,9 @@ func (r *CourseLessonLoader) ClearAll() {
 
 func (r *CourseLessonLoader) Get(
 	ctx context.Context,
-	lessonId string,
+	lessonID string,
 ) (*data.CourseLesson, error) {
-	courseLessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(lessonId))()
+	courseLessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(lessonID))()
 	if err != nil {
 		return nil, err
 	}
@@ -116,10 +116,10 @@ func (r *CourseLessonLoader) Get(
 
 func (r *CourseLessonLoader) GetByCourseAndNumber(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	number int32,
 ) (*data.CourseLesson, error) {
-	compositeKey := newCompositeKey(courseId, fmt.Sprintf("%d", number))
+	compositeKey := newCompositeKey(courseID, fmt.Sprintf("%d", number))
 	courseLessonData, err := r.batchGetByCourseAndNumber.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (r *CourseLessonLoader) GetByCourseAndNumber(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(courseLesson.LessonId.String), courseLesson)
+	r.batchGet.Prime(ctx, dataloader.StringKey(courseLesson.LessonID.String), courseLesson)
 
 	return courseLesson, nil
 }

@@ -9,7 +9,7 @@ import (
 
 type createCoursePayloadResolver struct {
 	Course  *repo.CoursePermit
-	StudyId *mytype.OID
+	StudyID *mytype.OID
 	Repos   *repo.Repos
 }
 
@@ -18,7 +18,7 @@ func (r *createCoursePayloadResolver) CourseEdge() (*courseEdgeResolver, error) 
 }
 
 func (r *createCoursePayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}

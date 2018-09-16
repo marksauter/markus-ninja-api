@@ -30,11 +30,11 @@ func (r *PRTPermit) Get() *data.PRT {
 	return prt
 }
 
-func (r *PRTPermit) EmailId() (*mytype.OID, error) {
+func (r *PRTPermit) EmailID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.prt.EmailId, nil
+	return &r.prt.EmailID, nil
 }
 
 func (r *PRTPermit) ExpiresAt() (time.Time, error) {
@@ -58,11 +58,11 @@ func (r *PRTPermit) Token() (string, error) {
 	return r.prt.Token.String, nil
 }
 
-func (r *PRTPermit) UserId() (*mytype.OID, error) {
+func (r *PRTPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.prt.UserId, nil
+	return &r.prt.UserID, nil
 }
 
 func (r *PRTPermit) EndedAt() (time.Time, error) {
@@ -132,13 +132,13 @@ func (r *PRTRepo) Create(
 
 func (r *PRTRepo) Get(
 	ctx context.Context,
-	userId,
+	userID,
 	token string,
 ) (*PRTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	prt, err := r.load.Get(ctx, userId, token)
+	prt, err := r.load.Get(ctx, userID, token)
 	if err != nil {
 		return nil, err
 	}

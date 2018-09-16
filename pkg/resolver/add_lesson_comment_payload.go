@@ -20,11 +20,11 @@ func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResol
 func (r *addLessonCommentPayloadResolver) Lesson(
 	ctx context.Context,
 ) (*lessonResolver, error) {
-	lessonId, err := r.LessonComment.LessonId()
+	lessonID, err := r.LessonComment.LessonID()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, lessonID.String)
 	if err != nil {
 		return nil, err
 	}

@@ -37,18 +37,18 @@ func (r *CourseLessonPermit) CreatedAt() (time.Time, error) {
 	return r.courseLesson.CreatedAt.Time, nil
 }
 
-func (r *CourseLessonPermit) CourseId() (*mytype.OID, error) {
+func (r *CourseLessonPermit) CourseID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("course_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.courseLesson.CourseId, nil
+	return &r.courseLesson.CourseID, nil
 }
 
-func (r *CourseLessonPermit) LessonId() (*mytype.OID, error) {
+func (r *CourseLessonPermit) LessonID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("lesson_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.courseLesson.LessonId, nil
+	return &r.courseLesson.LessonID, nil
 }
 
 func (r *CourseLessonPermit) Number() (n int32, err error) {
@@ -95,14 +95,14 @@ func (r *CourseLessonRepo) CheckConnection() error {
 
 func (r *CourseLessonRepo) CountByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountCourseLessonByCourse(db, courseId)
+	return data.CountCourseLessonByCourse(db, courseID)
 }
 
 func (r *CourseLessonRepo) Connect(
@@ -132,12 +132,12 @@ func (r *CourseLessonRepo) Connect(
 
 func (r *CourseLessonRepo) Get(
 	ctx context.Context,
-	lessonId string,
+	lessonID string,
 ) (*CourseLessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	courseLesson, err := r.load.Get(ctx, lessonId)
+	courseLesson, err := r.load.Get(ctx, lessonID)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +150,13 @@ func (r *CourseLessonRepo) Get(
 
 func (r *CourseLessonRepo) GetByCourseAndNumber(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	number int32,
 ) (*CourseLessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	courseLesson, err := r.load.GetByCourseAndNumber(ctx, courseId, number)
+	courseLesson, err := r.load.GetByCourseAndNumber(ctx, courseID, number)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (r *CourseLessonRepo) GetByCourseAndNumber(
 
 func (r *CourseLessonRepo) GetByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	po *data.PageOptions,
 ) ([]*CourseLessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -179,7 +179,7 @@ func (r *CourseLessonRepo) GetByCourse(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	courseLessons, err := data.GetCourseLessonByCourse(db, courseId, po)
+	courseLessons, err := data.GetCourseLessonByCourse(db, courseID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -210,5 +210,5 @@ func (r *CourseLessonRepo) Disconnect(
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, courseLesson); err != nil {
 		return err
 	}
-	return data.DeleteCourseLesson(db, courseLesson.LessonId.String)
+	return data.DeleteCourseLesson(db, courseLesson.LessonID.String)
 }

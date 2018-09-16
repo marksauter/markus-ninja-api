@@ -16,7 +16,7 @@ var testPayload = myjwt.Payload{
 }
 var testJWT = myjwt.JWT{Payload: testPayload, Signature: testPayload.String()}
 
-var conf = &service.AuthServiceConfig{KeyId: "secret"}
+var conf = &service.AuthServiceConfig{KeyID: "secret"}
 var mockAuthService = service.NewAuthService(myaws.NewMockKMS(), conf)
 
 func TestSignJWT(t *testing.T) {
