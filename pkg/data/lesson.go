@@ -364,7 +364,7 @@ func GetLessonByEnrollee(
 	selects := []string{
 		"body",
 		"course_id",
-		"coures_number",
+		"course_number",
 		"created_at",
 		"enrolled_at",
 		"id",
