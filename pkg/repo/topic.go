@@ -50,7 +50,7 @@ func (r *TopicPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.topic.Id, nil
+	return &r.topic.ID, nil
 }
 
 func (r *TopicPermit) Name() (string, error) {
@@ -114,14 +114,14 @@ func (r *TopicRepo) CountBySearch(
 
 func (r *TopicRepo) CountByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicByTopicable(db, topicableId)
+	return data.CountTopicByTopicable(db, topicableID)
 }
 
 func (r *TopicRepo) Create(
@@ -174,7 +174,7 @@ func (r *TopicRepo) Get(
 
 func (r *TopicRepo) GetByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
 	po *data.PageOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -184,7 +184,7 @@ func (r *TopicRepo) GetByTopicable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	topics, err := data.GetTopicByTopicable(db, topicableId, po)
+	topics, err := data.GetTopicByTopicable(db, topicableID, po)
 	if err != nil {
 		return nil, err
 	}

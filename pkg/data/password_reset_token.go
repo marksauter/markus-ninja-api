@@ -13,13 +13,13 @@ import (
 )
 
 type PRT struct {
-	EmailId   mytype.OID         `db:"email_id" permit:"create/read"`
+	EmailID   mytype.OID         `db:"email_id" permit:"create/read"`
 	EndedAt   pgtype.Timestamptz `db:"ended_at" permit:"read/update"`
 	EndIP     pgtype.Inet        `db:"end_ip" permit:"read/update"`
 	ExpiresAt pgtype.Timestamptz `db:"expires_at" permit:"create/read"`
 	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"create/read"`
 	RequestIP pgtype.Inet        `db:"request_ip" permit:"create/read"`
-	UserId    mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
 	Token     pgtype.Varchar     `db:"token" permit:"create"`
 }
 
@@ -31,13 +31,13 @@ func getPRT(
 ) (*PRT, error) {
 	var row PRT
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.EmailId,
+		&row.EmailID,
 		&row.EndedAt,
 		&row.EndIP,
 		&row.ExpiresAt,
 		&row.IssuedAt,
 		&row.RequestIP,
-		&row.UserId,
+		&row.UserID,
 		&row.Token,
 	)
 	if err == pgx.ErrNoRows {
@@ -49,7 +49,7 @@ func getPRT(
 	return &row, nil
 }
 
-const getPRTByIdSQL = `
+const getPRTByIDSQL = `
 	SELECT
 		email_id,
 		ended_at,
@@ -65,18 +65,18 @@ const getPRTByIdSQL = `
 
 func GetPRT(
 	db Queryer,
-	userId,
+	userID,
 	token string,
 ) (*PRT, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userId,
+		"user_id": userID,
 		"token":   token,
 	}).Info("GetPRT(user_id, token)")
 	return getPRT(
 		db,
-		"getPRTById",
-		getPRTByIdSQL,
-		userId,
+		"getPRTByID",
+		getPRTByIDSQL,
+		userID,
 		token,
 	)
 }
@@ -97,9 +97,9 @@ func CreatePRT(
 	columns = append(columns, `token`)
 	values = append(values, args.Append(token))
 
-	if row.EmailId.Status != pgtype.Undefined {
+	if row.EmailID.Status != pgtype.Undefined {
 		columns = append(columns, `email_id`)
-		values = append(values, args.Append(&row.EmailId))
+		values = append(values, args.Append(&row.EmailID))
 	}
 	if row.ExpiresAt.Status != pgtype.Undefined {
 		columns = append(columns, `expires_at`)
@@ -113,9 +113,9 @@ func CreatePRT(
 		columns = append(columns, `request_ip`)
 		values = append(values, args.Append(&row.RequestIP))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -151,7 +151,7 @@ func CreatePRT(
 		return nil, err
 	}
 
-	prt, err := GetPRT(tx, row.UserId.String, row.Token.String)
+	prt, err := GetPRT(tx, row.UserID.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func UpdatePRT(
 	row *PRT,
 ) (*PRT, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"user_id": row.UserId.String,
+		"user_id": row.UserID.String,
 		"token":   row.Token.String,
 	}).Info("UpdatePRT(user_id, token)")
 
@@ -187,7 +187,7 @@ func UpdatePRT(
 	}
 
 	if len(sets) == 0 {
-		return GetPRT(db, row.UserId.String, row.Token.String)
+		return GetPRT(db, row.UserID.String, row.Token.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -202,7 +202,7 @@ func UpdatePRT(
 	sql := `
 		UPDATE password_reset_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE user_id = ` + args.Append(&row.UserId) + `
+		WHERE user_id = ` + args.Append(&row.UserID) + `
 		AND token = ` + args.Append(&row.Token)
 
 	psName := preparedName("updatePRT", sql)
@@ -215,7 +215,7 @@ func UpdatePRT(
 		return nil, ErrNotFound
 	}
 
-	prt, err := GetPRT(tx, row.UserId.String, row.Token.String)
+	prt, err := GetPRT(tx, row.UserID.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -238,15 +238,15 @@ const deletePRTSQL = `
 
 func DeletePRT(
 	db Queryer,
-	userId,
+	userID,
 	token string,
 ) error {
 	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userId,
+		"user_id": userID,
 		"token":   token,
 	}).Info("DeletePRT(user_id, token)")
 
-	commandTag, err := prepareExec(db, "deletePRT", deletePRTSQL, userId, token)
+	commandTag, err := prepareExec(db, "deletePRT", deletePRTSQL, userID, token)
 	if err != nil {
 		return err
 	}

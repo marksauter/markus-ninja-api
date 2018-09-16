@@ -38,11 +38,11 @@ func (r *LessonPermit) Body() (*mytype.Markdown, error) {
 	return &r.lesson.Body, nil
 }
 
-func (r *LessonPermit) CourseId() (*mytype.OID, error) {
+func (r *LessonPermit) CourseID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("course_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lesson.CourseId, nil
+	return &r.lesson.CourseID, nil
 }
 
 func (r *LessonPermit) CourseNumber() (*int32, error) {
@@ -66,7 +66,7 @@ func (r *LessonPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lesson.Id, nil
+	return &r.lesson.ID, nil
 }
 
 func (r *LessonPermit) Number() (int32, error) {
@@ -84,11 +84,11 @@ func (r *LessonPermit) PublishedAt() (time.Time, error) {
 	return r.lesson.PublishedAt.Time, nil
 }
 
-func (r *LessonPermit) StudyId() (*mytype.OID, error) {
+func (r *LessonPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lesson.StudyId, nil
+	return &r.lesson.StudyID, nil
 }
 
 func (r *LessonPermit) Title() (string, error) {
@@ -105,11 +105,11 @@ func (r *LessonPermit) UpdatedAt() (time.Time, error) {
 	return r.lesson.UpdatedAt.Time, nil
 }
 
-func (r *LessonPermit) UserId() (*mytype.OID, error) {
+func (r *LessonPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lesson.UserId, nil
+	return &r.lesson.UserID, nil
 }
 
 func NewLessonRepo() *LessonRepo {
@@ -147,26 +147,26 @@ func (r *LessonRepo) CheckConnection() error {
 
 func (r *LessonRepo) CountByEnrollee(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByEnrollee(db, userId)
+	return data.CountLessonByEnrollee(db, userID)
 }
 
 func (r *LessonRepo) CountByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByLabel(db, labelId)
+	return data.CountLessonByLabel(db, labelID)
 }
 
 func (r *LessonRepo) CountBySearch(
@@ -184,38 +184,38 @@ func (r *LessonRepo) CountBySearch(
 
 func (r *LessonRepo) CountByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByCourse(db, courseId)
+	return data.CountLessonByCourse(db, courseID)
 }
 
 func (r *LessonRepo) CountByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByStudy(db, studyId)
+	return data.CountLessonByStudy(db, studyID)
 }
 
 func (r *LessonRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByUser(db, userId)
+	return data.CountLessonByUser(db, userID)
 }
 
 func (r *LessonRepo) Create(
@@ -263,7 +263,7 @@ func (r *LessonRepo) Get(
 
 func (r *LessonRepo) GetByEnrollee(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -273,7 +273,7 @@ func (r *LessonRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByEnrollee(db, userId, po)
+	lessons, err := data.GetLessonByEnrollee(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (r *LessonRepo) GetByEnrollee(
 
 func (r *LessonRepo) GetByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -302,7 +302,7 @@ func (r *LessonRepo) GetByLabel(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByLabel(db, labelId, po)
+	lessons, err := data.GetLessonByLabel(db, labelID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (r *LessonRepo) GetByLabel(
 
 func (r *LessonRepo) GetByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -331,7 +331,7 @@ func (r *LessonRepo) GetByCourse(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByCourse(db, courseId, po)
+	lessons, err := data.GetLessonByCourse(db, courseID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func (r *LessonRepo) GetByCourse(
 
 func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	po *data.PageOptions,
 	opts ...data.LessonFilterOption,
 ) ([]*LessonPermit, error) {
@@ -361,7 +361,7 @@ func (r *LessonRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByStudy(db, studyId, po, opts...)
+	lessons, err := data.GetLessonByStudy(db, studyID, po, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (r *LessonRepo) GetByStudy(
 
 func (r *LessonRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -390,7 +390,7 @@ func (r *LessonRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByUser(db, userId, po)
+	lessons, err := data.GetLessonByUser(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +409,7 @@ func (r *LessonRepo) GetByUser(
 
 func (r *LessonRepo) GetByCourseNumber(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	courseNumber int32,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -419,7 +419,7 @@ func (r *LessonRepo) GetByCourseNumber(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lesson, err := data.GetLessonByCourseNumber(db, courseId, courseNumber)
+	lesson, err := data.GetLessonByCourseNumber(db, courseID, courseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ func (r *LessonRepo) GetByCourseNumber(
 
 func (r *LessonRepo) GetByNumber(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -442,7 +442,7 @@ func (r *LessonRepo) GetByNumber(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lesson, err := data.GetLessonByNumber(db, studyId, number)
+	lesson, err := data.GetLessonByNumber(db, studyID, number)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +467,7 @@ func (r *LessonRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, lesson); err != nil {
 		return err
 	}
-	return data.DeleteLesson(db, lesson.Id.String)
+	return data.DeleteLesson(db, lesson.ID.String)
 }
 
 func (r *LessonRepo) Search(

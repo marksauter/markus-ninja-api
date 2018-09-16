@@ -136,10 +136,10 @@ func (r *StudyLoader) Get(
 
 func (r *StudyLoader) GetByName(
 	ctx context.Context,
-	userId,
+	userID,
 	name string,
 ) (*data.Study, error) {
-	compositeKey := newCompositeKey(userId, name)
+	compositeKey := newCompositeKey(userID, name)
 	studyData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (r *StudyLoader) GetByName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(study.Id.String), study)
+	r.batchGet.Prime(ctx, dataloader.StringKey(study.ID.String), study)
 
 	return study, nil
 }
@@ -169,7 +169,7 @@ func (r *StudyLoader) GetByUserAndName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(study.Id.String), study)
+	r.batchGet.Prime(ctx, dataloader.StringKey(study.ID.String), study)
 
 	return study, nil
 }

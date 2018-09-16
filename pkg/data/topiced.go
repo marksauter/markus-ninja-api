@@ -12,9 +12,9 @@ import (
 
 type Topiced struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id          pgtype.Int4        `db:"id" permit:"read"`
-	TopicId     mytype.OID         `db:"topic_id" permit:"read"`
-	TopicableId mytype.OID         `db:"topicable_id" permit:"read"`
+	ID          pgtype.Int4        `db:"id" permit:"read"`
+	TopicID     mytype.OID         `db:"topic_id" permit:"read"`
+	TopicableID mytype.OID         `db:"topicable_id" permit:"read"`
 }
 
 const countTopicedByTopicSQL = `
@@ -25,15 +25,15 @@ const countTopicedByTopicSQL = `
 
 func CountTopicedByTopic(
 	db Queryer,
-	topicId string,
+	topicID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("topic_id", topicId).Info("CountTopicedByTopic()")
+	mylog.Log.WithField("topic_id", topicID).Info("CountTopicedByTopic()")
 
 	err = prepareQueryRow(
 		db,
 		"countTopicedByTopic",
 		countTopicedByTopicSQL,
-		topicId,
+		topicID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -49,15 +49,15 @@ const countTopicedByTopicableSQL = `
 
 func CountTopicedByTopicable(
 	db Queryer,
-	topicableId string,
+	topicableID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("CountTopicedByTopicable()")
+	mylog.Log.WithField("topicable_id", topicableID).Info("CountTopicedByTopicable()")
 
 	err = prepareQueryRow(
 		db,
 		"countTopicedByTopicable",
 		countTopicedByTopicableSQL,
-		topicableId,
+		topicableID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -74,9 +74,9 @@ func getTopiced(
 	var row Topiced
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
-		&row.TopicId,
-		&row.TopicableId,
+		&row.ID,
+		&row.TopicID,
+		&row.TopicableID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -106,9 +106,9 @@ func getManyTopiced(
 		var row Topiced
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
-			&row.TopicId,
-			&row.TopicableId,
+			&row.ID,
+			&row.TopicID,
+			&row.TopicableID,
 		)
 		rows = append(rows, &row)
 	}
@@ -153,27 +153,27 @@ const getTopicedByTopicableAndTopicSQL = `
 
 func GetTopicedByTopicableAndTopic(
 	db Queryer,
-	topicableId,
-	topicId string,
+	topicableID,
+	topicID string,
 ) (*Topiced, error) {
 	mylog.Log.Info("GetTopicedByTopicableAndTopic()")
 	return getTopiced(
 		db,
 		"getTopicedByTopicableAndTopic",
 		getTopicedByTopicableAndTopicSQL,
-		topicableId,
-		topicId,
+		topicableID,
+		topicID,
 	)
 }
 
 func GetTopicedByTopic(
 	db Queryer,
-	topicId string,
+	topicID string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("GetTopicedByTopic(topic_id)")
+	mylog.Log.WithField("topic_id", topicID).Info("GetTopicedByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicId)}
+	where := []string{`topic_id = ` + args.Append(topicID)}
 
 	selects := []string{
 		"created_at",
@@ -191,12 +191,12 @@ func GetTopicedByTopic(
 
 func GetTopicedByTopicable(
 	db Queryer,
-	topicableId string,
+	topicableID string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("GetTopicedByTopicable(topicable_id)")
+	mylog.Log.WithField("topicable_id", topicableID).Info("GetTopicedByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topicable_id = ` + args.Append(topicableId)}
+	where := []string{`topicable_id = ` + args.Append(topicableID)}
 
 	selects := []string{
 		"created_at",
@@ -223,13 +223,13 @@ func CreateTopiced(
 
 	var columns, values []string
 
-	if row.TopicId.Status != pgtype.Undefined {
+	if row.TopicID.Status != pgtype.Undefined {
 		columns = append(columns, "topic_id")
-		values = append(values, args.Append(&row.TopicId))
+		values = append(values, args.Append(&row.TopicID))
 	}
-	if row.TopicableId.Status != pgtype.Undefined {
+	if row.TopicableID.Status != pgtype.Undefined {
 		columns = append(columns, "topicable_id")
-		values = append(values, args.Append(&row.TopicableId))
+		values = append(values, args.Append(&row.TopicableID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -242,13 +242,13 @@ func CreateTopiced(
 	}
 
 	var topicable string
-	switch row.TopicableId.Type {
+	switch row.TopicableID.Type {
 	case "Course":
 		topicable = "course"
 	case "Study":
 		topicable = "study"
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for topiced topicable id", row.TopicableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for topiced topicable id", row.TopicableID.Type)
 	}
 
 	table := strings.Join(
@@ -281,8 +281,8 @@ func CreateTopiced(
 
 	topiced, err := GetTopicedByTopicableAndTopic(
 		tx,
-		row.TopicableId.String,
-		row.TopicId.String,
+		row.TopicableID.String,
+		row.TopicID.String,
 	)
 	if err != nil {
 		return nil, err

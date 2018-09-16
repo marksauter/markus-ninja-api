@@ -43,22 +43,22 @@ func (r *LabeledPermit) ID() (n int32, err error) {
 		err = ErrAccessDenied
 		return
 	}
-	n = r.labeled.Id.Int
+	n = r.labeled.ID.Int
 	return
 }
 
-func (r *LabeledPermit) LabelId() (*mytype.OID, error) {
+func (r *LabeledPermit) LabelID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("label_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.labeled.LabelId, nil
+	return &r.labeled.LabelID, nil
 }
 
-func (r *LabeledPermit) LabelableId() (*mytype.OID, error) {
+func (r *LabeledPermit) LabelableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("labelable_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.labeled.LabelableId, nil
+	return &r.labeled.LabelableID, nil
 }
 
 func NewLabeledRepo() *LabeledRepo {
@@ -96,26 +96,26 @@ func (r *LabeledRepo) CheckConnection() error {
 
 func (r *LabeledRepo) CountByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabeledByLabel(db, labelId)
+	return data.CountLabeledByLabel(db, labelID)
 }
 
 func (r *LabeledRepo) CountByLabelable(
 	ctx context.Context,
-	labelableId string,
+	labelableID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabeledByLabelable(db, labelableId)
+	return data.CountLabeledByLabelable(db, labelableID)
 }
 
 func (r *LabeledRepo) Connect(
@@ -146,7 +146,7 @@ func (r *LabeledRepo) Connect(
 func (r *LabeledRepo) BatchConnect(
 	ctx context.Context,
 	labeled *data.Labeled,
-	labelableIds []*mytype.OID,
+	labelableIDs []*mytype.OID,
 ) error {
 	if err := r.CheckConnection(); err != nil {
 		return err
@@ -158,7 +158,7 @@ func (r *LabeledRepo) BatchConnect(
 	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, labeled); err != nil {
 		return err
 	}
-	return data.BatchCreateLabeled(db, labeled, labelableIds)
+	return data.BatchCreateLabeled(db, labeled, labelableIDs)
 }
 
 func (r *LabeledRepo) Get(
@@ -170,14 +170,14 @@ func (r *LabeledRepo) Get(
 	}
 	var labeled *data.Labeled
 	var err error
-	if l.Id.Status != pgtype.Undefined {
-		labeled, err = r.load.Get(ctx, l.Id.Int)
+	if l.ID.Status != pgtype.Undefined {
+		labeled, err = r.load.Get(ctx, l.ID.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if l.LabelableId.Status != pgtype.Undefined &&
-		l.LabelId.Status != pgtype.Undefined {
-		labeled, err = r.load.GetByLabelableAndLabel(ctx, l.LabelableId.String, l.LabelId.String)
+	} else if l.LabelableID.Status != pgtype.Undefined &&
+		l.LabelID.Status != pgtype.Undefined {
+		labeled, err = r.load.GetByLabelableAndLabel(ctx, l.LabelableID.String, l.LabelID.String)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +195,7 @@ func (r *LabeledRepo) Get(
 
 func (r *LabeledRepo) GetByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 	po *data.PageOptions,
 ) ([]*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -205,7 +205,7 @@ func (r *LabeledRepo) GetByLabel(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labeleds, err := data.GetLabeledByLabel(db, labelId, po)
+	labeleds, err := data.GetLabeledByLabel(db, labelID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (r *LabeledRepo) GetByLabel(
 
 func (r *LabeledRepo) GetByLabelable(
 	ctx context.Context,
-	labelableId string,
+	labelableID string,
 	po *data.PageOptions,
 ) ([]*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -234,7 +234,7 @@ func (r *LabeledRepo) GetByLabelable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labeleds, err := data.GetLabeledByLabelable(db, labelableId, po)
+	labeleds, err := data.GetLabeledByLabelable(db, labelableID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -265,14 +265,14 @@ func (r *LabeledRepo) Disconnect(
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, l); err != nil {
 		return err
 	}
-	if l.Id.Status != pgtype.Undefined {
-		return data.DeleteLabeled(db, l.Id.Int)
-	} else if l.LabelableId.Status != pgtype.Undefined &&
-		l.LabelId.Status != pgtype.Undefined {
+	if l.ID.Status != pgtype.Undefined {
+		return data.DeleteLabeled(db, l.ID.Int)
+	} else if l.LabelableID.Status != pgtype.Undefined &&
+		l.LabelID.Status != pgtype.Undefined {
 		return data.DeleteLabeledByLabelableAndLabel(
 			db,
-			l.LabelableId.String,
-			l.LabelId.String,
+			l.LabelableID.String,
+			l.LabelID.String,
 		)
 	}
 	return errors.New(

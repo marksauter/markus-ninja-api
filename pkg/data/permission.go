@@ -27,7 +27,7 @@ type Permission struct {
 	Audience    pgtype.Text        `db:"audience"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
 	GrantedAt   pgtype.Timestamptz `db:"granted_at"`
-	Id          mytype.OID         `db:"id"`
+	ID          mytype.OID         `db:"id"`
 	Field       pgtype.Text        `db:"field"`
 	Type        pgtype.Text        `db:"type"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at"`
@@ -265,7 +265,7 @@ func GetByRole(
 			&p.AccessLevel,
 			&p.CreatedAt,
 			&p.GrantedAt,
-			&p.Id,
+			&p.ID,
 			&p.Field,
 			&p.Type,
 			&p.UpdatedAt,
@@ -434,7 +434,7 @@ func getPermission(
 		&row.Audience,
 		&row.CreatedAt,
 		&row.Field,
-		&row.Id,
+		&row.ID,
 		&row.Type,
 		&row.UpdatedAt,
 	)
@@ -468,7 +468,7 @@ func getManyPermission(
 			&row.Audience,
 			&row.CreatedAt,
 			&row.Field,
-			&row.Id,
+			&row.ID,
 			&row.Type,
 			&row.UpdatedAt,
 		)

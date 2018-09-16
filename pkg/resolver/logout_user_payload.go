@@ -7,10 +7,10 @@ import (
 )
 
 type logoutUserPayloadResolver struct {
-	UserId *mytype.OID
+	UserID *mytype.OID
 	Repos  *repo.Repos
 }
 
-func (r *logoutUserPayloadResolver) LoggedOutUserId() graphql.ID {
-	return graphql.ID(r.UserId.String)
+func (r *logoutUserPayloadResolver) LoggedOutUserID() graphql.ID {
+	return graphql.ID(r.UserID.String)
 }

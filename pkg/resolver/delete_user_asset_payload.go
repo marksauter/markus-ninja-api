@@ -11,17 +11,17 @@ import (
 type DeleteUserAssetPayload = deleteUserAssetPayloadResolver
 
 type deleteUserAssetPayloadResolver struct {
-	UserAssetId *mytype.OID
-	StudyId     *mytype.OID
+	UserAssetID *mytype.OID
+	StudyID     *mytype.OID
 	Repos       *repo.Repos
 }
 
-func (r *deleteUserAssetPayloadResolver) DeletedUserAssetId() graphql.ID {
-	return graphql.ID(r.UserAssetId.String)
+func (r *deleteUserAssetPayloadResolver) DeletedUserAssetID() graphql.ID {
+	return graphql.ID(r.UserAssetID.String)
 }
 
 func (r *deleteUserAssetPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}

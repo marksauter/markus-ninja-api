@@ -14,18 +14,18 @@ import (
 
 type Lesson struct {
 	Body         mytype.Markdown    `db:"body" permit:"create/read/update"`
-	CourseId     mytype.OID         `db:"course_id" permit:"read"`
+	CourseID     mytype.OID         `db:"course_id" permit:"read"`
 	CourseNumber pgtype.Int4        `db:"course_number" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at"`
-	Id           mytype.OID         `db:"id" permit:"read"`
+	ID           mytype.OID         `db:"id" permit:"read"`
 	LabeledAt    pgtype.Timestamptz `db:"labeled_at"`
 	Number       pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read/update"`
-	StudyId      mytype.OID         `db:"study_id" permit:"create/read"`
+	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
 	Title        pgtype.Text        `db:"title" permit:"create/read/update"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId       mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 func lessonDelimeter(r rune) bool {
@@ -66,14 +66,14 @@ const countLessonByEnrolleeSQL = `
 
 func CountLessonByEnrollee(
 	db Queryer,
-	userId string,
+	userID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountLessonByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("CountLessonByEnrollee(user_id)")
 	err = prepareQueryRow(
 		db,
 		"countLessonByEnrollee",
 		countLessonByEnrolleeSQL,
-		userId,
+		userID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -89,14 +89,14 @@ const countLessonByLabelSQL = `
 
 func CountLessonByLabel(
 	db Queryer,
-	labelId string,
+	labelID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("label_id", labelId).Info("CountLessonByLabel(label_id)")
+	mylog.Log.WithField("label_id", labelID).Info("CountLessonByLabel(label_id)")
 	err = prepareQueryRow(
 		db,
 		"countLessonByLabel",
 		countLessonByLabelSQL,
-		labelId,
+		labelID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -146,17 +146,17 @@ const countLessonByCourseSQL = `
 
 func CountLessonByCourse(
 	db Queryer,
-	courseId string,
+	courseID string,
 ) (int32, error) {
 	mylog.Log.WithField(
-		"course_id", courseId,
+		"course_id", courseID,
 	).Info("CountLessonByCourse(course_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLessonByCourse",
 		countLessonByCourseSQL,
-		courseId,
+		courseID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -172,11 +172,11 @@ const countLessonByStudySQL = `
 
 func CountLessonByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	opts ...LessonFilterOption,
 ) (int32, error) {
 	mylog.Log.WithField(
-		"study_id", studyId,
+		"study_id", studyID,
 	).Info("CountLessonByStudy(study_id)")
 	var n int32
 
@@ -192,7 +192,7 @@ func CountLessonByStudy(
 
 	psName := preparedName("countLessonByStudy", sql)
 
-	err := prepareQueryRow(db, psName, sql, studyId).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, studyID).Scan(&n)
 	return n, err
 }
 
@@ -204,15 +204,15 @@ const countLessonByUserSQL = `
 
 func CountLessonByUser(
 	db Queryer,
-	userId string,
+	userID string,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userId).Info("CountLessonByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("CountLessonByUser(user_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
 		"countLessonByUser",
 		countLessonByUserSQL,
-		userId,
+		userID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -229,16 +229,16 @@ func getLesson(
 	var row Lesson
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
-		&row.CourseId,
+		&row.CourseID,
 		&row.CourseNumber,
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Number,
 		&row.PublishedAt,
-		&row.StudyId,
+		&row.StudyID,
 		&row.Title,
 		&row.UpdatedAt,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -267,16 +267,16 @@ func getManyLesson(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
-			&row.CourseId,
+			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Number,
 			&row.PublishedAt,
-			&row.StudyId,
+			&row.StudyID,
 			&row.Title,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -291,7 +291,7 @@ func getManyLesson(
 	return rows, nil
 }
 
-const getLessonByIdSQL = `
+const getLessonByIDSQL = `
 	SELECT
 		body,
 		course_id,
@@ -313,7 +313,7 @@ func GetLesson(
 	id string,
 ) (*Lesson, error) {
 	mylog.Log.WithField("id", id).Info("GetLesson(id)")
-	return getLesson(db, "getLessonById", getLessonByIdSQL, id)
+	return getLesson(db, "getLessonByID", getLessonByIDSQL, id)
 }
 
 const getLessonByOwnerStudyAndNumberSQL = `
@@ -354,12 +354,12 @@ func GetLessonByOwnerStudyAndNumber(
 
 func GetLessonByEnrollee(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetLessonByEnrollee(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetLessonByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userId)}
+	where := []string{`enrollee_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"body",
@@ -391,17 +391,17 @@ func GetLessonByEnrollee(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
-			&row.CourseId,
+			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.LabeledAt,
 			&row.Number,
 			&row.PublishedAt,
-			&row.StudyId,
+			&row.StudyID,
 			&row.Title,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -418,13 +418,13 @@ func GetLessonByEnrollee(
 
 func GetLessonByLabel(
 	db Queryer,
-	labelId string,
+	labelID string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("label_id", labelId).Info("GetLessonByLabel(label_id)")
+	mylog.Log.WithField("label_id", labelID).Info("GetLessonByLabel(label_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`label_id = ` + args.Append(labelId),
+		`label_id = ` + args.Append(labelID),
 	}
 
 	selects := []string{
@@ -457,17 +457,17 @@ func GetLessonByLabel(
 		var row Lesson
 		dbRows.Scan(
 			&row.Body,
-			&row.CourseId,
+			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.LabeledAt,
 			&row.Number,
 			&row.PublishedAt,
-			&row.StudyId,
+			&row.StudyID,
 			&row.Title,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
@@ -484,12 +484,12 @@ func GetLessonByLabel(
 
 func GetLessonByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetLessonByUser(user_id)")
+	mylog.Log.WithField("user_id", userID).Info("GetLessonByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := []string{`user_id = ` + args.Append(userID)}
 
 	selects := []string{
 		"body",
@@ -514,15 +514,15 @@ func GetLessonByUser(
 
 func GetLessonByCourse(
 	db Queryer,
-	courseId string,
+	courseID string,
 	po *PageOptions,
 ) ([]*Lesson, error) {
 	mylog.Log.WithField(
-		"course_id", courseId,
+		"course_id", courseID,
 	).Info("GetLessonByCourse(course_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := []string{
-		`course_id = ` + args.Append(courseId),
+		`course_id = ` + args.Append(courseID),
 	}
 
 	selects := []string{
@@ -548,12 +548,12 @@ func GetLessonByCourse(
 
 func GetLessonByStudy(
 	db Queryer,
-	studyId string,
+	studyID string,
 	po *PageOptions,
 	opts ...LessonFilterOption,
 ) ([]*Lesson, error) {
 	mylog.Log.WithField(
-		"study_id", studyId,
+		"study_id", studyID,
 	).Info("GetLessonByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	filters := make([]FilterOption, len(opts))
@@ -562,7 +562,7 @@ func GetLessonByStudy(
 	}
 	where := append(
 		[]WhereFrom{func(from string) string {
-			return from + `.study_id = ` + args.Append(studyId)
+			return from + `.study_id = ` + args.Append(studyID)
 		}},
 		JoinFilters(filters),
 	)
@@ -607,18 +607,18 @@ const getLessonByNumberSQL = `
 
 func GetLessonByNumber(
 	db Queryer,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*Lesson, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
+		"study_id": studyID,
 		"number":   number,
-	}).Info("GetLessonByNumber(studyId, number)")
+	}).Info("GetLessonByNumber(studyID, number)")
 	return getLesson(
 		db,
 		"getLessonByNumber",
 		getLessonByNumberSQL,
-		studyId,
+		studyID,
 		number,
 	)
 }
@@ -642,18 +642,18 @@ const getLessonByCourseNumberSQL = `
 
 func GetLessonByCourseNumber(
 	db Queryer,
-	courseId string,
+	courseID string,
 	courseNumber int32,
 ) (*Lesson, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"course_id":     courseId,
+		"course_id":     courseID,
 		"course_number": courseNumber,
 	}).Info("GetLessonByCourseNumber(course_id, course_number)")
 	return getLesson(
 		db,
 		"getLessonByCourseNumber",
 		getLessonByCourseNumberSQL,
-		courseId,
+		courseID,
 		courseNumber,
 	)
 }
@@ -677,18 +677,18 @@ const batchGetLessonByNumberSQL = `
 
 func BatchGetLessonByNumber(
 	db Queryer,
-	studyId string,
+	studyID string,
 	numbers []int32,
 ) ([]*Lesson, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
+		"study_id": studyID,
 		"numbers":  numbers,
-	}).Info("BatchGetLessonByNumber(studyId, numbers)")
+	}).Info("BatchGetLessonByNumber(studyID, numbers)")
 	return getManyLesson(
 		db,
 		"batchGetLessonByNumber",
 		batchGetLessonByNumberSQL,
-		studyId,
+		studyID,
 		numbers,
 	)
 }
@@ -703,9 +703,9 @@ func CreateLesson(
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Lesson")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Body.Status != pgtype.Undefined {
 		columns = append(columns, "body")
@@ -715,9 +715,9 @@ func CreateLesson(
 		columns = append(columns, "published_at")
 		values = append(values, args.Append(&row.PublishedAt))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
 	if row.Title.Status != pgtype.Undefined {
 		columns = append(columns, "title")
@@ -727,9 +727,9 @@ func CreateLesson(
 		columns = append(columns, "title_tokens")
 		values = append(values, args.Append(titleTokens))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -764,16 +764,16 @@ func CreateLesson(
 		return nil, err
 	}
 
-	lesson, err := GetLesson(tx, row.Id.String)
+	lesson, err := GetLesson(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
 
-	eventPayload, err := NewLessonCreatedPayload(&lesson.Id)
+	eventPayload, err := NewLessonCreatedPayload(&lesson.ID)
 	if err != nil {
 		return nil, err
 	}
-	e, err := NewLessonEvent(eventPayload, &lesson.StudyId, &lesson.UserId)
+	e, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -859,7 +859,7 @@ func UpdateLesson(
 	db Queryer,
 	row *Lesson,
 ) (*Lesson, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateLesson(id)")
+	mylog.Log.WithField("id", row.ID.String).Info("UpdateLesson(id)")
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
@@ -877,7 +877,7 @@ func UpdateLesson(
 	}
 
 	if len(sets) == 0 {
-		return GetLesson(db, row.Id.String)
+		return GetLesson(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -892,7 +892,7 @@ func UpdateLesson(
 	sql := `
 		UPDATE lesson
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateLesson", sql)
@@ -905,7 +905,7 @@ func UpdateLesson(
 		return nil, ErrNotFound
 	}
 
-	lesson, err := GetLesson(tx, row.Id.String)
+	lesson, err := GetLesson(tx, row.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -943,7 +943,7 @@ func ParseLessonBodyForEvents(
 	oldEvents := make(map[string]string)
 	events, err := GetEventByLesson(
 		tx,
-		lesson.Id.String,
+		lesson.ID.String,
 		nil,
 		IsLessonMentionedEvent,
 		IsLessonReferencedEvent,
@@ -957,9 +957,9 @@ func ParseLessonBodyForEvents(
 			return err
 		}
 		if payload.Action == LessonMentioned {
-			oldEvents[event.UserId.String] = event.Id.String
+			oldEvents[event.UserID.String] = event.ID.String
 		} else if payload.Action == LessonReferenced {
-			oldEvents[payload.LessonId.String] = event.Id.String
+			oldEvents[payload.LessonID.String] = event.ID.String
 		}
 	}
 
@@ -967,21 +967,21 @@ func ParseLessonBodyForEvents(
 	if len(userAssetRefs) > 0 {
 		userAssets, err := BatchGetUserAssetByName(
 			tx,
-			lesson.StudyId.String,
+			lesson.StudyID.String,
 			userAssetRefs,
 		)
 		if err != nil {
 			return err
 		}
 		for _, a := range userAssets {
-			if a.Id.String != lesson.Id.String {
-				newEvents[a.Id.String] = struct{}{}
-				if _, prs := oldEvents[a.Id.String]; !prs {
-					payload, err := NewUserAssetReferencedPayload(&a.Id, &lesson.Id)
+			if a.ID.String != lesson.ID.String {
+				newEvents[a.ID.String] = struct{}{}
+				if _, prs := oldEvents[a.ID.String]; !prs {
+					payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
 					if err != nil {
 						return err
 					}
-					event, err := NewUserAssetEvent(payload, &lesson.StudyId, &lesson.UserId)
+					event, err := NewUserAssetEvent(payload, &lesson.StudyID, &lesson.UserID)
 					if err != nil {
 						return err
 					}
@@ -999,21 +999,21 @@ func ParseLessonBodyForEvents(
 	if len(lessonNumberRefs) > 0 {
 		lessons, err := BatchGetLessonByNumber(
 			tx,
-			lesson.StudyId.String,
+			lesson.StudyID.String,
 			lessonNumberRefs,
 		)
 		if err != nil {
 			return err
 		}
 		for _, l := range lessons {
-			if l.Id.String != lesson.Id.String {
-				newEvents[l.Id.String] = struct{}{}
-				if _, prs := oldEvents[l.Id.String]; !prs {
-					payload, err := NewLessonReferencedPayload(&l.Id, &lesson.Id)
+			if l.ID.String != lesson.ID.String {
+				newEvents[l.ID.String] = struct{}{}
+				if _, prs := oldEvents[l.ID.String]; !prs {
+					payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
 					if err != nil {
 						return err
 					}
-					event, err := NewLessonEvent(payload, &lesson.StudyId, &lesson.UserId)
+					event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
 					if err != nil {
 						return err
 					}
@@ -1038,14 +1038,14 @@ func ParseLessonBodyForEvents(
 		if err != nil {
 			return err
 		}
-		if l.Id.String != lesson.Id.String {
-			newEvents[l.Id.String] = struct{}{}
-			if _, prs := oldEvents[l.Id.String]; !prs {
-				payload, err := NewLessonReferencedPayload(&l.Id, &lesson.Id)
+		if l.ID.String != lesson.ID.String {
+			newEvents[l.ID.String] = struct{}{}
+			if _, prs := oldEvents[l.ID.String]; !prs {
+				payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
 				if err != nil {
 					return err
 				}
-				event, err := NewLessonEvent(payload, &lesson.StudyId, &lesson.UserId)
+				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
 				if err != nil {
 					return err
 				}
@@ -1065,14 +1065,14 @@ func ParseLessonBodyForEvents(
 			return err
 		}
 		for _, u := range users {
-			if u.Id.String != lesson.UserId.String {
-				newEvents[u.Id.String] = struct{}{}
-				if _, prs := oldEvents[u.Id.String]; !prs {
-					payload, err := NewLessonMentionedPayload(&lesson.Id)
+			if u.ID.String != lesson.UserID.String {
+				newEvents[u.ID.String] = struct{}{}
+				if _, prs := oldEvents[u.ID.String]; !prs {
+					payload, err := NewLessonMentionedPayload(&lesson.ID)
 					if err != nil {
 						return err
 					}
-					event, err := NewLessonEvent(payload, &lesson.StudyId, &lesson.UserId)
+					event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
 					if err != nil {
 						return err
 					}

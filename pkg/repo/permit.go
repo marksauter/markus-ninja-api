@@ -32,5 +32,5 @@ type TopicablePermit interface {
 
 type StudyNodePermit interface {
 	ID() (*mytype.OID, error)
-	StudyId() (*mytype.OID, error)
+	StudyID() (*mytype.OID, error)
 }

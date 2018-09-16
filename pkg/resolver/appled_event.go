@@ -10,13 +10,13 @@ import (
 )
 
 type appledEventResolver struct {
-	AppleableId *mytype.OID
+	AppleableID *mytype.OID
 	Event       *repo.EventPermit
 	Repos       *repo.Repos
 }
 
 func (r *appledEventResolver) Appleable(ctx context.Context) (*appleableResolver, error) {
-	permit, err := r.Repos.GetAppleable(ctx, r.AppleableId)
+	permit, err := r.Repos.GetAppleable(ctx, r.AppleableID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,11 @@ func (r *appledEventResolver) ID() (graphql.ID, error) {
 }
 
 func (r *appledEventResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Event.StudyId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +54,11 @@ func (r *appledEventResolver) Study(ctx context.Context) (*studyResolver, error)
 }
 
 func (r *appledEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

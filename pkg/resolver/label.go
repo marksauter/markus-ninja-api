@@ -132,11 +132,11 @@ func (r *labelResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 func (r *labelResolver) Study(
 	ctx context.Context,
 ) (*studyResolver, error) {
-	studyId, err := r.Label.StudyId()
+	studyID, err := r.Label.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}

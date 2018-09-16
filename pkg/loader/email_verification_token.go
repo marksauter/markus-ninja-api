@@ -48,9 +48,9 @@ type EVTLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *EVTLoader) Clear(emailId, token string) {
+func (r *EVTLoader) Clear(emailID, token string) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(emailId, token)
+	compositeKey := newCompositeKey(emailID, token)
 	r.batchGet.Clear(ctx, compositeKey)
 }
 
@@ -60,10 +60,10 @@ func (r *EVTLoader) ClearAll() {
 
 func (r *EVTLoader) Get(
 	ctx context.Context,
-	emailId,
+	emailID,
 	token string,
 ) (*data.EVT, error) {
-	compositeKey := newCompositeKey(emailId, token)
+	compositeKey := newCompositeKey(emailID, token)
 	evtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err

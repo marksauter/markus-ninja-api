@@ -10,7 +10,7 @@ import (
 
 type updateTopicsPayloadResolver struct {
 	InvalidNames []string
-	TopicableId  *mytype.OID
+	TopicableID  *mytype.OID
 	Repos        *repo.Repos
 }
 
@@ -28,7 +28,7 @@ func (r *updateTopicsPayloadResolver) Message() string {
 func (r *updateTopicsPayloadResolver) Topicable(
 	ctx context.Context,
 ) (*topicableResolver, error) {
-	t, err := r.Repos.GetTopicable(ctx, r.TopicableId)
+	t, err := r.Repos.GetTopicable(ctx, r.TopicableID)
 	if err != nil {
 		return nil, err
 	}

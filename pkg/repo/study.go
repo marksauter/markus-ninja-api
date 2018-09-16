@@ -69,7 +69,7 @@ func (r *StudyPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.study.Id, nil
+	return &r.study.ID, nil
 }
 
 func (r *StudyPermit) Name() (string, error) {
@@ -97,11 +97,11 @@ func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	return r.study.UpdatedAt.Time, nil
 }
 
-func (r *StudyPermit) UserId() (*mytype.OID, error) {
+func (r *StudyPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.study.UserId, nil
+	return &r.study.UserID, nil
 }
 
 func NewStudyRepo() *StudyRepo {
@@ -139,38 +139,38 @@ func (r *StudyRepo) CheckConnection() error {
 
 func (r *StudyRepo) CountByApplee(
 	ctx context.Context,
-	appleeId string,
+	appleeID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByApplee(db, appleeId)
+	return data.CountStudyByApplee(db, appleeID)
 }
 
 func (r *StudyRepo) CountByEnrollee(
 	ctx context.Context,
-	enrolleeId string,
+	enrolleeID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByEnrollee(db, enrolleeId)
+	return data.CountStudyByEnrollee(db, enrolleeID)
 }
 
 func (r *StudyRepo) CountByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByTopic(db, topicId)
+	return data.CountStudyByTopic(db, topicID)
 }
 
 func (r *StudyRepo) CountBySearch(
@@ -200,14 +200,14 @@ func (r *StudyRepo) CountByTopicSearch(
 
 func (r *StudyRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByUser(db, userId)
+	return data.CountStudyByUser(db, userID)
 }
 
 func (r *StudyRepo) Create(
@@ -260,7 +260,7 @@ func (r *StudyRepo) Get(
 
 func (r *StudyRepo) GetByApplee(
 	ctx context.Context,
-	appleeId string,
+	appleeID string,
 	po *data.PageOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -270,7 +270,7 @@ func (r *StudyRepo) GetByApplee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByApplee(db, appleeId, po)
+	studies, err := data.GetStudyByApplee(db, appleeID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +289,7 @@ func (r *StudyRepo) GetByApplee(
 
 func (r *StudyRepo) GetByEnrollee(
 	ctx context.Context,
-	enrolleeId string,
+	enrolleeID string,
 	po *data.PageOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -299,7 +299,7 @@ func (r *StudyRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByEnrollee(db, enrolleeId, po)
+	studies, err := data.GetStudyByEnrollee(db, enrolleeID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (r *StudyRepo) GetByEnrollee(
 
 func (r *StudyRepo) GetByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
 	po *data.PageOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -328,7 +328,7 @@ func (r *StudyRepo) GetByTopic(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByTopic(db, topicId, po)
+	studies, err := data.GetStudyByTopic(db, topicID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +347,7 @@ func (r *StudyRepo) GetByTopic(
 
 func (r *StudyRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -357,7 +357,7 @@ func (r *StudyRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByUser(db, userId, po)
+	studies, err := data.GetStudyByUser(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -376,13 +376,13 @@ func (r *StudyRepo) GetByUser(
 
 func (r *StudyRepo) GetByName(
 	ctx context.Context,
-	userId,
+	userID,
 	name string,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	study, err := r.load.GetByName(ctx, userId, name)
+	study, err := r.load.GetByName(ctx, userID, name)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func (r *StudyRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, study); err != nil {
 		return err
 	}
-	return data.DeleteStudy(db, study.Id.String)
+	return data.DeleteStudy(db, study.ID.String)
 }
 
 func (r *StudyRepo) Search(

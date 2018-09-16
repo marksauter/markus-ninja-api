@@ -34,11 +34,11 @@ func (r *notificationResolver) Reason() (string, error) {
 }
 
 func (r *notificationResolver) Subject(ctx context.Context) (*lessonResolver, error) {
-	subjectId, err := r.Notification.SubjectId()
+	subjectID, err := r.Notification.SubjectID()
 	if err != nil {
 		return nil, err
 	}
-	subject, err := r.Repos.Lesson().Get(ctx, subjectId.String)
+	subject, err := r.Repos.Lesson().Get(ctx, subjectID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +46,11 @@ func (r *notificationResolver) Subject(ctx context.Context) (*lessonResolver, er
 }
 
 func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Notification.StudyId()
+	studyID, err := r.Notification.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +63,11 @@ func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {
 }
 
 func (r *notificationResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Notification.UserId()
+	userID, err := r.Notification.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

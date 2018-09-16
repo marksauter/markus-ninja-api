@@ -107,7 +107,7 @@ func (r *EnrolledLoader) Get(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	compositeKey := newCompositeKey(enrolled.EnrollableId.String, enrolled.UserId.String)
+	compositeKey := newCompositeKey(enrolled.EnrollableID.String, enrolled.UserID.String)
 	r.batchGetByEnrollableAndUser.Prime(ctx, compositeKey, enrolled)
 
 	return enrolled, nil
@@ -115,10 +115,10 @@ func (r *EnrolledLoader) Get(
 
 func (r *EnrolledLoader) GetByEnrollableAndUser(
 	ctx context.Context,
-	enrollableId,
-	userId string,
+	enrollableID,
+	userID string,
 ) (*data.Enrolled, error) {
-	compositeKey := newCompositeKey(enrollableId, userId)
+	compositeKey := newCompositeKey(enrollableID, userID)
 	enrolledData, err := r.batchGetByEnrollableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *EnrolledLoader) GetByEnrollableAndUser(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	key := strconv.Itoa(int(enrolled.Id.Int))
+	key := strconv.Itoa(int(enrolled.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), enrolled)
 
 	return enrolled, nil

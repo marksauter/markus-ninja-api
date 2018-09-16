@@ -42,7 +42,7 @@ func (r *EmailPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.email.Id, nil
+	return &r.email.ID, nil
 }
 
 func (r *EmailPermit) IsVerified() (bool, error) {
@@ -66,11 +66,11 @@ func (r *EmailPermit) UpdatedAt() (time.Time, error) {
 	return r.email.UpdatedAt.Time, nil
 }
 
-func (r *EmailPermit) UserId() (*mytype.OID, error) {
+func (r *EmailPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.email.UserId, nil
+	return &r.email.UserID, nil
 }
 
 func (r *EmailPermit) Value() (string, error) {
@@ -126,7 +126,7 @@ func (r *EmailRepo) CheckConnection() error {
 
 func (r *EmailRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	opts ...data.EmailFilterOption,
 ) (n int32, err error) {
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -134,7 +134,7 @@ func (r *EmailRepo) CountByUser(
 		err = errors.New("queryer not found")
 		return
 	}
-	return data.CountEmailByUser(db, userId)
+	return data.CountEmailByUser(db, userID)
 }
 
 func (r *EmailRepo) Create(
@@ -176,7 +176,7 @@ func (r *EmailRepo) Delete(
 	if !ok {
 		return &myctx.ErrNotFound{"queryer"}
 	}
-	return data.DeleteEmail(db, email.Id.String)
+	return data.DeleteEmail(db, email.ID.String)
 }
 
 func (r *EmailRepo) Get(
@@ -199,12 +199,12 @@ func (r *EmailRepo) Get(
 
 func (r *EmailRepo) GetByUserBackup(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	email, err := r.load.GetByUserBackup(ctx, userId)
+	email, err := r.load.GetByUserBackup(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -217,12 +217,12 @@ func (r *EmailRepo) GetByUserBackup(
 
 func (r *EmailRepo) GetByUserPrimary(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	email, err := r.load.GetByUserPrimary(ctx, userId)
+	email, err := r.load.GetByUserPrimary(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (r *EmailRepo) GetByValue(
 
 func (r *EmailRepo) GetByUser(
 	ctx context.Context,
-	userId *mytype.OID,
+	userID *mytype.OID,
 	po *data.PageOptions,
 	opts ...data.EmailFilterOption,
 ) ([]*EmailPermit, error) {
@@ -264,7 +264,7 @@ func (r *EmailRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	emails, err := data.GetEmailByUser(db, userId, po, opts...)
+	emails, err := data.GetEmailByUser(db, userID, po, opts...)
 	if err != nil {
 		return nil, err
 	}

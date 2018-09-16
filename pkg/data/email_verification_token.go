@@ -12,11 +12,11 @@ import (
 )
 
 type EVT struct {
-	EmailId    mytype.OID         `db:"email_id" permit:"create/read"`
+	EmailID    mytype.OID         `db:"email_id" permit:"create/read"`
 	ExpiresAt  pgtype.Timestamptz `db:"expires_at" permit:"read"`
 	IssuedAt   pgtype.Timestamptz `db:"issued_at" permit:"read"`
 	Token      pgtype.Varchar     `db:"token" permit:"read"`
-	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
@@ -28,11 +28,11 @@ func getEVT(
 ) (*EVT, error) {
 	var row EVT
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.EmailId,
+		&row.EmailID,
 		&row.ExpiresAt,
 		&row.IssuedAt,
 		&row.Token,
-		&row.UserId,
+		&row.UserID,
 		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -44,7 +44,7 @@ func getEVT(
 	return &row, nil
 }
 
-const getEVTByIdSQL = `
+const getEVTByIDSQL = `
 	SELECT
 		email_id,
 		expires_at,
@@ -58,18 +58,18 @@ const getEVTByIdSQL = `
 
 func GetEVT(
 	db Queryer,
-	emailId,
+	emailID,
 	token string,
 ) (*EVT, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"email_id": emailId,
+		"email_id": emailID,
 		"token":    token,
 	}).Info("EVT.Get(email_id, token)")
 	return getEVT(
 		db,
-		"getEVTById",
-		getEVTByIdSQL,
-		emailId,
+		"getEVTByID",
+		getEVTByIDSQL,
+		emailID,
 		token,
 	)
 }
@@ -88,13 +88,13 @@ func CreateEVT(
 	columns = append(columns, `token`)
 	values = append(values, args.Append(&row.Token))
 
-	if row.EmailId.Status != pgtype.Undefined {
+	if row.EmailID.Status != pgtype.Undefined {
 		columns = append(columns, `email_id`)
-		values = append(values, args.Append(&row.EmailId))
+		values = append(values, args.Append(&row.EmailID))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -130,7 +130,7 @@ func CreateEVT(
 		return nil, err
 	}
 
-	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(tx, row.EmailID.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func UpdateEVT(
 	row *EVT,
 ) (*EVT, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"email_id": row.EmailId.String,
+		"email_id": row.EmailID.String,
 		"token":    row.Token.String,
 	}).Info("EVT.Update(email_id, token)")
 	sets := make([]string, 0, 2)
@@ -162,7 +162,7 @@ func UpdateEVT(
 	}
 
 	if len(sets) == 0 {
-		return GetEVT(db, row.EmailId.String, row.Token.String)
+		return GetEVT(db, row.EmailID.String, row.Token.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -177,7 +177,7 @@ func UpdateEVT(
 	sql := `
 		UPDATE email_verification_token
 		SET ` + strings.Join(sets, ", ") + `
-		WHERE email_id = ` + args.Append(&row.EmailId) + `
+		WHERE email_id = ` + args.Append(&row.EmailID) + `
 			AND token = ` + args.Append(&row.Token)
 
 	psName := preparedName("updateEVT", sql)
@@ -190,7 +190,7 @@ func UpdateEVT(
 		return nil, ErrNotFound
 	}
 
-	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(tx, row.EmailID.String, row.Token.String)
 	if err != nil {
 		return nil, err
 	}
@@ -213,18 +213,18 @@ const deleteEVTSQL = `
 
 func DeleteEVT(
 	db Queryer,
-	emailId,
+	emailID,
 	token string,
 ) error {
 	mylog.Log.WithFields(logrus.Fields{
-		"email_id": emailId,
+		"email_id": emailID,
 		"token":    token,
 	}).Info("EVT.Delete(email_id, token)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEVT",
 		deleteEVTSQL,
-		emailId,
+		emailID,
 		token,
 	)
 	if err != nil {

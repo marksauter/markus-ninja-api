@@ -33,9 +33,9 @@ func (r *RootResolver) Asset(
 
 func (r *RootResolver) Node(
 	ctx context.Context,
-	args struct{ Id string },
+	args struct{ ID string },
 ) (*nodeResolver, error) {
-	id, err := mytype.ParseOID(args.Id)
+	id, err := mytype.ParseOID(args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,15 +55,15 @@ func (r *RootResolver) Node(
 }
 
 func (r *RootResolver) Nodes(ctx context.Context, args struct {
-	Ids []string
+	IDs []string
 }) ([]*nodeResolver, error) {
-	nodes := make([]*nodeResolver, len(args.Ids))
-	for i, id := range args.Ids {
-		nodeId, err := mytype.ParseOID(id)
+	nodes := make([]*nodeResolver, len(args.IDs))
+	for i, id := range args.IDs {
+		nodeID, err := mytype.ParseOID(id)
 		if err != nil {
 			return nil, err
 		}
-		permit, err := r.Repos.GetNode(ctx, nodeId)
+		permit, err := r.Repos.GetNode(ctx, nodeID)
 		if err != nil {
 			return nil, err
 		}
@@ -248,7 +248,7 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	user, err := r.Repos.User().Get(ctx, viewer.Id.String)
+	user, err := r.Repos.User().Get(ctx, viewer.ID.String)
 	if err != nil {
 		return nil, err
 	}

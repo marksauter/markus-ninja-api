@@ -13,7 +13,7 @@ type Services struct {
 
 func NewServices(conf *myconf.Config) (*Services, error) {
 	authConfig := &AuthServiceConfig{
-		KeyId: conf.AuthKeyId,
+		KeyID: conf.AuthKeyId,
 	}
 	mailConfig := &MailServiceConfig{
 		CharSet: conf.MailCharSet,

@@ -136,10 +136,10 @@ func (r *UserAssetLoader) Get(
 
 func (r *UserAssetLoader) GetByName(
 	ctx context.Context,
-	studyId,
+	studyID,
 	name string,
 ) (*data.UserAsset, error) {
-	compositeKey := newCompositeKey(studyId, name)
+	compositeKey := newCompositeKey(studyID, name)
 	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (r *UserAssetLoader) GetByName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
+	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
 
 	return userAsset, nil
 }
@@ -170,7 +170,7 @@ func (r *UserAssetLoader) GetByUserStudyAndName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
+	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
 
 	return userAsset, nil
 }

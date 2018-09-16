@@ -9,15 +9,15 @@ import (
 )
 
 type removeCourseLessonPayloadResolver struct {
-	CourseId *mytype.OID
-	LessonId *mytype.OID
+	CourseID *mytype.OID
+	LessonID *mytype.OID
 	Repos    *repo.Repos
 }
 
 func (r *removeCourseLessonPayloadResolver) Course(
 	ctx context.Context,
 ) (*courseResolver, error) {
-	course, err := r.Repos.Course().Get(ctx, r.CourseId.String)
+	course, err := r.Repos.Course().Get(ctx, r.CourseID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -25,14 +25,14 @@ func (r *removeCourseLessonPayloadResolver) Course(
 	return &courseResolver{Course: course, Repos: r.Repos}, nil
 }
 
-func (r *removeCourseLessonPayloadResolver) RemovedLessonId() graphql.ID {
-	return graphql.ID(r.LessonId.String)
+func (r *removeCourseLessonPayloadResolver) RemovedLessonID() graphql.ID {
+	return graphql.ID(r.LessonID.String)
 }
 
 func (r *removeCourseLessonPayloadResolver) RemovedLessonEdge(
 	ctx context.Context,
 ) (*lessonEdgeResolver, error) {
-	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonID.String)
 	if err != nil {
 		return nil, err
 	}

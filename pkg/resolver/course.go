@@ -63,19 +63,19 @@ func (r *courseResolver) AppleGivers(
 		return nil, err
 	}
 
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return nil, err
 	}
 	users, err := r.Repos.User().GetByAppleable(
 		ctx,
-		courseId.String,
+		courseID.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByAppleable(ctx, courseId.String)
+	count, err := r.Repos.User().CountByAppleable(ctx, courseID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -111,12 +111,12 @@ func (r *courseResolver) DescriptionHTML() (mygql.HTML, error) {
 }
 
 func (r *courseResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		var n int32
 		return n, err
 	}
-	return r.Repos.User().CountByEnrollable(ctx, courseId.String)
+	return r.Repos.User().CountByEnrollable(ctx, courseID.String)
 }
 
 func (r *courseResolver) Enrollees(
@@ -145,19 +145,19 @@ func (r *courseResolver) Enrollees(
 		return nil, err
 	}
 
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return nil, err
 	}
 	users, err := r.Repos.User().GetByEnrollable(
 		ctx,
-		courseId.String,
+		courseID.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(ctx, courseId.String)
+	count, err := r.Repos.User().CountByEnrollable(ctx, courseID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +184,8 @@ func (r *courseResolver) EnrollmentStatus(ctx context.Context) (string, error) {
 	}
 
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(id)
-	enrolled.UserId.Set(viewer.Id)
+	enrolled.EnrollableID.Set(id)
+	enrolled.UserID.Set(viewer.ID)
 	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
 	if err != nil {
 		if err != data.ErrNotFound {
@@ -210,13 +210,13 @@ func (r *courseResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
 ) (*lessonResolver, error) {
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return nil, err
 	}
 	lesson, err := r.Repos.Lesson().GetByNumber(
 		ctx,
-		courseId.String,
+		courseID.String,
 		args.Number,
 	)
 	if err != nil {
@@ -235,7 +235,7 @@ func (r *courseResolver) Lessons(
 		OrderBy *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (r *courseResolver) Lessons(
 
 	lessons, err := r.Repos.Lesson().GetByCourse(
 		ctx,
-		courseId.String,
+		courseID.String,
 		pageOptions,
 	)
 	if err != nil {
@@ -265,7 +265,7 @@ func (r *courseResolver) Lessons(
 	}
 	count, err := r.Repos.Lesson().CountByCourse(
 		ctx,
-		courseId.String,
+		courseID.String,
 	)
 	if err != nil {
 		return nil, err
@@ -283,14 +283,14 @@ func (r *courseResolver) Lessons(
 }
 
 func (r *courseResolver) LessonCount(ctx context.Context) (int32, error) {
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		var count int32
 		return count, err
 	}
 	return r.Repos.Lesson().CountByCourse(
 		ctx,
-		courseId.String,
+		courseID.String,
 	)
 }
 
@@ -303,11 +303,11 @@ func (r *courseResolver) Number() (int32, error) {
 }
 
 func (r *courseResolver) Owner(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Course.UserId()
+	userID, err := r.Course.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -343,11 +343,11 @@ func (r *courseResolver) Status() (string, error) {
 }
 
 func (r *courseResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Course.StudyId()
+	studyID, err := r.Course.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +364,7 @@ func (r *courseResolver) Topics(
 		OrderBy *OrderArg
 	},
 ) (*topicConnectionResolver, error) {
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -386,13 +386,13 @@ func (r *courseResolver) Topics(
 
 	topics, err := r.Repos.Topic().GetByTopicable(
 		ctx,
-		courseId.String,
+		courseID.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Topic().CountByTopicable(ctx, courseId.String)
+	count, err := r.Repos.Topic().CountByTopicable(ctx, courseID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -435,14 +435,14 @@ func (r *courseResolver) ViewerCanApple(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return false, err
 	}
 
 	appled := &data.Appled{}
-	appled.AppleableId.Set(courseId)
-	appled.UserId.Set(viewer.Id)
+	appled.AppleableID.Set(courseID)
+	appled.UserID.Set(viewer.ID)
 	return r.Repos.Appled().ViewerCanApple(ctx, appled)
 }
 
@@ -451,14 +451,14 @@ func (r *courseResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return false, err
 	}
 
 	enrolled := &data.Enrolled{}
-	enrolled.EnrollableId.Set(courseId)
-	enrolled.UserId.Set(viewer.Id)
+	enrolled.EnrollableID.Set(courseID)
+	enrolled.UserID.Set(viewer.ID)
 	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }
 
@@ -467,14 +467,14 @@ func (r *courseResolver) ViewerHasAppled(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	courseId, err := r.Course.ID()
+	courseID, err := r.Course.ID()
 	if err != nil {
 		return false, err
 	}
 
 	appled := &data.Appled{}
-	appled.AppleableId.Set(courseId)
-	appled.UserId.Set(viewer.Id)
+	appled.AppleableID.Set(courseID)
+	appled.UserID.Set(viewer.ID)
 	if _, err := r.Repos.Appled().Get(ctx, appled); err != nil {
 		if err == data.ErrNotFound {
 			return false, nil

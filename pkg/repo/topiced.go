@@ -43,22 +43,22 @@ func (r *TopicedPermit) ID() (n int32, err error) {
 		err = ErrAccessDenied
 		return
 	}
-	n = r.topiced.Id.Int
+	n = r.topiced.ID.Int
 	return
 }
 
-func (r *TopicedPermit) TopicId() (*mytype.OID, error) {
+func (r *TopicedPermit) TopicID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("topic_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.topiced.TopicId, nil
+	return &r.topiced.TopicID, nil
 }
 
-func (r *TopicedPermit) TopicableId() (*mytype.OID, error) {
+func (r *TopicedPermit) TopicableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("topicable_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.topiced.TopicableId, nil
+	return &r.topiced.TopicableID, nil
 }
 
 func NewTopicedRepo() *TopicedRepo {
@@ -96,26 +96,26 @@ func (r *TopicedRepo) CheckConnection() error {
 
 func (r *TopicedRepo) CountByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicedByTopic(db, topicId)
+	return data.CountTopicedByTopic(db, topicID)
 }
 
 func (r *TopicedRepo) CountByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicedByTopicable(db, topicableId)
+	return data.CountTopicedByTopicable(db, topicableID)
 }
 
 func (r *TopicedRepo) Connect(
@@ -152,17 +152,17 @@ func (r *TopicedRepo) Get(
 	}
 	var topiced *data.Topiced
 	var err error
-	if t.Id.Status != pgtype.Undefined {
-		topiced, err = r.load.Get(ctx, t.Id.Int)
+	if t.ID.Status != pgtype.Undefined {
+		topiced, err = r.load.Get(ctx, t.ID.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if t.TopicableId.Status != pgtype.Undefined &&
-		t.TopicId.Status != pgtype.Undefined {
+	} else if t.TopicableID.Status != pgtype.Undefined &&
+		t.TopicID.Status != pgtype.Undefined {
 		topiced, err = r.load.GetByTopicableAndTopic(
 			ctx,
-			t.TopicableId.String,
-			t.TopicId.String,
+			t.TopicableID.String,
+			t.TopicID.String,
 		)
 		if err != nil {
 			return nil, err
@@ -181,7 +181,7 @@ func (r *TopicedRepo) Get(
 
 func (r *TopicedRepo) GetByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -191,7 +191,7 @@ func (r *TopicedRepo) GetByTopic(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	topiceds, err := data.GetTopicedByTopic(db, topicId, po)
+	topiceds, err := data.GetTopicedByTopic(db, topicID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (r *TopicedRepo) GetByTopic(
 
 func (r *TopicedRepo) GetByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -220,7 +220,7 @@ func (r *TopicedRepo) GetByTopicable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	topiceds, err := data.GetTopicedByTopicable(db, topicableId, po)
+	topiceds, err := data.GetTopicedByTopicable(db, topicableID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -251,11 +251,11 @@ func (r *TopicedRepo) Disconnect(
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, topiced); err != nil {
 		return err
 	}
-	if topiced.Id.Status != pgtype.Undefined {
-		return data.DeleteTopiced(db, topiced.Id.Int)
-	} else if topiced.TopicableId.Status != pgtype.Undefined &&
-		topiced.TopicId.Status != pgtype.Undefined {
-		return data.DeleteTopicedByTopicableAndTopic(db, topiced.TopicableId.String, topiced.TopicId.String)
+	if topiced.ID.Status != pgtype.Undefined {
+		return data.DeleteTopiced(db, topiced.ID.Int)
+	} else if topiced.TopicableID.Status != pgtype.Undefined &&
+		topiced.TopicID.Status != pgtype.Undefined {
+		return data.DeleteTopicedByTopicableAndTopic(db, topiced.TopicableID.String, topiced.TopicID.String)
 	}
 	return errors.New(
 		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",

@@ -11,9 +11,9 @@ import (
 
 type referencedEventResolver struct {
 	Event           *repo.EventPermit
-	ReferenceableId *mytype.OID
+	ReferenceableID *mytype.OID
 	Repos           *repo.Repos
-	SourceId        *mytype.OID
+	SourceID        *mytype.OID
 }
 
 func (r *referencedEventResolver) CreatedAt() (graphql.Time, error) {
@@ -29,23 +29,23 @@ func (r *referencedEventResolver) ID() (graphql.ID, error) {
 func (r *referencedEventResolver) IsCrossStudy(
 	ctx context.Context,
 ) (bool, error) {
-	studyId, err := r.Event.StudyId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return false, err
 	}
-	source, err := r.Repos.Lesson().Get(ctx, r.SourceId.String)
+	source, err := r.Repos.Lesson().Get(ctx, r.SourceID.String)
 	if err != nil {
 		return false, err
 	}
-	sourceStudyId, err := source.StudyId()
+	sourceStudyID, err := source.StudyID()
 	if err != nil {
 		return false, err
 	}
-	return studyId.String != sourceStudyId.String, nil
+	return studyID.String != sourceStudyID.String, nil
 }
 
 func (r *referencedEventResolver) Referenceable(ctx context.Context) (*referenceableResolver, error) {
-	permit, err := r.Repos.GetReferenceable(ctx, r.ReferenceableId)
+	permit, err := r.Repos.GetReferenceable(ctx, r.ReferenceableID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (r *referencedEventResolver) Referenceable(ctx context.Context) (*reference
 }
 
 func (r *referencedEventResolver) Source(ctx context.Context) (*lessonResolver, error) {
-	source, err := r.Repos.Lesson().Get(ctx, r.SourceId.String)
+	source, err := r.Repos.Lesson().Get(ctx, r.SourceID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +69,11 @@ func (r *referencedEventResolver) Source(ctx context.Context) (*lessonResolver, 
 }
 
 func (r *referencedEventResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Event.StudyId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +81,11 @@ func (r *referencedEventResolver) Study(ctx context.Context) (*studyResolver, er
 }
 
 func (r *referencedEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

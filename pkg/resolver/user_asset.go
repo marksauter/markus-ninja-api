@@ -46,11 +46,11 @@ func (r *userAssetResolver) OriginalName() (string, error) {
 }
 
 func (r *userAssetResolver) Owner(ctx context.Context) (*userResolver, error) {
-	userId, err := r.UserAsset.UserId()
+	userID, err := r.UserAsset.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +94,11 @@ func (r *userAssetResolver) Size() (int32, error) {
 }
 
 func (r *userAssetResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.UserAsset.StudyId()
+	studyID, err := r.UserAsset.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (r *userAssetResolver) Timeline(
 		OrderBy *OrderArg
 	},
 ) (*userAssetTimelineConnectionResolver, error) {
-	userAssetId, err := r.UserAsset.ID()
+	userAssetID, err := r.UserAsset.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (r *userAssetResolver) Timeline(
 
 	events, err := r.Repos.Event().GetByUserAsset(
 		ctx,
-		userAssetId.String,
+		userAssetID.String,
 		pageOptions,
 	)
 	if err != nil {
@@ -150,7 +150,7 @@ func (r *userAssetResolver) Timeline(
 
 	count, err := r.Repos.Event().CountByUserAsset(
 		ctx,
-		userAssetId.String,
+		userAssetID.String,
 	)
 	if err != nil {
 		return nil, err

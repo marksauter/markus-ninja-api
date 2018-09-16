@@ -174,10 +174,10 @@ func (r *CourseLoader) Get(
 
 func (r *CourseLoader) GetByName(
 	ctx context.Context,
-	studyId,
+	studyID,
 	name string,
 ) (*data.Course, error) {
-	compositeKey := newCompositeKey(studyId, name)
+	compositeKey := newCompositeKey(studyID, name)
 	courseData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -187,17 +187,17 @@ func (r *CourseLoader) GetByName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }
 
 func (r *CourseLoader) GetByNumber(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*data.Course, error) {
-	compositeKey := newCompositeKey(studyId, fmt.Sprintf("%d", number))
+	compositeKey := newCompositeKey(studyID, fmt.Sprintf("%d", number))
 	courseData, err := r.batchGetByNumber.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (r *CourseLoader) GetByNumber(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }
@@ -227,7 +227,7 @@ func (r *CourseLoader) GetByStudyAndName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }

@@ -43,14 +43,14 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	emailId, err := mytype.NewOIDFromShort("Email", routeVars["id"])
+	emailID, err := mytype.NewOIDFromShort("Email", routeVars["id"])
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 	token := routeVars["token"]
-	evt, err := data.GetEVT(h.Db, emailId.String, token)
+	evt, err := data.GetEVT(h.Db, emailID.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -60,7 +60,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	if evt.UserId.String != user.Id.String {
+	if evt.UserID.String != user.ID.String {
 		mylog.Log.WithField(
 			"login", user.Login.String,
 		).Warn("user attempting to use another user's email verification token")
@@ -79,7 +79,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	err = data.GrantUserRoles(h.Db, evt.UserId.String, data.UserRole)
+	err = data.GrantUserRoles(h.Db, evt.UserID.String, data.UserRole)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -99,7 +99,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	email, err := data.GetEmail(h.Db, evt.EmailId.String)
+	email, err := data.GetEmail(h.Db, evt.EmailID.String)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		return

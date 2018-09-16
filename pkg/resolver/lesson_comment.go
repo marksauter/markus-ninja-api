@@ -18,11 +18,11 @@ type lessonCommentResolver struct {
 }
 
 func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
-	userId, err := r.LessonComment.UserId()
+	userID, err := r.LessonComment.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (r *lessonCommentResolver) Labels(
 		OrderBy *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
-	lessonCommentId, err := r.LessonComment.ID()
+	lessonCommentID, err := r.LessonComment.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +95,13 @@ func (r *lessonCommentResolver) Labels(
 
 	labels, err := r.Repos.Label().GetByLabelable(
 		ctx,
-		lessonCommentId.String,
+		lessonCommentID.String,
 		pageOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentId.String)
+	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +118,11 @@ func (r *lessonCommentResolver) Labels(
 }
 
 func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
-	lessonId, err := r.LessonComment.LessonId()
+	lessonID, err := r.LessonComment.LessonID()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, lessonID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -162,11 +162,11 @@ func (r *lessonCommentResolver) ResourcePath(
 }
 
 func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.LessonComment.StudyId()
+	studyID, err := r.LessonComment.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -205,10 +205,10 @@ func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, erro
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.LessonComment.UserId()
+	userID, err := r.LessonComment.UserID()
 	if err != nil {
 		return false, err
 	}
 
-	return viewer.Id.String == userId.String, nil
+	return viewer.ID.String == userID.String, nil
 }

@@ -246,9 +246,9 @@ func initDB(conf *myconf.Config) error {
 		"n": commandTag.RowsAffected(),
 	}).Infof("role permissions created for USER")
 
-	guestId, _ := mytype.NewOID("User")
+	guestID, _ := mytype.NewOID("User")
 	guest := &data.User{}
-	guest.Id.Set(guestId)
+	guest.ID.Set(guestID)
 	guest.Login.Set("guest")
 	guest.Password.Set("guest")
 	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
@@ -266,9 +266,9 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 
-	markusId, _ := mytype.NewOID("User")
+	markusID, _ := mytype.NewOID("User")
 	markus := &data.User{}
-	markus.Id.Set(markusId)
+	markus.ID.Set(markusID)
 	markus.Login.Set("markus")
 	markus.Password.Set("fender917")
 	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
@@ -296,7 +296,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !markusIsAdmin {
-		if err := data.GrantUserRoles(db, markus.Id.String, data.AdminRole); err != nil {
+		if err := data.GrantUserRoles(db, markus.ID.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
@@ -309,9 +309,9 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 
-	testUserId, _ := mytype.NewOID("User")
+	testUserID, _ := mytype.NewOID("User")
 	testUser := &data.User{}
-	testUser.Id.Set(testUserId)
+	testUser.ID.Set(testUserID)
 	testUser.Login.Set("test")
 	testUser.Password.Set("test")
 	if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
@@ -339,7 +339,7 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !testUserIsUser {
-		if err := data.GrantUserRoles(db, testUser.Id.String, data.UserRole); err != nil {
+		if err := data.GrantUserRoles(db, testUser.ID.String, data.UserRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
 					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")

@@ -208,116 +208,116 @@ func (r *Repos) Use(h http.Handler) http.Handler {
 
 func (r *Repos) GetAppleable(
 	ctx context.Context,
-	appleableId *mytype.OID,
+	appleableID *mytype.OID,
 ) (NodePermit, error) {
-	switch appleableId.Type {
+	switch appleableID.Type {
 	case "Course":
-		return r.Course().Get(ctx, appleableId.String)
+		return r.Course().Get(ctx, appleableID.String)
 	case "Study":
-		return r.Study().Get(ctx, appleableId.String)
+		return r.Study().Get(ctx, appleableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for appleable id", appleableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for appleable id", appleableID.Type)
 	}
 }
 
 func (r *Repos) GetCreateable(
 	ctx context.Context,
-	nodeId *mytype.OID,
+	nodeID *mytype.OID,
 ) (NodePermit, error) {
-	switch nodeId.Type {
+	switch nodeID.Type {
 	case "Lesson":
-		return r.Lesson().Get(ctx, nodeId.String)
+		return r.Lesson().Get(ctx, nodeID.String)
 	case "Study":
-		return r.Study().Get(ctx, nodeId.String)
+		return r.Study().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for createable id", nodeId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for createable id", nodeID.Type)
 	}
 }
 
 func (r *Repos) GetEnrollable(
 	ctx context.Context,
-	enrollableId *mytype.OID,
+	enrollableID *mytype.OID,
 ) (NodePermit, error) {
-	switch enrollableId.Type {
+	switch enrollableID.Type {
 	case "Lesson":
-		return r.Lesson().Get(ctx, enrollableId.String)
+		return r.Lesson().Get(ctx, enrollableID.String)
 	case "Study":
-		return r.Study().Get(ctx, enrollableId.String)
+		return r.Study().Get(ctx, enrollableID.String)
 	case "User":
-		return r.User().Get(ctx, enrollableId.String)
+		return r.User().Get(ctx, enrollableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableID.Type)
 	}
 }
 
 func (r *Repos) GetReferenceable(
 	ctx context.Context,
-	nodeId *mytype.OID,
+	nodeID *mytype.OID,
 ) (NodePermit, error) {
-	switch nodeId.Type {
+	switch nodeID.Type {
 	case "Lesson":
-		return r.Lesson().Get(ctx, nodeId.String)
+		return r.Lesson().Get(ctx, nodeID.String)
 	case "UserAsset":
-		return r.UserAsset().Get(ctx, nodeId.String)
+		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for referenceable id", nodeId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for referenceable id", nodeID.Type)
 	}
 }
 
 func (r *Repos) GetLabelable(
 	ctx context.Context,
-	labelableId *mytype.OID,
+	labelableID *mytype.OID,
 ) (NodePermit, error) {
-	switch labelableId.Type {
+	switch labelableID.Type {
 	case "Lesson":
-		return r.Lesson().Get(ctx, labelableId.String)
+		return r.Lesson().Get(ctx, labelableID.String)
 	case "LessonComment":
-		return r.LessonComment().Get(ctx, labelableId.String)
+		return r.LessonComment().Get(ctx, labelableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableID.Type)
 	}
 }
 
 func (r *Repos) GetNode(
 	ctx context.Context,
-	nodeId *mytype.OID,
+	nodeID *mytype.OID,
 ) (NodePermit, error) {
-	switch nodeId.Type {
+	switch nodeID.Type {
 	case "Email":
-		return r.Email().Get(ctx, nodeId.String)
+		return r.Email().Get(ctx, nodeID.String)
 	case "Event":
-		return r.Event().Get(ctx, nodeId.String)
+		return r.Event().Get(ctx, nodeID.String)
 	case "Label":
-		return r.Label().Get(ctx, nodeId.String)
+		return r.Label().Get(ctx, nodeID.String)
 	case "Lesson":
-		return r.Lesson().Get(ctx, nodeId.String)
+		return r.Lesson().Get(ctx, nodeID.String)
 	case "LessonComment":
-		return r.LessonComment().Get(ctx, nodeId.String)
+		return r.LessonComment().Get(ctx, nodeID.String)
 	case "Notification":
-		return r.Notification().Get(ctx, nodeId.String)
+		return r.Notification().Get(ctx, nodeID.String)
 	case "Study":
-		return r.Study().Get(ctx, nodeId.String)
+		return r.Study().Get(ctx, nodeID.String)
 	case "Topic":
-		return r.Topic().Get(ctx, nodeId.String)
+		return r.Topic().Get(ctx, nodeID.String)
 	case "User":
-		return r.User().Get(ctx, nodeId.String)
+		return r.User().Get(ctx, nodeID.String)
 	case "UserAsset":
-		return r.UserAsset().Get(ctx, nodeId.String)
+		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for node id", nodeId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for node id", nodeID.Type)
 	}
 }
 
 func (r *Repos) GetTopicable(
 	ctx context.Context,
-	topicableId *mytype.OID,
+	topicableID *mytype.OID,
 ) (NodePermit, error) {
-	switch topicableId.Type {
+	switch topicableID.Type {
 	case "Course":
-		return r.Course().Get(ctx, topicableId.String)
+		return r.Course().Get(ctx, topicableID.String)
 	case "Study":
-		return r.Study().Get(ctx, topicableId.String)
+		return r.Study().Get(ctx, topicableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableId.Type)
+		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableID.Type)
 	}
 }

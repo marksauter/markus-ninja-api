@@ -41,7 +41,7 @@ func (r *NotificationPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.notification.Id, nil
+	return &r.notification.ID, nil
 }
 
 func (r *NotificationPermit) LastReadAt() (time.Time, error) {
@@ -65,18 +65,18 @@ func (r *NotificationPermit) Subject() (string, error) {
 	return r.notification.Subject.String, nil
 }
 
-func (r *NotificationPermit) SubjectId() (*mytype.OID, error) {
+func (r *NotificationPermit) SubjectID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("subject_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.notification.SubjectId, nil
+	return &r.notification.SubjectID, nil
 }
 
-func (r *NotificationPermit) StudyId() (*mytype.OID, error) {
+func (r *NotificationPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.notification.StudyId, nil
+	return &r.notification.StudyID, nil
 }
 
 func (r *NotificationPermit) Unread() (bool, error) {
@@ -93,11 +93,11 @@ func (r *NotificationPermit) UpdatedAt() (time.Time, error) {
 	return r.notification.UpdatedAt.Time, nil
 }
 
-func (r *NotificationPermit) UserId() (*mytype.OID, error) {
+func (r *NotificationPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.notification.UserId, nil
+	return &r.notification.UserID, nil
 }
 
 func NewNotificationRepo() *NotificationRepo {
@@ -135,26 +135,26 @@ func (r *NotificationRepo) CheckConnection() error {
 
 func (r *NotificationRepo) CountByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountNotificationByStudy(db, studyId)
+	return data.CountNotificationByStudy(db, studyID)
 }
 
 func (r *NotificationRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountNotificationByUser(db, userId)
+	return data.CountNotificationByUser(db, userID)
 }
 
 func (r *NotificationRepo) Create(
@@ -202,7 +202,7 @@ func (r *NotificationRepo) Get(
 
 func (r *NotificationRepo) GetByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	po *data.PageOptions,
 ) ([]*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -212,7 +212,7 @@ func (r *NotificationRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	notifications, err := data.GetNotificationByStudy(db, studyId, po)
+	notifications, err := data.GetNotificationByStudy(db, studyID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (r *NotificationRepo) GetByStudy(
 
 func (r *NotificationRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*NotificationPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -241,7 +241,7 @@ func (r *NotificationRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	notifications, err := data.GetNotificationByUser(db, userId, po)
+	notifications, err := data.GetNotificationByUser(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (r *NotificationRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, n); err != nil {
 		return err
 	}
-	return data.DeleteNotification(db, n.Id.String)
+	return data.DeleteNotification(db, n.ID.String)
 }
 
 func (r *NotificationRepo) DeleteByStudy(
@@ -289,7 +289,7 @@ func (r *NotificationRepo) DeleteByStudy(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, n); err != nil {
 		return err
 	}
-	return data.DeleteNotificationByStudy(db, n.UserId.String, n.StudyId.String)
+	return data.DeleteNotificationByStudy(db, n.UserID.String, n.StudyID.String)
 }
 
 func (r *NotificationRepo) DeleteByUser(
@@ -306,5 +306,5 @@ func (r *NotificationRepo) DeleteByUser(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, n); err != nil {
 		return err
 	}
-	return data.DeleteNotificationByUser(db, n.UserId.String)
+	return data.DeleteNotificationByUser(db, n.UserID.String)
 }

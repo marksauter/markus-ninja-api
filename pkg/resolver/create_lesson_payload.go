@@ -9,7 +9,7 @@ import (
 
 type createLessonPayloadResolver struct {
 	Lesson  *repo.LessonPermit
-	StudyId *mytype.OID
+	StudyID *mytype.OID
 	Repos   *repo.Repos
 }
 
@@ -18,7 +18,7 @@ func (r *createLessonPayloadResolver) LessonEdge() (*lessonEdgeResolver, error) 
 }
 
 func (r *createLessonPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}

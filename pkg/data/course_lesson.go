@@ -12,8 +12,8 @@ import (
 
 type CourseLesson struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	CourseId  mytype.OID         `db:"course_id" permit:"read"`
-	LessonId  mytype.OID         `db:"lesson_id" permit:"read"`
+	CourseID  mytype.OID         `db:"course_id" permit:"read"`
+	LessonID  mytype.OID         `db:"lesson_id" permit:"read"`
 	Number    pgtype.Int4        `db:"number" permit:"read"`
 }
 
@@ -25,15 +25,15 @@ const countCourseLessonByCourseSQL = `
 
 func CountCourseLessonByCourse(
 	db Queryer,
-	courseId string,
+	courseID string,
 ) (n int32, err error) {
-	mylog.Log.WithField("course_id", courseId).Info("CountCourseLessonByCourse()")
+	mylog.Log.WithField("course_id", courseID).Info("CountCourseLessonByCourse()")
 
 	err = prepareQueryRow(
 		db,
 		"countCourseLessonByCourse",
 		countCourseLessonByCourseSQL,
-		courseId,
+		courseID,
 	).Scan(&n)
 
 	mylog.Log.WithField("n", n).Info("")
@@ -50,8 +50,8 @@ func getCourseLesson(
 	var row CourseLesson
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.CourseId,
-		&row.LessonId,
+		&row.CourseID,
+		&row.LessonID,
 		&row.Number,
 	)
 	if err == pgx.ErrNoRows {
@@ -82,8 +82,8 @@ func getManyCourseLesson(
 		var row CourseLesson
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.CourseId,
-			&row.LessonId,
+			&row.CourseID,
+			&row.LessonID,
 			&row.Number,
 		)
 		rows = append(rows, &row)
@@ -111,10 +111,10 @@ const getCourseLessonSQL = `
 
 func GetCourseLesson(
 	db Queryer,
-	lessonId string,
+	lessonID string,
 ) (*CourseLesson, error) {
-	mylog.Log.WithField("lesson_id", lessonId).Info("GetCourseLesson(lesson_id)")
-	return getCourseLesson(db, "getCourseLesson", getCourseLessonSQL, lessonId)
+	mylog.Log.WithField("lesson_id", lessonID).Info("GetCourseLesson(lesson_id)")
+	return getCourseLesson(db, "getCourseLesson", getCourseLessonSQL, lessonID)
 }
 
 const getCourseLessonByCourseAndNumberSQL = `
@@ -129,30 +129,30 @@ const getCourseLessonByCourseAndNumberSQL = `
 
 func GetCourseLessonByCourseAndNumber(
 	db Queryer,
-	courseId string,
+	courseID string,
 	number int32,
 ) (*CourseLesson, error) {
 	mylog.Log.WithFields(logrus.Fields{
-		"course_id": courseId,
+		"course_id": courseID,
 		"number":    number,
 	}).Info("GetCourseLessonByCourseAndNumber(course_id, number)")
 	return getCourseLesson(
 		db,
 		"getCourseLessonByCourseAndNumber",
 		getCourseLessonByCourseAndNumberSQL,
-		courseId,
+		courseID,
 		number,
 	)
 }
 
 func GetCourseLessonByCourse(
 	db Queryer,
-	courseId string,
+	courseID string,
 	po *PageOptions,
 ) ([]*CourseLesson, error) {
-	mylog.Log.WithField("course_id", courseId).Info("GetCourseLessonByCourse(course_id)")
+	mylog.Log.WithField("course_id", courseID).Info("GetCourseLessonByCourse(course_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`course_id = ` + args.Append(courseId)}
+	where := []string{`course_id = ` + args.Append(courseID)}
 
 	selects := []string{
 		"created_at",
@@ -163,7 +163,7 @@ func GetCourseLessonByCourse(
 	from := "course_lesson"
 	sql := SQL(selects, from, where, &args, po)
 
-	psName := preparedName("getCourseLessonsByCourseId", sql)
+	psName := preparedName("getCourseLessonsByCourseID", sql)
 
 	return getManyCourseLesson(db, psName, sql, args...)
 }
@@ -177,13 +177,13 @@ func CreateCourseLesson(
 
 	var columns, values []string
 
-	if row.CourseId.Status != pgtype.Undefined {
+	if row.CourseID.Status != pgtype.Undefined {
 		columns = append(columns, "course_id")
-		values = append(values, args.Append(&row.CourseId))
+		values = append(values, args.Append(&row.CourseID))
 	}
-	if row.LessonId.Status != pgtype.Undefined {
+	if row.LessonID.Status != pgtype.Undefined {
 		columns = append(columns, "lesson_id")
-		values = append(values, args.Append(&row.LessonId))
+		values = append(values, args.Append(&row.LessonID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
@@ -221,7 +221,7 @@ func CreateCourseLesson(
 
 	courseLesson, err := GetCourseLesson(
 		tx,
-		row.LessonId.String,
+		row.LessonID.String,
 	)
 	if err != nil {
 		return nil, err
@@ -245,14 +245,14 @@ const deleteCourseLessonSQL = `
 
 func DeleteCourseLesson(
 	db Queryer,
-	lessonId string,
+	lessonID string,
 ) error {
-	mylog.Log.WithField("lesson_id", lessonId).Info("DeleteCourseLesson(lesson_id)")
+	mylog.Log.WithField("lesson_id", lessonID).Info("DeleteCourseLesson(lesson_id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteCourseLesson",
 		deleteCourseLessonSQL,
-		lessonId,
+		lessonID,
 	)
 	if err != nil {
 		return err

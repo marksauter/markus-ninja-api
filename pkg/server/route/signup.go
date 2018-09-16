@@ -121,7 +121,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
-	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.ID.String}
 	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())

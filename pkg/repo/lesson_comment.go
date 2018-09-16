@@ -48,14 +48,14 @@ func (r *LessonCommentPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lessonComment.Id, nil
+	return &r.lessonComment.ID, nil
 }
 
-func (r *LessonCommentPermit) LessonId() (*mytype.OID, error) {
+func (r *LessonCommentPermit) LessonID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("lesson_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lessonComment.LessonId, nil
+	return &r.lessonComment.LessonID, nil
 }
 
 func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
@@ -65,18 +65,18 @@ func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
 	return r.lessonComment.PublishedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) StudyId() (*mytype.OID, error) {
+func (r *LessonCommentPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lessonComment.StudyId, nil
+	return &r.lessonComment.StudyID, nil
 }
 
-func (r *LessonCommentPermit) UserId() (*mytype.OID, error) {
+func (r *LessonCommentPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.lessonComment.UserId, nil
+	return &r.lessonComment.UserID, nil
 }
 
 func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
@@ -121,38 +121,38 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 func (r *LessonCommentRepo) CountByLesson(
 	ctx context.Context,
-	lessonId string,
+	lessonID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByLesson(db, lessonId)
+	return data.CountLessonCommentByLesson(db, lessonID)
 }
 
 func (r *LessonCommentRepo) CountByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByStudy(db, studyId)
+	return data.CountLessonCommentByStudy(db, studyID)
 }
 
 func (r *LessonCommentRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByUser(db, userId)
+	return data.CountLessonCommentByUser(db, userID)
 }
 
 func (r *LessonCommentRepo) Create(
@@ -228,7 +228,7 @@ func (r *LessonCommentRepo) BatchGet(
 
 func (r *LessonCommentRepo) GetByLesson(
 	ctx context.Context,
-	lessonId string,
+	lessonID string,
 	po *data.PageOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -238,7 +238,7 @@ func (r *LessonCommentRepo) GetByLesson(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByLesson(db, lessonId, po)
+	lessonComments, err := data.GetLessonCommentByLesson(db, lessonID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (r *LessonCommentRepo) GetByLesson(
 
 func (r *LessonCommentRepo) GetByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	po *data.PageOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -267,7 +267,7 @@ func (r *LessonCommentRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByStudy(db, studyId, po)
+	lessonComments, err := data.GetLessonCommentByStudy(db, studyID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,7 @@ func (r *LessonCommentRepo) GetByStudy(
 
 func (r *LessonCommentRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -296,7 +296,7 @@ func (r *LessonCommentRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByUser(db, userId, po)
+	lessonComments, err := data.GetLessonCommentByUser(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (r *LessonCommentRepo) Delete(
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, lc); err != nil {
 		return err
 	}
-	return data.DeleteLessonComment(db, lc.Id.String)
+	return data.DeleteLessonComment(db, lc.ID.String)
 }
 
 func (r *LessonCommentRepo) Update(

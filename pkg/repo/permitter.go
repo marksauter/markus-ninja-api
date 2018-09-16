@@ -146,278 +146,278 @@ func (r *Permitter) ViewerCanAdmin(
 	if viewer.Login.String == Guest {
 		return false, nil
 	}
-	vid := viewer.Id.String
+	vid := viewer.ID.String
 	switch node := node.(type) {
 	case data.Appled:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			appled, err := r.repos.Appled().load.Get(ctx, node.Id.Int)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			appled, err := r.repos.Appled().load.Get(ctx, node.ID.Int)
 			if err != nil {
 				return false, err
 			}
-			userId = &appled.UserId
+			userID = &appled.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Appled:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			appled, err := r.repos.Appled().load.Get(ctx, node.Id.Int)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			appled, err := r.repos.Appled().load.Get(ctx, node.ID.Int)
 			if err != nil {
 				return false, err
 			}
-			userId = &appled.UserId
+			userID = &appled.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.Course:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			course, err := r.repos.Course().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			course, err := r.repos.Course().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &course.UserId
+			userID = &course.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Course:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			course, err := r.repos.Course().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			course, err := r.repos.Course().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &course.UserId
+			userID = &course.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.Email:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			email, err := r.repos.Email().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			email, err := r.repos.Email().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &email.UserId
+			userID = &email.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Email:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			email, err := r.repos.Email().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			email, err := r.repos.Email().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &email.UserId
+			userID = &email.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.Enrolled:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.Id.Int)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.ID.Int)
 			if err != nil {
 				return false, err
 			}
-			userId = &enrolled.UserId
+			userID = &enrolled.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Enrolled:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.Id.Int)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			enrolled, err := r.repos.Enrolled().load.Get(ctx, node.ID.Int)
 			if err != nil {
 				return false, err
 			}
-			userId = &enrolled.UserId
+			userID = &enrolled.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.EVT:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			evt, err := r.repos.EVT().load.Get(ctx, node.EmailId.String, node.Token.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			evt, err := r.repos.EVT().load.Get(ctx, node.EmailID.String, node.Token.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &evt.UserId
+			userID = &evt.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.EVT:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			evt, err := r.repos.EVT().load.Get(ctx, node.EmailId.String, node.Token.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			evt, err := r.repos.EVT().load.Get(ctx, node.EmailID.String, node.Token.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &evt.UserId
+			userID = &evt.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.Label:
-		label, err := r.repos.Label().load.Get(ctx, node.Id.String)
+		label, err := r.repos.Label().load.Get(ctx, node.ID.String)
 		if err != nil {
 			return false, err
 		}
-		study, err := r.repos.Study().load.Get(ctx, label.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, label.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case *data.Label:
-		label, err := r.repos.Label().load.Get(ctx, node.Id.String)
+		label, err := r.repos.Label().load.Get(ctx, node.ID.String)
 		if err != nil {
 			return false, err
 		}
-		study, err := r.repos.Study().load.Get(ctx, label.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, label.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	// TODO: figure out the permissions for labeled data type
 	// case data.Labeled:
-	//   userId := &node.UserId
-	//   if node.UserId.Status == pgtype.Undefined {
-	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.Id.Int)
+	//   userID := &node.UserID
+	//   if node.UserID.Status == pgtype.Undefined {
+	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.ID.Int)
 	//     if err != nil {
 	//       return false, err
 	//     }
-	//     userId = &labeled.UserId
+	//     userID = &labeled.UserID
 	//   }
-	//   return vid == userId.String, nil
+	//   return vid == userID.String, nil
 	// case *data.Labeled:
-	//   userId := &node.UserId
-	//   if node.UserId.Status == pgtype.Undefined {
-	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.Id.Int)
+	//   userID := &node.UserID
+	//   if node.UserID.Status == pgtype.Undefined {
+	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.ID.Int)
 	//     if err != nil {
 	//       return false, err
 	//     }
-	//     userId = &labeled.UserId
+	//     userID = &labeled.UserID
 	//   }
-	//   return vid == userId.String, nil
+	//   return vid == userID.String, nil
 	case data.Lesson:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			lesson, err := r.repos.Lesson().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &lesson.UserId
+			userID = &lesson.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Lesson:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			lesson, err := r.repos.Lesson().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &lesson.UserId
+			userID = &lesson.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.LessonComment:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &lessonComment.UserId
+			userID = &lessonComment.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.LessonComment:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &lessonComment.UserId
+			userID = &lessonComment.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.Notification:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			notification, err := r.repos.Notification().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			notification, err := r.repos.Notification().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &notification.UserId
+			userID = &notification.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Notification:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			notification, err := r.repos.Notification().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			notification, err := r.repos.Notification().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &notification.UserId
+			userID = &notification.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case data.PRT:
-		return vid == node.UserId.String, nil
+		return vid == node.UserID.String, nil
 	case *data.PRT:
-		return vid == node.UserId.String, nil
+		return vid == node.UserID.String, nil
 	case data.Study:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			study, err := r.repos.Study().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			study, err := r.repos.Study().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &study.UserId
+			userID = &study.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.Study:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			study, err := r.repos.Study().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			study, err := r.repos.Study().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &study.UserId
+			userID = &study.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	// TODO: figure out the permissions for topiced data type
 	// case data.Topiced:
-	//   userId := &node.UserId
-	//   if node.UserId.Status == pgtype.Undefined {
-	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.Id.Int)
+	//   userID := &node.UserID
+	//   if node.UserID.Status == pgtype.Undefined {
+	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.ID.Int)
 	//     if err != nil {
 	//       return false, err
 	//     }
-	//     userId = &topiced.UserId
+	//     userID = &topiced.UserID
 	//   }
-	//   return vid == userId.String, nil
+	//   return vid == userID.String, nil
 	// case *data.Topiced:
-	//   userId := &node.UserId
-	//   if node.UserId.Status == pgtype.Undefined {
-	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.Id.Int)
+	//   userID := &node.UserID
+	//   if node.UserID.Status == pgtype.Undefined {
+	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.ID.Int)
 	//     if err != nil {
 	//       return false, err
 	//     }
-	//     userId = &topiced.UserId
+	//     userID = &topiced.UserID
 	//   }
-	//   return vid == userId.String, nil
+	//   return vid == userID.String, nil
 	case data.User:
-		return vid == node.Id.String, nil
+		return vid == node.ID.String, nil
 	case *data.User:
-		return vid == node.Id.String, nil
+		return vid == node.ID.String, nil
 	case data.UserAsset:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &userAsset.UserId
+			userID = &userAsset.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	case *data.UserAsset:
-		userId := &node.UserId
-		if node.UserId.Status == pgtype.Undefined {
-			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.Id.String)
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.ID.String)
 			if err != nil {
 				return false, err
 			}
-			userId = &userAsset.UserId
+			userID = &userAsset.UserID
 		}
-		return vid == userId.String, nil
+		return vid == userID.String, nil
 	default:
 		return false, nil
 	}
@@ -438,44 +438,44 @@ func (r *Permitter) ViewerCanCreate(
 	if viewer.Login.String == Guest {
 		return false, nil
 	}
-	vid := viewer.Id.String
+	vid := viewer.ID.String
 	switch node := node.(type) {
 	case data.Course:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case *data.Course:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case data.Label:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case *data.Label:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case data.Lesson:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	case *data.Lesson:
-		study, err := r.repos.Study().load.Get(ctx, node.StudyId.String)
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
 			return false, err
 		}
-		return vid == study.UserId.String, nil
+		return vid == study.UserID.String, nil
 	default:
 		return false, nil
 	}

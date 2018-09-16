@@ -31,11 +31,11 @@ func (r *AppledPermit) Get() *data.Appled {
 	return appled
 }
 
-func (r *AppledPermit) AppleableId() (*mytype.OID, error) {
+func (r *AppledPermit) AppleableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("appleable_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.appled.AppleableId, nil
+	return &r.appled.AppleableID, nil
 }
 
 func (r *AppledPermit) CreatedAt() (time.Time, error) {
@@ -50,15 +50,15 @@ func (r *AppledPermit) ID() (n int32, err error) {
 		err = ErrAccessDenied
 		return
 	}
-	n = r.appled.Id.Int
+	n = r.appled.ID.Int
 	return
 }
 
-func (r *AppledPermit) UserId() (*mytype.OID, error) {
+func (r *AppledPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.appled.UserId, nil
+	return &r.appled.UserID, nil
 }
 
 func NewAppledRepo() *AppledRepo {
@@ -96,26 +96,26 @@ func (r *AppledRepo) CheckConnection() error {
 
 func (r *AppledRepo) CountByAppleable(
 	ctx context.Context,
-	appleableId string,
+	appleableID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountAppledByAppleable(db, appleableId)
+	return data.CountAppledByAppleable(db, appleableID)
 }
 
 func (r *AppledRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountAppledByUser(db, userId)
+	return data.CountAppledByUser(db, userID)
 }
 
 func (r *AppledRepo) Connect(
@@ -152,14 +152,14 @@ func (r *AppledRepo) Get(
 	}
 	var appled *data.Appled
 	var err error
-	if a.Id.Status != pgtype.Undefined {
-		appled, err = r.load.Get(ctx, a.Id.Int)
+	if a.ID.Status != pgtype.Undefined {
+		appled, err = r.load.Get(ctx, a.ID.Int)
 		if err != nil {
 			return nil, err
 		}
-	} else if a.AppleableId.Status != pgtype.Undefined &&
-		a.UserId.Status != pgtype.Undefined {
-		appled, err = r.load.GetByAppleableAndUser(ctx, a.AppleableId.String, a.UserId.String)
+	} else if a.AppleableID.Status != pgtype.Undefined &&
+		a.UserID.Status != pgtype.Undefined {
+		appled, err = r.load.GetByAppleableAndUser(ctx, a.AppleableID.String, a.UserID.String)
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +177,7 @@ func (r *AppledRepo) Get(
 
 func (r *AppledRepo) GetByAppleable(
 	ctx context.Context,
-	appleableId string,
+	appleableID string,
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -187,7 +187,7 @@ func (r *AppledRepo) GetByAppleable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	appleds, err := data.GetAppledByAppleable(db, appleableId, po)
+	appleds, err := data.GetAppledByAppleable(db, appleableID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func (r *AppledRepo) GetByAppleable(
 
 func (r *AppledRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
@@ -216,7 +216,7 @@ func (r *AppledRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	appleds, err := data.GetAppledByUser(db, userId, po)
+	appleds, err := data.GetAppledByUser(db, userID, po)
 	if err != nil {
 		return nil, err
 	}
@@ -247,11 +247,11 @@ func (r *AppledRepo) Disconnect(
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, a); err != nil {
 		return err
 	}
-	if a.Id.Status != pgtype.Undefined {
-		return data.DeleteAppled(db, a.Id.Int)
-	} else if a.AppleableId.Status != pgtype.Undefined &&
-		a.UserId.Status != pgtype.Undefined {
-		return data.DeleteAppledByAppleableAndUser(db, a.AppleableId.String, a.UserId.String)
+	if a.ID.Status != pgtype.Undefined {
+		return data.DeleteAppled(db, a.ID.Int)
+	} else if a.AppleableID.Status != pgtype.Undefined &&
+		a.UserID.Status != pgtype.Undefined {
+		return data.DeleteAppledByAppleableAndUser(db, a.AppleableID.String, a.UserID.String)
 	}
 	return errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",

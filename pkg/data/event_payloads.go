@@ -34,30 +34,30 @@ const (
 
 type CourseEventPayload struct {
 	Action   string     `json:"action,omitempty"`
-	CourseId mytype.OID `json:"course_id,omitempty"`
+	CourseID mytype.OID `json:"course_id,omitempty"`
 }
 
-func NewCourseCreatedPayload(courseId *mytype.OID) (*CourseEventPayload, error) {
+func NewCourseCreatedPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseCreated}
-	if err := payload.CourseId.Set(courseId); err != nil {
+	if err := payload.CourseID.Set(courseID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewCourseAppledPayload(courseId *mytype.OID) (*CourseEventPayload, error) {
+func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseAppled}
-	if err := payload.CourseId.Set(courseId); err != nil {
+	if err := payload.CourseID.Set(courseID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewCourseUnappledPayload(courseId *mytype.OID) (*CourseEventPayload, error) {
+func NewCourseUnappledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseUnappled}
-	if err := payload.CourseId.Set(courseId); err != nil {
+	if err := payload.CourseID.Set(courseID); err != nil {
 		return nil, err
 	}
 
@@ -71,50 +71,50 @@ type RenamePayload struct {
 
 type LessonEventPayload struct {
 	Action    string        `json:"action,omitempty"`
-	CommentId mytype.OID    `json:"comment_id,omitempty"`
-	CourseId  mytype.OID    `json:"course_id,omitempty"`
-	LabelId   mytype.OID    `json:"label_id,omitempty"`
-	LessonId  mytype.OID    `json:"lesson_id,omitempty"`
+	CommentID mytype.OID    `json:"comment_id,omitempty"`
+	CourseID  mytype.OID    `json:"course_id,omitempty"`
+	LabelID   mytype.OID    `json:"label_id,omitempty"`
+	LessonID  mytype.OID    `json:"lesson_id,omitempty"`
 	Rename    RenamePayload `json:"rename,omitempty"`
-	SourceId  mytype.OID    `json:"source_id,omitempty"`
+	SourceID  mytype.OID    `json:"source_id,omitempty"`
 }
 
-func NewLessonCommentedPayload(lessonId, commentId *mytype.OID) (*LessonEventPayload, error) {
+func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonCommented}
-	if err := payload.CommentId.Set(commentId); err != nil {
+	if err := payload.CommentID.Set(commentID); err != nil {
 		return nil, err
 	}
-	if err := payload.LessonId.Set(lessonId); err != nil {
+	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewLessonCreatedPayload(lessonId *mytype.OID) (*LessonEventPayload, error) {
+func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonCreated}
-	if err := payload.LessonId.Set(lessonId); err != nil {
+	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewLessonMentionedPayload(lessonId *mytype.OID) (*LessonEventPayload, error) {
+func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonMentioned}
-	if err := payload.LessonId.Set(lessonId); err != nil {
+	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewLessonReferencedPayload(lessonId, sourceId *mytype.OID) (*LessonEventPayload, error) {
+func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonReferenced}
-	if err := payload.LessonId.Set(lessonId); err != nil {
+	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}
-	if err := payload.SourceId.Set(sourceId); err != nil {
+	if err := payload.SourceID.Set(sourceID); err != nil {
 		return nil, err
 	}
 
@@ -123,30 +123,30 @@ func NewLessonReferencedPayload(lessonId, sourceId *mytype.OID) (*LessonEventPay
 
 type StudyEventPayload struct {
 	Action  string     `json:"action,omitempty"`
-	StudyId mytype.OID `json:"study_id,omitempty"`
+	StudyID mytype.OID `json:"study_id,omitempty"`
 }
 
-func NewStudyCreatedPayload(studyId *mytype.OID) (*StudyEventPayload, error) {
+func NewStudyCreatedPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyCreated}
-	if err := payload.StudyId.Set(studyId); err != nil {
+	if err := payload.StudyID.Set(studyID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewStudyAppledPayload(studyId *mytype.OID) (*StudyEventPayload, error) {
+func NewStudyAppledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyAppled}
-	if err := payload.StudyId.Set(studyId); err != nil {
+	if err := payload.StudyID.Set(studyID); err != nil {
 		return nil, err
 	}
 
 	return payload, nil
 }
 
-func NewStudyUnappledPayload(studyId *mytype.OID) (*StudyEventPayload, error) {
+func NewStudyUnappledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyUnappled}
-	if err := payload.StudyId.Set(studyId); err != nil {
+	if err := payload.StudyID.Set(studyID); err != nil {
 		return nil, err
 	}
 
@@ -155,17 +155,17 @@ func NewStudyUnappledPayload(studyId *mytype.OID) (*StudyEventPayload, error) {
 
 type UserAssetEventPayload struct {
 	Action   string        `json:"action,omitempty"`
-	AssetId  mytype.OID    `json:"asset_id,omitempty"`
+	AssetID  mytype.OID    `json:"asset_id,omitempty"`
 	Rename   RenamePayload `json:"rename,omitempty"`
-	SourceId mytype.OID    `json:"source_id,omitempty"`
+	SourceID mytype.OID    `json:"source_id,omitempty"`
 }
 
-func NewUserAssetReferencedPayload(assetId, sourceId *mytype.OID) (*UserAssetEventPayload, error) {
+func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEventPayload, error) {
 	payload := &UserAssetEventPayload{Action: UserAssetReferenced}
-	if err := payload.AssetId.Set(assetId); err != nil {
+	if err := payload.AssetID.Set(assetID); err != nil {
 		return nil, err
 	}
-	if err := payload.SourceId.Set(sourceId); err != nil {
+	if err := payload.SourceID.Set(sourceID); err != nil {
 		return nil, err
 	}
 

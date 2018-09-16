@@ -12,7 +12,7 @@ import (
 func NewAppleableConnectionResolver(
 	repos *repo.Repos,
 	appleables []repo.NodePermit, pageOptions *data.PageOptions,
-	userId *mytype.OID,
+	userID *mytype.OID,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
 	for i := range edges {
@@ -34,7 +34,7 @@ func NewAppleableConnectionResolver(
 		appleables: appleables,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		userId:     userId,
+		userID:     userID,
 	}
 	return resolver, nil
 }
@@ -44,11 +44,11 @@ type appleableConnectionResolver struct {
 	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	userId     *mytype.OID
+	userID     *mytype.OID
 }
 
 func (r *appleableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
-	return r.repos.Course().CountByApplee(ctx, r.userId.String)
+	return r.repos.Course().CountByApplee(ctx, r.userID.String)
 }
 
 func (r *appleableConnectionResolver) Edges() *[]*appleableEdgeResolver {
@@ -84,5 +84,5 @@ func (r *appleableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *appleableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
-	return r.repos.Study().CountByApplee(ctx, r.userId.String)
+	return r.repos.Study().CountByApplee(ctx, r.userID.String)
 }

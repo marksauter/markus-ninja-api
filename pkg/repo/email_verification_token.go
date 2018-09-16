@@ -30,11 +30,11 @@ func (r *EVTPermit) Get() *data.EVT {
 	return evt
 }
 
-func (r *EVTPermit) EmailId() (*mytype.OID, error) {
+func (r *EVTPermit) EmailID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.evt.EmailId, nil
+	return &r.evt.EmailID, nil
 }
 
 func (r *EVTPermit) ExpiresAt() (time.Time, error) {
@@ -58,11 +58,11 @@ func (r *EVTPermit) Token() (string, error) {
 	return r.evt.Token.String, nil
 }
 
-func (r *EVTPermit) UserId() (*mytype.OID, error) {
+func (r *EVTPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		return nil, ErrAccessDenied
 	}
-	return &r.evt.UserId, nil
+	return &r.evt.UserID, nil
 }
 
 func (r *EVTPermit) VerifiedAt() (time.Time, error) {
@@ -132,13 +132,13 @@ func (r *EVTRepo) Create(
 
 func (r *EVTRepo) Get(
 	ctx context.Context,
-	emailId,
+	emailID,
 	token string,
 ) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	evt, err := r.load.Get(ctx, emailId, token)
+	evt, err := r.load.Get(ctx, emailID, token)
 	if err != nil {
 		return nil, err
 	}

@@ -25,11 +25,11 @@ func (r *eventResolver) ID() (graphql.ID, error) {
 }
 
 func (r *eventResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.Event.StudyId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +37,11 @@ func (r *eventResolver) Study(ctx context.Context) (*studyResolver, error) {
 }
 
 func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}

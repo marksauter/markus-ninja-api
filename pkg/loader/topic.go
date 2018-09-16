@@ -117,7 +117,7 @@ func (r *TopicLoader) GetByName(
 		return nil, fmt.Errorf("wrong type")
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(topic.Id.String), topic)
+	r.batchGet.Prime(ctx, dataloader.StringKey(topic.ID.String), topic)
 
 	return topic, nil
 }

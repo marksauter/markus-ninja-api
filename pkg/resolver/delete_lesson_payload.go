@@ -11,17 +11,17 @@ import (
 type DeleteLessonPayload = deleteLessonPayloadResolver
 
 type deleteLessonPayloadResolver struct {
-	LessonId *mytype.OID
-	StudyId  *mytype.OID
+	LessonID *mytype.OID
+	StudyID  *mytype.OID
 	Repos    *repo.Repos
 }
 
-func (r *deleteLessonPayloadResolver) DeletedLessonId() graphql.ID {
-	return graphql.ID(r.LessonId.String)
+func (r *deleteLessonPayloadResolver) DeletedLessonID() graphql.ID {
+	return graphql.ID(r.LessonID.String)
 }
 
 func (r *deleteLessonPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
-	study, err := r.Repos.Study().Get(ctx, r.StudyId.String)
+	study, err := r.Repos.Study().Get(ctx, r.StudyID.String)
 	if err != nil {
 		return nil, err
 	}
