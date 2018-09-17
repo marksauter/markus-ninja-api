@@ -49,6 +49,12 @@
   revision = "0755fe2dc241caebab64327c352006712f6a55c4"
 
 [[projects]]
+  name = "github.com/disintegration/imaging"
+  packages = ["."]
+  revision = "0bd5694c78c9c3d9a3cd06a706a8f3c59296a9ac"
+  version = "v1.5.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -197,8 +203,8 @@
     "pkg/s3utils",
     "pkg/set"
   ]
-  revision = "70799fe8dae6ecfb6c7d7e9e048fce27f23a1992"
-  version = "v6.0.5"
+  revision = "519049881e73150d1bbeac1d443e7c96b76e1b8d"
+  version = "v6.0.6"
 
 [[projects]]
   branch = "master"
@@ -327,6 +333,16 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/image"
+  packages = [
+    "bmp",
+    "tiff",
+    "tiff/lzw"
+  ]
+  revision = "c73c2afc3b812cdd6385de5a50616511c4a3d458"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -383,6 +399,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "629c34065a3682d94ea5db7648921ae8896b561f9fe468b5fe2c6f27eaf1f2e0"
+  inputs-digest = "a32a5f5efcc982dcc1c3d5a511520debd1a4290a5673aa87016a34af26e6d17e"
   solver-name = "gps-cdcl"
   solver-version = 1
