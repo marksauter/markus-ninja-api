@@ -5,6 +5,7 @@
 /.dockerfile-*
 *.toml
 /gin-bin
+/tmp
 
 note
 vendor/*
