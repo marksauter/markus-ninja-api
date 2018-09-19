@@ -340,6 +340,7 @@ func CreateNotification(
 	sql := `
 		INSERT INTO notification(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
+		ON CONFLICT (user_id, subject_id) DO NOTHING
 	`
 
 	psName := preparedName("createNotification", sql)
@@ -500,7 +501,7 @@ func DeleteNotificationByStudy(
 	studyID string,
 ) error {
 	mylog.Log.WithField("study_id", studyID).Info("DeleteNotificationByStudy(study_id)")
-	commandTag, err := prepareExec(
+	_, err := prepareExec(
 		db,
 		"deleteNotificationByStudy",
 		deleteNotificationByStudySQl,
@@ -509,9 +510,6 @@ func DeleteNotificationByStudy(
 	)
 	if err != nil {
 		return err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
 	}
 
 	return nil
@@ -527,7 +525,7 @@ func DeleteNotificationByUser(
 	userID string,
 ) error {
 	mylog.Log.WithField("user_id", userID).Info("DeleteNotificationByUser(user_id)")
-	commandTag, err := prepareExec(
+	_, err := prepareExec(
 		db,
 		"deleteNotificationByUser",
 		deleteNotificationByUserSQl,
@@ -535,9 +533,6 @@ func DeleteNotificationByUser(
 	)
 	if err != nil {
 		return err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
 	}
 
 	return nil
