@@ -51,8 +51,8 @@ func CountStudyByApplee(
 
 const countStudyByEnrolleeSQL = `
 	SELECT COUNT(*)
-	FROM study_enrolled
-	WHERE user_id = $1
+	FROM enrolled
+	WHERE user_id = $1 AND status = 'ENROLLED'
 `
 
 func CountStudyByEnrollee(
