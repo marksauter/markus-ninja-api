@@ -638,6 +638,10 @@ func CreateEvent(
 
 	event, err := GetEvent(tx, row.ID.String)
 	if err != nil {
+		if err == ErrNotFound {
+			mylog.Log.Info("event not created")
+			return nil, nil
+		}
 		return nil, err
 	}
 
