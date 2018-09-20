@@ -939,30 +939,6 @@ func ParseLessonBodyForEvents(
 		defer RollbackTransaction(tx)
 	}
 
-	newEvents := make(map[string]struct{})
-	oldEvents := make(map[string]string)
-	events, err := GetEventByLesson(
-		tx,
-		lesson.ID.String,
-		nil,
-		IsLessonMentionedEvent,
-		IsLessonReferencedEvent,
-	)
-	if err != nil {
-		return err
-	}
-	for _, event := range events {
-		payload := &LessonEventPayload{}
-		if err := event.Payload.AssignTo(payload); err != nil {
-			return err
-		}
-		if payload.Action == LessonMentioned {
-			oldEvents[event.UserID.String] = event.ID.String
-		} else if payload.Action == LessonReferenced {
-			oldEvents[payload.LessonID.String] = event.ID.String
-		}
-	}
-
 	userAssetRefs := lesson.Body.AssetRefs()
 	if len(userAssetRefs) > 0 {
 		userAssets, err := BatchGetUserAssetByName(
@@ -974,21 +950,16 @@ func ParseLessonBodyForEvents(
 			return err
 		}
 		for _, a := range userAssets {
-			if a.ID.String != lesson.ID.String {
-				newEvents[a.ID.String] = struct{}{}
-				if _, prs := oldEvents[a.ID.String]; !prs {
-					payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
-					if err != nil {
-						return err
-					}
-					event, err := NewUserAssetEvent(payload, &lesson.StudyID, &lesson.UserID)
-					if err != nil {
-						return err
-					}
-					if _, err = CreateEvent(tx, event); err != nil {
-						return err
-					}
-				}
+			payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
+			if err != nil {
+				return err
+			}
+			event, err := NewUserAssetEvent(payload, &lesson.StudyID, &lesson.UserID)
+			if err != nil {
+				return err
+			}
+			if _, err = CreateEvent(tx, event); err != nil {
+				return err
 			}
 		}
 	}
@@ -1007,19 +978,16 @@ func ParseLessonBodyForEvents(
 		}
 		for _, l := range lessons {
 			if l.ID.String != lesson.ID.String {
-				newEvents[l.ID.String] = struct{}{}
-				if _, prs := oldEvents[l.ID.String]; !prs {
-					payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
-					if err != nil {
-						return err
-					}
-					event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-					if err != nil {
-						return err
-					}
-					if _, err = CreateEvent(tx, event); err != nil {
-						return err
-					}
+				payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
+				if err != nil {
+					return err
+				}
+				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
+				if err != nil {
+					return err
+				}
+				if _, err = CreateEvent(tx, event); err != nil {
+					return err
 				}
 			}
 		}
@@ -1039,19 +1007,16 @@ func ParseLessonBodyForEvents(
 			return err
 		}
 		if l.ID.String != lesson.ID.String {
-			newEvents[l.ID.String] = struct{}{}
-			if _, prs := oldEvents[l.ID.String]; !prs {
-				payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
-				if err != nil {
-					return err
-				}
-				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
+			payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
+			if err != nil {
+				return err
+			}
+			event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
+			if err != nil {
+				return err
+			}
+			if _, err = CreateEvent(tx, event); err != nil {
+				return err
 			}
 		}
 	}
@@ -1066,28 +1031,17 @@ func ParseLessonBodyForEvents(
 		}
 		for _, u := range users {
 			if u.ID.String != lesson.UserID.String {
-				newEvents[u.ID.String] = struct{}{}
-				if _, prs := oldEvents[u.ID.String]; !prs {
-					payload, err := NewLessonMentionedPayload(&lesson.ID)
-					if err != nil {
-						return err
-					}
-					event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-					if err != nil {
-						return err
-					}
-					if _, err = CreateEvent(tx, event); err != nil {
-						return err
-					}
+				payload, err := NewLessonMentionedPayload(&lesson.ID)
+				if err != nil {
+					return err
 				}
-			}
-		}
-	}
-	for k, v := range oldEvents {
-		if _, prs := newEvents[k]; !prs {
-			err := DeleteEvent(tx, v)
-			if err != nil {
-				return err
+				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
+				if err != nil {
+					return err
+				}
+				if _, err = CreateEvent(tx, event); err != nil {
+					return err
+				}
 			}
 		}
 	}
