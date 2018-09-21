@@ -121,6 +121,8 @@ func (s *StorageService) GetThumbnail(
 			return nil, err
 		}
 
+		mylog.Log.Info("generating new thumbnail...")
+
 		asset, err := s.Get(contentType, userID, key)
 		if err != nil {
 			return nil, err
