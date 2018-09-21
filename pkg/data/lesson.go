@@ -108,34 +108,27 @@ func CountLessonBySearch(
 	db Queryer,
 	within *mytype.OID,
 	query string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountLessonBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	sql := `
-		SELECT COUNT(*)
-		FROM lesson_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
-	`
-	if within != nil {
-		if within.Type != "User" && within.Type != "Study" {
-			// Only users and studies 'contain' lessons, so return 0 otherwise
-			return
+	var n int32
+	var args pgx.QueryArgs
+	from := "lesson_search_index"
+	in := within
+	if in != nil {
+		if in.Type != "User" && in.Type != "Study" {
+			return n, fmt.Errorf(
+				"cannot search for lessons within type `%s`",
+				in.Type,
+			)
 		}
-		andIn := fmt.Sprintf(
-			"AND lesson_search_index.%s = %s",
-			within.DBVarName(),
-			args.Append(within),
-		)
-		sql = sql + andIn
 	}
+
+	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
 
 	psName := preparedName("countLessonBySearch", sql)
 
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 const countLessonByCourseSQL = `

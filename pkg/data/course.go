@@ -20,7 +20,7 @@ type Course struct {
 	Description pgtype.Text         `db:"description" permit:"create/read/update"`
 	EnrolledAt  pgtype.Timestamptz  `db:"enrolled_at"`
 	ID          mytype.OID          `db:"id" permit:"read"`
-	Name        mytype.URLSafeName  `db:"name" permit:"create/read"`
+	Name        pgtype.Text         `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
 	Status      mytype.CourseStatus `db:"status" permit:"read/update"`
 	StudyID     mytype.OID          `db:"study_id" permit:"create/read"`

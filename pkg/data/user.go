@@ -106,21 +106,18 @@ func CountUserByEnrollee(
 func CountUserBySearch(
 	db Queryer,
 	query string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountUserBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	sql := `
-		SELECT COUNT(*)
-		FROM user_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
-	`
+	var n int32
+	var args pgx.QueryArgs
+	from := "user_search_index"
+
+	sql := CountSearchSQL(from, nil, ToPrefixTsQuery(query), "document", &args)
+
 	psName := preparedName("countUserBySearch", sql)
 
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 const batchGetUserSQL = `
