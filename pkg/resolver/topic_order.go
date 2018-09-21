@@ -32,7 +32,7 @@ func ParseTopicOrderField(s string) (TopicOrderField, error) {
 func (f TopicOrderField) String() string {
 	switch f {
 	case TopicTopicedAt:
-		return "created_at"
+		return "topiced_at"
 	case TopicTopicedCount:
 		return "topiced_count"
 	case TopicName:
@@ -58,7 +58,7 @@ func (o *TopicOrder) Field() string {
 func ParseTopicOrder(arg *OrderArg) (*TopicOrder, error) {
 	if arg == nil {
 		return &TopicOrder{
-			direction: data.DESC,
+			direction: data.ASC,
 			field:     TopicTopicedAt,
 		}, nil
 	}
