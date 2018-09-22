@@ -39,12 +39,21 @@ func (r *lessonResolver) Body() (string, error) {
 	return body.String, nil
 }
 
-func (r *lessonResolver) BodyHTML() (mygql.HTML, error) {
+func (r *lessonResolver) BodyHTML(ctx context.Context) (mygql.HTML, error) {
 	body, err := r.Lesson.Body()
 	if err != nil {
 		return "", err
 	}
-	return mygql.HTML(body.ToHTML()), nil
+	study, err := r.Study(ctx)
+	if err != nil {
+		return "", err
+	}
+	studyPath, err := study.ResourcePath(ctx)
+	if err != nil {
+		return "", err
+	}
+	html, err := body.ToHTML(clientURL, string(studyPath))
+	return mygql.HTML(html), err
 }
 
 func (r *lessonResolver) BodyText() (string, error) {

@@ -325,7 +325,7 @@ const getLessonByOwnerStudyAndNumberSQL = `
 	FROM lesson_master
 	JOIN account ON lower(account.login) = lower($1)
 	JOIN study ON lower(study.name) = lower($2)
-	WHERE lesson_master.number = $3
+	WHERE lesson_master.user_id = account.id AND lesson_master.study_id = study.id AND lesson_master.number = $3
 `
 
 func GetLessonByOwnerStudyAndNumber(
@@ -934,15 +934,28 @@ func ParseLessonBodyForEvents(
 
 	userAssetRefs := lesson.Body.AssetRefs()
 	if len(userAssetRefs) > 0 {
+		names := make([]string, len(userAssetRefs))
+		for i, ref := range userAssetRefs {
+			names[i] = ref.Name
+		}
 		userAssets, err := BatchGetUserAssetByName(
 			tx,
 			lesson.StudyID.String,
-			userAssetRefs,
+			names,
 		)
 		if err != nil {
 			return err
 		}
 		for _, a := range userAssets {
+			href := fmt.Sprintf(
+				"http://localhost:5000/user/assets/%s/%s",
+				a.UserID.Short,
+				a.Key.String,
+			)
+			body := mytype.AssetRefRegexp.ReplaceAllString(lesson.Body.String, "![$$$1]("+href+")")
+			if err := lesson.Body.Set(body); err != nil {
+				return err
+			}
 			payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
 			if err != nil {
 				return err
@@ -961,10 +974,14 @@ func ParseLessonBodyForEvents(
 		return err
 	}
 	if len(lessonNumberRefs) > 0 {
+		numbers := make([]int32, len(lessonNumberRefs))
+		for i, ref := range lessonNumberRefs {
+			numbers[i] = ref.Number
+		}
 		lessons, err := BatchGetLessonByNumber(
 			tx,
 			lesson.StudyID.String,
-			lessonNumberRefs,
+			numbers,
 		)
 		if err != nil {
 			return err
@@ -1015,9 +1032,13 @@ func ParseLessonBodyForEvents(
 	}
 	userRefs := lesson.Body.AtRefs()
 	if len(userRefs) > 0 {
+		names := make([]string, len(userRefs))
+		for i, ref := range userRefs {
+			names[i] = ref.Name
+		}
 		users, err := BatchGetUserByLogin(
 			tx,
-			userRefs,
+			names,
 		)
 		if err != nil {
 			return err

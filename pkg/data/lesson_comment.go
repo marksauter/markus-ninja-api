@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -397,9 +398,9 @@ func CreateLessonComment(
 		return nil, err
 	}
 
-	// if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
-	//   return nil, err
-	// }
+	if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
+		return nil, err
+	}
 
 	if newTx {
 		err = CommitTransaction(tx)
@@ -522,26 +523,42 @@ func ParseLessonCommentBodyForEvents(
 
 	userAssetRefs := comment.Body.AssetRefs()
 	if len(userAssetRefs) > 0 {
+		names := make([]string, len(userAssetRefs))
+		for i, ref := range userAssetRefs {
+			names[i] = ref.Name
+		}
 		userAssets, err := BatchGetUserAssetByName(
 			tx,
 			comment.StudyID.String,
-			userAssetRefs,
+			names,
 		)
 		if err != nil {
 			return err
 		}
-		for _, a := range userAssets {
-			payload, err := NewUserAssetReferencedPayload(&a.ID, &comment.LessonID)
-			if err != nil {
-				return err
+		if len(userAssets) > 0 {
+			for _, a := range userAssets {
+				href := fmt.Sprintf(
+					"http://localhost:5000/user/assets/%s/%s",
+					a.UserID.Short,
+					a.Key.String,
+				)
+				body := mytype.AssetRefRegexp.ReplaceAllString(comment.Body.String, "![$1]("+href+")")
+				if err := comment.Body.Set(body); err != nil {
+					return err
+				}
+				payload, err := NewUserAssetReferencedPayload(&a.ID, &comment.LessonID)
+				if err != nil {
+					return err
+				}
+				event, err := NewUserAssetEvent(payload, &comment.StudyID, &comment.UserID)
+				if err != nil {
+					return err
+				}
+				if _, err = CreateEvent(tx, event); err != nil {
+					return err
+				}
 			}
-			event, err := NewUserAssetEvent(payload, &comment.StudyID, &comment.UserID)
-			if err != nil {
-				return err
-			}
-			if _, err = CreateEvent(tx, event); err != nil {
-				return err
-			}
+			UpdateLessonComment(tx, comment)
 		}
 	}
 	lessonNumberRefs, err := comment.Body.NumberRefs()
@@ -549,10 +566,14 @@ func ParseLessonCommentBodyForEvents(
 		return err
 	}
 	if len(lessonNumberRefs) > 0 {
+		numbers := make([]int32, len(lessonNumberRefs))
+		for i, ref := range lessonNumberRefs {
+			numbers[i] = ref.Number
+		}
 		lessons, err := BatchGetLessonByNumber(
 			tx,
 			comment.StudyID.String,
-			lessonNumberRefs,
+			numbers,
 		)
 		if err != nil {
 			return err
@@ -603,9 +624,13 @@ func ParseLessonCommentBodyForEvents(
 	}
 	userRefs := comment.Body.AtRefs()
 	if len(userRefs) > 0 {
+		names := make([]string, len(userRefs))
+		for i, ref := range userRefs {
+			names[i] = ref.Name
+		}
 		users, err := BatchGetUserByLogin(
 			tx,
-			userRefs,
+			names,
 		)
 		if err != nil {
 			return err

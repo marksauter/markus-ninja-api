@@ -1688,7 +1688,7 @@ func (r *RootResolver) UpdateStudy(
 }
 
 type UpdateTopicInput struct {
-	Description *string
+	Description string
 	TopicID     string
 }
 
@@ -1700,10 +1700,8 @@ func (r *RootResolver) UpdateTopic(
 	if err := topic.ID.Set(args.Input.TopicID); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set topic id"}
 	}
-	if args.Input.Description != nil {
-		if err := topic.Description.Set(args.Input.Description); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set topic description"}
-		}
+	if err := topic.Description.Set(args.Input.Description); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set topic description"}
 	}
 
 	topicPermit, err := r.Repos.Topic().Update(ctx, topic)
