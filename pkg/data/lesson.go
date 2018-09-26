@@ -213,6 +213,96 @@ func CountLessonByUser(
 	return n, err
 }
 
+func existsLesson(
+	db Queryer,
+	name string,
+	sql string,
+	args ...interface{},
+) (bool, error) {
+	var exists bool
+	err := prepareQueryRow(db, name, sql, args...).Scan(&exists)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to check if lesson exists")
+		return false, err
+	}
+
+	return exists, nil
+}
+
+const existsLessonByIDSQL = `
+	SELECT exists(
+		SELECT 1
+		FROM lesson
+		WHERE id = $1
+	)
+`
+
+func ExistsLesson(
+	db Queryer,
+	id string,
+) (bool, error) {
+	mylog.Log.WithField("id", id).Info("ExistsLesson(id)")
+	return existsLesson(db, "existsLessonByID", existsLessonByIDSQL, id)
+}
+
+const existsLessonByNumberSQL = `
+	SELECT exists(
+		SELECT 1
+		FROM lesson
+		JOIN study ON study.id = $1
+		WHERE lesson.number = $2
+	)
+`
+
+func ExistsLessonByNumber(
+	db Queryer,
+	studyID string,
+	number int32,
+) (bool, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyID,
+		"number":   number,
+	}).Info("ExistsLessonByNumber(study_id, number)")
+	return existsLesson(
+		db,
+		"existsLessonByNumber",
+		existsLessonByNumberSQL,
+		studyID,
+		number,
+	)
+}
+
+const existsLessonByOwnerStudyAndNumberSQL = `
+	SELECT exists(
+		SELECT 1
+		FROM lesson
+		JOIN account ON account.login = $1
+		JOIN study ON study.name = $2
+		WHERE lesson.number = $3
+	)
+`
+
+func ExistsLessonByOwnerStudyAndNumber(
+	db Queryer,
+	ownerLogin,
+	studyName string,
+	number int32,
+) (bool, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"owner":  ownerLogin,
+		"study":  studyName,
+		"number": number,
+	}).Info("ExistsLessonByOwnerStudyAndNumber(owner, study, number)")
+	return existsLesson(
+		db,
+		"existsLessonByOwnerStudyAndNumber",
+		existsLessonByOwnerStudyAndNumberSQL,
+		ownerLogin,
+		studyName,
+		number,
+	)
+}
+
 func getLesson(
 	db Queryer,
 	name string,
@@ -686,6 +776,12 @@ func BatchGetLessonByNumber(
 	)
 }
 
+const updateNewLessonBodySQL = `
+	UPDATE lesson
+	SET body = $1
+	WHERE id = $2
+`
+
 func CreateLesson(
 	db Queryer,
 	row *Lesson,
@@ -774,9 +870,29 @@ func CreateLesson(
 		return nil, err
 	}
 
-	err = ParseLessonBodyForEvents(tx, lesson)
+	if err := ParseLessonBodyForEvents(tx, lesson); err != nil {
+		return nil, err
+	}
+
+	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, lesson.Body, lesson.StudyID.String)
 	if err != nil {
 		return nil, err
+	}
+	if updated {
+		if err := lesson.Body.Set(body); err != nil {
+			return nil, err
+		}
+
+		_, err := prepareExec(
+			tx,
+			"updateNewLessonBody",
+			updateNewLessonBodySQL,
+			lesson.Body.String,
+			lesson.ID.String,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if newTx {
@@ -853,12 +969,34 @@ func UpdateLesson(
 	row *Lesson,
 ) (*Lesson, error) {
 	mylog.Log.WithField("id", row.ID.String).Info("UpdateLesson(id)")
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	if err := ParseLessonBodyForEvents(tx, row); err != nil {
+		return nil, err
+	}
+
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
-	if row.Body.Status != pgtype.Undefined {
-		sets = append(sets, `body`+"="+args.Append(&row.Body))
+	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
+	if err != nil {
+		return nil, err
 	}
+	if updated {
+		if err := row.Body.Set(body); err != nil {
+			return nil, err
+		}
+	}
+	sets = append(sets, `body`+"="+args.Append(&row.Body))
+
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
@@ -871,15 +1009,6 @@ func UpdateLesson(
 
 	if len(sets) == 0 {
 		return GetLesson(db, row.ID.String)
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -900,10 +1029,6 @@ func UpdateLesson(
 
 	lesson, err := GetLesson(tx, row.ID.String)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := ParseLessonBodyForEvents(tx, lesson); err != nil {
 		return nil, err
 	}
 
@@ -947,15 +1072,6 @@ func ParseLessonBodyForEvents(
 			return err
 		}
 		for _, a := range userAssets {
-			href := fmt.Sprintf(
-				"http://localhost:5000/user/assets/%s/%s",
-				a.UserID.Short,
-				a.Key.String,
-			)
-			body := mytype.AssetRefRegexp.ReplaceAllString(lesson.Body.String, "![$$$1]("+href+")")
-			if err := lesson.Body.Set(body); err != nil {
-				return err
-			}
 			payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
 			if err != nil {
 				return err

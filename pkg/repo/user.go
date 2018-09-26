@@ -210,6 +210,26 @@ func (r *UserRepo) Create(
 	return &UserPermit{fieldPermFn, user}, nil
 }
 
+func (r *UserRepo) Exists(
+	ctx context.Context,
+	id string,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	return r.load.Exists(ctx, id)
+}
+
+func (r *UserRepo) ExistsByLogin(
+	ctx context.Context,
+	login string,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	return r.load.ExistsByLogin(ctx, login)
+}
+
 func (r *UserRepo) Get(
 	ctx context.Context,
 	id string,

@@ -281,6 +281,33 @@ func (r *UserAssetRepo) GetByName(
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
 }
 
+func (r *UserAssetRepo) BatchGetByName(
+	ctx context.Context,
+	studyID string,
+	names []string,
+) ([]*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	userAssets, errs := r.load.GetManyByName(ctx, studyID, names)
+	if errs != nil {
+		for _, err := range errs {
+			if err != data.ErrNotFound {
+				return nil, err
+			}
+		}
+	}
+	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
+	for i, userAsset := range userAssets {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
+		if err != nil {
+			return nil, err
+		}
+		userAssetPermits[i] = &UserAssetPermit{fieldPermFn, userAsset}
+	}
+	return userAssetPermits, nil
+}
+
 func (r *UserAssetRepo) GetByUserStudyAndName(
 	ctx context.Context,
 	userLogin,

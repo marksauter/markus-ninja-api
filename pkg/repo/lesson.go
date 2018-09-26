@@ -243,6 +243,47 @@ func (r *LessonRepo) Create(
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
+func (r *LessonRepo) Exists(
+	ctx context.Context,
+	id string,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	return r.load.Exists(ctx, id)
+}
+
+func (r *LessonRepo) ExistsByNumber(
+	ctx context.Context,
+	studyID string,
+	number int32,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return false, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.ExistsLessonByNumber(db, studyID, number)
+}
+
+func (r *LessonRepo) ExistsByOwnerStudyAndNumber(
+	ctx context.Context,
+	ownerLogin,
+	studyName string,
+	number int32,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return false, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.ExistsLessonByOwnerStudyAndNumber(db, ownerLogin, studyName, number)
+}
+
 func (r *LessonRepo) Get(
 	ctx context.Context,
 	id string,

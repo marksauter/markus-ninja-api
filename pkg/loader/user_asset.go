@@ -131,6 +131,9 @@ func (r *UserAssetLoader) Get(
 		return nil, fmt.Errorf("wrong type")
 	}
 
+	compositeKey := newCompositeKey(userAsset.StudyID.String, userAsset.Name.String)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
+
 	return userAsset, nil
 }
 
@@ -171,19 +174,46 @@ func (r *UserAssetLoader) GetByUserStudyAndName(
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
+	compositeKey = newCompositeKey(userAsset.StudyID.String, userAsset.Name.String)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }
 
 func (r *UserAssetLoader) GetMany(
 	ctx context.Context,
-	ids *[]string,
+	ids []string,
 ) ([]*data.UserAsset, []error) {
-	keys := make(dataloader.Keys, len(*ids))
-	for i, k := range *ids {
+	keys := make(dataloader.Keys, len(ids))
+	for i, k := range ids {
 		keys[i] = dataloader.StringKey(k)
 	}
 	userAssetData, errs := r.batchGet.LoadMany(ctx, keys)()
+	if errs != nil {
+		return nil, errs
+	}
+	userAssets := make([]*data.UserAsset, len(userAssetData))
+	for i, d := range userAssetData {
+		var ok bool
+		userAssets[i], ok = d.(*data.UserAsset)
+		if !ok {
+			return nil, []error{fmt.Errorf("wrong type")}
+		}
+	}
+
+	return userAssets, nil
+}
+
+func (r *UserAssetLoader) GetManyByName(
+	ctx context.Context,
+	studyID string,
+	names []string,
+) ([]*data.UserAsset, []error) {
+	keys := make(dataloader.Keys, len(names))
+	for i, name := range names {
+		keys[i] = newCompositeKey(studyID, name)
+	}
+	userAssetData, errs := r.batchGetByName.LoadMany(ctx, keys)()
 	if errs != nil {
 		return nil, errs
 	}

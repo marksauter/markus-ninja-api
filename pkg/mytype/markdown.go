@@ -41,7 +41,7 @@ func (src *Markdown) AtRefs() []*AtRef {
 	return refs
 }
 
-var AssetRefRegexp = regexp.MustCompile(`(?:(?:^|\s|\[)\${2})([\w-.]+)(?:\]|\s|$)`)
+var AssetRefRegexp = regexp.MustCompile(`(?:(?:^|\s)\${2})([\w-.]+)(?:\s|$)`)
 
 // AssetRef -
 type AssetRef struct {
@@ -128,11 +128,8 @@ func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
 }
 
 // ToHTML -
-func (src *Markdown) ToHTML(clientURL, studyResourcePath string) (string, error) {
-	src.String = AtRefRegexp.ReplaceAllString(src.String, "[@$1]("+clientURL+"/$1)")
-	src.String = NumberRefRegexp.ReplaceAllString(src.String, "[#$1]("+clientURL+studyResourcePath+"/lesson/$1)")
-	src.String = CrossStudyRefRegexp.ReplaceAllString(src.String, "[$1/$2#$3]("+clientURL+"/$1/$2"+"/lesson/$3)")
-	return string(util.MarkdownToHTML([]byte(src.String))), nil
+func (src *Markdown) ToHTML() string {
+	return string(util.MarkdownToHTML([]byte(src.String)))
 }
 
 // ToText -
