@@ -1568,10 +1568,24 @@ func (r *RootResolver) UpdateLesson(
 	ctx context.Context,
 	args struct{ Input UpdateLessonInput },
 ) (*lessonResolver, error) {
-	lesson := &data.Lesson{}
-	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	lessonID, err := mytype.ParseOID(args.Input.LessonID)
+	if err != nil {
 		return nil, errors.New("invalid lesson id")
 	}
+	currentLessonPermit, err := r.Repos.Lesson().Get(ctx, lessonID.String)
+	if err != nil {
+		mylog.Log.Error(err)
+		return nil, errors.New("lesson not found")
+	}
+	lesson := currentLessonPermit.Get()
 
 	if args.Input.Body != nil {
 		if err := lesson.Body.Set(args.Input.Body); err != nil {
@@ -1588,11 +1602,19 @@ func (r *RootResolver) UpdateLesson(
 	if err != nil {
 		return nil, err
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
 }
 
 type UpdateLessonCommentInput struct {
-	Body            *string
+	Body            string
 	LessonCommentID string
 }
 
@@ -1600,21 +1622,41 @@ func (r *RootResolver) UpdateLessonComment(
 	ctx context.Context,
 	args struct{ Input UpdateLessonCommentInput },
 ) (*lessonCommentResolver, error) {
-	lessonComment := &data.LessonComment{}
-	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson comment id"}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
 	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	if args.Input.Body != nil {
-		if err := lessonComment.Body.Set(args.Input.Body); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lessonComment body"}
-		}
+	lessonCommentID, err := mytype.ParseOID(args.Input.LessonCommentID)
+	if err != nil {
+		return nil, errors.New("invalid lesson comment id")
+	}
+	currentLessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, lessonCommentID.String)
+	if err != nil {
+		mylog.Log.Error(err)
+		return nil, errors.New("lesson comment not found")
+	}
+	lessonComment := currentLessonCommentPermit.Get()
+
+	if err := lessonComment.Body.Set(args.Input.Body); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set lessonComment body"}
 	}
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
 	if err != nil {
 		return nil, err
 	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &lessonCommentResolver{
 		LessonComment: lessonCommentPermit,
 		Repos:         r.Repos,

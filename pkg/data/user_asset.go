@@ -251,6 +251,40 @@ func GetUserAsset(
 	return getUserAsset(db, "getUserAssetByID", getUserAssetByIDSQL, id)
 }
 
+const batchGetUserAssetSQL = `
+	SELECT
+		asset_id,
+		created_at,
+		id,
+		key,
+		name,
+		original_name,
+		published_at,
+		size,
+		study_id,
+		subtype,
+		type,
+		updated_at,
+		user_id
+	FROM user_asset_master
+	WHERE id = ANY($1)
+`
+
+func BatchGetUserAsset(
+	db Queryer,
+	ids []string,
+) ([]*UserAsset, error) {
+	mylog.Log.WithField(
+		"ids", ids,
+	).Info("BatchGetUserAsset(ids)")
+	return getManyUserAsset(
+		db,
+		"batchGetUserAsset",
+		batchGetUserAssetSQL,
+		ids,
+	)
+}
+
 const getUserAssetByNameSQL = `
 	SELECT
 		asset_id,
@@ -654,4 +688,36 @@ func UpdateUserAsset(
 	}
 
 	return userAsset, nil
+}
+
+func ReplaceMarkdownUserAssetRefsWithLinks(db Queryer, markdown mytype.Markdown, studyID string) (*mytype.Markdown, error, bool) {
+	updated := false
+	userAssetRefToLink := func(s string) string {
+		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		name := result[1]
+		userAsset, err := GetUserAssetByName(
+			db,
+			studyID,
+			name,
+		)
+		if err != nil && err != ErrNotFound {
+			return s
+		}
+		updated = true
+		href := fmt.Sprintf(
+			"http://localhost:5000/user/assets/%s/%s",
+			userAsset.UserID.Short,
+			userAsset.Key.String,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("![%s](%s)", name, href))
+	}
+	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
+	if err != nil {
+		return nil, err, false
+	}
+
+	return &markdown, nil, updated
 }

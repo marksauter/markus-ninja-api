@@ -120,50 +120,57 @@ func CountUserBySearch(
 	return n, err
 }
 
-const batchGetUserSQL = `
-	SELECT
-		account_updated_at,
-		bio,
-		created_at,
-		id,
-		login,
-		name,
-		profile_email_id,
-		profile_updated_at,
-		roles
-	FROM user_master
-	WHERE id = ANY($1)
-`
-
-func BatchGetUser(
+func existsUser(
 	db Queryer,
-	ids []string,
-) ([]*User, error) {
-	mylog.Log.WithField("ids", ids).Info("BatchGetUser(ids) User")
-	return getManyUser(db, "batchGetUserByID", batchGetUserSQL, ids)
+	name string,
+	sql string,
+	args ...interface{},
+) (bool, error) {
+	var exists bool
+	err := prepareQueryRow(db, name, sql, args...).Scan(&exists)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to check if user exists")
+		return false, err
+	}
+
+	return exists, nil
 }
 
-const batchGetUserByLoginSQL = `
-	SELECT
-		account_updated_at,
-		bio,
-		created_at,
-		id,
-		login,
-		name,
-		profile_email_id,
-		profile_updated_at,
-		roles
-	FROM user_master
-	WHERE lower(login) = any($1)
+const existsUserByIDSQL = `
+	SELECT exists(
+		SELECT 1
+		FROM account
+		WHERE id = $1
+	)
 `
 
-func BatchGetUserByLogin(
+func ExistsUser(
 	db Queryer,
-	logins []string,
-) ([]*User, error) {
-	mylog.Log.WithField("logins", logins).Info("BatchGetUserByLogin(logins) User")
-	return getManyUser(db, "batchGetUserByLoginByID", batchGetUserByLoginSQL, logins)
+	id string,
+) (bool, error) {
+	mylog.Log.WithField("id", id).Info("ExistsUser(id)")
+	return existsUser(db, "existsUserByID", existsUserByIDSQL, id)
+}
+
+const existsUserByLoginSQL = `
+	SELECT exists(
+		SELECT 1
+		FROM account
+		WHERE lower(login) = lower($1)
+	)
+`
+
+func ExistsUserByLogin(
+	db Queryer,
+	login string,
+) (bool, error) {
+	mylog.Log.WithField("login", login).Info("ExistsUserByLogin(login)")
+	return existsUser(
+		db,
+		"existsUserByLogin",
+		existsUserByLoginSQL,
+		login,
+	)
 }
 
 func getUser(
@@ -254,6 +261,75 @@ func GetUser(
 ) {
 	mylog.Log.WithField("id", id).Info("GetUser(id)")
 	return getUser(db, "getUserByID", getUserByIDSQL, id)
+}
+
+const batchGetUserSQL = `
+	SELECT
+		account_updated_at,
+		bio,
+		created_at,
+		id,
+		login,
+		name,
+		profile_email_id,
+		profile_updated_at,
+		roles
+	FROM user_master
+	WHERE id = ANY($1)
+`
+
+func BatchGetUser(
+	db Queryer,
+	ids []string,
+) ([]*User, error) {
+	mylog.Log.WithField("ids", ids).Info("BatchGetUser(ids) User")
+	return getManyUser(db, "batchGetUserByID", batchGetUserSQL, ids)
+}
+
+const getUserByLoginSQL = `
+	SELECT
+		account_updated_at,
+		bio,
+		created_at,
+		id,
+		login,
+		name,
+		profile_email_id,
+		profile_updated_at,
+		roles
+	FROM user_master
+	WHERE LOWER(login) = LOWER($1)
+`
+
+func GetUserByLogin(
+	db Queryer,
+	login string,
+) (*User, error) {
+	mylog.Log.WithField("login", login).Info("GetUserByLogin(login)")
+	return getUser(db, "getUserByLogin", getUserByLoginSQL, login)
+}
+
+const batchGetUserByLoginSQL = `
+	SELECT
+		account_updated_at,
+		bio,
+		created_at,
+		id,
+		login,
+		name,
+		profile_email_id,
+		profile_updated_at,
+		roles
+	FROM user_master
+	WHERE lower(login) = any($1)
+`
+
+func BatchGetUserByLogin(
+	db Queryer,
+	logins []string,
+) ([]*User, error) {
+	mylog.Log.WithField("logins", logins).Info("BatchGetUserByLogin(logins) User")
+	return getManyUser(db, "batchGetUserByLoginByID", batchGetUserByLoginSQL, logins)
 }
 
 func GetUserByAppleable(
@@ -442,29 +518,6 @@ func GetUserByEnrollable(
 	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
-}
-
-const getUserByLoginSQL = `
-	SELECT
-		account_updated_at,
-		bio,
-		created_at,
-		id,
-		login,
-		name,
-		profile_email_id,
-		profile_updated_at,
-		roles
-	FROM user_master
-	WHERE LOWER(login) = LOWER($1)
-`
-
-func GetUserByLogin(
-	db Queryer,
-	login string) (*User, error,
-) {
-	mylog.Log.WithField("login", login).Info("GetUserByLogin(login)")
-	return getUser(db, "getUserByLogin", getUserByLoginSQL, login)
 }
 
 func getUserCredentials(

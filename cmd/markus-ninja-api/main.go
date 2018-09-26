@@ -92,6 +92,7 @@ func main() {
 	preview := middleware.CommonMiddleware.Append(
 		route.PreviewCors.Handler,
 		authMiddleware.Use,
+		repos.Use,
 	).Then(previewHandler)
 	token := middleware.CommonMiddleware.Append(
 		route.TokenCors.Handler,

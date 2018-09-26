@@ -98,3 +98,15 @@ var rxHexColor = regexp.MustCompile(`^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
 func IsHexColor(str string) bool {
 	return rxHexColor.MatchString(str)
 }
+
+func ReplaceWithPadding(match, replace string) string {
+	paddingLeft := ""
+	paddingRight := ""
+	if match[0] == ' ' {
+		paddingLeft = " "
+	}
+	if match[len(match)-1] == ' ' {
+		paddingRight = " "
+	}
+	return paddingLeft + replace + paddingRight
+}

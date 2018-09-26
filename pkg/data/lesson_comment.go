@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -313,6 +312,12 @@ func GetLessonCommentByUser(
 	return getManyLessonComment(db, psName, sql, args...)
 }
 
+const updateNewLessonCommentBodySQL = `
+	UPDATE lesson_comment
+	SET body = $1
+	WHERE id = $2
+`
+
 // CreateLessonComment - create a lesson comment
 func CreateLessonComment(
 	db Queryer,
@@ -402,6 +407,27 @@ func CreateLessonComment(
 		return nil, err
 	}
 
+	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, lessonComment.Body, lessonComment.StudyID.String)
+	if err != nil {
+		return nil, err
+	}
+	if updated {
+		if err := lessonComment.Body.Set(body); err != nil {
+			return nil, err
+		}
+
+		_, err := prepareExec(
+			tx,
+			"updateNewLessonCommentBody",
+			updateNewLessonCommentBodySQL,
+			lessonComment.Body.String,
+			lessonComment.ID.String,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
@@ -456,12 +482,25 @@ func UpdateLessonComment(
 		defer RollbackTransaction(tx)
 	}
 
+	err = ParseLessonCommentBodyForEvents(tx, row)
+	if err != nil {
+		return nil, err
+	}
+
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
-	if row.Body.Status != pgtype.Undefined {
-		sets = append(sets, `body`+"="+args.Append(&row.Body))
+	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
+	if err != nil {
+		return nil, err
 	}
+	if updated {
+		if err := row.Body.Set(body); err != nil {
+			return nil, err
+		}
+	}
+	sets = append(sets, `body`+"="+args.Append(&row.Body))
+
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
@@ -486,11 +525,6 @@ func UpdateLessonComment(
 	}
 
 	lessonComment, err := GetLessonComment(tx, row.ID.String)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ParseLessonCommentBodyForEvents(tx, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -535,30 +569,18 @@ func ParseLessonCommentBodyForEvents(
 		if err != nil {
 			return err
 		}
-		if len(userAssets) > 0 {
-			for _, a := range userAssets {
-				href := fmt.Sprintf(
-					"http://localhost:5000/user/assets/%s/%s",
-					a.UserID.Short,
-					a.Key.String,
-				)
-				body := mytype.AssetRefRegexp.ReplaceAllString(comment.Body.String, "![$1]("+href+")")
-				if err := comment.Body.Set(body); err != nil {
-					return err
-				}
-				payload, err := NewUserAssetReferencedPayload(&a.ID, &comment.LessonID)
-				if err != nil {
-					return err
-				}
-				event, err := NewUserAssetEvent(payload, &comment.StudyID, &comment.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
+		for _, a := range userAssets {
+			payload, err := NewUserAssetReferencedPayload(&a.ID, &comment.LessonID)
+			if err != nil {
+				return err
 			}
-			UpdateLessonComment(tx, comment)
+			event, err := NewUserAssetEvent(payload, &comment.StudyID, &comment.UserID)
+			if err != nil {
+				return err
+			}
+			if _, err = CreateEvent(tx, event); err != nil {
+				return err
+			}
 		}
 	}
 	lessonNumberRefs, err := comment.Body.NumberRefs()

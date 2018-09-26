@@ -13,6 +13,62 @@ import (
 
 func NewUserLoader() *UserLoader {
 	return &UserLoader{
+		batchExists: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						user, err := data.ExistsUser(db, key.String())
+						results[i] = &dataloader.Result{Data: user, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
+		batchExistsByLogin: createLoader(
+			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
+				var (
+					n       = len(keys)
+					results = make([]*dataloader.Result, n)
+					wg      sync.WaitGroup
+				)
+
+				wg.Add(n)
+
+				for i, key := range keys {
+					go func(i int, key dataloader.Key) {
+						defer wg.Done()
+						db, ok := myctx.QueryerFromContext(ctx)
+						if !ok {
+							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
+							return
+						}
+						user, err := data.ExistsUserByLogin(db, key.String())
+						results[i] = &dataloader.Result{Data: user, Error: err}
+					}(i, key)
+				}
+
+				wg.Wait()
+
+				return results
+			},
+		),
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -73,18 +129,55 @@ func NewUserLoader() *UserLoader {
 }
 
 type UserLoader struct {
-	batchGet        *dataloader.Loader
-	batchGetByLogin *dataloader.Loader
+	batchExists        *dataloader.Loader
+	batchExistsByLogin *dataloader.Loader
+	batchGet           *dataloader.Loader
+	batchGetByLogin    *dataloader.Loader
 }
 
 func (r *UserLoader) Clear(id string) {
 	ctx := context.Background()
+	r.batchExists.Clear(ctx, dataloader.StringKey(id))
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
 func (r *UserLoader) ClearAll() {
+	r.batchExists.ClearAll()
+	r.batchExistsByLogin.ClearAll()
 	r.batchGet.ClearAll()
 	r.batchGetByLogin.ClearAll()
+}
+
+func (r *UserLoader) Exists(
+	ctx context.Context,
+	id string,
+) (bool, error) {
+	userData, err := r.batchExists.Load(ctx, dataloader.StringKey(id))()
+	if err != nil {
+		return false, err
+	}
+	exists, ok := userData.(bool)
+	if !ok {
+		return false, fmt.Errorf("wrong type")
+	}
+
+	return exists, nil
+}
+
+func (r *UserLoader) ExistsByLogin(
+	ctx context.Context,
+	login string,
+) (bool, error) {
+	userData, err := r.batchExistsByLogin.Load(ctx, dataloader.StringKey(login))()
+	if err != nil {
+		return false, err
+	}
+	exists, ok := userData.(bool)
+	if !ok {
+		return false, fmt.Errorf("wrong type")
+	}
+
+	return exists, nil
 }
 
 func (r *UserLoader) Get(
