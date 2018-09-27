@@ -145,6 +145,9 @@ type User implements
 
   id: ID!
 
+  # Whether or not the user has verified their account.
+  isVerified: Boolean!
+
   # Whether or not this user is a site administrator.
   isSiteAdmin: Boolean!
 

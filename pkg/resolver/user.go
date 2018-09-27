@@ -554,6 +554,18 @@ func (r *userResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *userResolver) IsVerified(ctx context.Context) (bool, error) {
+	userID, err := r.User.ID()
+	if err != nil {
+		return false, err
+	}
+	primaryEmail, err := r.Repos.Email().GetByUserPrimary(ctx, userID.String)
+	if err != nil {
+		return false, err
+	}
+	return primaryEmail.IsVerified()
+}
+
 func (r *userResolver) IsSiteAdmin() bool {
 	for _, role := range r.User.Roles() {
 		if role == data.AdminRole {
