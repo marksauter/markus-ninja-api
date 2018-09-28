@@ -155,7 +155,7 @@ type Mutation {
   # Removes a label from a labelable.
   removeLabel(input: RemoveLabelInput!): RemoveLabelPayload
   # Requests an email verification mail to be sent.
-  requestEmailVerification(input: RequestEmailVerificationInput!): EVT
+  requestEmailVerification(input: RequestEmailVerificationInput!): Boolean!
   # Requests a password reset mail to be sent.
   requestPasswordReset(input: RequestPasswordResetInput!): PRT
   # Resets a user's password.

@@ -1064,84 +1064,63 @@ type RequestEmailVerificationInput struct {
 func (r *RootResolver) RequestEmailVerification(
 	ctx context.Context,
 	args struct{ Input RequestEmailVerificationInput },
-) (*evtResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
-	}
+) (bool, error) {
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
-		return nil, err
+		return false, err
 	} else if newTx {
 		defer data.RollbackTransaction(tx)
 	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	email, err := r.Repos.Email().GetByValue(ctx, args.Input.Email)
+	email, err := data.GetEmailByValue(tx, args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
-			return nil, errors.New("`email` not found")
+			return false, errors.New("email not found")
 		}
-		return nil, err
-	}
-	userID, err := email.UserID()
-	if err != nil {
-		return nil, err
-	}
-	if viewer.ID.String != userID.String {
-		return nil, errors.New("email already registered to another user")
+		return false, err
 	}
 
-	isVerified, err := email.IsVerified()
+	user, err := data.GetUser(tx, email.UserID.String)
 	if err != nil {
-		return nil, err
-	}
-	if isVerified {
-		return nil, errors.New("email already verified")
+		return false, err
 	}
 
-	emailID, err := email.ID()
-	if err != nil {
-		return nil, err
+	if email.VerifiedAt.Status != pgtype.Null {
+		return false, errors.New("email already verified")
 	}
 
 	evt := &data.EVT{}
-	if err := evt.EmailID.Set(emailID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set evt email_id"}
+	if err := evt.EmailID.Set(&email.ID); err != nil {
+		return false, myerr.UnexpectedError{"failed to set evt email_id"}
 	}
-	if err := evt.UserID.Set(userID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set evt user_id"}
-	}
-
-	evtPermit, err := r.Repos.EVT().Create(ctx, evt)
-	if err != nil {
-		return nil, err
+	if err := evt.UserID.Set(&email.UserID); err != nil {
+		return false, myerr.UnexpectedError{"failed to set evt user_id"}
 	}
 
-	to, err := email.Value()
+	_, err = data.CreateEVT(tx, evt)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	sendMailInput := &service.SendEmailVerificationMailInput{
-		EmailID:   emailID.Short,
-		To:        to,
-		UserLogin: viewer.Login.String,
+		EmailID:   email.ID.Short,
+		To:        email.Value.String,
+		UserLogin: user.Login.String,
 		Token:     evt.Token.String,
 	}
 	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	if newTx {
 		err := data.CommitTransaction(tx)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 	}
 
-	return &evtResolver{EVT: evtPermit, Repos: r.Repos}, nil
+	return true, nil
 }
 
 type RequestPasswordResetInput struct {
