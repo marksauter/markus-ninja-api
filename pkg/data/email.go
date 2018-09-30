@@ -164,7 +164,7 @@ const getEmailByUserBackupSQL = `
 		value,
 		verified_at
 	FROM email
-	WHERE user_id = $1 AND type = BACKUP
+	WHERE user_id = $1 AND type = 'BACKUP'
 `
 
 func GetEmailByUserBackup(db Queryer, userID string) (*Email, error) {
@@ -189,7 +189,7 @@ const getEmailByUserPrimarySQL = `
 		value,
 		verified_at
 	FROM email
-	WHERE user_id = $1 AND type = PRIMARY
+	WHERE user_id = $1 AND type = 'PRIMARY'
 `
 
 func GetEmailByUserPrimary(db Queryer, userID string) (*Email, error) {
