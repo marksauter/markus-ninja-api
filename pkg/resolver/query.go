@@ -236,6 +236,9 @@ func (r *RootResolver) Topic(
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
+	if args.Login == repo.Guest {
+		return nil, nil
+	}
 	user, err := r.Repos.User().GetByLogin(ctx, args.Login)
 	if err != nil {
 		return nil, err
@@ -247,6 +250,9 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
+	}
+	if viewer.Login.String == repo.Guest {
+		return nil, nil
 	}
 	user, err := r.Repos.User().Get(ctx, viewer.ID.String)
 	if err != nil {
