@@ -22,29 +22,36 @@ type Email struct {
 type EmailFilterOption int
 
 const (
-	IsVerifiedEmail EmailFilterOption = iota
-	IsBackupEmail
+	// OR filters
+	IsBackupEmail EmailFilterOption = iota
 	IsExtraEmail
 	IsPrimaryEmail
+
+	// AND filters
+	IsVerifiedEmail
 )
 
 func (src EmailFilterOption) SQL(from string) string {
 	switch src {
-	case IsVerifiedEmail:
-		return from + ".verified_at IS NOT NULL"
 	case IsBackupEmail:
 		return from + ".type = 'BACKUP'"
 	case IsExtraEmail:
 		return from + ".type = 'EXTRA'"
 	case IsPrimaryEmail:
 		return from + ".type = 'PRIMARY'"
+	case IsVerifiedEmail:
+		return from + ".verified_at IS NOT NULL"
 	default:
 		return ""
 	}
 }
 
 func (src EmailFilterOption) Type() FilterType {
-	return EqualFilter
+	if src > IsPrimaryEmail {
+		return AndFilter
+	} else {
+		return OrFilter
+	}
 }
 
 const countEmailByUserSQL = `
@@ -261,6 +268,8 @@ func GetEmailByUser(
 	}
 	from := "email"
 	sql := SQL2(selects, from, where, &args, po)
+
+	mylog.Log.Debug(sql)
 
 	psName := preparedName("getEmailByUser", sql)
 

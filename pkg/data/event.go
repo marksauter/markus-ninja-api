@@ -140,9 +140,9 @@ func (src EventFilterOption) SQL(from string) string {
 
 func (src EventFilterOption) Type() FilterType {
 	if src < IsCourseEvent {
-		return NotEqualFilter
+		return AndFilter
 	} else {
-		return EqualFilter
+		return OrFilter
 	}
 }
 

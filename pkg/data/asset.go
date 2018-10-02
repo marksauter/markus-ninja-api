@@ -171,7 +171,7 @@ func CreateAsset(
 	sql := `
 		INSERT INTO asset(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING id
+		ON CONFLICT (key) DO NOTHING
 	`
 
 	psName := preparedName("createAsset", sql)
@@ -192,7 +192,7 @@ func CreateAsset(
 		return nil, err
 	}
 
-	asset, err := GetAsset(tx, row.ID.Int)
+	asset, err := GetAssetByKey(tx, row.Key.String)
 	if err != nil {
 		return nil, err
 	}

@@ -61,7 +61,7 @@ func (r *Permitter) Check(
 	additionalRoles := []string{}
 	// If we are not creating, then check if the viewer can admin the object. If
 	// yes, then grant the owner role to the user.
-	if a != mytype.CreateAccess {
+	if a != mytype.CreateAccess && a != mytype.ConnectAccess {
 		ok, err := r.ViewerCanAdmin(ctx, node)
 		if err != nil {
 			return f, err
@@ -70,9 +70,9 @@ func (r *Permitter) Check(
 			additionalRoles = append(additionalRoles, data.OwnerRole)
 		}
 	} else {
-		// If we are creating, then check if viewer can create the object.  If yes,
-		// then grant the owner role to the user.
-		ok, err := r.ViewerCanCreate(ctx, node)
+		// If we are creating/connecting, then check if viewer can create the object
+		// with the Owner role. If yes, then grant the Owner role to the user.
+		ok, err := r.ViewerCanCreateWithOwnership(ctx, node)
 		if err != nil {
 			return f, err
 		}
@@ -188,6 +188,26 @@ func (r *Permitter) ViewerCanAdmin(
 			userID = &course.UserID
 		}
 		return vid == userID.String, nil
+	case data.CourseLesson:
+		courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
+		if err != nil {
+			return false, err
+		}
+		course, err := r.repos.Course().load.Get(ctx, courseLesson.CourseID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == course.UserID.String, nil
+	case *data.CourseLesson:
+		courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
+		if err != nil {
+			return false, err
+		}
+		course, err := r.repos.Course().load.Get(ctx, courseLesson.CourseID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == course.UserID.String, nil
 	case data.Email:
 		userID := &node.UserID
 		if node.UserID.Status == pgtype.Undefined {
@@ -268,27 +288,40 @@ func (r *Permitter) ViewerCanAdmin(
 			return false, err
 		}
 		return vid == study.UserID.String, nil
-	// TODO: figure out the permissions for labeled data type
-	// case data.Labeled:
-	//   userID := &node.UserID
-	//   if node.UserID.Status == pgtype.Undefined {
-	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.ID.Int)
-	//     if err != nil {
-	//       return false, err
-	//     }
-	//     userID = &labeled.UserID
-	//   }
-	//   return vid == userID.String, nil
-	// case *data.Labeled:
-	//   userID := &node.UserID
-	//   if node.UserID.Status == pgtype.Undefined {
-	//     labeled, err := r.repos.Labeled().load.Get(ctx, node.ID.Int)
-	//     if err != nil {
-	//       return false, err
-	//     }
-	//     userID = &labeled.UserID
-	//   }
-	//   return vid == userID.String, nil
+	case data.Labeled:
+		userID := mytype.OID{}
+		switch node.LabelableID.Type {
+		case "Lesson":
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lesson.UserID
+		case "LessonComment":
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lessonComment.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Labeled:
+		userID := mytype.OID{}
+		switch node.LabelableID.Type {
+		case "Lesson":
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lesson.UserID
+		case "LessonComment":
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lessonComment.UserID
+		}
+		return vid == userID.String, nil
 	case data.Lesson:
 		userID := &node.UserID
 		if node.UserID.Status == pgtype.Undefined {
@@ -373,27 +406,40 @@ func (r *Permitter) ViewerCanAdmin(
 			userID = &study.UserID
 		}
 		return vid == userID.String, nil
-	// TODO: figure out the permissions for topiced data type
-	// case data.Topiced:
-	//   userID := &node.UserID
-	//   if node.UserID.Status == pgtype.Undefined {
-	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.ID.Int)
-	//     if err != nil {
-	//       return false, err
-	//     }
-	//     userID = &topiced.UserID
-	//   }
-	//   return vid == userID.String, nil
-	// case *data.Topiced:
-	//   userID := &node.UserID
-	//   if node.UserID.Status == pgtype.Undefined {
-	//     topiced, err := r.repos.Topiced().load.Get(ctx, node.ID.Int)
-	//     if err != nil {
-	//       return false, err
-	//     }
-	//     userID = &topiced.UserID
-	//   }
-	//   return vid == userID.String, nil
+	case data.Topiced:
+		userID := mytype.OID{}
+		switch node.TopicableID.Type {
+		case "Course":
+			course, err := r.repos.Course().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = course.UserID
+		case "Study":
+			study, err := r.repos.Study().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = study.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Topiced:
+		userID := mytype.OID{}
+		switch node.TopicableID.Type {
+		case "Course":
+			course, err := r.repos.Course().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = course.UserID
+		case "Study":
+			study, err := r.repos.Study().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = study.UserID
+		}
+		return vid == userID.String, nil
 	case data.User:
 		return vid == node.ID.String, nil
 	case *data.User:
@@ -424,10 +470,10 @@ func (r *Permitter) ViewerCanAdmin(
 	return false, nil
 }
 
-// Can the viewer create the passed node? Mainly used for objects that have
-// parent objects, and the viewer must be the owner of the parent object to
-// create a child object.
-func (r *Permitter) ViewerCanCreate(
+// Can the viewer create the passed node with the Owner role?
+// Mainly used for objects that have parent objects, and the viewer must
+// be the owner of the parent object to create a child object.
+func (r *Permitter) ViewerCanCreateWithOwnership(
 	ctx context.Context,
 	node interface{},
 ) (bool, error) {
@@ -452,6 +498,18 @@ func (r *Permitter) ViewerCanCreate(
 			return false, err
 		}
 		return vid == study.UserID.String, nil
+	case data.CourseLesson:
+		course, err := r.repos.Course().load.Get(ctx, node.CourseID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == course.UserID.String, nil
+	case *data.CourseLesson:
+		course, err := r.repos.Course().load.Get(ctx, node.CourseID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == course.UserID.String, nil
 	case data.Label:
 		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
@@ -464,6 +522,40 @@ func (r *Permitter) ViewerCanCreate(
 			return false, err
 		}
 		return vid == study.UserID.String, nil
+	case data.Labeled:
+		userID := mytype.OID{}
+		switch node.LabelableID.Type {
+		case "Lesson":
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lesson.UserID
+		case "LessonComment":
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lessonComment.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Labeled:
+		userID := mytype.OID{}
+		switch node.LabelableID.Type {
+		case "Lesson":
+			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lesson.UserID
+		case "LessonComment":
+			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = lessonComment.UserID
+		}
+		return vid == userID.String, nil
 	case data.Lesson:
 		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {
@@ -476,6 +568,40 @@ func (r *Permitter) ViewerCanCreate(
 			return false, err
 		}
 		return vid == study.UserID.String, nil
+	case data.Topiced:
+		userID := mytype.OID{}
+		switch node.TopicableID.Type {
+		case "Course":
+			course, err := r.repos.Course().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = course.UserID
+		case "Study":
+			study, err := r.repos.Study().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = study.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Topiced:
+		userID := mytype.OID{}
+		switch node.TopicableID.Type {
+		case "Course":
+			course, err := r.repos.Course().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = course.UserID
+		case "Study":
+			study, err := r.repos.Study().load.Get(ctx, node.TopicableID.String)
+			if err != nil {
+				return false, err
+			}
+			userID = study.UserID
+		}
+		return vid == userID.String, nil
 	default:
 		return false, nil
 	}

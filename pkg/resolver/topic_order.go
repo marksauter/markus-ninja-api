@@ -59,7 +59,7 @@ func ParseTopicOrder(arg *OrderArg) (*TopicOrder, error) {
 	if arg == nil {
 		return &TopicOrder{
 			direction: data.ASC,
-			field:     TopicTopicedAt,
+			field:     TopicName,
 		}, nil
 	}
 	direction, err := data.ParseOrderDirection(arg.Direction)
