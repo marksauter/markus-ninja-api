@@ -212,6 +212,9 @@ func (r *lessonResolver) Course(ctx context.Context) (*courseResolver, error) {
 	}
 	course, err := r.Repos.Course().Get(ctx, courseID.String)
 	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &courseResolver{Course: course, Repos: r.Repos}, nil

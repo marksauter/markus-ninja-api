@@ -18,12 +18,12 @@ type UserAsset struct {
 	ID           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
-	OriginalName mytype.Filename    `db:"original_name" permit:"create/read"`
+	OriginalName mytype.Filename    `db:"original_name" permit:"read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
-	Size         pgtype.Int8        `db:"size" permit:"create/read"`
+	Size         pgtype.Int8        `db:"size" permit:"read"`
 	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
-	Subtype      pgtype.Text        `db:"subtype" permit:"create/read"`
-	Type         pgtype.Text        `db:"type" permit:"create/read"`
+	Subtype      pgtype.Text        `db:"subtype" permit:"read"`
+	Type         pgtype.Text        `db:"type" permit:"read"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserID       mytype.OID         `db:"user_id" permit:"create/read"`
 }
@@ -71,7 +71,7 @@ func (src UserAssetFilterOption) SQL(from string) string {
 }
 
 func (src UserAssetFilterOption) Type() FilterType {
-	return EqualFilter
+	return OrFilter
 }
 
 func CountUserAssetBySearch(

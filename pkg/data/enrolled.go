@@ -36,7 +36,7 @@ func (src EnrolledFilterOption) SQL(from string) string {
 }
 
 func (src EnrolledFilterOption) Type() FilterType {
-	return NotEqualFilter
+	return AndFilter
 }
 
 const countEnrolledByUserSQL = `

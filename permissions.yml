@@ -7,7 +7,7 @@ permissions:
   - operation: Disconnect Appled
     authenticated: true
     roles:
-      - user
+      - owner
   # Owners can read the appled.
   - operation: Read Appled
     authenticated: true
@@ -75,15 +75,20 @@ permissions:
 
 
 
-  # Only authenticated users can connect/disconnect enrolled.
+  # Only owners can connect/disconnect course lessons.
   - operation: Connect CourseLesson 
     authenticated: true
     roles:
-      - user
+      - owner
   - operation: Disconnect CourseLesson
     authenticated: true
     roles:
-      - user
+      - owner
+  # Owners can read the course lesson.
+  - operation: Read CourseLesson
+    authenticated: true
+    roles:
+      - owner
 
 
 
@@ -246,7 +251,7 @@ permissions:
   - operation: Read Labeled
     authenticated: true
     roles:
-      - owner
+      - user
 
 
 
@@ -446,7 +451,7 @@ permissions:
   - operation: Read Topiced
     authenticated: true
     roles:
-      - owner
+      - user
 
 
 
@@ -514,12 +519,9 @@ permissions:
     roles:
       - user
     fields:
+      - asset_id
       - name
-      - original_name
-      - size
       - study_id
-      - subtype
-      - type
       - user_id
   # Only owners can update/delete user assets. 
   - operation: Update UserAsset

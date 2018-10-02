@@ -110,10 +110,10 @@ func (s *StorageService) GetThumbnail(
 		objectName,
 	}, "/")
 
-	object, err := s.svc.GetObject(
+	_, err := s.svc.StatObject(
 		s.bucket,
 		objectPath,
-		minio.GetObjectOptions{},
+		minio.StatObjectOptions{},
 	)
 	if err != nil {
 		minioError := minio.ToErrorResponse(err)
@@ -178,7 +178,11 @@ func (s *StorageService) GetThumbnail(
 		}
 	}
 
-	return object, nil
+	return s.svc.GetObject(
+		s.bucket,
+		objectPath,
+		minio.GetObjectOptions{},
+	)
 }
 
 // UploadResponse - response object from Upload

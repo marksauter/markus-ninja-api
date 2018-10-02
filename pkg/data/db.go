@@ -465,8 +465,8 @@ func ReorderQuery(po *PageOptions, query string) string {
 type FilterType int
 
 const (
-	EqualFilter FilterType = iota
-	NotEqualFilter
+	OrFilter FilterType = iota
+	AndFilter
 )
 
 type FilterOption interface {
@@ -475,31 +475,31 @@ type FilterOption interface {
 }
 
 func JoinFilters(filters []FilterOption) func(from string) string {
-	notFilters := make([]FilterOption, 0, len(filters))
-	isFilters := make([]FilterOption, 0, len(filters))
+	andFilters := make([]FilterOption, 0, len(filters))
+	orFilters := make([]FilterOption, 0, len(filters))
 
 	for _, f := range filters {
-		// If the filter's value is less than the first is filter, then it is a not
-		// filter
-		if f.Type() == NotEqualFilter {
-			notFilters = append(notFilters, f)
+		// If the filter's value is less than the first `or` filter, then it is an
+		// `and` filter
+		if f.Type() == AndFilter {
+			andFilters = append(andFilters, f)
 		} else {
-			isFilters = append(isFilters, f)
+			orFilters = append(orFilters, f)
 		}
 	}
 
 	return func(from string) string {
 		sql := make([]string, 0, 2)
-		if len(isFilters) > 0 {
-			fs := make([]string, len(isFilters))
-			for i, f := range isFilters {
+		if len(orFilters) > 0 {
+			fs := make([]string, len(orFilters))
+			for i, f := range orFilters {
 				fs[i] = f.SQL(from)
 			}
 			sql = append(sql, fmt.Sprintf("(%s)", strings.Join(fs, " OR ")))
 		}
-		if len(notFilters) > 0 {
-			fs := make([]string, len(notFilters))
-			for i, f := range notFilters {
+		if len(andFilters) > 0 {
+			fs := make([]string, len(andFilters))
+			for i, f := range andFilters {
 				fs[i] = f.SQL(from)
 			}
 			sql = append(sql, fmt.Sprintf("(%s)", strings.Join(fs, " AND ")))

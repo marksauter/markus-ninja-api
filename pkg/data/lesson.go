@@ -52,9 +52,9 @@ func (src LessonFilterOption) SQL(from string) string {
 
 func (src LessonFilterOption) Type() FilterType {
 	if src < IsCourseLesson {
-		return NotEqualFilter
+		return AndFilter
 	} else {
-		return EqualFilter
+		return OrFilter
 	}
 }
 
