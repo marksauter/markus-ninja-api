@@ -14,10 +14,11 @@ import (
 )
 
 var TokenCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Authorization"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-	Debug:          true,
+	AllowCredentials: true,
+	AllowedHeaders:   []string{"Authorization"},
+	AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
+	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
+	Debug:            true,
 })
 
 type TokenHandler struct {
@@ -76,19 +77,12 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response := TokenSuccessResponse{
-		AccessToken: jwt.String(),
-		ExpiresIn:   jwt.Payload.Exp,
-	}
-	myhttp.WriteResponseTo(rw, &response)
+	http.SetCookie(rw, &http.Cookie{
+		Name:     "access_token",
+		Value:    jwt.String(),
+		Expires:  time.Unix(jwt.Payload.Exp, 0),
+		HttpOnly: true,
+		// Secure:   true,
+	})
 	return
-}
-
-type TokenSuccessResponse struct {
-	AccessToken string              `json:"access_token,omitempty"`
-	ExpiresIn   myjwt.UnixTimestamp `json:"expires_in,omitempty"`
-}
-
-func (r *TokenSuccessResponse) StatusHTTP() int {
-	return http.StatusOK
 }

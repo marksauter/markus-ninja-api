@@ -92,7 +92,7 @@ type Query {
   ): User
 
   # The currently authenticated user.
-  viewer: User!
+  viewer: User
 }
 
 type Mutation {

@@ -69,6 +69,7 @@ func main() {
 	indexHandler := route.IndexHandler{}
 	previewHandler := route.PreviewHandler{Repos: repos}
 	tokenHandler := route.TokenHandler{svcs.Auth, db}
+	removeTokenHandler := route.RemoveTokenHandler{}
 	signupHandler := route.SignupHandler{svcs.Auth, db}
 	uploadHandler := route.UploadHandler{}
 	uploadAssetsHandler := route.UploadAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
@@ -97,6 +98,9 @@ func main() {
 	token := middleware.CommonMiddleware.Append(
 		route.TokenCors.Handler,
 	).Then(tokenHandler)
+	removeToken := middleware.CommonMiddleware.Append(
+		route.RemoveTokenCors.Handler,
+	).Then(removeTokenHandler)
 	signup := middleware.CommonMiddleware.Append(
 		route.SignupCors.Handler,
 		authMiddleware.Use,
@@ -120,6 +124,7 @@ func main() {
 	r.Handle("/preview", preview)
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
+	r.Handle("/remove_token", removeToken)
 	r.Handle("/upload", upload)
 	r.Handle("/upload/assets", uploadAssets)
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
