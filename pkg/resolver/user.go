@@ -72,25 +72,12 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountByUser(
-		ctx,
-		userID.String,
-		data.IsCourseEvent,
-		data.IsStudyEvent,
-	)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := NewUserActivityConnectionResolver(
+	return NewUserActivityConnectionResolver(
+		r.Repos,
 		events,
 		pageOptions,
-		count,
-		r.Repos,
+		userID,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
 }
 
 func (r *userResolver) Appled(
@@ -659,7 +646,7 @@ func (r *userResolver) ReceivedActivity(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*userActivityConnectionResolver, error) {
+) (*userReceivedActivityConnectionResolver, error) {
 	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -689,23 +676,12 @@ func (r *userResolver) ReceivedActivity(
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountReceivedByUser(
-		ctx,
-		userID.String,
-	)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := NewUserActivityConnectionResolver(
+	return NewUserReceivedActivityConnectionResolver(
+		r.Repos,
 		events,
 		pageOptions,
-		count,
-		r.Repos,
+		userID,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return resolver, nil
 }
 
 func (r *userResolver) ResourcePath() (mygql.URI, error) {
