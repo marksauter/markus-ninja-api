@@ -21,3 +21,18 @@ type UserActivityConnection {
   # The total count of items in the connection.
   totalCount: Int!
 }
+
+# A connection type for UserActivityEvent.
+type UserReceivedActivityConnection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [UserActivityEventEdge]
+
+  # A list of nodes.
+  nodes: [UserActivityEvent]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

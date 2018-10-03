@@ -41,6 +41,7 @@ func MarkdownToHTML(input []byte) []byte {
 	unsafe := blackfriday.Run(input)
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-z-A-Z0-9]+$")).OnElements("code")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^((caption|hint|overline|secondary|subtitle[1|2])(\s+|$))*$`)).OnElements("p")
 	return p.SanitizeBytes(unsafe)
 }
 

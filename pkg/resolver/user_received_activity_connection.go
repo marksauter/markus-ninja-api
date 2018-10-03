@@ -9,12 +9,12 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewUserActivityConnectionResolver(
+func NewUserReceivedActivityConnectionResolver(
 	repos *repo.Repos,
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
-) (*userActivityConnectionResolver, error) {
+) (*userReceivedActivityConnectionResolver, error) {
 	edges := make([]*userActivityEventEdgeResolver, len(events))
 	for i := range edges {
 		edge, err := NewUserActivityEventEdgeResolver(events[i], repos)
@@ -30,7 +30,7 @@ func NewUserActivityConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &userActivityConnectionResolver{
+	resolver := &userReceivedActivityConnectionResolver{
 		edges:    edges,
 		events:   events,
 		pageInfo: pageInfo,
@@ -40,7 +40,7 @@ func NewUserActivityConnectionResolver(
 	return resolver, nil
 }
 
-type userActivityConnectionResolver struct {
+type userReceivedActivityConnectionResolver struct {
 	edges    []*userActivityEventEdgeResolver
 	events   []*repo.EventPermit
 	pageInfo *pageInfoResolver
@@ -48,7 +48,7 @@ type userActivityConnectionResolver struct {
 	userID   *mytype.OID
 }
 
-func (r *userActivityConnectionResolver) Edges() *[]*userActivityEventEdgeResolver {
+func (r *userReceivedActivityConnectionResolver) Edges() *[]*userActivityEventEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
@@ -56,7 +56,7 @@ func (r *userActivityConnectionResolver) Edges() *[]*userActivityEventEdgeResolv
 	return &[]*userActivityEventEdgeResolver{}
 }
 
-func (r *userActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userActivityEventResolver, error) {
+func (r *userReceivedActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userActivityEventResolver, error) {
 	n := len(r.events)
 	nodes := make([]*userActivityEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
@@ -76,10 +76,10 @@ func (r *userActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userAct
 	return &nodes, nil
 }
 
-func (r *userActivityConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *userReceivedActivityConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *userActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
-	return r.repos.Event().CountByUser(ctx, r.userID.String, data.IsCourseEvent, data.IsStudyEvent)
+func (r *userReceivedActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.Event().CountReceivedByUser(ctx, r.userID.String)
 }

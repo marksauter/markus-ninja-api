@@ -215,7 +215,7 @@ type User implements
 
     # Ordering options for events returned from the connection.
     orderBy: EventOrder
-  ): UserActivityConnection!
+  ): UserReceivedActivityConnection!
 
   # The HTTP path for this user.
   resourcePath: URI!
