@@ -1242,7 +1242,7 @@ func (r *RootResolver) ResetPassword(
 		mylog.Log.WithError(err).Error("failed to set password")
 		return false, err
 	}
-	if err := user.Password.CheckStrength(mytype.VeryWeak); err != nil {
+	if err := user.Password.CheckStrength(mytype.Strong); err != nil {
 		mylog.Log.WithError(err).Error("password failed strength check")
 		return false, err
 	}

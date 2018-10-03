@@ -42,13 +42,13 @@ type Authenticate struct {
 func (a *Authenticate) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		token, err := myjwt.JWTFromRequest(req)
-		if err != nil && err != myjwt.ErrNoHeader {
-			response := myhttp.UnauthorizedErrorResponse(err.Error())
+		if err != nil && err != http.ErrNoCookie {
+			response := myhttp.InvalidRequestErrorResponse(err.Error())
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
 		var user *data.User
-		if err == myjwt.ErrNoHeader {
+		if err == http.ErrNoCookie {
 			user, err = data.GetUserCredentialsByLogin(a.Db, "guest")
 			if err != nil {
 				response := myhttp.UnauthorizedErrorResponse("user not found")
