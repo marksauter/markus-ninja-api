@@ -171,7 +171,6 @@ func (r *LessonRepo) CountByLabel(
 
 func (r *LessonRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	var n int32
@@ -179,43 +178,46 @@ func (r *LessonRepo) CountBySearch(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonBySearch(db, within, query)
+	return data.CountLessonBySearch(db, query)
 }
 
 func (r *LessonRepo) CountByCourse(
 	ctx context.Context,
 	courseID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByCourse(db, courseID)
+	return data.CountLessonByCourse(db, courseID, filters)
 }
 
 func (r *LessonRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByStudy(db, studyID)
+	return data.CountLessonByStudy(db, studyID, filters)
 }
 
 func (r *LessonRepo) CountByUser(
 	ctx context.Context,
 	userID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByUser(db, userID)
+	return data.CountLessonByUser(db, userID, filters)
 }
 
 func (r *LessonRepo) Create(
@@ -306,6 +308,7 @@ func (r *LessonRepo) GetByEnrollee(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -314,7 +317,7 @@ func (r *LessonRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByEnrollee(db, userID, po)
+	lessons, err := data.GetLessonByEnrollee(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -335,6 +338,7 @@ func (r *LessonRepo) GetByLabel(
 	ctx context.Context,
 	labelID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -343,7 +347,7 @@ func (r *LessonRepo) GetByLabel(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByLabel(db, labelID, po)
+	lessons, err := data.GetLessonByLabel(db, labelID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -364,6 +368,7 @@ func (r *LessonRepo) GetByCourse(
 	ctx context.Context,
 	courseID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -372,7 +377,7 @@ func (r *LessonRepo) GetByCourse(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByCourse(db, courseID, po)
+	lessons, err := data.GetLessonByCourse(db, courseID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +398,7 @@ func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
 	studyID string,
 	po *data.PageOptions,
-	opts ...data.LessonFilterOption,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -402,7 +407,7 @@ func (r *LessonRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByStudy(db, studyID, po, opts...)
+	lessons, err := data.GetLessonByStudy(db, studyID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -423,6 +428,7 @@ func (r *LessonRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -431,7 +437,7 @@ func (r *LessonRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.GetLessonByUser(db, userID, po)
+	lessons, err := data.GetLessonByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +519,6 @@ func (r *LessonRepo) Delete(
 
 func (r *LessonRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 	po *data.PageOptions,
 ) ([]*LessonPermit, error) {
@@ -524,7 +529,7 @@ func (r *LessonRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.SearchLesson(db, within, query, po)
+	lessons, err := data.SearchLesson(db, query, po)
 	if err != nil {
 		return nil, err
 	}

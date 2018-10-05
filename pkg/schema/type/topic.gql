@@ -35,6 +35,9 @@ type Topic implements
     # Ordering options for topicables returned from the connection.
     orderBy: TopicableOrder
 
+    # Query to search topicables by.
+    search: String
+
     # The types of topicable topicables to retrieve.
     type: TopicableType!
   ): TopicableConnection!

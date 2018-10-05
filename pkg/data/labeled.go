@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -11,10 +10,11 @@ import (
 )
 
 type Labeled struct {
-	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	ID          pgtype.Int4        `db:"id" permit:"read"`
-	LabelID     mytype.OID         `db:"label_id" permit:"read"`
-	LabelableID mytype.OID         `db:"labelable_id" permit:"read"`
+	CreatedAt   pgtype.Timestamptz   `db:"created_at" permit:"read"`
+	ID          pgtype.Int4          `db:"id" permit:"read"`
+	LabelID     mytype.OID           `db:"label_id" permit:"read"`
+	LabelableID mytype.OID           `db:"labelable_id" permit:"read"`
+	Type        mytype.LabelableType `db:"type" permit:"read"`
 }
 
 const countLabeledByLabelSQL = `
@@ -77,6 +77,7 @@ func getLabeled(
 		&row.ID,
 		&row.LabelID,
 		&row.LabelableID,
+		&row.Type,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -109,6 +110,7 @@ func getManyLabeled(
 			&row.ID,
 			&row.LabelID,
 			&row.LabelableID,
+			&row.Type,
 		)
 		rows = append(rows, &row)
 	}
@@ -128,7 +130,8 @@ const getLabeledSQL = `
 		created_at,
 		id,
 		label_id,
-		labelable_id
+		labelable_id,
+		type
 	FROM labeled
 	WHERE id = $1
 `
@@ -146,7 +149,8 @@ const getLabeledByLabelableAndLabelSQL = `
 		created_at,
 		id,
 		label_id,
-		labelable_id
+		labelable_id,
+		type
 	FROM labeled
 	WHERE labelable_id = $1 AND label_id = $2
 `
@@ -180,6 +184,7 @@ func GetLabeledByLabel(
 		"id",
 		"label_id",
 		"labelable_id",
+		"type",
 	}
 	from := "labeled"
 	sql := SQL(selects, from, where, &args, po)
@@ -203,6 +208,7 @@ func GetLabeledByLabelable(
 		"id",
 		"label_id",
 		"labelable_id",
+		"type",
 	}
 	from := "labeled"
 	sql := SQL(selects, from, where, &args, po)
@@ -233,6 +239,8 @@ func CreateLabeled(
 		columns = append(columns, "labelable_id")
 		values = append(values, args.Append(&row.LabelableID))
 	}
+	columns = append(columns, "type")
+	values = append(values, args.Append(row.LabelableID.Type))
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
@@ -243,22 +251,8 @@ func CreateLabeled(
 		defer RollbackTransaction(tx)
 	}
 
-	var labelable string
-	switch row.LabelableID.Type {
-	case "Lesson":
-		labelable = "lesson"
-	case "LessonComment":
-		labelable = "lesson_comment"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for labeled labelable id", row.LabelableID.Type)
-	}
-
-	table := strings.Join(
-		[]string{labelable, "labeled"},
-		"_",
-	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO labeled(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -298,101 +292,6 @@ func CreateLabeled(
 	}
 
 	return labeled, nil
-}
-
-func BatchCreateLabeled(
-	db Queryer,
-	src *Labeled,
-	labelableIDs []*mytype.OID,
-) error {
-	mylog.Log.Info("BatchCreateLabeled()")
-
-	n := len(labelableIDs)
-	lessonLabeleds := make([][]interface{}, 0, n)
-	lessonCommentLabeleds := make([][]interface{}, 0, n)
-	for _, labelableID := range labelableIDs {
-		id, _ := mytype.NewOID("Labeled")
-		src.ID.Set(id)
-		labeled := []interface{}{
-			src.LabelID.String,
-			labelableID.String,
-			src.ID.Int,
-		}
-		switch labelableID.Type {
-		case "Lesson":
-			lessonLabeleds = append(lessonLabeleds, labeled)
-		case "LessonComment":
-			lessonCommentLabeleds = append(lessonCommentLabeleds, labeled)
-		default:
-			return fmt.Errorf("invalid type '%s' for labeled labelable id", labelableID.Type)
-		}
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	var lessonLabeledCopyCount int
-	if len(lessonLabeleds) > 0 {
-		lessonLabeledCopyCount, err = tx.CopyFrom(
-			pgx.Identifier{"lesson_labeled"},
-			[]string{"label_id", "labelable_id", "labeled_id"},
-			pgx.CopyFromRows(lessonLabeleds),
-		)
-		if err != nil {
-			if pgErr, ok := err.(pgx.PgError); ok {
-				switch PSQLError(pgErr.Code) {
-				default:
-					return err
-				case UniqueViolation:
-					mylog.Log.Warn("labeleds already created")
-					return nil
-				}
-			}
-			return err
-		}
-	}
-
-	var lessonCommentLabeledCopyCount int
-	if len(lessonCommentLabeleds) > 0 {
-		lessonCommentLabeledCopyCount, err = tx.CopyFrom(
-			pgx.Identifier{"lesson_comment_labeled"},
-			[]string{"label_id", "labelable_id", "labeled_id"},
-			pgx.CopyFromRows(lessonCommentLabeleds),
-		)
-		if err != nil {
-			if pgErr, ok := err.(pgx.PgError); ok {
-				switch PSQLError(pgErr.Code) {
-				default:
-					return err
-				case UniqueViolation:
-					mylog.Log.Warn("labeleds already created")
-					return nil
-				}
-			}
-			return err
-		}
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return err
-		}
-	}
-
-	mylog.Log.WithField(
-		"n",
-		lessonLabeledCopyCount+lessonCommentLabeledCopyCount,
-	).Info("created labeleds")
-
-	return nil
 }
 
 const deleteLabeledSQL = `

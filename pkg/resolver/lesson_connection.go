@@ -1,15 +1,17 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonConnectionResolver(
+	repos *repo.Repos,
 	lessons []*repo.LessonPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
-	repos *repo.Repos,
 ) (*lessonConnectionResolver, error) {
 	edges := make([]*lessonEdgeResolver, len(lessons))
 	for i := range edges {
@@ -68,6 +70,6 @@ func (r *lessonConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *lessonConnectionResolver) TotalCount() int32 {
+func (r *lessonConnectionResolver) TotalCount(ctx context.Context) int32 {
 	return r.totalCount
 }

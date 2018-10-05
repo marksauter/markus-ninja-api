@@ -88,6 +88,7 @@ func (r *userResolver) Appled(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*appleableConnectionResolver, error) {
@@ -127,7 +128,10 @@ func (r *userResolver) Appled(
 			permits = append(permits, s)
 		}
 	case AppleableTypeStudy:
-		studies, err := r.Repos.Study().GetByApplee(ctx, id.String, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: args.Search,
+		}
+		studies, err := r.Repos.Study().GetByApplee(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -313,6 +317,7 @@ func (r *userResolver) Enrolled(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*enrollableConnectionResolver, error) {
@@ -356,7 +361,10 @@ func (r *userResolver) Enrolled(
 
 	switch enrollableType {
 	case EnrollableTypeLesson:
-		lessons, err := r.Repos.Lesson().GetByEnrollee(ctx, id.String, pageOptions)
+		filters := &data.LessonFilterOptions{
+			Search: args.Search,
+		}
+		lessons, err := r.Repos.Lesson().GetByEnrollee(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -364,7 +372,10 @@ func (r *userResolver) Enrolled(
 			permits = append(permits, l)
 		}
 	case EnrollableTypeStudy:
-		studies, err := r.Repos.Study().GetByEnrollee(ctx, id.String, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: args.Search,
+		}
+		studies, err := r.Repos.Study().GetByEnrollee(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -577,11 +588,12 @@ func (r *userResolver) IsViewer(ctx context.Context) (bool, error) {
 func (r *userResolver) Lessons(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LessonFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -604,19 +616,28 @@ func (r *userResolver) Lessons(
 		return nil, err
 	}
 
-	lessons, err := r.Repos.Lesson().GetByUser(ctx, id.String, pageOptions)
+	lessons, err := r.Repos.Lesson().GetByUser(
+		ctx,
+		id.String,
+		pageOptions,
+		args.FilterBy,
+	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByUser(ctx, id.String)
+	count, err := r.Repos.Lesson().CountByUser(
+		ctx,
+		id.String,
+		args.FilterBy,
+	)
 	if err != nil {
 		return nil, err
 	}
 	resolver, err := NewLessonConnectionResolver(
+		r.Repos,
 		lessons,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err
@@ -714,11 +735,12 @@ func (r *userResolver) Study(
 func (r *userResolver) Studies(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.StudyFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*studyConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -741,11 +763,20 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 
-	studies, err := r.Repos.Study().GetByUser(ctx, id.String, pageOptions)
+	studies, err := r.Repos.Study().GetByUser(
+		ctx,
+		id.String,
+		pageOptions,
+		args.FilterBy,
+	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Study().CountByUser(ctx, id.String)
+	count, err := r.Repos.Study().CountByUser(
+		ctx,
+		id.String,
+		args.FilterBy,
+	)
 	if err != nil {
 		return nil, err
 	}

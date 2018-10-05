@@ -111,3 +111,13 @@ func ReplaceWithPadding(match, replace string) string {
 	}
 	return paddingLeft + replace + paddingRight
 }
+
+func RemoveEmptyStrings(strs []string) []string {
+	noEmpties := make([]string, 0, len(strs))
+	for _, s := range strs {
+		if s != "" {
+			noEmpties = append(noEmpties, s)
+		}
+	}
+	return noEmpties
+}

@@ -51,6 +51,7 @@ func (r *labelResolver) Labelables(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*labelableConnectionResolver, error) {
@@ -87,12 +88,24 @@ func (r *labelResolver) Labelables(
 
 	switch labelableType {
 	case LabelableTypeLesson:
-		studies, err := r.Repos.Lesson().GetByLabel(ctx, id.String, pageOptions)
+		filters := &data.LessonFilterOptions{
+			Search: args.Search,
+		}
+		lessons, err := r.Repos.Lesson().GetByLabel(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(studies))
-		for i, l := range studies {
+		permits = make([]repo.NodePermit, len(lessons))
+		for i, l := range lessons {
+			permits[i] = l
+		}
+	case LabelableTypeLessonComment:
+		lessonComments, err := r.Repos.LessonComment().GetByLabel(ctx, id.String, pageOptions)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(lessonComments))
+		for i, l := range lessonComments {
 			permits[i] = l
 		}
 	default:

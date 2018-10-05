@@ -14,11 +14,33 @@ type LessonComment struct {
 	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	ID          mytype.OID         `db:"id" permit:"read"`
+	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
 	LessonID    mytype.OID         `db:"lesson_id" permit:"create/read"`
 	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
 	StudyID     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	UserID      mytype.OID         `db:"user_id" permit:"create/read"`
+}
+
+const countLessonCommentByLabelSQL = `
+	SELECT COUNT(*)
+	FROM labeled
+	WHERE label_id = $1 AND type = 'LessonComment'
+`
+
+func CountLessonCommentByLabel(
+	db Queryer,
+	labelID string,
+) (int32, error) {
+	mylog.Log.WithField("label_id", labelID).Info("CountLessonCommentByLabel(label_id)")
+	var n int32
+	err := prepareQueryRow(
+		db,
+		"countLessonCommentByLabel",
+		countLessonCommentByLabelSQL,
+		labelID,
+	).Scan(&n)
+	return n, err
 }
 
 const countLessonCommentByLessonSQL = `
@@ -216,6 +238,66 @@ func BatchGetLessonComment(
 		batchGetLessonCommentByIDSQL,
 		ids,
 	)
+}
+
+func GetLessonCommentByLabel(
+	db Queryer,
+	labelID string,
+	po *PageOptions,
+) ([]*LessonComment, error) {
+	mylog.Log.WithField("label_id", labelID).Info("GetLessonCommentByLabel(label_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID)
+	}
+
+	selects := []string{
+		"body",
+		"created_at",
+		"id",
+		"labeled_at",
+		"lesson_id",
+		"published_at",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "labeled_lesson_comment"
+	sql := SQL3(selects, from, where, nil, &args, po)
+
+	psName := preparedName("getLessonCommentsByLabel", sql)
+
+	var rows []*LessonComment
+
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	for dbRows.Next() {
+		var row LessonComment
+		dbRows.Scan(
+			&row.Body,
+			&row.CreatedAt,
+			&row.ID,
+			&row.LabeledAt,
+			&row.LessonID,
+			&row.PublishedAt,
+			&row.StudyID,
+			&row.UpdatedAt,
+			&row.UserID,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error("failed to get users")
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info("")
+
+	return rows, nil
 }
 
 // GetLessonCommentByLesson - get lesson comments by lesson id
