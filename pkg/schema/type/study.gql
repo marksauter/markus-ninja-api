@@ -66,6 +66,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for courses returned from the connection.
+    filterBy: CourseFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -146,12 +149,11 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for lessons returned from the connection.
+    filterBy: LessonFilters
+
     # Returns the first n elements form the list.
     first: Int
-
-    # If non-null, filters lessons according to whether they are part of a
-    # course.
-    isCourseLesson: Boolean
 
     # Returns the last n elements form the list.
     last: Int

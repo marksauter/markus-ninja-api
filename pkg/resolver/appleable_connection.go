@@ -84,5 +84,5 @@ func (r *appleableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *appleableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
-	return r.repos.Study().CountByApplee(ctx, r.userID.String)
+	return r.repos.Study().CountByApplee(ctx, r.userID.String, nil)
 }

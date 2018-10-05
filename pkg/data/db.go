@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/xid"
 )
 
@@ -216,8 +217,8 @@ func (p *PageOptions) Limit() int32 {
 	return limit
 }
 
-func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
-	var joins []string
+func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) string {
+	joins := make([]string, 0, 2)
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
 			"JOIN %[1]s AS %[2]s2 ON %[2]s2.id = "+args.Append(p.After.Value()),
@@ -232,11 +233,11 @@ func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
 			as,
 		))
 	}
-	return joins
+	return strings.Join(joins, " ")
 }
 
-func (p *PageOptions) whereAnds(from string) []string {
-	var whereAnds []string
+func (p *PageOptions) where(from string) string {
+	where := make([]string, 0, 2)
 	field := p.Order.Field()
 	if field == "best_match" {
 		field = "created_at"
@@ -249,8 +250,8 @@ func (p *PageOptions) whereAnds(from string) []string {
 		case DESC:
 			relation = "<="
 		}
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %[3]s %[1]s2.%[2]s",
+		where = append(where, fmt.Sprintf(
+			"%[1]s.%[2]s %[3]s %[1]s2.%[2]s",
 			from,
 			field,
 			relation,
@@ -264,14 +265,19 @@ func (p *PageOptions) whereAnds(from string) []string {
 		case DESC:
 			relation = ">="
 		}
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %[3]s %[1]s3.%[2]s",
+		where = append(where, fmt.Sprintf(
+			"%[1]s.%[2]s %[3]s %[1]s3.%[2]s",
 			from,
 			field,
 			relation,
 		))
 	}
-	return whereAnds
+
+	if len(where) == 0 {
+		return ""
+	}
+
+	return "(" + strings.Join(where, " AND ") + ")"
 }
 
 func (p *PageOptions) orderBy(from string) string {
@@ -284,6 +290,127 @@ func (p *PageOptions) orderBy(from string) string {
 
 type WhereFrom = func(string) string
 
+func SQL3(
+	selects []string,
+	from string,
+	where WhereFrom,
+	filters FilterOptions,
+	args *pgx.QueryArgs,
+	po *PageOptions,
+) string {
+	fromAlias := xid.New().String()
+	selectSQL := make([]string, len(selects))
+	for i, s := range selects {
+		selectSQL[i] = fromAlias + "." + s
+	}
+	fromSQL := []string{from + " AS " + fromAlias}
+	joinSQL := []string{}
+	whereSQL := []string{where(fromAlias)}
+
+	var limit, orderBy string
+
+	if po != nil {
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = po.orderBy(fromAlias)
+	}
+
+	if filters != nil {
+		filterSQL := filters.SQL(fromAlias, args)
+		if filterSQL != nil {
+			fromSQL = append(fromSQL, filterSQL.From)
+			whereSQL = append(whereSQL, filterSQL.Where)
+		}
+	}
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
+
+	sql := `
+		SELECT 
+		` + strings.Join(selectSQL, ",") + `
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		` + strings.Join(joinSQL, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
+		` + orderBy + `
+		` + limit
+
+	return ReorderQuery(po, sql)
+}
+
+func CountSQL(
+	from string,
+	where WhereFrom,
+	filters FilterOptions,
+	args *pgx.QueryArgs,
+) string {
+	fromAlias := xid.New().String()
+	fromSQL := []string{from + " AS " + fromAlias}
+	whereSQL := []string{where(fromAlias)}
+
+	if filters != nil {
+		filterSQL := filters.SQL(fromAlias, args)
+		if filterSQL != nil {
+			fromSQL = append(fromSQL, filterSQL.From)
+			whereSQL = append(whereSQL, filterSQL.Where)
+		}
+	}
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
+
+	return `
+		SELECT count(` + fromAlias + `)
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ")
+}
+
+func SearchSQL2(
+	selects []string,
+	from string,
+	query string,
+	args *pgx.QueryArgs,
+	po *PageOptions,
+) string {
+	fromAlias := xid.New().String()
+	selectSQL := make([]string, len(selects))
+	for i, s := range selects {
+		selectSQL[i] = fromAlias + "." + s
+	}
+	fromSQL := []string{
+		from + " AS " + fromAlias,
+		"to_tsquery('simple', " + args.Append(query) + ") AS document_query",
+	}
+	joinSQL := []string{}
+	whereSQL := []string{
+		"CASE " + args.Append(query) + " WHEN '*' THEN TRUE ELSE " + fromAlias + ".document @@ document_query END",
+	}
+
+	var limit, orderBy string
+
+	if po != nil {
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = po.orderBy(fromAlias)
+	}
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
+
+	sql := `
+		SELECT 
+		` + strings.Join(selectSQL, ",") + `
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		` + strings.Join(joinSQL, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
+		` + orderBy + `
+		` + limit
+
+	return ReorderQuery(po, sql)
+}
+
 func SQL2(
 	selects []string,
 	from string,
@@ -292,33 +419,36 @@ func SQL2(
 	po *PageOptions,
 ) string {
 	fromAlias := xid.New().String()
-	var joins, whereAnds []string
-	var limit, orderBy string
-	if po != nil {
-		joins = po.joins(from, fromAlias, args)
-		whereAnds = po.whereAnds(fromAlias)
-		limit = "LIMIT " + args.Append(po.Limit())
-		orderBy = po.orderBy(fromAlias)
-	}
-	selectsCopy := make([]string, len(selects))
+	selectSQL := make([]string, len(selects))
 	for i, s := range selects {
-		selectsCopy[i] = fromAlias + "." + s
+		selectSQL[i] = fromAlias + "." + s
 	}
-	whereSQL := make([]string, 0, len(where))
+	joinSQL := []string{}
+	whereSQL := []string{}
+
 	for _, w := range where {
 		and := w(fromAlias)
 		if and != "" {
 			whereSQL = append(whereSQL, and)
 		}
 	}
+	var limit, orderBy string
+
+	if po != nil {
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = po.orderBy(fromAlias)
+	}
+
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
 
 	sql := `
 		SELECT 
-		` + strings.Join(selectsCopy, ",") + `
+		` + strings.Join(selectSQL, ",") + `
 		FROM ` + from + ` AS ` + fromAlias + `
-		` + strings.Join(joins, " ") + `
+		` + strings.Join(joinSQL, " ") + `
 		WHERE ` + strings.Join(whereSQL, " AND ") + `
-		` + strings.Join(whereAnds, " ") + `
 		` + orderBy + `
 		` + limit
 
@@ -333,30 +463,31 @@ func SQL(
 	po *PageOptions,
 ) string {
 	fromAlias := xid.New().String()
-	var joins, whereAnds []string
+	selectSQL := make([]string, len(selects))
+	for i, s := range selects {
+		selectSQL[i] = fromAlias + "." + s
+	}
+	joinSQL := []string{}
+	whereSQL := make([]string, len(where))
+	for i, w := range where {
+		whereSQL[i] = fromAlias + "." + w
+	}
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, fromAlias, args)
-		whereAnds = po.whereAnds(fromAlias)
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
 		limit = "LIMIT " + args.Append(po.Limit())
 		orderBy = po.orderBy(fromAlias)
 	}
-	selectsCopy := make([]string, len(selects))
-	for i, s := range selects {
-		selectsCopy[i] = fromAlias + "." + s
-	}
-	whereCopy := make([]string, len(where))
-	for i, w := range where {
-		whereCopy[i] = fromAlias + "." + w
-	}
+
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
 
 	sql := `
 		SELECT 
-		` + strings.Join(selectsCopy, ",") + `
+		` + strings.Join(selectSQL, ",") + `
 		FROM ` + from + ` AS ` + fromAlias + `
-		` + strings.Join(joins, " ") + `
-		WHERE ` + strings.Join(whereCopy, " AND ") + `
-		` + strings.Join(whereAnds, " ") + `
+		` + strings.Join(joinSQL, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
 		` + orderBy + `
 		` + limit
 
@@ -404,11 +535,12 @@ func SearchSQL(
 ) string {
 	fromAlias := xid.New().String()
 	queryAlias := xid.New().String()
-	var joins, whereAnds []string
+	joinSQL := []string{}
+	whereSQL := []string{}
 	var limit, orderBy string
 	if po != nil {
-		joins = po.joins(from, fromAlias, args)
-		whereAnds = po.whereAnds(fromAlias)
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
 		limit = "LIMIT " + args.Append(po.Limit())
 		if po.Order.Field() == "best_match" && query != "*" {
 			orderBy = fmt.Sprintf("ORDER BY ts_rank(%s.%s, %s)", fromAlias, vector, queryAlias)
@@ -418,12 +550,12 @@ func SearchSQL(
 	}
 	if within != nil {
 		andIn := fmt.Sprintf(
-			"AND %s.%s = %s",
+			"%s.%s = %s",
 			fromAlias,
 			within.DBVarName(),
 			args.Append(within),
 		)
-		whereAnds = append(whereAnds, andIn)
+		whereSQL = append(whereSQL, andIn)
 	}
 
 	for i, s := range selects {
@@ -435,10 +567,10 @@ func SearchSQL(
 			` + strings.Join(selects, ",\n\t\t\t") + `
 		FROM ` + from + ` AS ` + fromAlias + `,
 			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
-		` + strings.Join(joins, " ") + `
+		` + strings.Join(joinSQL, " ") + `
 		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
 			ELSE ` + fromAlias + `.` + vector + ` @@ ` + queryAlias + ` END
-		` + strings.Join(whereAnds, " ") + `
+		` + strings.Join(whereSQL, " AND ") + `
 		` + orderBy + `
 		` + limit
 
@@ -460,6 +592,15 @@ func ReorderQuery(po *PageOptions, query string) string {
 		)
 	}
 	return query
+}
+
+type SQLParts struct {
+	From  string
+	Where string
+}
+
+type FilterOptions interface {
+	SQL(from string, args *pgx.QueryArgs) *SQLParts
 }
 
 type FilterType int

@@ -175,11 +175,12 @@ func (r *studyResolver) Course(
 func (r *studyResolver) Courses(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.CourseFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*courseConnectionResolver, error) {
 	studyID, err := r.Study.ID()
@@ -206,6 +207,7 @@ func (r *studyResolver) Courses(
 		ctx,
 		studyID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -213,6 +215,7 @@ func (r *studyResolver) Courses(
 	count, err := r.Repos.Course().CountByStudy(
 		ctx,
 		studyID.String,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -429,12 +432,12 @@ func (r *studyResolver) Lesson(
 func (r *studyResolver) Lessons(
 	ctx context.Context,
 	args struct {
-		After          *string
-		Before         *string
-		First          *int32
-		IsCourseLesson *bool
-		Last           *int32
-		OrderBy        *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LessonFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	studyID, err := r.Study.ID()
@@ -457,20 +460,11 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 
-	filterOptions := []data.LessonFilterOption{}
-	if args.IsCourseLesson != nil {
-		if *args.IsCourseLesson {
-			filterOptions = append(filterOptions, data.IsCourseLesson)
-		} else {
-			filterOptions = append(filterOptions, data.NotCourseLesson)
-		}
-	}
-
 	lessons, err := r.Repos.Lesson().GetByStudy(
 		ctx,
 		studyID.String,
 		pageOptions,
-		filterOptions...,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -478,15 +472,16 @@ func (r *studyResolver) Lessons(
 	count, err := r.Repos.Lesson().CountByStudy(
 		ctx,
 		studyID.String,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
+		r.Repos,
 		lessons,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err
@@ -556,6 +551,7 @@ func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
 	return r.Repos.Lesson().CountByStudy(
 		ctx,
 		studyID.String,
+		nil,
 	)
 }
 

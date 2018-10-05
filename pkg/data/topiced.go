@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -11,10 +10,11 @@ import (
 )
 
 type Topiced struct {
-	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	ID          pgtype.Int4        `db:"id" permit:"read"`
-	TopicID     mytype.OID         `db:"topic_id" permit:"read"`
-	TopicableID mytype.OID         `db:"topicable_id" permit:"read"`
+	CreatedAt   pgtype.Timestamptz   `db:"created_at" permit:"read"`
+	ID          pgtype.Int4          `db:"id" permit:"read"`
+	TopicID     mytype.OID           `db:"topic_id" permit:"read"`
+	TopicableID mytype.OID           `db:"topicable_id" permit:"read"`
+	Type        mytype.TopicableType `db:"type" permit:"read"`
 }
 
 const countTopicedByTopicSQL = `
@@ -77,6 +77,7 @@ func getTopiced(
 		&row.ID,
 		&row.TopicID,
 		&row.TopicableID,
+		&row.Type,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -109,6 +110,7 @@ func getManyTopiced(
 			&row.ID,
 			&row.TopicID,
 			&row.TopicableID,
+			&row.Type,
 		)
 		rows = append(rows, &row)
 	}
@@ -128,7 +130,8 @@ const getTopicedSQL = `
 		created_at,
 		id,
 		topic_id,
-		topicable_id
+		topicable_id,
+		type
 	FROM topiced
 	WHERE id = $1
 `
@@ -146,7 +149,8 @@ const getTopicedByTopicableAndTopicSQL = `
 		created_at,
 		id,
 		topic_id,
-		topicable_id
+		topicable_id,
+		type
 	FROM topiced
 	WHERE topicable_id = $1 AND topic_id = $2
 `
@@ -180,6 +184,7 @@ func GetTopicedByTopic(
 		"id",
 		"topic_id",
 		"topicable_id",
+		"type",
 	}
 	from := "topiced"
 	sql := SQL(selects, from, where, &args, po)
@@ -203,6 +208,7 @@ func GetTopicedByTopicable(
 		"id",
 		"topic_id",
 		"topicable_id",
+		"type",
 	}
 	from := "topiced"
 	sql := SQL(selects, from, where, &args, po)
@@ -231,6 +237,8 @@ func CreateTopiced(
 		columns = append(columns, "topicable_id")
 		values = append(values, args.Append(&row.TopicableID))
 	}
+	columns = append(columns, "type")
+	values = append(values, args.Append(row.TopicableID.Type))
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
@@ -241,24 +249,9 @@ func CreateTopiced(
 		defer RollbackTransaction(tx)
 	}
 
-	var topicable string
-	switch row.TopicableID.Type {
-	case "Course":
-		topicable = "course"
-	case "Study":
-		topicable = "study"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for topiced topicable id", row.TopicableID.Type)
-	}
-
-	table := strings.Join(
-		[]string{topicable, "topiced"},
-		"_",
-	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO topiced(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
-		RETURNING topiced_id
 	`
 
 	psName := preparedName("createTopiced", sql)

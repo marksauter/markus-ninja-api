@@ -226,6 +226,35 @@ func (r *LessonCommentRepo) BatchGet(
 	return lessonCommentPermits, nil
 }
 
+func (r *LessonCommentRepo) GetByLabel(
+	ctx context.Context,
+	labelID string,
+	po *data.PageOptions,
+) ([]*LessonCommentPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComments, err := data.GetLessonCommentByLabel(db, labelID, po)
+	if err != nil {
+		return nil, err
+	}
+	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
+	if len(lessonComments) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
+		if err != nil {
+			return nil, err
+		}
+		for i, l := range lessonComments {
+			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
+		}
+	}
+	return lessonCommentPermits, nil
+}
+
 func (r *LessonCommentRepo) GetByLesson(
 	ctx context.Context,
 	lessonID string,

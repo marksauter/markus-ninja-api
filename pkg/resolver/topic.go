@@ -55,6 +55,7 @@ func (r *topicResolver) Topicables(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*topicableConnectionResolver, error) {
@@ -100,7 +101,10 @@ func (r *topicResolver) Topicables(
 			permits[i] = l
 		}
 	case TopicableTypeStudy:
-		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: args.Search,
+		}
+		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}

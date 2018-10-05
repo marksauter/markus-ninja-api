@@ -52,7 +52,7 @@ type searchableConnectionResolver struct {
 }
 
 func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
-	return r.repos.Course().CountBySearch(ctx, r.within, r.query)
+	return r.repos.Course().CountBySearch(ctx, r.query)
 }
 
 func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
@@ -68,7 +68,7 @@ func (r *searchableConnectionResolver) LabelCount(ctx context.Context) (int32, e
 }
 
 func (r *searchableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
-	return r.repos.Lesson().CountBySearch(ctx, r.within, r.query)
+	return r.repos.Lesson().CountBySearch(ctx, r.query)
 }
 
 func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
@@ -96,7 +96,7 @@ func (r *searchableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *searchableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
-	return r.repos.Study().CountBySearch(ctx, r.within, r.query)
+	return r.repos.Study().CountBySearch(ctx, r.query)
 }
 
 func (r *searchableConnectionResolver) TopicCount(ctx context.Context) (int32, error) {

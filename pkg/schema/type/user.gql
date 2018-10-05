@@ -43,6 +43,9 @@ type User implements
     # Ordering options for studies returned from the connection.
     orderBy: AppleableOrder
 
+    # Query to search appleds by.
+    search: String
+
     # The types of appleable items to retrieve.
     type: AppleableType!
   ): AppleableConnection!
@@ -115,6 +118,9 @@ type User implements
     # Ordering options for enrollables returned from the connection.
     orderBy: EnrollableOrder
 
+    # Query to search enrolleds by.
+    search: String
+
     # The types of enrollables to retrieve
     type: EnrollableType!
   ): EnrollableConnection!
@@ -161,6 +167,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for lessons returned from the connection.
+    filterBy: LessonFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -233,6 +242,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for studies returned from the connection.
+    filterBy: StudyFilters
 
     # Returns the first n elements form the list.
     first: Int

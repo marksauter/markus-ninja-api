@@ -143,24 +143,6 @@ func (r *LabeledRepo) Connect(
 	return &LabeledPermit{fieldPermFn, labeled}, nil
 }
 
-func (r *LabeledRepo) BatchConnect(
-	ctx context.Context,
-	labeled *data.Labeled,
-	labelableIDs []*mytype.OID,
-) error {
-	if err := r.CheckConnection(); err != nil {
-		return err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, labeled); err != nil {
-		return err
-	}
-	return data.BatchCreateLabeled(db, labeled, labelableIDs)
-}
-
 func (r *LabeledRepo) Get(
 	ctx context.Context,
 	l *data.Labeled,

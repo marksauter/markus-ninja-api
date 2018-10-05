@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -26,166 +25,174 @@ type Study struct {
 	UserID      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-const countStudyByAppleeSQL = `
-	SELECT COUNT(*)
-	FROM study_appled
-	WHERE user_id = $1
-`
+func studyDelimeter(r rune) bool {
+	return r == '-' || r == '_'
+}
+
+type StudyFilterOptions struct {
+	Topics *[]string
+	Search *string
+}
+
+func (src *StudyFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 2)
+	if src.Topics != nil && len(*src.Topics) > 0 {
+		query := ToTsQuery(strings.Join(*src.Topics, " "))
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS topics_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".topics @@ topics_query END",
+		)
+	}
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountStudyByApplee(
 	db Queryer,
 	appleeID string,
-) (n int32, err error) {
+	filters *StudyFilterOptions,
+) (int32, error) {
 	mylog.Log.WithField("applee_id", appleeID).Info("CountStudyByApplee(applee_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByApplee",
-		countStudyByAppleeSQL,
-		appleeID,
-	).Scan(&n)
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
+	from := "appled_study"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByApplee", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 const countStudyByEnrolleeSQL = `
 	SELECT COUNT(*)
 	FROM enrolled
-	WHERE user_id = $1 AND status = 'ENROLLED'
+	WHERE user_id = $1 AND type = 'Study' AND status = 'ENROLLED'
 `
 
 func CountStudyByEnrollee(
 	db Queryer,
 	enrolleeID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountStudyByEnrollee(enrollee_id)")
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countStudyByEnrollee",
 		countStudyByEnrolleeSQL,
 		enrolleeID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
 
 const countStudyByTopicSQL = `
 	SELECT COUNT(*)
-	FROM topiced_study
+	FROM study_topiced
 	WHERE topic_id = $1
 `
 
 func CountStudyByTopic(
 	db Queryer,
 	topicID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField(
 		"topic_id", topicID,
 	).Info("CountStudyByTopic(topic_id)")
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countStudyByTopic",
 		countStudyByTopicSQL,
 		topicID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
-
-const countStudyByUserSQL = `
-	SELECT COUNT(*)
-	FROM study
-	WHERE user_id = $1
-`
 
 func CountStudyByUser(
 	db Queryer,
 	userID string,
-) (n int32, err error) {
-	mylog.Log.WithField("user_id", userID).Info("CountStudyByUser(user_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByUser",
-		countStudyByUserSQL,
-		userID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
-}
-
-func CountStudyBySearch(
-	db Queryer,
-	within *mytype.OID,
-	query string,
+	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
-	var n int32
-	var args pgx.QueryArgs
-	from := "study_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
-			return n, fmt.Errorf(
-				"cannot search for studies within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(db, in.String)
-			if err != nil {
-				return n, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					nil,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
+	mylog.Log.WithField("user_id", userID).Info("CountStudyByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
+	from := "study_search_index"
 
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByUser", sql)
 
-	psName := preparedName("countStudyBySearch", sql)
-
+	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
+const countStudyBySearchSQL = `
+	SELECT COUNT(*)
+	FROM study_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
+`
+
+func CountStudyBySearch(
+	db Queryer,
+	query string,
+) (int32, error) {
+	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
+	var n int32
+	err := prepareQueryRow(
+		db,
+		"countStudyBySearch",
+		countStudyBySearchSQL,
+		ToPrefixTsQuery(query),
+	).Scan(&n)
+	return n, err
+}
+
+const countStudyByTopicSearchSQL = `
+	SELECT COUNT(*)
+	FROM study_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE topics @@ query END)
+`
+
 func CountStudyByTopicSearch(
 	db Queryer,
 	query string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	if query == "" {
-		query = "*"
-	}
-	sql := `
-		SELECT COUNT(*)
-		FROM study_search_index
-		WHERE topics @@ to_tsquery('simple',` + query + `)
-	`
-	psName := preparedName("countStudyBySearch", sql)
-
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	return
+	var n int32
+	err := prepareQueryRow(
+		db,
+		"countStudyByTopicSearch",
+		countStudyByTopicSearchSQL,
+		ToTsQuery(query),
+	).Scan(&n)
+	return n, err
 }
 
 func getStudy(
@@ -277,12 +284,15 @@ func GetStudy(
 
 func GetStudyByApplee(
 	db Queryer,
-	userID string,
+	appleeID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetStudyByApplee(user_id)")
+	mylog.Log.WithField("applee_id", appleeID).Info("GetStudyByApplee(applee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`applee_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -296,7 +306,7 @@ func GetStudyByApplee(
 		"user_id",
 	}
 	from := "appled_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByAppled", sql)
 
@@ -335,12 +345,15 @@ func GetStudyByApplee(
 
 func GetStudyByEnrollee(
 	db Queryer,
-	userID string,
+	enrolleeID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetStudyByEnrollee(user_id)")
+	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetStudyByEnrollee(enrollee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -354,7 +367,7 @@ func GetStudyByEnrollee(
 		"user_id",
 	}
 	from := "enrolled_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByEnrollee", sql)
 
@@ -395,10 +408,13 @@ func GetStudyByTopic(
 	db Queryer,
 	topicID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetStudyByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicID)}
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -412,7 +428,7 @@ func GetStudyByTopic(
 		"user_id",
 	}
 	from := "topiced_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByTopic", sql)
 
@@ -453,10 +469,13 @@ func GetStudyByUser(
 	db Queryer,
 	userID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetStudyByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -468,8 +487,8 @@ func GetStudyByUser(
 		"updated_at",
 		"user_id",
 	}
-	from := "study"
-	sql := SQL(selects, from, where, &args, po)
+	from := "study_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByUserID", sql)
 
@@ -647,7 +666,6 @@ func DeleteStudy(
 
 func SearchStudy(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 	po *PageOptions,
 ) ([]*Study, error) {
@@ -674,37 +692,7 @@ func SearchStudy(
 		defer RollbackTransaction(tx)
 	}
 
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
-			return nil, fmt.Errorf(
-				"cannot search for studies within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(tx, in.String)
-			if err != nil {
-				return nil, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					po,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
-	}
-
-	sql := SearchSQL(selects, from, in, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchStudyIndex", sql)
 
@@ -799,8 +787,4 @@ func UpdateStudy(
 	}
 
 	return study, nil
-}
-
-func studyDelimeter(r rune) bool {
-	return r == '-' || r == '_'
 }

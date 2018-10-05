@@ -228,11 +228,12 @@ func (r *courseResolver) Lesson(
 func (r *courseResolver) Lessons(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LessonFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
 	courseID, err := r.Course.ID()
@@ -259,6 +260,7 @@ func (r *courseResolver) Lessons(
 		ctx,
 		courseID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -266,15 +268,16 @@ func (r *courseResolver) Lessons(
 	count, err := r.Repos.Lesson().CountByCourse(
 		ctx,
 		courseID.String,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
+		r.Repos,
 		lessons,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err
@@ -291,6 +294,7 @@ func (r *courseResolver) LessonCount(ctx context.Context) (int32, error) {
 	return r.Repos.Lesson().CountByCourse(
 		ctx,
 		courseID.String,
+		nil,
 	)
 }
 

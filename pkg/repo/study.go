@@ -140,13 +140,14 @@ func (r *StudyRepo) CheckConnection() error {
 func (r *StudyRepo) CountByApplee(
 	ctx context.Context,
 	appleeID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByApplee(db, appleeID)
+	return data.CountStudyByApplee(db, appleeID, filters)
 }
 
 func (r *StudyRepo) CountByEnrollee(
@@ -175,7 +176,6 @@ func (r *StudyRepo) CountByTopic(
 
 func (r *StudyRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	var n int32
@@ -183,7 +183,7 @@ func (r *StudyRepo) CountBySearch(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyBySearch(db, within, query)
+	return data.CountStudyBySearch(db, query)
 }
 
 func (r *StudyRepo) CountByTopicSearch(
@@ -201,13 +201,14 @@ func (r *StudyRepo) CountByTopicSearch(
 func (r *StudyRepo) CountByUser(
 	ctx context.Context,
 	userID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByUser(db, userID)
+	return data.CountStudyByUser(db, userID, filters)
 }
 
 func (r *StudyRepo) Create(
@@ -262,6 +263,7 @@ func (r *StudyRepo) GetByApplee(
 	ctx context.Context,
 	appleeID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -270,7 +272,7 @@ func (r *StudyRepo) GetByApplee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByApplee(db, appleeID, po)
+	studies, err := data.GetStudyByApplee(db, appleeID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +293,7 @@ func (r *StudyRepo) GetByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -299,7 +302,7 @@ func (r *StudyRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByEnrollee(db, enrolleeID, po)
+	studies, err := data.GetStudyByEnrollee(db, enrolleeID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -320,6 +323,7 @@ func (r *StudyRepo) GetByTopic(
 	ctx context.Context,
 	topicID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -328,7 +332,7 @@ func (r *StudyRepo) GetByTopic(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByTopic(db, topicID, po)
+	studies, err := data.GetStudyByTopic(db, topicID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -349,6 +353,7 @@ func (r *StudyRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -357,7 +362,7 @@ func (r *StudyRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.GetStudyByUser(db, userID, po)
+	studies, err := data.GetStudyByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +436,6 @@ func (r *StudyRepo) Delete(
 
 func (r *StudyRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 	po *data.PageOptions,
 ) ([]*StudyPermit, error) {
@@ -442,7 +446,7 @@ func (r *StudyRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.SearchStudy(db, within, query, po)
+	studies, err := data.SearchStudy(db, query, po)
 	if err != nil {
 		return nil, err
 	}
