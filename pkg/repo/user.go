@@ -103,6 +103,13 @@ func (r *UserPermit) Roles() []string {
 	return roles
 }
 
+func (r *UserPermit) Verified() (bool, error) {
+	if ok := r.checkFieldPermission("verified"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.user.Verified.Bool, nil
+}
+
 func NewUserRepo() *UserRepo {
 	return &UserRepo{
 		load: loader.NewUserLoader(),
@@ -139,37 +146,40 @@ func (r *UserRepo) CheckConnection() error {
 func (r *UserRepo) CountByAppleable(
 	ctx context.Context,
 	studyID string,
+	filters *data.UserFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserByAppleable(db, studyID)
+	return data.CountUserByAppleable(db, studyID, filters)
 }
 
 func (r *UserRepo) CountByEnrollable(
 	ctx context.Context,
 	enrollableID string,
+	filters *data.UserFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserByEnrollable(db, enrollableID)
+	return data.CountUserByEnrollable(db, enrollableID, filters)
 }
 
 func (r *UserRepo) CountByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
+	filters *data.UserFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserByEnrollee(db, enrolleeID)
+	return data.CountUserByEnrollee(db, enrolleeID, filters)
 }
 
 func (r *UserRepo) CountBySearch(
@@ -252,6 +262,7 @@ func (r *UserRepo) GetByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
 	po *data.PageOptions,
+	filters *data.UserFilterOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -260,7 +271,7 @@ func (r *UserRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	users, err := data.GetUserByEnrollee(db, enrolleeID, po)
+	users, err := data.GetUserByEnrollee(db, enrolleeID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +292,7 @@ func (r *UserRepo) GetByAppleable(
 	ctx context.Context,
 	appleableID string,
 	po *data.PageOptions,
+	filters *data.UserFilterOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -289,7 +301,7 @@ func (r *UserRepo) GetByAppleable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	users, err := data.GetUserByAppleable(db, appleableID, po)
+	users, err := data.GetUserByAppleable(db, appleableID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -310,6 +322,7 @@ func (r *UserRepo) GetByEnrollable(
 	ctx context.Context,
 	enrollableID string,
 	po *data.PageOptions,
+	filters *data.UserFilterOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -318,7 +331,7 @@ func (r *UserRepo) GetByEnrollable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	users, err := data.GetUserByEnrollable(db, enrollableID, po)
+	users, err := data.GetUserByEnrollable(db, enrollableID, po, filters)
 	if err != nil {
 		return nil, err
 	}

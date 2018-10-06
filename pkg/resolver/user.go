@@ -35,10 +35,11 @@ func (r *userResolver) Activity(
 		OrderBy *OrderArg
 	},
 ) (*userActivityConnectionResolver, error) {
-	filters := []data.EventFilterOption{}
+	filters := &data.EventFilterOptions{}
 	_, ok := myctx.UserFromContext(ctx)
 	if !ok {
-		filters = append(filters, data.IsPublic)
+		isPublic := true
+		filters.IsPublic = &isPublic
 	}
 
 	userID, err := r.User.ID()
@@ -61,12 +62,16 @@ func (r *userResolver) Activity(
 		return nil, err
 	}
 
-	filters = append(filters, data.IsCourseEvent, data.IsStudyEvent)
+	eventTypes := []string{
+		mytype.CourseEvent.String(),
+		mytype.StudyEvent.String(),
+	}
+	filters.Types = &eventTypes
 	events, err := r.Repos.Event().GetByUser(
 		ctx,
 		userID.String,
 		pageOptions,
-		filters...,
+		filters,
 	)
 	if err != nil {
 		return nil, err
@@ -77,6 +82,7 @@ func (r *userResolver) Activity(
 		events,
 		pageOptions,
 		userID,
+		filters,
 	)
 }
 
@@ -120,7 +126,10 @@ func (r *userResolver) Appled(
 	permits := make([]repo.NodePermit, 0, pageOptions.Limit())
 	switch appleableType {
 	case AppleableTypeCourse:
-		courses, err := r.Repos.Course().GetByApplee(ctx, id.String, pageOptions)
+		filters := &data.CourseFilterOptions{
+			Search: args.Search,
+		}
+		courses, err := r.Repos.Course().GetByApplee(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -147,17 +156,19 @@ func (r *userResolver) Appled(
 		permits,
 		pageOptions,
 		id,
+		args.Search,
 	)
 }
 
 func (r *userResolver) Assets(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.UserAssetFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -180,19 +191,21 @@ func (r *userResolver) Assets(
 		return nil, err
 	}
 
-	userAssets, err := r.Repos.UserAsset().GetByUser(ctx, id, pageOptions)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.UserAsset().CountByUser(ctx, id.String)
+	userAssets, err := r.Repos.UserAsset().GetByUser(
+		ctx,
+		id,
+		pageOptions,
+		args.FilterBy,
+	)
 	if err != nil {
 		return nil, err
 	}
 	resolver, err := NewUserAssetConnectionResolver(
+		r.Repos,
 		userAssets,
 		pageOptions,
-		count,
-		r.Repos,
+		id,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -235,12 +248,11 @@ func (r *userResolver) Email(ctx context.Context) (*emailResolver, error) {
 func (r *userResolver) Emails(
 	ctx context.Context,
 	args struct {
-		After      *string
-		Before     *string
-		First      *int32
-		IsVerified *bool
-		Last       *int32
-		Type       *[]string
+		After    *string
+		Before   *string
+		FilterBy *data.EmailFilterOptions
+		First    *int32
+		Last     *int32
 	},
 ) (*emailConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -260,6 +272,15 @@ func (r *userResolver) Emails(
 		return nil, err
 	}
 
+	if args.FilterBy != nil && args.FilterBy.Types != nil {
+		for _, t := range *args.FilterBy.Types {
+			_, err := mytype.ParseEmailType(t)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -268,40 +289,16 @@ func (r *userResolver) Emails(
 	}
 	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	filterOptions := make([]data.EmailFilterOption, 0, 1)
-	if args.IsVerified != nil && *args.IsVerified {
-		filterOptions = append(filterOptions, data.IsVerifiedEmail)
-	}
-	if args.Type != nil {
-		for _, t := range *args.Type {
-			emailType, err := mytype.ParseEmailType(t)
-			if err != nil {
-				return nil, err
-			}
-			switch emailType.V {
-			case mytype.BackupEmail:
-				filterOptions = append(filterOptions, data.IsBackupEmail)
-			case mytype.ExtraEmail:
-				filterOptions = append(filterOptions, data.IsExtraEmail)
-			case mytype.PrimaryEmail:
-				filterOptions = append(filterOptions, data.IsPrimaryEmail)
-			}
-		}
-	}
-
-	emails, err := r.Repos.Email().GetByUser(ctx, id, pageOptions, filterOptions...)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.Email().CountByUser(ctx, id.String, filterOptions...)
+	emails, err := r.Repos.Email().GetByUser(ctx, id.String, pageOptions, args.FilterBy)
 	if err != nil {
 		return nil, err
 	}
 	resolver, err := NewEmailConnectionResolver(
+		r.Repos,
 		emails,
 		pageOptions,
-		count,
-		r.Repos,
+		id,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -345,18 +342,6 @@ func (r *userResolver) Enrolled(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByEnrollee(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
-	studyCount, err := r.Repos.Study().CountByEnrollee(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
-	userCount, err := r.Repos.User().CountByEnrollee(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := make([]repo.NodePermit, 0, pageOptions.Limit())
 
 	switch enrollableType {
@@ -383,7 +368,10 @@ func (r *userResolver) Enrolled(
 			permits = append(permits, s)
 		}
 	case EnrollableTypeUser:
-		users, err := r.Repos.User().GetByEnrollee(ctx, id.String, pageOptions)
+		filters := &data.UserFilterOptions{
+			Search: args.Search,
+		}
+		users, err := r.Repos.User().GetByEnrollee(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -395,9 +383,8 @@ func (r *userResolver) Enrolled(
 		r.Repos,
 		permits,
 		pageOptions,
-		lessonCount,
-		studyCount,
-		userCount,
+		id,
+		args.Search,
 	)
 }
 
@@ -407,17 +394,18 @@ func (r *userResolver) EnrolleeCount(ctx context.Context) (int32, error) {
 		var n int32
 		return n, err
 	}
-	return r.Repos.User().CountByEnrollable(ctx, userID.String)
+	return r.Repos.User().CountByEnrollable(ctx, userID.String, nil)
 }
 
 func (r *userResolver) Enrollees(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.UserFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*enrolleeConnectionResolver, error) {
 	id, err := r.User.ID()
@@ -445,19 +433,17 @@ func (r *userResolver) Enrollees(
 		ctx,
 		id.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	resolver, err := NewEnrolleeConnectionResolver(
+		r.Repos,
 		users,
 		pageOptions,
-		count,
-		r.Repos,
+		id,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -553,15 +539,7 @@ func (r *userResolver) ID() (graphql.ID, error) {
 }
 
 func (r *userResolver) IsVerified(ctx context.Context) (bool, error) {
-	userID, err := r.User.ID()
-	if err != nil {
-		return false, err
-	}
-	primaryEmail, err := r.Repos.Email().GetByUserPrimary(ctx, userID.String)
-	if err != nil {
-		return false, err
-	}
-	return primaryEmail.IsVerified()
+	return r.User.Verified()
 }
 
 func (r *userResolver) IsSiteAdmin() bool {
@@ -692,6 +670,7 @@ func (r *userResolver) ReceivedActivity(
 		ctx,
 		userID.String,
 		pageOptions,
+		nil,
 	)
 	if err != nil {
 		return nil, err

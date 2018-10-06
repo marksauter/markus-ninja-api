@@ -235,17 +235,18 @@ func (r *lessonResolver) EnrolleeCount(ctx context.Context) (int32, error) {
 		var n int32
 		return n, err
 	}
-	return r.Repos.User().CountByEnrollable(ctx, lessonID.String)
+	return r.Repos.User().CountByEnrollable(ctx, lessonID.String, nil)
 }
 
 func (r *lessonResolver) Enrollees(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.UserFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*enrolleeConnectionResolver, error) {
 	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
@@ -272,19 +273,17 @@ func (r *lessonResolver) Enrollees(
 		ctx,
 		lessonID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(ctx, lessonID.String)
-	if err != nil {
-		return nil, err
-	}
 	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
+		r.Repos,
 		users,
 		pageOptions,
-		count,
-		r.Repos,
+		lessonID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -337,11 +336,12 @@ func (r *lessonResolver) IsCourseLesson() (bool, error) {
 func (r *lessonResolver) Labels(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LabelFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
 	lessonID, err := r.Lesson.ID()
@@ -368,19 +368,20 @@ func (r *lessonResolver) Labels(
 		ctx,
 		lessonID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonID.String)
+	count, err := r.Repos.Label().CountByLabelable(ctx, lessonID.String, args.FilterBy)
 	if err != nil {
 		return nil, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
+		r.Repos,
 		labels,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err
@@ -505,12 +506,18 @@ func (r *lessonResolver) Timeline(
 		return nil, err
 	}
 
+	actionIsNot := []string{
+		mytype.CreatedAction.String(),
+		mytype.MentionedAction.String(),
+	}
+	filters := &data.EventFilterOptions{
+		ActionIsNot: &actionIsNot,
+	}
 	events, err := r.Repos.Event().GetByLesson(
 		ctx,
 		lessonID.String,
 		pageOptions,
-		data.NotLessonCreatedEvent,
-		data.NotLessonMentionedEvent,
+		filters,
 	)
 	if err != nil {
 		return nil, err
@@ -519,8 +526,7 @@ func (r *lessonResolver) Timeline(
 	count, err := r.Repos.Event().CountByLesson(
 		ctx,
 		lessonID.String,
-		data.NotLessonCreatedEvent,
-		data.NotLessonMentionedEvent,
+		filters,
 	)
 	if err != nil {
 		return nil, err

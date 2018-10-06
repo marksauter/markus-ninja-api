@@ -5,14 +5,16 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewUserAssetTimelineConnectionResolver(
+	repos *repo.Repos,
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	assetID *mytype.OID,
+	filters *data.EventFilterOptions,
 ) (*userAssetTimelineConnectionResolver, error) {
 	edges := make([]*userAssetTimelineEventEdgeResolver, len(events))
 	for i := range edges {
@@ -30,21 +32,22 @@ func NewUserAssetTimelineConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &userAssetTimelineConnectionResolver{
-		edges:      edges,
-		events:     events,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		assetID:  assetID,
+		edges:    edges,
+		events:   events,
+		pageInfo: pageInfo,
+		repos:    repos,
 	}
 	return resolver, nil
 }
 
 type userAssetTimelineConnectionResolver struct {
-	edges      []*userAssetTimelineEventEdgeResolver
-	events     []*repo.EventPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	assetID  *mytype.OID
+	edges    []*userAssetTimelineEventEdgeResolver
+	events   []*repo.EventPermit
+	filters  *data.EventFilterOptions
+	pageInfo *pageInfoResolver
+	repos    *repo.Repos
 }
 
 func (r *userAssetTimelineConnectionResolver) Edges() *[]*userAssetTimelineEventEdgeResolver {
@@ -79,6 +82,6 @@ func (r *userAssetTimelineConnectionResolver) PageInfo() (*pageInfoResolver, err
 	return r.pageInfo, nil
 }
 
-func (r *userAssetTimelineConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *userAssetTimelineConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.Event().CountByUserAsset(ctx, r.assetID.String, r.filters)
 }

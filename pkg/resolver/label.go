@@ -80,10 +80,6 @@ func (r *labelResolver) Labelables(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByLabel(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := []repo.NodePermit{}
 
 	switch labelableType {
@@ -116,7 +112,8 @@ func (r *labelResolver) Labelables(
 		r.Repos,
 		permits,
 		pageOptions,
-		lessonCount,
+		id,
+		args.Search,
 	)
 }
 

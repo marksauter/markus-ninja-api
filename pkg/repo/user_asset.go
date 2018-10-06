@@ -167,7 +167,6 @@ func (r *UserAssetRepo) CheckConnection() error {
 
 func (r *UserAssetRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	var n int32
@@ -175,31 +174,33 @@ func (r *UserAssetRepo) CountBySearch(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetBySearch(db, within, query)
+	return data.CountUserAssetBySearch(db, query)
 }
 
 func (r *UserAssetRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
+	filters *data.UserAssetFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetByStudy(db, studyID)
+	return data.CountUserAssetByStudy(db, studyID, filters)
 }
 
 func (r *UserAssetRepo) CountByUser(
 	ctx context.Context,
 	userID string,
+	filters *data.UserAssetFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetByUser(db, userID)
+	return data.CountUserAssetByUser(db, userID, filters)
 }
 
 func (r *UserAssetRepo) Create(
@@ -332,7 +333,7 @@ func (r *UserAssetRepo) GetByStudy(
 	ctx context.Context,
 	studyID *mytype.OID,
 	po *data.PageOptions,
-	opts ...data.UserAssetFilterOption,
+	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -341,7 +342,7 @@ func (r *UserAssetRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.GetUserAssetByStudy(db, studyID, po, opts...)
+	userAssets, err := data.GetUserAssetByStudy(db, studyID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +363,7 @@ func (r *UserAssetRepo) GetByUser(
 	ctx context.Context,
 	userID *mytype.OID,
 	po *data.PageOptions,
-	opts ...data.UserAssetFilterOption,
+	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -371,7 +372,7 @@ func (r *UserAssetRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.GetUserAssetByUser(db, userID, po, opts...)
+	userAssets, err := data.GetUserAssetByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +391,6 @@ func (r *UserAssetRepo) GetByUser(
 
 func (r *UserAssetRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 	po *data.PageOptions,
 ) ([]*UserAssetPermit, error) {
@@ -401,7 +401,7 @@ func (r *UserAssetRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.SearchUserAsset(db, within, query, po)
+	userAssets, err := data.SearchUserAsset(db, query, po)
 	if err != nil {
 		return nil, err
 	}

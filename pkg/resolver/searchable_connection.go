@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -14,7 +13,6 @@ func NewSearchableConnectionResolver(
 	searchables []repo.NodePermit,
 	pageOptions *data.PageOptions,
 	query string,
-	within *mytype.OID,
 ) (*searchableConnectionResolver, error) {
 	edges := make([]*searchableEdgeResolver, len(searchables))
 	for i := range edges {
@@ -37,7 +35,6 @@ func NewSearchableConnectionResolver(
 		pageInfo:    pageInfo,
 		repos:       repos,
 		query:       query,
-		within:      within,
 	}
 	return resolver, nil
 }
@@ -48,7 +45,6 @@ type searchableConnectionResolver struct {
 	pageInfo    *pageInfoResolver
 	repos       *repo.Repos
 	query       string
-	within      *mytype.OID
 }
 
 func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
@@ -64,7 +60,7 @@ func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
 }
 
 func (r *searchableConnectionResolver) LabelCount(ctx context.Context) (int32, error) {
-	return r.repos.Label().CountBySearch(ctx, r.within, r.query)
+	return r.repos.Label().CountBySearch(ctx, r.query)
 }
 
 func (r *searchableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
@@ -100,7 +96,7 @@ func (r *searchableConnectionResolver) StudyCount(ctx context.Context) (int32, e
 }
 
 func (r *searchableConnectionResolver) TopicCount(ctx context.Context) (int32, error) {
-	return r.repos.Topic().CountBySearch(ctx, r.within, r.query)
+	return r.repos.Topic().CountBySearch(ctx, r.query)
 }
 
 func (r *searchableConnectionResolver) UserCount(ctx context.Context) (int32, error) {
@@ -108,5 +104,5 @@ func (r *searchableConnectionResolver) UserCount(ctx context.Context) (int32, er
 }
 
 func (r *searchableConnectionResolver) UserAssetCount(ctx context.Context) (int32, error) {
-	return r.repos.UserAsset().CountBySearch(ctx, r.within, r.query)
+	return r.repos.UserAsset().CountBySearch(ctx, r.query)
 }

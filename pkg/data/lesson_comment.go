@@ -22,6 +22,37 @@ type LessonComment struct {
 	UserID      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
+type LessonCommentFilterOptions struct {
+	Labels *[]string
+}
+
+func (src *LessonCommentFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 3)
+	if src.Labels != nil && len(*src.Labels) > 0 {
+		query := ToTsQuery(strings.Join(*src.Labels, " "))
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS labels_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".labels @@ labels_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
+
 const countLessonCommentByLabelSQL = `
 	SELECT COUNT(*)
 	FROM labeled
@@ -64,9 +95,6 @@ func CountLessonCommentByLesson(
 		countLessonCommentByLessonSQL,
 		lessonID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
 	return n, err
 }
 
@@ -91,9 +119,6 @@ func CountLessonCommentByStudy(
 		countLessonCommentByStudySQL,
 		studyID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
 	return n, err
 }
 
@@ -118,9 +143,6 @@ func CountLessonCommentByUser(
 		countLessonCommentByUserSQL,
 		userID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
 	return n, err
 }
 
@@ -183,8 +205,6 @@ func getManyLessonComment(
 		mylog.Log.WithError(err).Error("failed to get lesson_comments")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -310,8 +330,8 @@ func GetLessonCommentByLesson(
 		"lesson_id", lessonID,
 	).Info("GetLessonCommentByLesson(lesson_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{
-		`lesson_id = ` + args.Append(lessonID),
+	where := func(from string) string {
+		return from + `.lesson_id = ` + args.Append(lessonID)
 	}
 
 	selects := []string{
@@ -325,7 +345,7 @@ func GetLessonCommentByLesson(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
@@ -342,8 +362,8 @@ func GetLessonCommentByStudy(
 		"study_id", studyID,
 	).Info("GetLessonCommentByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{
-		`study_id = ` + args.Append(studyID),
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
 	}
 
 	selects := []string{
@@ -357,7 +377,7 @@ func GetLessonCommentByStudy(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
@@ -374,7 +394,9 @@ func GetLessonCommentByUser(
 		"user_id", userID,
 	).Info("GetLessonCommentByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"body",
@@ -387,7 +409,7 @@ func GetLessonCommentByUser(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLessonCommentsByUser", sql)
 

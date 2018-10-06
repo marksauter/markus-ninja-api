@@ -127,14 +127,14 @@ func (r *EmailRepo) CheckConnection() error {
 func (r *EmailRepo) CountByUser(
 	ctx context.Context,
 	userID string,
-	opts ...data.EmailFilterOption,
+	filters *data.EmailFilterOptions,
 ) (n int32, err error) {
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		err = errors.New("queryer not found")
 		return
 	}
-	return data.CountEmailByUser(db, userID)
+	return data.CountEmailByUser(db, userID, filters)
 }
 
 func (r *EmailRepo) Create(
@@ -197,42 +197,6 @@ func (r *EmailRepo) Get(
 	return &EmailPermit{fieldPermFn, email}, nil
 }
 
-func (r *EmailRepo) GetByUserBackup(
-	ctx context.Context,
-	userID string,
-) (*EmailPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	email, err := r.load.GetByUserBackup(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
-	if err != nil {
-		return nil, err
-	}
-	return &EmailPermit{fieldPermFn, email}, nil
-}
-
-func (r *EmailRepo) GetByUserPrimary(
-	ctx context.Context,
-	userID string,
-) (*EmailPermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		return nil, err
-	}
-	email, err := r.load.GetByUserPrimary(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, email)
-	if err != nil {
-		return nil, err
-	}
-	return &EmailPermit{fieldPermFn, email}, nil
-}
-
 func (r *EmailRepo) GetByValue(
 	ctx context.Context,
 	value string,
@@ -253,9 +217,9 @@ func (r *EmailRepo) GetByValue(
 
 func (r *EmailRepo) GetByUser(
 	ctx context.Context,
-	userID *mytype.OID,
+	userID string,
 	po *data.PageOptions,
-	opts ...data.EmailFilterOption,
+	filters *data.EmailFilterOptions,
 ) ([]*EmailPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -264,7 +228,7 @@ func (r *EmailRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	emails, err := data.GetEmailByUser(db, userID, po, opts...)
+	emails, err := data.GetEmailByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}

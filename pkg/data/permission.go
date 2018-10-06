@@ -42,21 +42,20 @@ const countPermissionByTypeSQL = `
 func CountPermissionByType(
 	db Queryer,
 	nodeType interface{},
-) (n int32, err error) {
+) (int32, error) {
+	mylog.Log.Info("CountPermissionByType()")
+	var n int32
 	mType, err := mytype.ParseNodeType(structs.Name(nodeType))
 	if err != nil {
-		return
+		return n, err
 	}
-	mylog.Log.WithField("node_type", mType).Info("CountPermissionByType(nodeType)")
 	err = prepareQueryRow(
 		db,
 		"countPermissionByType",
 		countPermissionByTypeSQL,
 		mType,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-	return
+	return n, err
 }
 
 // Creates a suite of permissions for the passed model.
@@ -67,14 +66,12 @@ func CreatePermissionSuite(
 	db Queryer,
 	model interface{},
 ) error {
+	mylog.Log.Info("CreatePermissionSuite()")
+
 	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
 		return err
 	}
-	mylog.Log.WithField(
-		"model",
-		mType,
-	).Info("CreatePermissionSuite(model)")
 
 	fields := structs.Fields(model)
 	n := len(fields)*len(accessLevelsWithFields) + len(accessLevelsWithoutFields)

@@ -34,6 +34,9 @@ type LessonComment implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
+
     # Returns the first n elements form the list.
     first: Int
 

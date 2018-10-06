@@ -124,18 +124,18 @@ func (r *LabelRepo) CheckConnection() error {
 func (r *LabelRepo) CountByLabelable(
 	ctx context.Context,
 	labelableID string,
+	filters *data.LabelFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabelByLabelable(db, labelableID)
+	return data.CountLabelByLabelable(db, labelableID, filters)
 }
 
 func (r *LabelRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	var n int32
@@ -143,19 +143,20 @@ func (r *LabelRepo) CountBySearch(
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabelBySearch(db, within, query)
+	return data.CountLabelBySearch(db, query)
 }
 
 func (r *LabelRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
+	filters *data.LabelFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabelByStudy(db, studyID)
+	return data.CountLabelByStudy(db, studyID, filters)
 }
 
 func (r *LabelRepo) Create(
@@ -210,6 +211,7 @@ func (r *LabelRepo) GetByLabelable(
 	ctx context.Context,
 	labelableID string,
 	po *data.PageOptions,
+	filters *data.LabelFilterOptions,
 ) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -218,7 +220,7 @@ func (r *LabelRepo) GetByLabelable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labels, err := data.GetLabelByLabelable(db, labelableID, po)
+	labels, err := data.GetLabelByLabelable(db, labelableID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +241,7 @@ func (r *LabelRepo) GetByStudy(
 	ctx context.Context,
 	studyID string,
 	po *data.PageOptions,
+	filters *data.LabelFilterOptions,
 ) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -247,7 +250,7 @@ func (r *LabelRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labels, err := data.GetLabelByStudy(db, studyID, po)
+	labels, err := data.GetLabelByStudy(db, studyID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +304,6 @@ func (r *LabelRepo) Delete(
 
 func (r *LabelRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
 	query string,
 	po *data.PageOptions,
 ) ([]*LabelPermit, error) {
@@ -312,7 +314,7 @@ func (r *LabelRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labels, err := data.SearchLabel(db, within, query, po)
+	labels, err := data.SearchLabel(db, query, po)
 	if err != nil {
 		return nil, err
 	}

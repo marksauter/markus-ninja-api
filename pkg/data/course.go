@@ -72,45 +72,43 @@ func (src *CourseFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts 
 	}
 }
 
-const countCourseByAppleeSQL = `
-	SELECT COUNT(*)
-	FROM course_appled
-	WHERE user_id = $1
-`
-
 func CountCourseByApplee(
 	db Queryer,
 	appleeID string,
+	filters *CourseFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("applee_id", appleeID).Info("CountCourseByApplee(applee_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
+	from := "appled_course"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByApplee", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countCourseByApplee",
-		countCourseByAppleeSQL,
-		appleeID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countCourseByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM course_enrolled
-	WHERE user_id = $1
-`
 
 func CountCourseByEnrollee(
 	db Queryer,
 	enrolleeID string,
+	filters *CourseFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountCourseByEnrollee(enrollee_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "enrolled_course"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByEnrollee", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countCourseByEnrollee",
-		countCourseByEnrolleeSQL,
-		enrolleeID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
@@ -134,26 +132,25 @@ func CountCourseByStudy(
 	return n, err
 }
 
-const countCourseByTopicSQL = `
-	SELECT COUNT(*)
-	FROM topiced_course
-	WHERE topic_id = $1
-`
-
 func CountCourseByTopic(
 	db Queryer,
 	topicID string,
+	filters *CourseFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"topic_id", topicID,
 	).Info("CountCourseByTopic(topic_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
+	from := "topiced_course"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByTopic", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countCourseByTopic",
-		countCourseByTopicSQL,
-		topicID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
@@ -285,8 +282,6 @@ func getManyCourse(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -317,12 +312,15 @@ func GetCourse(
 
 func GetCourseByApplee(
 	db Queryer,
-	userID string,
+	appleeID string,
 	po *PageOptions,
+	filters *CourseFilterOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetCourseByApplee(user_id)")
+	mylog.Log.WithField("applee_id", appleeID).Info("GetCourseByApplee(applee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`applee_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -339,7 +337,7 @@ func GetCourseByApplee(
 		"user_id",
 	}
 	from := "appled_course"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByAppled", sql)
 
@@ -374,19 +372,20 @@ func GetCourseByApplee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
 func GetCourseByEnrollee(
 	db Queryer,
-	userID string,
+	enrolleeID string,
 	po *PageOptions,
+	filters *CourseFilterOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetCourseByEnrollee(user_id)")
+	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetCourseByEnrollee(enrollee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -403,7 +402,7 @@ func GetCourseByEnrollee(
 		"user_id",
 	}
 	from := "enrolled_course"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByEnrollee", sql)
 
@@ -438,8 +437,6 @@ func GetCourseByEnrollee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -447,10 +444,13 @@ func GetCourseByTopic(
 	db Queryer,
 	topicID string,
 	po *PageOptions,
+	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetCourseByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicID)}
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -467,7 +467,7 @@ func GetCourseByTopic(
 		"user_id",
 	}
 	from := "topiced_course"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByTopic", sql)
 
@@ -501,8 +501,6 @@ func GetCourseByTopic(
 		mylog.Log.WithError(err).Error("failed to get courses")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }

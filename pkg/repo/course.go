@@ -165,37 +165,40 @@ func (r *CourseRepo) CheckConnection() error {
 func (r *CourseRepo) CountByApplee(
 	ctx context.Context,
 	appleeID string,
+	filters *data.CourseFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountCourseByApplee(db, appleeID)
+	return data.CountCourseByApplee(db, appleeID, filters)
 }
 
 func (r *CourseRepo) CountByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
+	filters *data.CourseFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountCourseByEnrollee(db, enrolleeID)
+	return data.CountCourseByEnrollee(db, enrolleeID, filters)
 }
 
 func (r *CourseRepo) CountByTopic(
 	ctx context.Context,
 	topicID string,
+	filters *data.CourseFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountCourseByTopic(db, topicID)
+	return data.CountCourseByTopic(db, topicID, filters)
 }
 
 func (r *CourseRepo) CountBySearch(
@@ -300,6 +303,7 @@ func (r *CourseRepo) GetByApplee(
 	ctx context.Context,
 	appleeID string,
 	po *data.PageOptions,
+	filters *data.CourseFilterOptions,
 ) ([]*CoursePermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -308,7 +312,7 @@ func (r *CourseRepo) GetByApplee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	courses, err := data.GetCourseByApplee(db, appleeID, po)
+	courses, err := data.GetCourseByApplee(db, appleeID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +333,7 @@ func (r *CourseRepo) GetByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
 	po *data.PageOptions,
+	filters *data.CourseFilterOptions,
 ) ([]*CoursePermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -337,7 +342,7 @@ func (r *CourseRepo) GetByEnrollee(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	courses, err := data.GetCourseByEnrollee(db, enrolleeID, po)
+	courses, err := data.GetCourseByEnrollee(db, enrolleeID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -388,6 +393,7 @@ func (r *CourseRepo) GetByTopic(
 	ctx context.Context,
 	topicID string,
 	po *data.PageOptions,
+	filters *data.CourseFilterOptions,
 ) ([]*CoursePermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -396,7 +402,7 @@ func (r *CourseRepo) GetByTopic(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	courses, err := data.GetCourseByTopic(db, topicID, po)
+	courses, err := data.GetCourseByTopic(db, topicID, po, filters)
 	if err != nil {
 		return nil, err
 	}

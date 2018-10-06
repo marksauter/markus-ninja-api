@@ -1,15 +1,19 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEnrolleeConnectionResolver(
+	repos *repo.Repos,
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	enrollableID *mytype.OID,
+	filters *data.UserFilterOptions,
 ) (*enrolleeConnectionResolver, error) {
 	edges := make([]*enrolleeEdgeResolver, len(users))
 	for i := range edges {
@@ -29,21 +33,23 @@ func NewEnrolleeConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &enrolleeConnectionResolver{
-		edges:      edges,
-		users:      users,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		edges:        edges,
+		enrollableID: enrollableID,
+		filters:      filters,
+		pageInfo:     pageInfo,
+		repos:        repos,
+		users:        users,
 	}
 	return resolver, nil
 }
 
 type enrolleeConnectionResolver struct {
-	edges      []*enrolleeEdgeResolver
-	users      []*repo.UserPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	edges        []*enrolleeEdgeResolver
+	enrollableID *mytype.OID
+	filters      *data.UserFilterOptions
+	pageInfo     *pageInfoResolver
+	repos        *repo.Repos
+	users        []*repo.UserPermit
 }
 
 func (r *enrolleeConnectionResolver) Edges() *[]*enrolleeEdgeResolver {
@@ -70,6 +76,6 @@ func (r *enrolleeConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *enrolleeConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *enrolleeConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.User().CountByEnrollable(ctx, r.enrollableID.String, r.filters)
 }

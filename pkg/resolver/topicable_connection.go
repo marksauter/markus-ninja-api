@@ -1,16 +1,19 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewTopicableConnectionResolver(
 	repos *repo.Repos,
 	topicables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	topicID *mytype.OID,
+	search *string,
 ) (*topicableConnectionResolver, error) {
 	edges := make([]*topicableEdgeResolver, len(topicables))
 	for i := range edges {
@@ -32,7 +35,7 @@ func NewTopicableConnectionResolver(
 		topicables: topicables,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		topicID:    topicID,
 	}
 	return resolver, nil
 }
@@ -42,7 +45,15 @@ type topicableConnectionResolver struct {
 	topicables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	search     *string
+	topicID    *mytype.OID
+}
+
+func (r *topicableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
+	filters := &data.CourseFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Course().CountByTopic(ctx, r.topicID.String, filters)
 }
 
 func (r *topicableConnectionResolver) Edges() *[]*topicableEdgeResolver {
@@ -77,6 +88,9 @@ func (r *topicableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *topicableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+func (r *topicableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	filters := &data.StudyFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Study().CountByTopic(ctx, r.topicID.String, filters)
 }

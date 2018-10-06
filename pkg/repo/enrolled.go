@@ -104,27 +104,27 @@ func (r *EnrolledRepo) CheckConnection() error {
 func (r *EnrolledRepo) CountByEnrollable(
 	ctx context.Context,
 	enrollableID string,
-	opts ...data.EnrolledFilterOption,
+	filters *data.EnrolledFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEnrolledByEnrollable(db, enrollableID, opts...)
+	return data.CountEnrolledByEnrollable(db, enrollableID, filters)
 }
 
 func (r *EnrolledRepo) CountByUser(
 	ctx context.Context,
 	userID string,
-	opts ...data.EnrolledFilterOption,
+	filters *data.EnrolledFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEnrolledByUser(db, userID, opts...)
+	return data.CountEnrolledByUser(db, userID, filters)
 }
 
 func (r *EnrolledRepo) Connect(
@@ -188,7 +188,7 @@ func (r *EnrolledRepo) GetByEnrollable(
 	ctx context.Context,
 	enrollableID string,
 	po *data.PageOptions,
-	opts ...data.EnrolledFilterOption,
+	filters *data.EnrolledFilterOptions,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func (r *EnrolledRepo) GetByEnrollable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	enrolleds, err := data.GetEnrolledByEnrollable(db, enrollableID, po, opts...)
+	enrolleds, err := data.GetEnrolledByEnrollable(db, enrollableID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (r *EnrolledRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
-	opts ...data.EnrolledFilterOption,
+	filters *data.EnrolledFilterOptions,
 ) ([]*EnrolledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -227,7 +227,7 @@ func (r *EnrolledRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	enrolleds, err := data.GetEnrolledByUser(db, userID, po, opts...)
+	enrolleds, err := data.GetEnrolledByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}

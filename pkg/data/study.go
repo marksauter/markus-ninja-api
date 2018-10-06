@@ -89,47 +89,45 @@ func CountStudyByApplee(
 	return n, err
 }
 
-const countStudyByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE user_id = $1 AND type = 'Study' AND status = 'ENROLLED'
-`
-
 func CountStudyByEnrollee(
 	db Queryer,
 	enrolleeID string,
+	filters *StudyFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountStudyByEnrollee(enrollee_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "enrolled_study"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByEnrollee", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countStudyByEnrollee",
-		countStudyByEnrolleeSQL,
-		enrolleeID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countStudyByTopicSQL = `
-	SELECT COUNT(*)
-	FROM study_topiced
-	WHERE topic_id = $1
-`
 
 func CountStudyByTopic(
 	db Queryer,
 	topicID string,
+	filters *StudyFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"topic_id", topicID,
 	).Info("CountStudyByTopic(topic_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
+	from := "topiced_study"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByTopic", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countStudyByTopic",
-		countStudyByTopicSQL,
-		topicID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
@@ -255,8 +253,6 @@ func getManyStudy(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -338,8 +334,6 @@ func GetStudyByApplee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -399,8 +393,6 @@ func GetStudyByEnrollee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -459,8 +451,6 @@ func GetStudyByTopic(
 		mylog.Log.WithError(err).Error("failed to get studies")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -682,31 +672,13 @@ func SearchStudy(
 	}
 	from := "study_search_index"
 	var args pgx.QueryArgs
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
 	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchStudyIndex", sql)
 
-	studies, err := getManyStudy(tx, psName, sql, args...)
+	studies, err := getManyStudy(db, psName, sql, args...)
 	if err != nil {
 		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
 	}
 
 	return studies, nil

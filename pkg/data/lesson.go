@@ -79,45 +79,43 @@ func (src *LessonFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts 
 	}
 }
 
-const countLessonByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE user_id = $1 AND type = 'Lesson' AND status = 'ENROLLED'
-`
-
 func CountLessonByEnrollee(
 	db Queryer,
-	userID string,
+	enrolleeID string,
+	filters *LessonFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountLessonByEnrollee(user_id)")
+	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountLessonByEnrollee(enrollee_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "lesson_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonByEnrollee", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonByEnrollee",
-		countLessonByEnrolleeSQL,
-		userID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countLessonByLabelSQL = `
-	SELECT COUNT(*)
-	FROM labeled
-	WHERE label_id = $1 AND type = 'Lesson'
-`
 
 func CountLessonByLabel(
 	db Queryer,
 	labelID string,
+	filters *LessonFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("label_id", labelID).Info("CountLessonByLabel(label_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID)
+	}
+	from := "lesson_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonByLabel", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonByLabel",
-		countLessonByLabelSQL,
-		labelID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
@@ -942,34 +940,11 @@ func SearchLesson(
 	}
 	from := "lesson_search_index"
 	var args pgx.QueryArgs
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
 	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchLessonIndex", sql)
 
-	lessons, err := getManyLesson(tx, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return lessons, nil
+	return getManyLesson(db, psName, sql, args...)
 }
 
 func UpdateLesson(

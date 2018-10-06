@@ -1,0 +1,5 @@
+# Ways in which to filter lists of topics.
+input TopicFilters {
+  # Query to search topics by.
+  search: String
+}

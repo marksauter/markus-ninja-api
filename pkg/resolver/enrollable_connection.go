@@ -1,18 +1,19 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEnrollableConnectionResolver(
 	repos *repo.Repos,
 	enrollables []repo.NodePermit, pageOptions *data.PageOptions,
-	lessonCount,
-	studyCount,
-	userCount int32,
+	userID *mytype.OID,
+	search *string,
 ) (*enrollableConnectionResolver, error) {
 	edges := make([]*enrollableEdgeResolver, len(enrollables))
 	for i := range edges {
@@ -34,9 +35,8 @@ func NewEnrollableConnectionResolver(
 		enrollables: enrollables,
 		pageInfo:    pageInfo,
 		repos:       repos,
-		lessonCount: lessonCount,
-		studyCount:  studyCount,
-		userCount:   userCount,
+		search:      search,
+		userID:      userID,
 	}
 	return resolver, nil
 }
@@ -46,9 +46,8 @@ type enrollableConnectionResolver struct {
 	enrollables []repo.NodePermit
 	pageInfo    *pageInfoResolver
 	repos       *repo.Repos
-	lessonCount int32
-	studyCount  int32
-	userCount   int32
+	search      *string
+	userID      *mytype.OID
 }
 
 func (r *enrollableConnectionResolver) Edges() *[]*enrollableEdgeResolver {
@@ -59,8 +58,11 @@ func (r *enrollableConnectionResolver) Edges() *[]*enrollableEdgeResolver {
 	return &[]*enrollableEdgeResolver{}
 }
 
-func (r *enrollableConnectionResolver) LessonCount() int32 {
-	return r.lessonCount
+func (r *enrollableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
+	filters := &data.LessonFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Lesson().CountByEnrollee(ctx, r.userID.String, filters)
 }
 
 func (r *enrollableConnectionResolver) Nodes() (*[]*enrollableResolver, error) {
@@ -87,10 +89,16 @@ func (r *enrollableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *enrollableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+func (r *enrollableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	filters := &data.StudyFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Study().CountByEnrollee(ctx, r.userID.String, filters)
 }
 
-func (r *enrollableConnectionResolver) UserCount() int32 {
-	return r.userCount
+func (r *enrollableConnectionResolver) UserCount(ctx context.Context) (int32, error) {
+	filters := &data.UserFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.User().CountByEnrollee(ctx, r.userID.String, filters)
 }

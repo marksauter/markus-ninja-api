@@ -160,11 +160,12 @@ func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 func (r *lessonCommentResolver) Labels(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LabelFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
 	lessonCommentID, err := r.LessonComment.ID()
@@ -191,19 +192,20 @@ func (r *lessonCommentResolver) Labels(
 		ctx,
 		lessonCommentID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentID.String)
+	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentID.String, args.FilterBy)
 	if err != nil {
 		return nil, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
+		r.Repos,
 		labels,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err

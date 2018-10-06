@@ -55,97 +55,95 @@ func userAssetDelimeter(r rune) bool {
 	return r == '-' || r == '_'
 }
 
-type UserAssetFilterOption int
+type UserAssetFilterOptions struct {
+	Search *string
+}
 
-const (
-	IsImageUserAsset UserAssetFilterOption = iota
-)
+func (src *UserAssetFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
 
-func (src UserAssetFilterOption) SQL(from string) string {
-	switch src {
-	case IsImageUserAsset:
-		return from + `.type = 'image'`
-	default:
-		return ""
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 2)
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
 	}
 }
 
-func (src UserAssetFilterOption) Type() FilterType {
-	return OrFilter
-}
+const countUserAssetBySearchSQL = `
+	SELECT COUNT(*)
+	FROM user_asset_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
+`
 
 func CountUserAssetBySearch(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountUserAssetBySearch(query)")
 	var n int32
-	var args pgx.QueryArgs
-	from := "user_asset_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Study" {
-			return n, fmt.Errorf(
-				"cannot search for user assets within type `%s`",
-				in.Type,
-			)
-		}
-	}
-
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
-
-	psName := preparedName("countUserAssetBySearch", sql)
-
-	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	err := prepareQueryRow(
+		db,
+		"countUserAssetBySearch",
+		countUserAssetBySearchSQL,
+		ToPrefixTsQuery(query),
+	).Scan(&n)
 	return n, err
 }
-
-const countUserAssetByStudySQL = `
-	SELECT COUNT(*)
-	FROM user_asset
-	WHERE study_id = $1
-`
 
 func CountUserAssetByStudy(
 	db Queryer,
 	studyID string,
+	filters *UserAssetFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("study_id", studyID).Info("CountUserAssetByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+	from := "user_asset_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserAssetByStudy", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserAssetByStudy",
-		countUserAssetByStudySQL,
-		studyID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countUserAssetByUserSQL = `
-	SELECT COUNT(*)
-	FROM user_asset
-	WHERE user_id = $1
-`
 
 func CountUserAssetByUser(
 	db Queryer,
 	userID string,
+	filters *UserAssetFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("user_id", userID).Info("CountUserAssetByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
+	from := "user_asset_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserAssetByUser", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserAssetByUser",
-		countUserAssetByUserSQL,
-		userID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
@@ -218,8 +216,6 @@ func getManyUserAsset(
 		mylog.Log.WithError(err).Error("failed to get user_assets")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -404,13 +400,16 @@ func GetUserAssetByStudy(
 	db Queryer,
 	studyID *mytype.OID,
 	po *PageOptions,
-	opts ...UserAssetFilterOption,
+	filters *UserAssetFilterOptions,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
 		"study_id", studyID.String,
 	).Info("GetUserAssetByStudy(studyID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyID)}
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+
 	selects := []string{
 		"asset_id",
 		"created_at",
@@ -426,8 +425,8 @@ func GetUserAssetByStudy(
 		"updated_at",
 		"user_id",
 	}
-	from := "user_asset_master"
-	sql := SQL(selects, from, where, &args, po)
+	from := "user_asset_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getUserAssetsByStudy", sql)
 
@@ -438,13 +437,15 @@ func GetUserAssetByUser(
 	db Queryer,
 	userID *mytype.OID,
 	po *PageOptions,
-	opts ...UserAssetFilterOption,
+	filters *UserAssetFilterOptions,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField(
 		"user_id", userID.String,
 	).Info("GetUserAssetByUser(userID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"asset_id",
@@ -461,8 +462,8 @@ func GetUserAssetByUser(
 		"updated_at",
 		"user_id",
 	}
-	from := "user_asset_master"
-	sql := SQL(selects, from, where, &args, po)
+	from := "user_asset_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getUserAssetsByUser", sql)
 
@@ -579,19 +580,10 @@ func DeleteUserAsset(
 
 func SearchUserAsset(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 	po *PageOptions,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField("query", query).Info("SearchUserAsset(query)")
-	if within != nil {
-		if within.Type != "User" && within.Type != "Study" {
-			return nil, fmt.Errorf(
-				"cannot search for user assets within type `%s`",
-				within.Type,
-			)
-		}
-	}
 	selects := []string{
 		"asset_id",
 		"created_at",
@@ -609,7 +601,7 @@ func SearchUserAsset(
 	}
 	from := "user_asset_search_index"
 	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchUserAssetIndex", sql)
 
@@ -690,7 +682,11 @@ func UpdateUserAsset(
 	return userAsset, nil
 }
 
-func ReplaceMarkdownUserAssetRefsWithLinks(db Queryer, markdown mytype.Markdown, studyID string) (*mytype.Markdown, error, bool) {
+func ReplaceMarkdownUserAssetRefsWithLinks(
+	db Queryer,
+	markdown mytype.Markdown,
+	studyID string,
+) (*mytype.Markdown, error, bool) {
 	updated := false
 	userAssetRefToLink := func(s string) string {
 		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
