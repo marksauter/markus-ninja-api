@@ -23,85 +23,115 @@ type User struct {
 	ProfileEmailID   mytype.OID         `db:"profile_email_id" permit:"read/update"`
 	ProfileUpdatedAt pgtype.Timestamptz `db:"profile_updated_at" permit:"read"`
 	Roles            pgtype.TextArray   `db:"roles"`
+	Verified         pgtype.Bool        `db:"verified" permit:"read"`
 }
 
-const countUserByAppleableSQL = `
-	SELECT COUNT(*)
-	FROM appled
-	WHERE appleable_id = $1
-`
+func userDelimeter(r rune) bool {
+	return r == ' ' || r == '-' || r == '_'
+}
+
+type UserFilterOptions struct {
+	Search *string
+}
+
+func (src *UserFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 2)
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountUserByAppleable(
 	db Queryer,
 	appleableID string,
+	filters *UserFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"appleable_id",
 		appleableID,
 	).Info("CountUserByAppleable(appleable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.appleable_id = ` + args.Append(appleableID)
+	}
+	from := "appled"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserByAppleable", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserByAppleable",
-		countUserByAppleableSQL,
-		appleableID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countUserByEnrollableSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE enrollable_id = $1 AND status = 'ENROLLED'
-`
 
 func CountUserByEnrollable(
 	db Queryer,
 	enrollableID string,
+	filters *UserFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"enrollable_id",
 		enrollableID,
 	).Info("CountUserByEnrollable(enrollable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
+	}
+	from := "enrolled"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserByEnrollable", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserByEnrollable",
-		countUserByEnrollableSQL,
-		enrollableID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countUserByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM user_enrolled
-	WHERE user_id = $1
-`
 
 func CountUserByEnrollee(
 	db Queryer,
 	enrolleeID string,
+	filters *UserFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("user_id", enrolleeID).Info("CountUserByEnrollee(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "enrolled_user"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserByEnrollee", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserByEnrollee",
-		countUserByEnrolleeSQL,
-		enrolleeID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
+
+const countUserBySearchSQL = `
+	SELECT COUNT(*)
+	FROM user_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
+`
 
 func CountUserBySearch(
 	db Queryer,
@@ -109,14 +139,12 @@ func CountUserBySearch(
 ) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountUserBySearch(query)")
 	var n int32
-	var args pgx.QueryArgs
-	from := "user_search_index"
-
-	sql := CountSearchSQL(from, nil, ToPrefixTsQuery(query), "document", &args)
-
-	psName := preparedName("countUserBySearch", sql)
-
-	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	err := prepareQueryRow(
+		db,
+		"countUserBySearch",
+		countUserBySearchSQL,
+		ToPrefixTsQuery(query),
+	).Scan(&n)
 	return n, err
 }
 
@@ -190,6 +218,7 @@ func getUser(
 		&row.ProfileEmailID,
 		&row.ProfileUpdatedAt,
 		&row.Roles,
+		&row.Verified,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -226,6 +255,7 @@ func getManyUser(
 			&row.ProfileEmailID,
 			&row.ProfileUpdatedAt,
 			&row.Roles,
+			&row.Verified,
 		)
 		rows = append(rows, &row)
 	}
@@ -234,8 +264,6 @@ func getManyUser(
 		mylog.Log.WithError(err).Error("failed to get users")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -250,7 +278,8 @@ const getUserByIDSQL = `
 		name,
 		profile_email_id,
 		profile_updated_at,
-		roles
+		roles,
+		verified
 	FROM user_master
 	WHERE id = $1
 `
@@ -273,7 +302,8 @@ const batchGetUserSQL = `
 		name,
 		profile_email_id,
 		profile_updated_at,
-		roles
+		roles,
+		verified
 	FROM user_master
 	WHERE id = ANY($1)
 `
@@ -296,7 +326,8 @@ const getUserByLoginSQL = `
 		name,
 		profile_email_id,
 		profile_updated_at,
-		roles
+		roles,
+		verified
 	FROM user_master
 	WHERE LOWER(login) = LOWER($1)
 `
@@ -319,7 +350,8 @@ const batchGetUserByLoginSQL = `
 		name,
 		profile_email_id,
 		profile_updated_at,
-		roles
+		roles,
+		verified
 	FROM user_master
 	WHERE lower(login) = any($1)
 `
@@ -336,13 +368,16 @@ func GetUserByAppleable(
 	db Queryer,
 	appleableID string,
 	po *PageOptions,
+	filters *UserFilterOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"appleabled_id",
 		appleableID,
 	).Info("GetUserByAppleable(appleabled_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`appleable_id = ` + args.Append(appleableID)}
+	where := func(from string) string {
+		return from + `.appleable_id = ` + args.Append(appleableID)
+	}
 
 	selects := []string{
 		"account_updated_at",
@@ -355,9 +390,10 @@ func GetUserByAppleable(
 		"profile_email_id",
 		"profile_updated_at",
 		"roles",
+		"verified",
 	}
 	from := "apple_giver"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getUsersByAppleable", sql)
 
@@ -381,6 +417,7 @@ func GetUserByAppleable(
 			&row.ProfileEmailID,
 			&row.ProfileUpdatedAt,
 			&row.Roles,
+			&row.Verified,
 		)
 		rows = append(rows, &row)
 	}
@@ -390,8 +427,6 @@ func GetUserByAppleable(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -399,13 +434,16 @@ func GetUserByEnrollee(
 	db Queryer,
 	enrolleeID string,
 	po *PageOptions,
+	filters *UserFilterOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
-		"user_id",
+		"enrollee_id",
 		enrolleeID,
-	).Info("GetUserByEnrollee(user_id)")
+	).Info("GetUserByEnrollee(enrollee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(enrolleeID)}
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
 
 	selects := []string{
 		"account_updated_at",
@@ -418,9 +456,10 @@ func GetUserByEnrollee(
 		"profile_email_id",
 		"profile_updated_at",
 		"roles",
+		"verified",
 	}
 	from := "enrolled_user"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getByEnrollee", sql)
 
@@ -444,6 +483,7 @@ func GetUserByEnrollee(
 			&row.ProfileEmailID,
 			&row.ProfileUpdatedAt,
 			&row.Roles,
+			&row.Verified,
 		)
 		rows = append(rows, &row)
 	}
@@ -453,8 +493,6 @@ func GetUserByEnrollee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -462,12 +500,15 @@ func GetUserByEnrollable(
 	db Queryer,
 	enrollableID string,
 	po *PageOptions,
+	filters *UserFilterOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField(
 		"enrollable_id", enrollableID,
 	).Info("GetUserByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollable_id = ` + args.Append(enrollableID)}
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
+	}
 
 	selects := []string{
 		"account_updated_at",
@@ -480,9 +521,10 @@ func GetUserByEnrollable(
 		"profile_email_id",
 		"profile_updated_at",
 		"roles",
+		"verified",
 	}
 	from := "enrollee"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrollees", sql)
 
@@ -506,6 +548,7 @@ func GetUserByEnrollable(
 			&row.ProfileEmailID,
 			&row.ProfileUpdatedAt,
 			&row.Roles,
+			&row.Verified,
 		)
 		rows = append(rows, &row)
 	}
@@ -514,8 +557,6 @@ func GetUserByEnrollable(
 		mylog.Log.WithError(err).Error("failed to get users")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -533,6 +574,7 @@ func getUserCredentials(
 		&row.Password,
 		&row.PrimaryEmail,
 		&row.Roles,
+		&row.Verified,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -550,7 +592,8 @@ const getUserCredentialsSQL = `
 		login,
 		password,
 		primary_email,
-		roles
+		roles,
+		verified
 	FROM user_credentials
 	WHERE id = $1
 `
@@ -569,7 +612,8 @@ const getUserCredentialsByLoginSQL = `
 		login,
 		password,
 		primary_email,
-		roles
+		roles,
+		verified
 	FROM user_credentials
 	WHERE LOWER(login) = LOWER($1)
 `
@@ -588,7 +632,8 @@ const getUserCredentialsByEmailSQL = `
 		u.login,
 		u.password,
 		u.primary_email,
-		u.roles
+		u.roles,
+		u.verified
 	FROM user_credentials u
 	JOIN email e ON LOWER(e.value) = LOWER($1)
 		AND e.type = ANY('{"PRIMARY", "BACKUP"}')
@@ -728,10 +773,11 @@ func SearchUser(
 		"profile_email_id",
 		"profile_updated_at",
 		"roles",
+		"verified",
 	}
 	from := "user_search_index"
 	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, nil, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchUserIndex", sql)
 
@@ -883,8 +929,4 @@ func UpdateUserProfile(
 	}
 
 	return user, nil
-}
-
-func userDelimeter(r rune) bool {
-	return r == ' ' || r == '-' || r == '_'
 }

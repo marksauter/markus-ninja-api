@@ -17,11 +17,6 @@ type enrollableResolver struct {
 	enrollable
 }
 
-func (r *enrollableResolver) ToCourse() (*courseResolver, bool) {
-	resolver, ok := r.enrollable.(*courseResolver)
-	return resolver, ok
-}
-
 func (r *enrollableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.enrollable.(*lessonResolver)
 	return resolver, ok

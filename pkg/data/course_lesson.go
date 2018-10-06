@@ -152,7 +152,9 @@ func GetCourseLessonByCourse(
 ) ([]*CourseLesson, error) {
 	mylog.Log.WithField("course_id", courseID).Info("GetCourseLessonByCourse(course_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`course_id = ` + args.Append(courseID)}
+	where := func(from string) string {
+		return from + `.course_id = ` + args.Append(courseID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -161,7 +163,7 @@ func GetCourseLessonByCourse(
 		"number",
 	}
 	from := "course_lesson"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getCourseLessonsByCourseID", sql)
 

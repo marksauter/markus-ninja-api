@@ -26,19 +26,16 @@ const countLabeledByLabelSQL = `
 func CountLabeledByLabel(
 	db Queryer,
 	labelID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("label_id", labelID).Info("CountLabeledByLabel()")
-
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countLabeledByLabel",
 		countLabeledByLabelSQL,
 		labelID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
 
 const countLabeledByLabelableSQL = `
@@ -50,19 +47,16 @@ const countLabeledByLabelableSQL = `
 func CountLabeledByLabelable(
 	db Queryer,
 	labelableID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("labelable_id", labelableID).Info("CountLabeledByLabelable()")
-
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countLabeledByLabelable",
 		countLabeledByLabelableSQL,
 		labelableID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
 
 func getLabeled(
@@ -177,7 +171,9 @@ func GetLabeledByLabel(
 ) ([]*Labeled, error) {
 	mylog.Log.WithField("label_id", labelID).Info("GetLabeledByLabel(label_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`label_id = ` + args.Append(labelID)}
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -187,7 +183,7 @@ func GetLabeledByLabel(
 		"type",
 	}
 	from := "labeled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLabeledsByLabel", sql)
 
@@ -201,7 +197,9 @@ func GetLabeledByLabelable(
 ) ([]*Labeled, error) {
 	mylog.Log.WithField("labelable_id", labelableID).Info("GetLabeledByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`labelable_id = ` + args.Append(labelableID)}
+	where := func(from string) string {
+		return from + `.labelable_id = ` + args.Append(labelableID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -211,9 +209,7 @@ func GetLabeledByLabelable(
 		"type",
 	}
 	from := "labeled"
-	sql := SQL(selects, from, where, &args, po)
-
-	mylog.Log.Debug(sql)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLabeledsByLabelable", sql)
 

@@ -1,15 +1,19 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEmailConnectionResolver(
+	repos *repo.Repos,
 	emails []*repo.EmailPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	userID *mytype.OID,
+	filters *data.EmailFilterOptions,
 ) (*emailConnectionResolver, error) {
 	edges := make([]*emailEdgeResolver, len(emails))
 	for i := range edges {
@@ -27,21 +31,23 @@ func NewEmailConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &emailConnectionResolver{
-		edges:      edges,
-		emails:     emails,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		edges:    edges,
+		userID:   userID,
+		emails:   emails,
+		filters:  filters,
+		pageInfo: pageInfo,
+		repos:    repos,
 	}
 	return resolver, nil
 }
 
 type emailConnectionResolver struct {
-	edges      []*emailEdgeResolver
-	emails     []*repo.EmailPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	edges    []*emailEdgeResolver
+	emails   []*repo.EmailPermit
+	userID   *mytype.OID
+	filters  *data.EmailFilterOptions
+	pageInfo *pageInfoResolver
+	repos    *repo.Repos
 }
 
 func (r *emailConnectionResolver) Edges() *[]*emailEdgeResolver {
@@ -68,6 +74,6 @@ func (r *emailConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *emailConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *emailConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.Email().CountByUser(ctx, r.userID.String, r.filters)
 }

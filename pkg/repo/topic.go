@@ -102,26 +102,27 @@ func (r *TopicRepo) CheckConnection() error {
 
 func (r *TopicRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID, query string,
+	query string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicBySearch(db, within, query)
+	return data.CountTopicBySearch(db, query)
 }
 
 func (r *TopicRepo) CountByTopicable(
 	ctx context.Context,
 	topicableID string,
+	filters *data.TopicFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicByTopicable(db, topicableID)
+	return data.CountTopicByTopicable(db, topicableID, filters)
 }
 
 func (r *TopicRepo) Create(
@@ -176,6 +177,7 @@ func (r *TopicRepo) GetByTopicable(
 	ctx context.Context,
 	topicableID string,
 	po *data.PageOptions,
+	filters *data.TopicFilterOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -184,7 +186,7 @@ func (r *TopicRepo) GetByTopicable(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	topics, err := data.GetTopicByTopicable(db, topicableID, po)
+	topics, err := data.GetTopicByTopicable(db, topicableID, po, filters)
 	if err != nil {
 		return nil, err
 	}

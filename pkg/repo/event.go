@@ -70,7 +70,7 @@ func (r *EventPermit) Type() (string, error) {
 	if ok := r.checkFieldPermission("type"); !ok {
 		return "", ErrAccessDenied
 	}
-	return r.event.Type.String, nil
+	return r.event.Type.String(), nil
 }
 
 func (r *EventPermit) UserID() (*mytype.OID, error) {
@@ -116,66 +116,66 @@ func (r *EventRepo) CheckConnection() error {
 func (r *EventRepo) CountByLesson(
 	ctx context.Context,
 	lessonID string,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventByLesson(db, lessonID, opts...)
+	return data.CountEventByLesson(db, lessonID, filters)
 }
 
 func (r *EventRepo) CountReceivedByUser(
 	ctx context.Context,
 	userID string,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountReceivedEventByUser(db, userID, opts...)
+	return data.CountReceivedEventByUser(db, userID, filters)
 }
 
 func (r *EventRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventByStudy(db, studyID, opts...)
+	return data.CountEventByStudy(db, studyID, filters)
 }
 
 func (r *EventRepo) CountByUser(
 	ctx context.Context,
 	userID string,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventByUser(db, userID, opts...)
+	return data.CountEventByUser(db, userID, filters)
 }
 
 func (r *EventRepo) CountByUserAsset(
 	ctx context.Context,
 	assetID string,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountEventByUserAsset(db, assetID, opts...)
+	return data.CountEventByUserAsset(db, assetID, filters)
 }
 
 func (r *EventRepo) Create(
@@ -225,7 +225,7 @@ func (r *EventRepo) GetByLesson(
 	ctx context.Context,
 	lessonID string,
 	po *data.PageOptions,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (r *EventRepo) GetByLesson(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventByLesson(db, lessonID, po, opts...)
+	events, err := data.GetEventByLesson(db, lessonID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (r *EventRepo) GetReceivedByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (r *EventRepo) GetReceivedByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetReceivedEventByUser(db, userID, po, opts...)
+	events, err := data.GetReceivedEventByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +285,7 @@ func (r *EventRepo) GetByStudy(
 	ctx context.Context,
 	studyID string,
 	po *data.PageOptions,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -294,7 +294,7 @@ func (r *EventRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventByStudy(db, studyID, po, opts...)
+	events, err := data.GetEventByStudy(db, studyID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +315,7 @@ func (r *EventRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -324,7 +324,7 @@ func (r *EventRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventByUser(db, userID, po, opts...)
+	events, err := data.GetEventByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +345,7 @@ func (r *EventRepo) GetByUserAsset(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
-	opts ...data.EventFilterOption,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -354,7 +354,7 @@ func (r *EventRepo) GetByUserAsset(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	events, err := data.GetEventByUserAsset(db, userID, po, opts...)
+	events, err := data.GetEventByUserAsset(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}

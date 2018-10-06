@@ -84,15 +84,14 @@ func (r *topicResolver) Topicables(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByTopic(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := []repo.NodePermit{}
 
 	switch topicableType {
 	case TopicableTypeCourse:
-		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions)
+		filters := &data.CourseFilterOptions{
+			Search: args.Search,
+		}
+		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +119,8 @@ func (r *topicResolver) Topicables(
 		r.Repos,
 		permits,
 		pageOptions,
-		studyCount,
+		id,
+		args.Search,
 	)
 }
 

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -25,80 +24,105 @@ type Label struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-const countLabelByLabelableSQL = `
-	SELECT COUNT(*)
-	FROM labelable_label
-	WHERE labelable_id = $1
-`
+type LabelFilterOptions struct {
+	IsDefault *bool
+	Search    *string
+}
+
+func (src *LabelFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 3)
+	if src.IsDefault != nil {
+		if *src.IsDefault {
+			whereParts = append(whereParts, from+".is_default = true")
+		} else {
+			whereParts = append(whereParts, from+".is_default = false")
+		}
+	}
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountLabelByLabelable(
 	db Queryer,
 	labelableID string,
+	filters *LabelFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField(
 		"labelable_id", labelableID,
 	).Info("CountLabelByLabelable(labelable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.labelable_id = ` + args.Append(labelableID)
+	}
+	from := "labelable_label"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLabelByLabelable", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLabelByLabelable",
-		countLabelByLabelableSQL,
-		labelableID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
-
-const countLabelByStudySQL = `
-	SELECT COUNT(*)
-	FROM label
-	WHERE study_id = $1
-`
 
 func CountLabelByStudy(
 	db Queryer,
 	studyID string,
+	filters *LabelFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("study_id", studyID).Info("CountLabelByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+	from := "label_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLabelByStudy", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLabelByStudy",
-		countLabelByStudySQL,
-		studyID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
+const countLabelBySearchSQL = `
+	SELECT COUNT(*)
+	FROM label_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
+`
+
 func CountLabelBySearch(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountLabelBySearch(query)")
 	var n int32
-	var args pgx.QueryArgs
-	from := "label_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "Study" {
-			return n, fmt.Errorf(
-				"cannot search for labels within type `%s`",
-				in.Type,
-			)
-		}
-	}
-
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
-
-	psName := preparedName("countLabelBySearch", sql)
-
-	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	err := prepareQueryRow(
+		db,
+		"countLabelBySearch",
+		countLabelBySearchSQL,
+		ToPrefixTsQuery(query),
+	).Scan(&n)
 	return n, err
 }
 
@@ -162,8 +186,6 @@ func getManyLabel(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -193,12 +215,15 @@ func GetLabelByLabelable(
 	db Queryer,
 	labelableID string,
 	po *PageOptions,
+	filters *LabelFilterOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField(
 		"labelable_id", labelableID,
 	).Info("GetLabelByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`labelable_id = ` + args.Append(labelableID)}
+	where := func(from string) string {
+		return from + `.labelable_id = ` + args.Append(labelableID)
+	}
 
 	selects := []string{
 		"color",
@@ -212,7 +237,7 @@ func GetLabelByLabelable(
 		"updated_at",
 	}
 	from := "labelable_label"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLabelsByLabelableID", sql)
 
@@ -244,8 +269,6 @@ func GetLabelByLabelable(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -253,10 +276,13 @@ func GetLabelByStudy(
 	db Queryer,
 	studyID string,
 	po *PageOptions,
+	filters *LabelFilterOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetLabelByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyID)}
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
 
 	selects := []string{
 		"color",
@@ -269,7 +295,7 @@ func GetLabelByStudy(
 		"updated_at",
 	}
 	from := "label"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLabelsByStudyID", sql)
 
@@ -410,19 +436,10 @@ func DeleteLabel(
 
 func SearchLabel(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 	po *PageOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField("query", query).Info("Search(query)")
-	if within != nil {
-		if within.Type != "Study" {
-			return nil, fmt.Errorf(
-				"cannot search for labels within type `%s`",
-				within.Type,
-			)
-		}
-	}
 	selects := []string{
 		"color",
 		"created_at",
@@ -435,7 +452,7 @@ func SearchLabel(
 	}
 	from := "label_search_index"
 	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, within, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchLabelIndex", sql)
 

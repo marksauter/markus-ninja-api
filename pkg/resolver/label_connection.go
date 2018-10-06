@@ -6,10 +6,10 @@ import (
 )
 
 func NewLabelConnectionResolver(
+	repos *repo.Repos,
 	labels []*repo.LabelPermit,
 	pageOptions *data.PageOptions,
 	totalCount int32,
-	repos *repo.Repos,
 ) (*labelConnectionResolver, error) {
 	edges := make([]*labelEdgeResolver, len(labels))
 	for i := range edges {

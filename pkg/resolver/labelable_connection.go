@@ -1,16 +1,19 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLabelableConnectionResolver(
 	repos *repo.Repos,
 	labelables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	labelID *mytype.OID,
+	search *string,
 ) (*labelableConnectionResolver, error) {
 	edges := make([]*labelableEdgeResolver, len(labelables))
 	for i := range edges {
@@ -30,9 +33,10 @@ func NewLabelableConnectionResolver(
 	resolver := &labelableConnectionResolver{
 		edges:      edges,
 		labelables: labelables,
+		labelID:    labelID,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		search:     search,
 	}
 	return resolver, nil
 }
@@ -40,9 +44,10 @@ func NewLabelableConnectionResolver(
 type labelableConnectionResolver struct {
 	edges      []*labelableEdgeResolver
 	labelables []repo.NodePermit
+	labelID    *mytype.OID
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	search     *string
 }
 
 func (r *labelableConnectionResolver) Edges() *[]*labelableEdgeResolver {
@@ -51,6 +56,21 @@ func (r *labelableConnectionResolver) Edges() *[]*labelableEdgeResolver {
 		return &edges
 	}
 	return &[]*labelableEdgeResolver{}
+}
+
+func (r *labelableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
+	filters := &data.LessonFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Lesson().CountByLabel(ctx, r.labelID.String, filters)
+}
+
+func (r *labelableConnectionResolver) LessonCommentCount(ctx context.Context) (int32, error) {
+	// filters := &data.LessonCommentFilterOptions{
+	//   Search: r.search,
+	// }
+	// return r.repos.LessonComment().CountByLabel(ctx, r.labelID.String)
+	return int32(0), nil
 }
 
 func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
@@ -75,8 +95,4 @@ func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 
 func (r *labelableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
-}
-
-func (r *labelableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
 }

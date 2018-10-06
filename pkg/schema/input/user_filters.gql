@@ -1,0 +1,5 @@
+# Ways in which to filter lists of users.
+input UserFilters {
+  # Query to search users by.
+  search: String
+}

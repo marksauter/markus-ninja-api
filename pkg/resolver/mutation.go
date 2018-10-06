@@ -509,10 +509,14 @@ func (r *RootResolver) DeleteEmail(
 
 	email := emailPermit.Get()
 
+	isVerified := true
+	filters := &data.EmailFilterOptions{
+		IsVerified: &isVerified,
+	}
 	n, err := r.Repos.Email().CountByUser(
 		ctx,
 		email.UserID.String,
-		data.IsVerifiedEmail,
+		filters,
 	)
 	if err != nil {
 		return nil, err
@@ -529,9 +533,9 @@ func (r *RootResolver) DeleteEmail(
 		var newPrimaryEmail *data.Email
 		emails, err := r.Repos.Email().GetByUser(
 			ctx,
-			&email.UserID,
+			email.UserID.String,
 			nil,
-			data.IsVerifiedEmail,
+			filters,
 		)
 		if err != nil {
 			return nil, err
@@ -1358,26 +1362,31 @@ func (r *RootResolver) UpdateEmail(
 	if err != nil {
 		return nil, err
 	}
+	email := emailPermit.Get()
 
-	ok, err := emailPermit.IsVerified()
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
+	if email.VerifiedAt.Status == pgtype.Null {
 		return nil, errors.New("cannot update unverified email")
 	}
 
+	emailType, err := mytype.ParseEmailType(*args.Input.Type)
+	if err != nil {
+		return nil, errors.New("invalid email type")
+	}
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
 	if args.Input.Type != nil {
-		if *args.Input.Type == mytype.PrimaryEmail.String() {
-			viewer, ok := myctx.UserFromContext(ctx)
-			if !ok {
-				return nil, errors.New("viewer not found")
+		if emailType.V == mytype.PrimaryEmail {
+			filters := &data.EmailFilterOptions{
+				Types: &[]string{emailType.String()},
 			}
-			email, err := r.Repos.Email().GetByUserPrimary(ctx, viewer.ID.String)
-			if err != nil {
-				return nil, myerr.UnexpectedError{"user primary email not found"}
+			emails, err := r.Repos.Email().GetByUser(ctx, viewer.ID.String, nil, filters)
+			if err != nil || len(emails) == 0 {
+				return nil, err
 			}
-			e := email.Get()
+			e := emails[0].Get()
 			if err := e.Type.Set(mytype.ExtraEmail); err != nil {
 				return nil, myerr.UnexpectedError{"failed to set email type"}
 			}
@@ -1386,17 +1395,16 @@ func (r *RootResolver) UpdateEmail(
 				return nil, err
 			}
 		}
-		if *args.Input.Type == mytype.BackupEmail.String() {
-			viewer, ok := myctx.UserFromContext(ctx)
-			if !ok {
-				return nil, errors.New("viewer not found")
+		if emailType.V == mytype.BackupEmail {
+			filters := &data.EmailFilterOptions{
+				Types: &[]string{emailType.String()},
 			}
-			email, err := r.Repos.Email().GetByUserBackup(ctx, viewer.ID.String)
-			if err != nil && err != data.ErrNotFound {
+			emails, err := r.Repos.Email().GetByUser(ctx, viewer.ID.String, nil, filters)
+			if err != nil {
 				return nil, err
 			}
-			if email != nil {
-				e := email.Get()
+			if len(emails) > 0 {
+				e := emails[0].Get()
 				if err := e.Type.Set(mytype.ExtraEmail); err != nil {
 					return nil, myerr.UnexpectedError{"failed to set email type"}
 				}
@@ -1408,17 +1416,20 @@ func (r *RootResolver) UpdateEmail(
 		}
 	}
 
-	email := &data.Email{}
-	if err := email.ID.Set(args.Input.EmailID); err != nil {
+	emailUpdate := &data.Email{}
+	if err := emailUpdate.ID.Set(&email.ID); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set email id"}
+	}
+	if err := emailUpdate.UserID.Set(&viewer.ID); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set email id"}
 	}
 	if args.Input.Type != nil {
-		if err := email.Type.Set(args.Input.Type); err != nil {
+		if err := emailUpdate.Type.Set(emailType); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set email type"}
 		}
 	}
 
-	emailPermit, err = r.Repos.Email().Update(ctx, email)
+	emailPermit, err = r.Repos.Email().Update(ctx, emailUpdate)
 	if err != nil {
 		return nil, err
 	}
@@ -1775,6 +1786,7 @@ func (r *RootResolver) UpdateTopics(
 	topicPermits, err := r.Repos.Topic().GetByTopicable(
 		ctx,
 		args.Input.TopicableID,
+		nil,
 		nil,
 	)
 	if err != nil {

@@ -148,25 +148,27 @@ func (r *LessonRepo) CheckConnection() error {
 func (r *LessonRepo) CountByEnrollee(
 	ctx context.Context,
 	userID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByEnrollee(db, userID)
+	return data.CountLessonByEnrollee(db, userID, filters)
 }
 
 func (r *LessonRepo) CountByLabel(
 	ctx context.Context,
 	labelID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonByLabel(db, labelID)
+	return data.CountLessonByLabel(db, labelID, filters)
 }
 
 func (r *LessonRepo) CountBySearch(

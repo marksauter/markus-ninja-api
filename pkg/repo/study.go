@@ -153,25 +153,27 @@ func (r *StudyRepo) CountByApplee(
 func (r *StudyRepo) CountByEnrollee(
 	ctx context.Context,
 	enrolleeID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByEnrollee(db, enrolleeID)
+	return data.CountStudyByEnrollee(db, enrolleeID, filters)
 }
 
 func (r *StudyRepo) CountByTopic(
 	ctx context.Context,
 	topicID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyByTopic(db, topicID)
+	return data.CountStudyByTopic(db, topicID, filters)
 }
 
 func (r *StudyRepo) CountBySearch(

@@ -13,6 +13,7 @@ func NewAppleableConnectionResolver(
 	repos *repo.Repos,
 	appleables []repo.NodePermit, pageOptions *data.PageOptions,
 	userID *mytype.OID,
+	search *string,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
 	for i := range edges {
@@ -34,6 +35,7 @@ func NewAppleableConnectionResolver(
 		appleables: appleables,
 		pageInfo:   pageInfo,
 		repos:      repos,
+		search:     search,
 		userID:     userID,
 	}
 	return resolver, nil
@@ -44,11 +46,15 @@ type appleableConnectionResolver struct {
 	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
+	search     *string
 	userID     *mytype.OID
 }
 
 func (r *appleableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
-	return r.repos.Course().CountByApplee(ctx, r.userID.String)
+	filters := &data.CourseFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Course().CountByApplee(ctx, r.userID.String, filters)
 }
 
 func (r *appleableConnectionResolver) Edges() *[]*appleableEdgeResolver {
@@ -84,5 +90,8 @@ func (r *appleableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *appleableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
-	return r.repos.Study().CountByApplee(ctx, r.userID.String, nil)
+	filters := &data.StudyFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Study().CountByApplee(ctx, r.userID.String, filters)
 }

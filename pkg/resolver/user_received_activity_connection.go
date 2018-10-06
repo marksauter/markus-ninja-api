@@ -81,5 +81,5 @@ func (r *userReceivedActivityConnectionResolver) PageInfo() (*pageInfoResolver, 
 }
 
 func (r *userReceivedActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
-	return r.repos.Event().CountReceivedByUser(ctx, r.userID.String)
+	return r.repos.Event().CountReceivedByUser(ctx, r.userID.String, nil)
 }

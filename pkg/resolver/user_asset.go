@@ -7,6 +7,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -119,7 +120,7 @@ func (r *userAssetResolver) Timeline(
 		OrderBy *OrderArg
 	},
 ) (*userAssetTimelineConnectionResolver, error) {
-	userAssetID, err := r.UserAsset.ID()
+	id, err := r.UserAsset.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -139,27 +140,28 @@ func (r *userAssetResolver) Timeline(
 		return nil, err
 	}
 
+	actionIsNot := []string{
+		mytype.CreatedAction.String(),
+	}
+	filters := &data.EventFilterOptions{
+		ActionIsNot: &actionIsNot,
+	}
 	events, err := r.Repos.Event().GetByUserAsset(
 		ctx,
-		userAssetID.String,
+		id.String,
 		pageOptions,
+		filters,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountByUserAsset(
-		ctx,
-		userAssetID.String,
-	)
-	if err != nil {
-		return nil, err
-	}
 	resolver, err := NewUserAssetTimelineConnectionResolver(
+		r.Repos,
 		events,
 		pageOptions,
-		count,
-		r.Repos,
+		id,
+		filters,
 	)
 	if err != nil {
 		return nil, err

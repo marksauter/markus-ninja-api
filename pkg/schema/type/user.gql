@@ -26,7 +26,7 @@ type User implements
     orderBy: EventOrder
   ): UserActivityConnection!
 
-  # A list of studies the user has appled.
+  # A list of appleables the user has appled.
   appled(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -58,6 +58,9 @@ type User implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for user assets returned from the connection.
+    filterBy: UserAssetFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -88,17 +91,14 @@ type User implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for emails returned from the connection.
+    filterBy: EmailFilters
+
     # Returns the first n elements form the list.
     first: Int
 
-    # If non-null, then filter emails by whether they have been verified.
-    isVerified: Boolean
-
     # Returns the last n elements form the list.
     last: Int
-
-    # If non-null, then filter emails by type.
-    type: [EmailType!]
   ): EmailConnection!
 
   # A list of enrollables the user is enrolled in.
@@ -135,6 +135,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
 
     # Returns the first n elements form the list.
     first: Int

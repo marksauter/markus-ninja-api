@@ -4,6 +4,7 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
 )
 
 type appleable interface {
@@ -28,9 +29,10 @@ func (r *appleableResolver) ToStudy() (*studyResolver, bool) {
 }
 
 type AppleGiversArgs struct {
-	After   *string
-	Before  *string
-	First   *int32
-	Last    *int32
-	OrderBy *OrderArg
+	After    *string
+	Before   *string
+	FilterBy *data.UserFilterOptions
+	First    *int32
+	Last     *int32
+	OrderBy  *OrderArg
 }

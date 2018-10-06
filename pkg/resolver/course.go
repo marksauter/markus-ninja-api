@@ -9,7 +9,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -71,19 +70,17 @@ func (r *courseResolver) AppleGivers(
 		ctx,
 		courseID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByAppleable(ctx, courseID.String)
-	if err != nil {
-		return nil, err
-	}
 	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
+		r.Repos,
 		users,
 		pageOptions,
-		count,
-		r.Repos,
+		courseID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -108,97 +105,6 @@ func (r *courseResolver) DescriptionHTML() (mygql.HTML, error) {
 	descriptionHTML := util.MarkdownToHTML([]byte(description))
 	gqlHTML := mygql.HTML(descriptionHTML)
 	return gqlHTML, nil
-}
-
-func (r *courseResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	courseID, err := r.Course.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.User().CountByEnrollable(ctx, courseID.String)
-}
-
-func (r *courseResolver) Enrollees(
-	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*enrolleeConnectionResolver, error) {
-	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
-	if err != nil {
-		return nil, err
-	}
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		enrolleeOrder,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	courseID, err := r.Course.ID()
-	if err != nil {
-		return nil, err
-	}
-	users, err := r.Repos.User().GetByEnrollable(
-		ctx,
-		courseID.String,
-		pageOptions,
-	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.User().CountByEnrollable(ctx, courseID.String)
-	if err != nil {
-		return nil, err
-	}
-	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
-		users,
-		pageOptions,
-		count,
-		r.Repos,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return enrolleeConnectionResolver, nil
-}
-
-func (r *courseResolver) EnrollmentStatus(ctx context.Context) (string, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return "", errors.New("viewer not found")
-	}
-	id, err := r.Course.ID()
-	if err != nil {
-		return "", err
-	}
-
-	enrolled := &data.Enrolled{}
-	enrolled.EnrollableID.Set(id)
-	enrolled.UserID.Set(viewer.ID)
-	permit, err := r.Repos.Enrolled().Get(ctx, enrolled)
-	if err != nil {
-		if err != data.ErrNotFound {
-			return "", err
-		}
-		return mytype.EnrollmentStatusUnenrolled.String(), nil
-	}
-
-	status, err := permit.Status()
-	if err != nil {
-		return "", err
-	}
-	return status.String(), nil
 }
 
 func (r *courseResolver) ID() (graphql.ID, error) {
@@ -361,11 +267,12 @@ func (r *courseResolver) Study(ctx context.Context) (*studyResolver, error) {
 func (r *courseResolver) Topics(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.TopicFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*topicConnectionResolver, error) {
 	courseID, err := r.Course.ID()
@@ -392,19 +299,17 @@ func (r *courseResolver) Topics(
 		ctx,
 		courseID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Topic().CountByTopicable(ctx, courseID.String)
-	if err != nil {
-		return nil, err
-	}
 	topicConnectionResolver, err := NewTopicConnectionResolver(
+		r.Repos,
 		topics,
 		pageOptions,
-		count,
-		r.Repos,
+		courseID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -448,22 +353,6 @@ func (r *courseResolver) ViewerCanApple(ctx context.Context) (bool, error) {
 	appled.AppleableID.Set(courseID)
 	appled.UserID.Set(viewer.ID)
 	return r.Repos.Appled().ViewerCanApple(ctx, appled)
-}
-
-func (r *courseResolver) ViewerCanEnroll(ctx context.Context) (bool, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return false, errors.New("viewer not found")
-	}
-	courseID, err := r.Course.ID()
-	if err != nil {
-		return false, err
-	}
-
-	enrolled := &data.Enrolled{}
-	enrolled.EnrollableID.Set(courseID)
-	enrolled.UserID.Set(viewer.ID)
-	return r.Repos.Enrolled().ViewerCanEnroll(ctx, enrolled)
 }
 
 func (r *courseResolver) ViewerHasAppled(ctx context.Context) (bool, error) {

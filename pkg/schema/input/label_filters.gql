@@ -1,0 +1,8 @@
+# Ways in which to filter lists of labels.
+input LabelFilters {
+  # List labels that default to each study.
+  isDefault: Boolean
+
+  # Query to search labels by.
+  search: String
+}

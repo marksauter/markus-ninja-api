@@ -14,6 +14,7 @@ func NewUserActivityConnectionResolver(
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
+	filters *data.EventFilterOptions,
 ) (*userActivityConnectionResolver, error) {
 	edges := make([]*userActivityEventEdgeResolver, len(events))
 	for i := range edges {
@@ -33,6 +34,7 @@ func NewUserActivityConnectionResolver(
 	resolver := &userActivityConnectionResolver{
 		edges:    edges,
 		events:   events,
+		filters:  filters,
 		pageInfo: pageInfo,
 		repos:    repos,
 		userID:   userID,
@@ -43,6 +45,7 @@ func NewUserActivityConnectionResolver(
 type userActivityConnectionResolver struct {
 	edges    []*userActivityEventEdgeResolver
 	events   []*repo.EventPermit
+	filters  *data.EventFilterOptions
 	pageInfo *pageInfoResolver
 	repos    *repo.Repos
 	userID   *mytype.OID
@@ -81,5 +84,5 @@ func (r *userActivityConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *userActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
-	return r.repos.Event().CountByUser(ctx, r.userID.String, data.IsCourseEvent, data.IsStudyEvent)
+	return r.repos.Event().CountByUser(ctx, r.userID.String, r.filters)
 }

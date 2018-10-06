@@ -1,15 +1,20 @@
 package resolver
 
 import (
+	"context"
+	"errors"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewUserAssetConnectionResolver(
+	repos *repo.Repos,
 	userAssets []*repo.UserAssetPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	nodeID *mytype.OID,
+	filters *data.UserAssetFilterOptions,
 ) (*userAssetConnectionResolver, error) {
 	edges := make([]*userAssetEdgeResolver, len(userAssets))
 	for i := range edges {
@@ -28,20 +33,22 @@ func NewUserAssetConnectionResolver(
 
 	resolver := &userAssetConnectionResolver{
 		edges:      edges,
-		userAssets: userAssets,
+		filters:    filters,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		totalCount: totalCount,
+		userAssets: userAssets,
+		nodeID:     nodeID,
 	}
 	return resolver, nil
 }
 
 type userAssetConnectionResolver struct {
 	edges      []*userAssetEdgeResolver
-	userAssets []*repo.UserAssetPermit
+	filters    *data.UserAssetFilterOptions
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	totalCount int32
+	userAssets []*repo.UserAssetPermit
+	nodeID     *mytype.OID
 }
 
 func (r *userAssetConnectionResolver) Edges() *[]*userAssetEdgeResolver {
@@ -68,6 +75,14 @@ func (r *userAssetConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *userAssetConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *userAssetConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	switch r.nodeID.Type {
+	case "Study":
+		return r.repos.UserAsset().CountByStudy(ctx, r.nodeID.String, r.filters)
+	case "User":
+		return r.repos.UserAsset().CountByUser(ctx, r.nodeID.String, r.filters)
+	default:
+		var n int32
+		return n, errors.New("invalid node ID for user asset total count")
+	}
 }

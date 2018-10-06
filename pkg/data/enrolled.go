@@ -20,87 +20,86 @@ type Enrolled struct {
 	UserID       mytype.OID              `db:"user_id" permit:"read"`
 }
 
-type EnrolledFilterOption int
+type EnrolledFilterOptions struct {
+	Status *[]string
+	Types  *[]string
+}
 
-const (
-	NotUnenrolled EnrolledFilterOption = iota
-)
+func (src *EnrolledFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
 
-func (src EnrolledFilterOption) SQL(from string) string {
-	switch src {
-	case NotUnenrolled:
-		return from + ".status IS NOT 'UNENROLLED'"
-	default:
-		return ""
+	whereParts := make([]string, 0, 2)
+	if src.Status != nil && len(*src.Status) > 0 {
+		whereStatus := make([]string, len(*src.Status))
+		for i, s := range *src.Status {
+			whereStatus[i] = from + ".status = '" + s + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereStatus, " OR ")+")",
+		)
+	}
+	if src.Types != nil && len(*src.Types) > 0 {
+		whereType := make([]string, len(*src.Types))
+		for i, t := range *src.Types {
+			whereType[i] = from + ".type = '" + t + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereType, " OR ")+")",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		Where: where,
 	}
 }
-
-func (src EnrolledFilterOption) Type() FilterType {
-	return AndFilter
-}
-
-const countEnrolledByUserSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE user_id = $1
-`
 
 func CountEnrolledByUser(
 	db Queryer,
 	userID string,
-	opts ...EnrolledFilterOption,
-) (n int32, err error) {
+	filters *EnrolledFilterOptions,
+) (int32, error) {
 	mylog.Log.WithField("user_id", userID).Info("CountEnrolledByUser()")
-
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	ands := JoinFilters(filters)("enrolled")
-	sql := countEnrolledByUserSQL
-	if len(ands) > 0 {
-		sql = strings.Join([]string{sql, ands}, " AND ")
-	}
+	from := "enrolled"
 
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countEnrolledByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userID).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
-
-const countEnrolledByEnrollableSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE enrollable_id = $1
-`
 
 func CountEnrolledByEnrollable(
 	db Queryer,
 	enrollableID string,
-	opts ...EnrolledFilterOption,
-) (n int32, err error) {
+	filters *EnrolledFilterOptions,
+) (int32, error) {
 	mylog.Log.WithField("enrollable_id", enrollableID).Info("CountEnrolledByEnrollable()")
-
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
 	}
-	ands := JoinFilters(filters)("enrolled")
-	sql := countEnrolledByEnrollableSQL
-	if len(ands) > 0 {
-		sql = strings.Join([]string{sql, ands}, " AND ")
-	}
+	from := "enrolled"
 
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("CountEnrolledByEnrollable", sql)
 
-	err = prepareQueryRow(db, psName, sql, enrollableID).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 func getEnrolled(
@@ -162,8 +161,6 @@ func getManyEnrolled(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -223,20 +220,13 @@ func GetEnrolledByUser(
 	db Queryer,
 	userID string,
 	po *PageOptions,
-	opts ...EnrolledFilterOption,
+	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetEnrolledByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	where := append(
-		[]WhereFrom{func(from string) string {
-			return from + `.user_id = ` + args.Append(userID)
-		}},
-		JoinFilters(filters),
-	)
 
 	selects := []string{
 		"created_at",
@@ -248,7 +238,7 @@ func GetEnrolledByUser(
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL2(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrolledsByUser", sql)
 
@@ -259,20 +249,13 @@ func GetEnrolledByEnrollable(
 	db Queryer,
 	enrollableID string,
 	po *PageOptions,
-	opts ...EnrolledFilterOption,
+	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("enrollable_id", enrollableID).Info("GetEnrolledByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
 	}
-	where := append(
-		[]WhereFrom{func(from string) string {
-			return from + `.enrollable_id = ` + args.Append(enrollableID)
-		}},
-		JoinFilters(filters),
-	)
 
 	selects := []string{
 		"created_at",
@@ -284,7 +267,7 @@ func GetEnrolledByEnrollable(
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL2(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrolledsByEnrollable", sql)
 

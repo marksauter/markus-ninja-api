@@ -60,19 +60,17 @@ func (r *studyResolver) AppleGivers(
 		ctx,
 		studyID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByAppleable(ctx, studyID.String)
-	if err != nil {
-		return nil, err
-	}
 	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
+		r.Repos,
 		users,
 		pageOptions,
-		count,
-		r.Repos,
+		studyID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -102,11 +100,12 @@ func (r *studyResolver) Asset(
 func (r *studyResolver) Assets(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.UserAssetFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
 	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)
@@ -133,19 +132,17 @@ func (r *studyResolver) Assets(
 		ctx,
 		studyID,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.UserAsset().CountByStudy(ctx, studyID.String)
-	if err != nil {
-		return nil, err
-	}
 	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
+		r.Repos,
 		userAssets,
 		pageOptions,
-		count,
-		r.Repos,
+		studyID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -257,17 +254,18 @@ func (r *studyResolver) EnrolleeCount(ctx context.Context) (int32, error) {
 		var n int32
 		return n, err
 	}
-	return r.Repos.User().CountByEnrollable(ctx, studyID.String)
+	return r.Repos.User().CountByEnrollable(ctx, studyID.String, nil)
 }
 
 func (r *studyResolver) Enrollees(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.UserFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*enrolleeConnectionResolver, error) {
 	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
@@ -294,19 +292,17 @@ func (r *studyResolver) Enrollees(
 		ctx,
 		studyID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.User().CountByEnrollable(ctx, studyID.String)
-	if err != nil {
-		return nil, err
-	}
 	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
+		r.Repos,
 		users,
 		pageOptions,
-		count,
-		r.Repos,
+		studyID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
@@ -354,11 +350,12 @@ func (r *studyResolver) IsPrivate(ctx context.Context) (bool, error) {
 func (r *studyResolver) Labels(
 	ctx context.Context,
 	args struct {
-		After  *string
-		Before *string
-		First  *int32
-		Last   *int32
-		Query  *string
+		After    *string
+		Before   *string
+		FilterBy *data.LabelFilterOptions
+		First    *int32
+		Last     *int32
+		Query    *string
 	},
 ) (*labelConnectionResolver, error) {
 	studyID, err := r.Study.ID()
@@ -377,32 +374,19 @@ func (r *studyResolver) Labels(
 		return nil, err
 	}
 
-	var count int32
-	var labels []*repo.LabelPermit
-	if args.Query != nil {
-		count, err = r.Repos.Label().CountBySearch(ctx, studyID, *args.Query)
-		if err != nil {
-			return nil, err
-		}
-		labels, err = r.Repos.Label().Search(ctx, studyID, *args.Query, pageOptions)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		count, err = r.Repos.Label().CountByStudy(ctx, studyID.String)
-		if err != nil {
-			return nil, err
-		}
-		labels, err = r.Repos.Label().GetByStudy(ctx, studyID.String, pageOptions)
-		if err != nil {
-			return nil, err
-		}
+	count, err := r.Repos.Label().CountByStudy(ctx, studyID.String, args.FilterBy)
+	if err != nil {
+		return nil, err
+	}
+	labels, err := r.Repos.Label().GetByStudy(ctx, studyID.String, pageOptions, args.FilterBy)
+	if err != nil {
+		return nil, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
+		r.Repos,
 		labels,
 		pageOptions,
 		count,
-		r.Repos,
 	)
 	if err != nil {
 		return nil, err
@@ -604,11 +588,12 @@ func (r *studyResolver) ResourcePath(
 func (r *studyResolver) Topics(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.TopicFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*topicConnectionResolver, error) {
 	studyID, err := r.Study.ID()
@@ -635,19 +620,17 @@ func (r *studyResolver) Topics(
 		ctx,
 		studyID.String,
 		pageOptions,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Topic().CountByTopicable(ctx, studyID.String)
-	if err != nil {
-		return nil, err
-	}
 	topicConnectionResolver, err := NewTopicConnectionResolver(
+		r.Repos,
 		topics,
 		pageOptions,
-		count,
-		r.Repos,
+		studyID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err

@@ -12,6 +12,9 @@ type AppleableEdge {
 
 # A list of appleables.
 type AppleableConnection {
+  # The number of courses associated with the connection.
+  courseCount: Int!
+
   # A list of edges.
   edges: [AppleableEdge]
 
@@ -21,6 +24,6 @@ type AppleableConnection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
-  # The number of studies associated with the apple.
+  # The number of studies associated with the connection.
   studyCount: Int!
 }

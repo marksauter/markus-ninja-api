@@ -26,19 +26,16 @@ const countTopicedByTopicSQL = `
 func CountTopicedByTopic(
 	db Queryer,
 	topicID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("CountTopicedByTopic()")
-
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countTopicedByTopic",
 		countTopicedByTopicSQL,
 		topicID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
 
 const countTopicedByTopicableSQL = `
@@ -50,19 +47,16 @@ const countTopicedByTopicableSQL = `
 func CountTopicedByTopicable(
 	db Queryer,
 	topicableID string,
-) (n int32, err error) {
+) (int32, error) {
 	mylog.Log.WithField("topicable_id", topicableID).Info("CountTopicedByTopicable()")
-
-	err = prepareQueryRow(
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countTopicedByTopicable",
 		countTopicedByTopicableSQL,
 		topicableID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	return n, err
 }
 
 func getTopiced(
@@ -177,7 +171,9 @@ func GetTopicedByTopic(
 ) ([]*Topiced, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetTopicedByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicID)}
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -187,7 +183,7 @@ func GetTopicedByTopic(
 		"type",
 	}
 	from := "topiced"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getTopicedsByTopic", sql)
 
@@ -201,7 +197,9 @@ func GetTopicedByTopicable(
 ) ([]*Topiced, error) {
 	mylog.Log.WithField("topicable_id", topicableID).Info("GetTopicedByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topicable_id = ` + args.Append(topicableID)}
+	where := func(from string) string {
+		return from + `.topicable_id = ` + args.Append(topicableID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -211,9 +209,7 @@ func GetTopicedByTopicable(
 		"type",
 	}
 	from := "topiced"
-	sql := SQL(selects, from, where, &args, po)
-
-	mylog.Log.Debug(sql)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getTopicedsByTopicable", sql)
 

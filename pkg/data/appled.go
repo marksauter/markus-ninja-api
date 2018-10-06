@@ -33,8 +33,6 @@ func CountAppledByUser(db Queryer, userID string) (n int32, err error) {
 		userID,
 	).Scan(&n)
 
-	mylog.Log.WithField("n", n).Info("")
-
 	return
 }
 
@@ -53,8 +51,6 @@ func CountAppledByAppleable(db Queryer, appleableID string) (n int32, err error)
 		countAppledByAppleableSQL,
 		appleableID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
 
 	return
 }
@@ -114,8 +110,6 @@ func getManyAppled(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -164,7 +158,9 @@ func GetAppledByUser(
 ) ([]*Appled, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetAppledByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"appleable_id",
@@ -174,7 +170,7 @@ func GetAppledByUser(
 		"user_id",
 	}
 	from := "appled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getAppledsByUser", sql)
 
@@ -188,7 +184,9 @@ func GetAppledByAppleable(
 ) ([]*Appled, error) {
 	mylog.Log.WithField("appleable_id", appleableID).Info("GetAppledByAppleable(appleable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`appleable_id = ` + args.Append(appleableID)}
+	where := func(from string) string {
+		return from + `.appleable_id = ` + args.Append(appleableID)
+	}
 
 	selects := []string{
 		"appleable_id",
@@ -198,9 +196,7 @@ func GetAppledByAppleable(
 		"user_id",
 	}
 	from := "appled"
-	sql := SQL(selects, from, where, &args, po)
-
-	mylog.Log.Debug(sql)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getAppledsByAppleable", sql)
 

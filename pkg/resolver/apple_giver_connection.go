@@ -1,15 +1,19 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleGiverConnectionResolver(
+	repos *repo.Repos,
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	appleableID *mytype.OID,
+	filters *data.UserFilterOptions,
 ) (*appleGiverConnectionResolver, error) {
 	edges := make([]*appleGiverEdgeResolver, len(users))
 	for i := range edges {
@@ -29,21 +33,23 @@ func NewAppleGiverConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &appleGiverConnectionResolver{
-		edges:      edges,
-		users:      users,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		appleableID: appleableID,
+		edges:       edges,
+		filters:     filters,
+		pageInfo:    pageInfo,
+		repos:       repos,
+		users:       users,
 	}
 	return resolver, nil
 }
 
 type appleGiverConnectionResolver struct {
-	edges      []*appleGiverEdgeResolver
-	users      []*repo.UserPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	appleableID *mytype.OID
+	edges       []*appleGiverEdgeResolver
+	filters     *data.UserFilterOptions
+	pageInfo    *pageInfoResolver
+	repos       *repo.Repos
+	users       []*repo.UserPermit
 }
 
 func (r *appleGiverConnectionResolver) Edges() *[]*appleGiverEdgeResolver {
@@ -70,6 +76,6 @@ func (r *appleGiverConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *appleGiverConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *appleGiverConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.User().CountByAppleable(ctx, r.appleableID.String, r.filters)
 }

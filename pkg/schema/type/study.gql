@@ -42,6 +42,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for user assets returned from the connection.
+    filterBy: UserAssetFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -99,6 +102,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -125,14 +131,14 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
+
     # Returns the first n elements form the list.
     first: Int
 
     # Returns the last n elements form the list.
     last: Int
-
-    # If provided, search labels by name and description.
-    query: String
   ): LabelConnection!
 
   # Returns a single lesson from the current study by number.
@@ -198,6 +204,9 @@ type Study implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for topics returned from the connection.
+    filterBy: TopicFilters
 
     # Returns the first n elements form the list.
     first: Int

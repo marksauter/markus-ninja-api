@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -22,54 +21,79 @@ type Topic struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-const countTopicByTopicableSQL = `
-	SELECT COUNT(*)
-	FROM topicable_topic
-	WHERE topicable_id = $1
-`
+func topicDelimeter(r rune) bool {
+	return r == '-'
+}
+
+type TopicFilterOptions struct {
+	Search *string
+}
+
+func (src *TopicFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 3)
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountTopicByTopicable(
 	db Queryer,
 	topicableID string,
+	filters *TopicFilterOptions,
 ) (int32, error) {
 	mylog.Log.WithField("topicable_id", topicableID).Info("CountTopicByTopicable(topicable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topicable_id = ` + args.Append(topicableID)
+	}
+	from := "topicable_topic"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countTopicByTopicable", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countTopicByTopicable",
-		countTopicByTopicableSQL,
-		topicableID,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err
 }
 
+const countTopicBySearchSQL = `
+	SELECT COUNT(*)
+	FROM topic_search_index, to_tsquery('simple', $1) as query
+	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
+`
+
 func CountTopicBySearch(
 	db Queryer,
-	within *mytype.OID,
 	query string,
 ) (int32, error) {
 	mylog.Log.WithField("query", query).Info("CountTopicBySearch(query)")
 	var n int32
-	var args pgx.QueryArgs
-	from := "topic_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "Study" {
-			return n, fmt.Errorf(
-				"cannot search for topics within type `%s`",
-				in.Type,
-			)
-		}
-	}
-
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
-
-	psName := preparedName("countTopicBySearch", sql)
-
-	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	err := prepareQueryRow(
+		db,
+		"countTopicBySearch",
+		countTopicBySearchSQL,
+		ToPrefixTsQuery(query),
+	).Scan(&n)
 	return n, err
 }
 
@@ -126,8 +150,6 @@ func getManyTopic(
 		mylog.Log.WithError(err).Error("failed to get topics")
 		return nil, err
 	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
 
 	return rows, nil
 }
@@ -188,12 +210,15 @@ func GetTopicByTopicable(
 	db Queryer,
 	topicableID string,
 	po *PageOptions,
+	filters *TopicFilterOptions,
 ) ([]*Topic, error) {
 	mylog.Log.WithField(
 		"topicable_id", topicableID,
 	).Info("GetTopicByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topicable_id = ` + args.Append(topicableID)}
+	where := func(from string) string {
+		return from + `.topicable_id = ` + args.Append(topicableID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -205,7 +230,7 @@ func GetTopicByTopicable(
 		"updated_at",
 	}
 	from := "topicable_topic"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getTopicsByTopicableID", sql)
 
@@ -362,7 +387,7 @@ func SearchTopic(
 	}
 	from := "topic_search_index"
 	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, nil, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
 
 	psName := preparedName("searchTopicIndex", sql)
 
@@ -424,8 +449,4 @@ func UpdateTopic(
 	}
 
 	return topic, nil
-}
-
-func topicDelimeter(r rune) bool {
-	return r == '-'
 }

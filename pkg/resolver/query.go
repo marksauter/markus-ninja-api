@@ -3,7 +3,6 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -94,20 +93,8 @@ func (r *RootResolver) Search(
 		OrderBy *OrderArg
 		Query   string
 		Type    string
-		Within  *string
 	},
 ) (*searchableConnectionResolver, error) {
-	var within *mytype.OID
-	if args.Within != nil {
-		var err error
-		within, err = mytype.ParseOID(*args.Within)
-		if err != nil {
-			return nil, err
-		}
-		if within.Type != "User" && within.Type != "Study" && within.Type != "Topic" && within.Type != "Label" {
-			return nil, fmt.Errorf("cannot search within %s", within.Type)
-		}
-	}
 	searchType, err := ParseSearchType(args.Type)
 	if err != nil {
 		return nil, err
@@ -141,7 +128,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeLabel:
-		labels, err := r.Repos.Label().Search(ctx, within, args.Query, pageOptions)
+		labels, err := r.Repos.Label().Search(ctx, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +173,7 @@ func (r *RootResolver) Search(
 			permits[i] = l
 		}
 	case SearchTypeUserAsset:
-		userAssets, err := r.Repos.UserAsset().Search(ctx, within, args.Query, pageOptions)
+		userAssets, err := r.Repos.UserAsset().Search(ctx, args.Query, pageOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +188,6 @@ func (r *RootResolver) Search(
 		permits,
 		pageOptions,
 		args.Query,
-		within,
 	)
 }
 

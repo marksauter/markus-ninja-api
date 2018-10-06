@@ -1,15 +1,19 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewTopicConnectionResolver(
+	repos *repo.Repos,
 	topics []*repo.TopicPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	topicableID *mytype.OID,
+	filters *data.TopicFilterOptions,
 ) (*topicConnectionResolver, error) {
 	edges := make([]*topicEdgeResolver, len(topics))
 	for i := range edges {
@@ -29,21 +33,23 @@ func NewTopicConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &topicConnectionResolver{
-		edges:      edges,
-		topics:     topics,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		edges:       edges,
+		filters:     filters,
+		pageInfo:    pageInfo,
+		repos:       repos,
+		topics:      topics,
+		topicableID: topicableID,
 	}
 	return resolver, nil
 }
 
 type topicConnectionResolver struct {
-	edges      []*topicEdgeResolver
-	topics     []*repo.TopicPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	edges       []*topicEdgeResolver
+	filters     *data.TopicFilterOptions
+	pageInfo    *pageInfoResolver
+	repos       *repo.Repos
+	topics      []*repo.TopicPermit
+	topicableID *mytype.OID
 }
 
 func (r *topicConnectionResolver) Edges() *[]*topicEdgeResolver {
@@ -70,6 +76,6 @@ func (r *topicConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *topicConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *topicConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.Topic().CountByTopicable(ctx, r.topicableID.String, r.filters)
 }

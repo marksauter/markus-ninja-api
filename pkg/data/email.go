@@ -19,71 +19,63 @@ type Email struct {
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
-type EmailFilterOption int
-
-const (
-	// OR filters
-	IsBackupEmail EmailFilterOption = iota
-	IsExtraEmail
-	IsPrimaryEmail
-
-	// AND filters
-	IsVerifiedEmail
-)
-
-func (src EmailFilterOption) SQL(from string) string {
-	switch src {
-	case IsBackupEmail:
-		return from + ".type = 'BACKUP'"
-	case IsExtraEmail:
-		return from + ".type = 'EXTRA'"
-	case IsPrimaryEmail:
-		return from + ".type = 'PRIMARY'"
-	case IsVerifiedEmail:
-		return from + ".verified_at IS NOT NULL"
-	default:
-		return ""
-	}
+type EmailFilterOptions struct {
+	IsVerified *bool
+	Types      *[]string
 }
 
-func (src EmailFilterOption) Type() FilterType {
-	if src > IsPrimaryEmail {
-		return AndFilter
-	} else {
-		return OrFilter
+func (src *EmailFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	whereParts := make([]string, 0, 2)
+	if src.IsVerified != nil {
+		if *src.IsVerified {
+			whereParts = append(whereParts, from+".verified_at IS NOT NULL")
+		} else {
+			whereParts = append(whereParts, from+".verified_at IS NULL")
+		}
+	}
+	if src.Types != nil && len(*src.Types) > 0 {
+		whereType := make([]string, len(*src.Types))
+		for i, t := range *src.Types {
+			whereType[i] = from + ".type = '" + t + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereType, " OR ")+")",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		Where: where,
 	}
 }
-
-const countEmailByUserSQL = `
-	SELECT COUNT(*)
-	FROM email
-	WHERE user_id = $1
-`
 
 func CountEmailByUser(
 	db Queryer,
 	userID string,
-	opts ...EmailFilterOption,
-) (n int32, err error) {
+	filters *EmailFilterOptions,
+) (int32, error) {
 	mylog.Log.WithField("user_id", userID).Info("CountEmailByUser(user_id) Email")
-
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	ands := JoinFilters(filters)("email")
-	sql := countEmailByUserSQL
-	if len(ands) > 0 {
-		sql = strings.Join([]string{sql, ands}, " AND ")
-	}
+	from := "email"
 
-	psName := preparedName("countEmailByUser", sql)
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userID).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	return n, err
 }
 
 func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email, error) {
@@ -138,8 +130,6 @@ func getManyEmail(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
@@ -159,56 +149,6 @@ const getEmailByIDSQL = `
 func GetEmail(db Queryer, id string) (*Email, error) {
 	mylog.Log.WithField("id", id).Info("GetEmail(id)")
 	return getEmail(db, "getEmailByID", getEmailByIDSQL, id)
-}
-
-const getEmailByUserBackupSQL = `
-	SELECT
-		created_at,
-		id,
-		type,
-		user_id,
-		updated_at,
-		value,
-		verified_at
-	FROM email
-	WHERE user_id = $1 AND type = 'BACKUP'
-`
-
-func GetEmailByUserBackup(db Queryer, userID string) (*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userID,
-	).Info("GetEmailByUserBackup(user_id)")
-	return getEmail(
-		db,
-		"getEmailByUserBackup",
-		getEmailByUserBackupSQL,
-		userID,
-	)
-}
-
-const getEmailByUserPrimarySQL = `
-	SELECT
-		created_at,
-		id,
-		type,
-		user_id,
-		updated_at,
-		value,
-		verified_at
-	FROM email
-	WHERE user_id = $1 AND type = 'PRIMARY'
-`
-
-func GetEmailByUserPrimary(db Queryer, userID string) (*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userID,
-	).Info("GetEmailByUserPrimary(user_id)")
-	return getEmail(
-		db,
-		"getEmailByUserPrimary",
-		getEmailByUserPrimarySQL,
-		userID,
-	)
 }
 
 const getEmailByValueSQL = `
@@ -238,24 +178,17 @@ func GetEmailByValue(db Queryer, email string) (*Email, error) {
 
 func GetEmailByUser(
 	db Queryer,
-	userID *mytype.OID,
+	userID string,
 	po *PageOptions,
-	opts ...EmailFilterOption,
+	filters *EmailFilterOptions,
 ) ([]*Email, error) {
 	mylog.Log.WithField(
-		"user_id", userID.String,
+		"user_id", userID,
 	).Info("GetEmailByUser(userID)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	filters := make([]FilterOption, len(opts))
-	for i, o := range opts {
-		filters[i] = o
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	where := append(
-		[]WhereFrom{func(from string) string {
-			return from + `.user_id = ` + args.Append(userID)
-		}},
-		JoinFilters(filters),
-	)
 
 	selects := []string{
 		"created_at",
@@ -267,9 +200,7 @@ func GetEmailByUser(
 		"verified_at",
 	}
 	from := "email"
-	sql := SQL2(selects, from, where, &args, po)
-
-	mylog.Log.Debug(sql)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEmailByUser", sql)
 

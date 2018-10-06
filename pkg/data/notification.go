@@ -45,9 +45,6 @@ func CountNotificationByStudy(
 		countNotificationByStudySQL,
 		studyID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
 	return n, err
 }
 
@@ -69,9 +66,6 @@ func CountNotificationByUser(
 		countNotificationByUserSQL,
 		userID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
 	return n, err
 }
 
@@ -178,7 +172,9 @@ func GetNotificationByStudy(
 ) ([]*Notification, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetNotificationByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyID)}
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -194,7 +190,7 @@ func GetNotificationByStudy(
 		"user_id",
 	}
 	from := "notification_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getNotificationsByStudy", sql)
 
@@ -208,7 +204,9 @@ func GetNotificationByUser(
 ) ([]*Notification, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetNotificationByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userID)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -224,7 +222,7 @@ func GetNotificationByUser(
 		"user_id",
 	}
 	from := "notification_master"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getNotificationsByUser", sql)
 
@@ -398,8 +396,8 @@ func CreateNotificationsFromEvent(
 	}
 
 	var enrolleds []*Enrolled
-	switch event.Type.String {
-	case LessonEvent:
+	switch event.Type.V {
+	case mytype.LessonEvent:
 		payload := &LessonEventPayload{}
 		if err := event.Payload.AssignTo(payload); err != nil {
 			return err
@@ -413,7 +411,7 @@ func CreateNotificationsFromEvent(
 
 		switch payload.Action {
 		case LessonCommented:
-			enrolleds, err = GetEnrolledByEnrollable(tx, payload.LessonID.String, nil)
+			enrolleds, err = GetEnrolledByEnrollable(tx, payload.LessonID.String, nil, nil)
 			if err != nil {
 				return err
 			}
