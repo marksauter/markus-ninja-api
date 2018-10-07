@@ -3,6 +3,9 @@ enum StudyOrderField {
   # Order studies by advance time.
   ADVANCED_AT
 
+  # Order items by number of apples given.
+  APPLE_COUNT
+
   # Order studies by creation time.
   CREATED_AT
 

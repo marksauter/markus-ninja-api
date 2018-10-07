@@ -148,6 +148,15 @@ func (r *lessonResolver) BodyText() (string, error) {
 	return body.ToText(), nil
 }
 
+func (r *lessonResolver) CommentCount(ctx context.Context) (int32, error) {
+	lessonID, err := r.Lesson.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.LessonComment().CountByLesson(ctx, lessonID.String)
+}
+
 func (r *lessonResolver) Comments(
 	ctx context.Context,
 	args struct {
@@ -186,18 +195,11 @@ func (r *lessonResolver) Comments(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.LessonComment().CountByLesson(
-		ctx,
-		lessonID.String,
-	)
-	if err != nil {
-		return nil, err
-	}
 	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
+		r.Repos,
 		lessonComments,
 		pageOptions,
-		count,
-		r.Repos,
+		lessonID,
 	)
 	if err != nil {
 		return nil, err

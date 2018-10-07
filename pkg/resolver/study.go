@@ -473,6 +473,15 @@ func (r *studyResolver) Lessons(
 	return lessonConnectionResolver, nil
 }
 
+func (r *studyResolver) LessonCommentCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.LessonComment().CountByStudy(ctx, studyID.String)
+}
+
 func (r *studyResolver) LessonComments(
 	ctx context.Context,
 	args struct {
@@ -507,18 +516,11 @@ func (r *studyResolver) LessonComments(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.LessonComment().CountByStudy(
-		ctx,
-		studyID.String,
-	)
-	if err != nil {
-		return nil, err
-	}
 	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
+		r.Repos,
 		lessonComments,
 		pageOptions,
-		count,
-		r.Repos,
+		studyID,
 	)
 	if err != nil {
 		return nil, err

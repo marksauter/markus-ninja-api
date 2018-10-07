@@ -658,6 +658,8 @@ func GetLessonByStudy(
 	from := "lesson_search_index"
 	sql := SQL3(selects, from, where, filters, &args, po)
 
+	mylog.Log.Debug(sql)
+
 	psName := preparedName("getLessonsByStudy", sql)
 
 	return getManyLesson(db, psName, sql, args...)

@@ -26,6 +26,9 @@ type Lesson implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # The number of comments on this lesson.
+  commentCount: Int!
+
   # Returns a list of comments for the current lesson.
   comments(
     # Returns the elements in the list that come after the specified global ID.
