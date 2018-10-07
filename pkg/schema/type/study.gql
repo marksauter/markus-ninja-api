@@ -147,6 +147,9 @@ type Study implements
     number: Int!  
   ): Lesson
 
+  # How many lessons there are in this study.
+  lessonCount: Int!
+
   # Returns a list of lessons from the current study.
   lessons(
     # Returns the elements in the list that come after the specified global ID.
@@ -168,6 +171,9 @@ type Study implements
     orderBy: LessonOrder
   ): LessonConnection!
 
+  # How many lesson comments there are in this study.
+  lessonCommentCount: Int!
+
   lessonComments(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -181,9 +187,6 @@ type Study implements
     # Returns the last n elements form the list.
     last: Int
   ): LessonCommentConnection!
-
-  # How many lessons there are in this study.
-  lessonCount: Int!
 
   # The name of the study.
   name: String!

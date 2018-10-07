@@ -40,7 +40,7 @@ type User implements
     # Returns the last n elements form the list.
     last: Int
 
-    # Ordering options for studies returned from the connection.
+    # Ordering options for appleables returned from the connection.
     orderBy: AppleableOrder
 
     # Query to search appleds by.
@@ -79,6 +79,27 @@ type User implements
 
   # Identifies the date and time when the object was created.
   createdAt: Time!
+
+  # A list of courses that the user owns.
+  courses(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for courses returned from the connection.
+    filterBy: CourseFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for courses returned from the connection.
+    orderBy: CourseOrder
+  ): CourseConnection!
 
   # The user's public profile email.
   email: Email

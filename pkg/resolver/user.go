@@ -231,6 +231,66 @@ func (r *userResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *userResolver) Courses(
+	ctx context.Context,
+	args struct {
+		After    *string
+		Before   *string
+		FilterBy *data.CourseFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
+	},
+) (*courseConnectionResolver, error) {
+	id, err := r.User.ID()
+	if err != nil {
+		return nil, err
+	}
+	courseOrder, err := ParseCourseOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		courseOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	courses, err := r.Repos.Course().GetByUser(
+		ctx,
+		id.String,
+		pageOptions,
+		args.FilterBy,
+	)
+	if err != nil {
+		return nil, err
+	}
+	count, err := r.Repos.Course().CountByUser(
+		ctx,
+		id.String,
+		args.FilterBy,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolver, err := NewCourseConnectionResolver(
+		courses,
+		pageOptions,
+		count,
+		r.Repos,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resolver, nil
+}
+
 func (r *userResolver) Email(ctx context.Context) (*emailResolver, error) {
 	id, err := r.User.ProfileEmailID()
 	if err != nil {

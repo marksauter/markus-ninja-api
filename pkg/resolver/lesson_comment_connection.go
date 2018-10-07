@@ -1,15 +1,19 @@
 package resolver
 
 import (
+	"context"
+	"errors"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonCommentConnectionResolver(
+	repos *repo.Repos,
 	lessonComments []*repo.LessonCommentPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
-	repos *repo.Repos,
+	nodeID *mytype.OID,
 ) (*lessonCommentConnectionResolver, error) {
 	edges := make([]*lessonCommentEdgeResolver, len(lessonComments))
 	for i := range edges {
@@ -29,9 +33,9 @@ func NewLessonCommentConnectionResolver(
 	resolver := &lessonCommentConnectionResolver{
 		edges:          edges,
 		lessonComments: lessonComments,
+		nodeID:         nodeID,
 		pageInfo:       pageInfo,
 		repos:          repos,
-		totalCount:     totalCount,
 	}
 	return resolver, nil
 }
@@ -39,9 +43,9 @@ func NewLessonCommentConnectionResolver(
 type lessonCommentConnectionResolver struct {
 	edges          []*lessonCommentEdgeResolver
 	lessonComments []*repo.LessonCommentPermit
+	nodeID         *mytype.OID
 	pageInfo       *pageInfoResolver
 	repos          *repo.Repos
-	totalCount     int32
 }
 
 func (r *lessonCommentConnectionResolver) Edges() *[]*lessonCommentEdgeResolver {
@@ -68,6 +72,14 @@ func (r *lessonCommentConnectionResolver) PageInfo() (*pageInfoResolver, error) 
 	return r.pageInfo, nil
 }
 
-func (r *lessonCommentConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *lessonCommentConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	switch r.nodeID.Type {
+	case "Lesson":
+		return r.repos.LessonComment().CountByLesson(ctx, r.nodeID.String)
+	case "Study":
+		return r.repos.LessonComment().CountByStudy(ctx, r.nodeID.String)
+	default:
+		var n int32
+		return n, errors.New("invalid node id for lesson comment total count")
+	}
 }
