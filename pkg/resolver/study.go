@@ -97,6 +97,19 @@ func (r *studyResolver) Asset(
 	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
 }
 
+func (r *studyResolver) AssetCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.UserAsset().CountByStudy(
+		ctx,
+		studyID.String,
+		nil,
+	)
+}
+
 func (r *studyResolver) Assets(
 	ctx context.Context,
 	args struct {
@@ -167,6 +180,19 @@ func (r *studyResolver) Course(
 		return nil, err
 	}
 	return &courseResolver{Course: course, Repos: r.Repos}, nil
+}
+
+func (r *studyResolver) CourseCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.Course().CountByStudy(
+		ctx,
+		studyID.String,
+		nil,
+	)
 }
 
 func (r *studyResolver) Courses(
@@ -347,6 +373,19 @@ func (r *studyResolver) IsPrivate(ctx context.Context) (bool, error) {
 	return r.Study.Private()
 }
 
+func (r *studyResolver) LabelCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.Label().CountByStudy(
+		ctx,
+		studyID.String,
+		nil,
+	)
+}
+
 func (r *studyResolver) Labels(
 	ctx context.Context,
 	args struct {
@@ -355,10 +394,14 @@ func (r *studyResolver) Labels(
 		FilterBy *data.LabelFilterOptions
 		First    *int32
 		Last     *int32
-		Query    *string
+		OrderBy  *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
 	studyID, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	labelOrder, err := ParseLabelOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +411,7 @@ func (r *studyResolver) Labels(
 		args.Before,
 		args.First,
 		args.Last,
-		&LabelOrder{data.ASC, LabelName},
+		labelOrder,
 	)
 	if err != nil {
 		return nil, err
@@ -411,6 +454,19 @@ func (r *studyResolver) Lesson(
 		return nil, err
 	}
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+}
+
+func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.Lesson().CountByStudy(
+		ctx,
+		studyID.String,
+		nil,
+	)
 }
 
 func (r *studyResolver) Lessons(
@@ -526,19 +582,6 @@ func (r *studyResolver) LessonComments(
 		return nil, err
 	}
 	return lessonCommentConnectionResolver, nil
-}
-
-func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.Lesson().CountByStudy(
-		ctx,
-		studyID.String,
-		nil,
-	)
 }
 
 func (r *studyResolver) Name() (string, error) {

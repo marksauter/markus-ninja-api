@@ -1,0 +1,11 @@
+# Properties by which user connections can be ordered.
+enum UserOrderField {
+  # Order users by creation time.
+  CREATED_AT
+
+  # Order users by number of enrollees.
+  ENROLLEE_COUNT
+
+  # Order users by number of studies.
+  STUDY_COUNT
+}
