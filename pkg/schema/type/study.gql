@@ -34,6 +34,9 @@ type Study implements
     name: String!
   ): UserAsset
 
+  # How many assets there are in this study.
+  assetCount: Int!
+
   # Returns a list of assets that the study owns.
   assets(
     # Returns the elements in the list that come after the specified global ID.
@@ -60,6 +63,9 @@ type Study implements
     # The number for the course to be returned.
     number: Int!  
   ): Course
+
+  # How many courses there are in this study.
+  courseCount: Int!
 
   # Returns a list of courses from the current study.
   courses(
@@ -123,6 +129,9 @@ type Study implements
   # Is this study private?
   isPrivate: Boolean!
 
+  # How many labels there are in this study.
+  labelCount: Int!
+
   # Returns a list of labels from the current study.
   labels(
     # Returns the elements in the list that come after the specified global ID.
@@ -139,6 +148,9 @@ type Study implements
 
     # Returns the last n elements form the list.
     last: Int
+
+    # Ordering options for labels returned from the connection.
+    orderBy: LabelOrder
   ): LabelConnection!
 
   # Returns a single lesson from the current study by number.
