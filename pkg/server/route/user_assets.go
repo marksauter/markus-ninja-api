@@ -17,9 +17,10 @@ import (
 
 // UserAssetsCors - cors options for user assets route
 var UserAssetsCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
+	AllowCredentials: true,
+	AllowedHeaders:   []string{"Content-Type"},
+	AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
+	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
 })
 
 // UserAssetsHandler - handler for user assets route

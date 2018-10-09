@@ -28,9 +28,10 @@ type Sizer interface {
 }
 
 var UploadAssetsCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Authorization", "Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
+	AllowCredentials: true,
+	AllowedHeaders:   []string{"Authorization", "Content-Type"},
+	AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
+	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
 })
 
 type UploadAssetsHandler struct {
