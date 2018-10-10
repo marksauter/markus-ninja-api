@@ -12,6 +12,9 @@ type TopicableEdge {
 
 # A list of topicables.
 type TopicableConnection {
+  # The number of courses associated with the topic.
+  courseCount: Int!
+
   # A list of edges.
   edges: [TopicableEdge]
 

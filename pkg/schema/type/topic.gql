@@ -7,6 +7,9 @@ type Topic implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # The number of courses with this topic.
+  courseCount: Int!
+
   # The description of the topic.
   description: String!
 
@@ -17,6 +20,9 @@ type Topic implements
 
   # The HTTP path for this topic.
   resourcePath: URI!
+
+  # The number of studies with this topic.
+  studyCount: Int!
 
   # Returns a list of topicables associated with the topic.
   topicables(

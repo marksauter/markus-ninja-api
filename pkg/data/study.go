@@ -126,6 +126,8 @@ func CountStudyByTopic(
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countStudyByTopic", sql)
 
+	mylog.Log.Debug(sql)
+
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
 	return n, err

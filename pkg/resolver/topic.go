@@ -24,6 +24,15 @@ func (r *topicResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *topicResolver) CourseCount(ctx context.Context) (int32, error) {
+	topicID, err := r.Topic.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.Course().CountByTopic(ctx, topicID.String, nil)
+}
+
 func (r *topicResolver) Description() (string, error) {
 	return r.Topic.Description()
 }
@@ -45,6 +54,15 @@ func (r *topicResolver) ResourcePath() (mygql.URI, error) {
 	}
 	uri = mygql.URI(fmt.Sprintf("/topics/%s", name))
 	return uri, nil
+}
+
+func (r *topicResolver) StudyCount(ctx context.Context) (int32, error) {
+	topicID, err := r.Topic.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.Study().CountByTopic(ctx, topicID.String, nil)
 }
 
 func (r *topicResolver) Topicables(
