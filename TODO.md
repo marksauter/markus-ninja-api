@@ -5,3 +5,6 @@ fix update queries to eliminate identical row updates that can cause various
 finish updating data types to reflect new filters - see lesson/study for example
 
 fix order fields for each data type, make sure they match the schema
+
+THERE IS PROBABLY SOME SORT OF MEMORY LEAK, BECAUSE THE SERVER SLOWS DOWN THE
+LONGER IT RUNS...

@@ -1,20 +1,5 @@
 # Properties by which topicable connections can be ordered.
 enum TopicableOrderField {
-  # Order topicables by advance time.
-  ADVANCED_AT
-
-  # Order topicables by apple count.
-  APPLE_COUNT
-
-  # Order topicables by creation time.
-  CREATED_AT
-
-  # Order topicables by name.
-  NAME
-
   # Order topicables by topic time.
   TOPICED_AT
-
-  # Order topicables by update time.
-  UPDATED_AT
 }

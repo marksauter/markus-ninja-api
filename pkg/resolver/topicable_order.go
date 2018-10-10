@@ -10,19 +10,13 @@ import (
 type TopicableOrderField int
 
 const (
-	TopicableCreatedAt TopicableOrderField = iota
-	TopicableTopicedAt
-	TopicableUpdatedAt
+	TopicableTopicedAt TopicableOrderField = iota
 )
 
 func ParseTopicableOrderField(s string) (TopicableOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "CREATED_AT":
-		return TopicableCreatedAt, nil
 	case "TOPICED_AT":
 		return TopicableTopicedAt, nil
-	case "UPDATED_AT":
-		return TopicableUpdatedAt, nil
 	default:
 		var f TopicableOrderField
 		return f, fmt.Errorf("invalid TopicableOrderField: %q", s)
@@ -31,12 +25,8 @@ func ParseTopicableOrderField(s string) (TopicableOrderField, error) {
 
 func (f TopicableOrderField) String() string {
 	switch f {
-	case TopicableCreatedAt:
-		return "created_at"
 	case TopicableTopicedAt:
 		return "topiced_at"
-	case TopicableUpdatedAt:
-		return "updated_at"
 	default:
 		return "unknown"
 	}
@@ -62,14 +52,19 @@ func ParseTopicableOrder(t TopicableType, arg *OrderArg) (data.Order, error) {
 			field:     TopicableTopicedAt,
 		}, nil
 	}
-	switch t {
-	case TopicableTypeCourse:
-		return ParseCourseOrder(arg)
-	case TopicableTypeStudy:
-		return ParseStudyOrder(arg)
-	default:
-		return nil, fmt.Errorf("invalid TopicableType: %q", t)
+	direction, err := data.ParseOrderDirection(arg.Direction)
+	if err != nil {
+		return nil, err
 	}
+	field, err := ParseTopicableOrderField(arg.Field)
+	if err != nil {
+		return nil, err
+	}
+	topicableOrder := &TopicableOrder{
+		direction: direction,
+		field:     field,
+	}
+	return topicableOrder, nil
 }
 
 type topicableOrderResolver struct {

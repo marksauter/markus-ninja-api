@@ -259,6 +259,9 @@ type User implements
     name: String!
   ): Study
 
+  # The number of studies that the user has created.
+  studyCount: Int!
+
   # A list of studies that the user owns.
   studies(
     # Returns the elements in the list that come after the specified global ID.

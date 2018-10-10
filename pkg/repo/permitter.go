@@ -602,6 +602,18 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 			userID = study.UserID
 		}
 		return vid == userID.String, nil
+	case data.UserAsset:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserID.String, nil
+	case *data.UserAsset:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
+		if err != nil {
+			return false, err
+		}
+		return vid == study.UserID.String, nil
 	default:
 		return false, nil
 	}

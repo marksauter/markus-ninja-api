@@ -11,7 +11,8 @@ import (
 
 func NewTopicableConnectionResolver(
 	repos *repo.Repos,
-	topicables []repo.NodePermit, pageOptions *data.PageOptions,
+	topicables []repo.NodePermit,
+	pageOptions *data.PageOptions,
 	topicID *mytype.OID,
 	search *string,
 ) (*topicableConnectionResolver, error) {
@@ -35,6 +36,7 @@ func NewTopicableConnectionResolver(
 		topicables: topicables,
 		pageInfo:   pageInfo,
 		repos:      repos,
+		search:     search,
 		topicID:    topicID,
 	}
 	return resolver, nil

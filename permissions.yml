@@ -517,7 +517,7 @@ permissions:
   - operation: Create UserAsset
     authenticated: true
     roles:
-      - user
+      - owner
     fields:
       - asset_id
       - name

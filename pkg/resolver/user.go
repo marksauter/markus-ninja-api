@@ -771,6 +771,15 @@ func (r *userResolver) Study(
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
 }
 
+func (r *userResolver) StudyCount(ctx context.Context) (int32, error) {
+	userID, err := r.User.ID()
+	if err != nil {
+		var n int32
+		return n, err
+	}
+	return r.Repos.Study().CountByUser(ctx, userID.String, nil)
+}
+
 func (r *userResolver) Studies(
 	ctx context.Context,
 	args struct {
