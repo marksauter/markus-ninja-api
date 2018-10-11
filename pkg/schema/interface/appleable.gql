@@ -1,5 +1,8 @@
 # Things that can be appled.
 interface Appleable {
+  # How many users have appled this appleable.
+  appleGiverCount: Int!
+
   # Returns a list users who have appled this appleable.
   appleGivers(
     # Returns the elements in the list that come after the specified global ID.
