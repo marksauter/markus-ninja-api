@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
@@ -59,6 +60,7 @@ func main() {
 	)
 
 	r := mux.NewRouter()
+	r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
 
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 

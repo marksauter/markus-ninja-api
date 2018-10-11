@@ -32,6 +32,19 @@ func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 	return nil, nil
 }
 
+func (r *studyResolver) AppleGiverCount(ctx context.Context) (int32, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		var count int32
+		return count, err
+	}
+	return r.Repos.User().CountByAppleable(
+		ctx,
+		studyID.String,
+		nil,
+	)
+}
+
 func (r *studyResolver) AppleGivers(
 	ctx context.Context,
 	args AppleGiversArgs,
@@ -509,19 +522,12 @@ func (r *studyResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByStudy(
-		ctx,
-		studyID.String,
-		args.FilterBy,
-	)
-	if err != nil {
-		return nil, err
-	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		r.Repos,
 		lessons,
 		pageOptions,
-		count,
+		studyID,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err

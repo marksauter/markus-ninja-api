@@ -663,19 +663,12 @@ func (r *userResolver) Lessons(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Lesson().CountByUser(
-		ctx,
-		id.String,
-		args.FilterBy,
-	)
-	if err != nil {
-		return nil, err
-	}
 	resolver, err := NewLessonConnectionResolver(
 		r.Repos,
 		lessons,
 		pageOptions,
-		count,
+		id,
+		args.FilterBy,
 	)
 	if err != nil {
 		return nil, err

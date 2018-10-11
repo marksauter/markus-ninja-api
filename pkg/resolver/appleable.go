@@ -8,6 +8,7 @@ import (
 )
 
 type appleable interface {
+	AppleGiverCount(context.Context) (int32, error)
 	AppleGivers(context.Context, AppleGiversArgs) (*appleGiverConnectionResolver, error)
 	ID() (graphql.ID, error)
 	ViewerCanApple(context.Context) (bool, error)
