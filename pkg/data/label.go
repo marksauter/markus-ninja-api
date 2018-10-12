@@ -157,13 +157,12 @@ func getManyLabel(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Label,
 	args ...interface{},
-) ([]*Label, error) {
-	var rows []*Label
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -178,15 +177,15 @@ func getManyLabel(
 			&row.StudyID,
 			&row.UpdatedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get labels")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getLabelByIDSQL = `
@@ -220,6 +219,16 @@ func GetLabelByLabelable(
 	mylog.Log.WithField(
 		"labelable_id", labelableID,
 	).Info("GetLabelByLabelable(labelable_id)")
+	var rows []*Label
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Label, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.labelable_id = ` + args.Append(labelableID)
@@ -240,8 +249,6 @@ func GetLabelByLabelable(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLabelsByLabelableID", sql)
-
-	var rows []*Label
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -279,6 +286,16 @@ func GetLabelByStudy(
 	filters *LabelFilterOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetLabelByStudy(study_id)")
+	var rows []*Label
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Label, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -299,7 +316,11 @@ func GetLabelByStudy(
 
 	psName := preparedName("getLabelsByStudyID", sql)
 
-	return getManyLabel(db, psName, sql, args...)
+	if err := getManyLabel(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getLabelByNameSQL = `
@@ -440,6 +461,16 @@ func SearchLabel(
 	po *PageOptions,
 ) ([]*Label, error) {
 	mylog.Log.WithField("query", query).Info("Search(query)")
+	var rows []*Label
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Label, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"color",
 		"created_at",
@@ -456,7 +487,11 @@ func SearchLabel(
 
 	psName := preparedName("searchLabelIndex", sql)
 
-	return getManyLabel(db, psName, sql, args...)
+	if err := getManyLabel(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func UpdateLabel(

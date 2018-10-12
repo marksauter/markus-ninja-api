@@ -226,13 +226,12 @@ func getManyStudy(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Study,
 	args ...interface{},
-) ([]*Study, error) {
-	var rows []*Study
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -247,15 +246,15 @@ func getManyStudy(
 			&row.UpdatedAt,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get studies")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getStudyByIDSQL = `
@@ -287,6 +286,16 @@ func GetStudyByApplee(
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("applee_id", appleeID).Info("GetStudyByApplee(applee_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.applee_id = ` + args.Append(appleeID)
@@ -307,8 +316,6 @@ func GetStudyByApplee(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByAppled", sql)
-
-	var rows []*Study
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -346,6 +353,16 @@ func GetStudyByEnrollee(
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetStudyByEnrollee(enrollee_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -366,8 +383,6 @@ func GetStudyByEnrollee(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByEnrollee", sql)
-
-	var rows []*Study
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -405,6 +420,16 @@ func GetStudyByTopic(
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetStudyByTopic(topic_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topic_id = ` + args.Append(topicID)
@@ -425,8 +450,6 @@ func GetStudyByTopic(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByTopic", sql)
-
-	var rows []*Study
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -464,6 +487,16 @@ func GetStudyByUser(
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetStudyByUser(user_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -484,7 +517,11 @@ func GetStudyByUser(
 
 	psName := preparedName("getStudiesByUserID", sql)
 
-	return getManyStudy(db, psName, sql, args...)
+	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getStudyByNameSQL = `
@@ -662,6 +699,16 @@ func SearchStudy(
 	po *PageOptions,
 ) ([]*Study, error) {
 	mylog.Log.WithField("query", query).Info("SearchStudy(query)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"advanced_at",
 		"created_at",
@@ -678,12 +725,11 @@ func SearchStudy(
 
 	psName := preparedName("searchStudyIndex", sql)
 
-	studies, err := getManyStudy(db, psName, sql, args...)
-	if err != nil {
+	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
 		return nil, err
 	}
 
-	return studies, nil
+	return rows, nil
 }
 
 func UpdateStudy(

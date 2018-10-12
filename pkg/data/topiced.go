@@ -87,14 +87,13 @@ func getManyTopiced(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Topiced,
 	args ...interface{},
-) ([]*Topiced, error) {
-	var rows []*Topiced
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get topiceds")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -106,17 +105,15 @@ func getManyTopiced(
 			&row.TopicableID,
 			&row.Type,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get topiceds")
-		return nil, err
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
 const getTopicedSQL = `
@@ -170,6 +167,16 @@ func GetTopicedByTopic(
 	po *PageOptions,
 ) ([]*Topiced, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetTopicedByTopic(topic_id)")
+	var rows []*Topiced
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topiced, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topic_id = ` + args.Append(topicID)
@@ -187,7 +194,11 @@ func GetTopicedByTopic(
 
 	psName := preparedName("getTopicedsByTopic", sql)
 
-	return getManyTopiced(db, psName, sql, args...)
+	if err := getManyTopiced(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetTopicedByTopicable(
@@ -196,6 +207,16 @@ func GetTopicedByTopicable(
 	po *PageOptions,
 ) ([]*Topiced, error) {
 	mylog.Log.WithField("topicable_id", topicableID).Info("GetTopicedByTopicable(topicable_id)")
+	var rows []*Topiced
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topiced, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topicable_id = ` + args.Append(topicableID)
@@ -213,7 +234,11 @@ func GetTopicedByTopicable(
 
 	psName := preparedName("getTopicedsByTopicable", sql)
 
-	return getManyTopiced(db, psName, sql, args...)
+	if err := getManyTopiced(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateTopiced(

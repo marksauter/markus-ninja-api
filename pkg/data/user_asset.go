@@ -183,13 +183,12 @@ func getManyUserAsset(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*UserAsset,
 	args ...interface{},
-) ([]*UserAsset, error) {
-	var rows []*UserAsset
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -209,15 +208,15 @@ func getManyUserAsset(
 			&row.UpdatedAt,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get user_assets")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getUserAssetByIDSQL = `
@@ -273,12 +272,20 @@ func BatchGetUserAsset(
 	mylog.Log.WithField(
 		"ids", ids,
 	).Info("BatchGetUserAsset(ids)")
-	return getManyUserAsset(
+	rows := make([]*UserAsset, 0, len(ids))
+
+	err := getManyUserAsset(
 		db,
 		"batchGetUserAsset",
 		batchGetUserAssetSQL,
+		&rows,
 		ids,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getUserAssetByNameSQL = `
@@ -343,17 +350,25 @@ func BatchGetUserAssetByName(
 		"study_id": studyID,
 		"names":    names,
 	}).Info("BatchGetUserAssetByName(studyID, names)")
+	rows := make([]*UserAsset, 0, len(names))
+
 	lowerNames := make([]string, len(names))
 	for i, name := range names {
 		lowerNames[i] = strings.ToLower(name)
 	}
-	return getManyUserAsset(
+	err := getManyUserAsset(
 		db,
 		"batchGetUserAssetByName",
 		batchGetUserAssetByNameSQL,
+		&rows,
 		studyID,
 		lowerNames,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getUserAssetByUserStudyAndNameSQL = `
@@ -405,6 +420,16 @@ func GetUserAssetByStudy(
 	mylog.Log.WithField(
 		"study_id", studyID.String,
 	).Info("GetUserAssetByStudy(studyID)")
+	var rows []*UserAsset
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*UserAsset, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -430,7 +455,11 @@ func GetUserAssetByStudy(
 
 	psName := preparedName("getUserAssetsByStudy", sql)
 
-	return getManyUserAsset(db, psName, sql, args...)
+	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetUserAssetByUser(
@@ -442,6 +471,16 @@ func GetUserAssetByUser(
 	mylog.Log.WithField(
 		"user_id", userID.String,
 	).Info("GetUserAssetByUser(userID)")
+	var rows []*UserAsset
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*UserAsset, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -467,7 +506,11 @@ func GetUserAssetByUser(
 
 	psName := preparedName("getUserAssetsByUser", sql)
 
-	return getManyUserAsset(db, psName, sql, args...)
+	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateUserAsset(
@@ -584,6 +627,16 @@ func SearchUserAsset(
 	po *PageOptions,
 ) ([]*UserAsset, error) {
 	mylog.Log.WithField("query", query).Info("SearchUserAsset(query)")
+	var rows []*UserAsset
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*UserAsset, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"asset_id",
 		"created_at",
@@ -605,7 +658,11 @@ func SearchUserAsset(
 
 	psName := preparedName("searchUserAssetIndex", sql)
 
-	return getManyUserAsset(db, psName, sql, args...)
+	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func UpdateUserAsset(

@@ -32,19 +32,6 @@ func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 	return nil, nil
 }
 
-func (r *studyResolver) AppleGiverCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.User().CountByAppleable(
-		ctx,
-		studyID.String,
-		nil,
-	)
-}
-
 func (r *studyResolver) AppleGivers(
 	ctx context.Context,
 	args AppleGiversArgs,
@@ -108,19 +95,6 @@ func (r *studyResolver) Asset(
 		return nil, err
 	}
 	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
-}
-
-func (r *studyResolver) AssetCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.UserAsset().CountByStudy(
-		ctx,
-		studyID.String,
-		nil,
-	)
 }
 
 func (r *studyResolver) Assets(
@@ -193,19 +167,6 @@ func (r *studyResolver) Course(
 		return nil, err
 	}
 	return &courseResolver{Course: course, Repos: r.Repos}, nil
-}
-
-func (r *studyResolver) CourseCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.Course().CountByStudy(
-		ctx,
-		studyID.String,
-		nil,
-	)
 }
 
 func (r *studyResolver) Courses(
@@ -287,25 +248,9 @@ func (r *studyResolver) DescriptionHTML() (mygql.HTML, error) {
 	return gqlHTML, nil
 }
 
-func (r *studyResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.User().CountByEnrollable(ctx, studyID.String, nil)
-}
-
 func (r *studyResolver) Enrollees(
 	ctx context.Context,
-	args struct {
-		After    *string
-		Before   *string
-		FilterBy *data.UserFilterOptions
-		First    *int32
-		Last     *int32
-		OrderBy  *OrderArg
-	},
+	args EnrolleesArgs,
 ) (*enrolleeConnectionResolver, error) {
 	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
 	if err != nil {
@@ -386,19 +331,6 @@ func (r *studyResolver) IsPrivate(ctx context.Context) (bool, error) {
 	return r.Study.Private()
 }
 
-func (r *studyResolver) LabelCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.Label().CountByStudy(
-		ctx,
-		studyID.String,
-		nil,
-	)
-}
-
 func (r *studyResolver) Labels(
 	ctx context.Context,
 	args struct {
@@ -469,19 +401,6 @@ func (r *studyResolver) Lesson(
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
-func (r *studyResolver) LessonCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.Lesson().CountByStudy(
-		ctx,
-		studyID.String,
-		nil,
-	)
-}
-
 func (r *studyResolver) Lessons(
 	ctx context.Context,
 	args struct {
@@ -533,15 +452,6 @@ func (r *studyResolver) Lessons(
 		return nil, err
 	}
 	return lessonConnectionResolver, nil
-}
-
-func (r *studyResolver) LessonCommentCount(ctx context.Context) (int32, error) {
-	studyID, err := r.Study.ID()
-	if err != nil {
-		var count int32
-		return count, err
-	}
-	return r.Repos.LessonComment().CountByStudy(ctx, studyID.String)
 }
 
 func (r *studyResolver) LessonComments(

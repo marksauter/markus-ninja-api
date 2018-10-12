@@ -234,13 +234,12 @@ func getManyUser(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*User,
 	args ...interface{},
-) ([]*User, error) {
-	var rows []*User
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -257,15 +256,15 @@ func getManyUser(
 			&row.Roles,
 			&row.Verified,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get users")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getUserByIDSQL = `  
@@ -313,7 +312,20 @@ func BatchGetUser(
 	ids []string,
 ) ([]*User, error) {
 	mylog.Log.WithField("ids", ids).Info("BatchGetUser(ids) User")
-	return getManyUser(db, "batchGetUserByID", batchGetUserSQL, ids)
+	rows := make([]*User, 0, len(ids))
+
+	err := getManyUser(
+		db,
+		"batchGetUserByID",
+		batchGetUserSQL,
+		&rows,
+		ids,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getUserByLoginSQL = `
@@ -361,7 +373,20 @@ func BatchGetUserByLogin(
 	logins []string,
 ) ([]*User, error) {
 	mylog.Log.WithField("logins", logins).Info("BatchGetUserByLogin(logins) User")
-	return getManyUser(db, "batchGetUserByLoginByID", batchGetUserByLoginSQL, logins)
+	rows := make([]*User, 0, len(logins))
+
+	err := getManyUser(
+		db,
+		"batchGetUserByLoginByID",
+		batchGetUserByLoginSQL,
+		&rows,
+		logins,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetUserByAppleable(
@@ -374,6 +399,16 @@ func GetUserByAppleable(
 		"appleabled_id",
 		appleableID,
 	).Info("GetUserByAppleable(appleabled_id)")
+	var rows []*User
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*User, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.appleable_id = ` + args.Append(appleableID)
@@ -396,8 +431,6 @@ func GetUserByAppleable(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getUsersByAppleable", sql)
-
-	var rows []*User
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -440,6 +473,16 @@ func GetUserByEnrollee(
 		"enrollee_id",
 		enrolleeID,
 	).Info("GetUserByEnrollee(enrollee_id)")
+	var rows []*User
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*User, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -462,8 +505,6 @@ func GetUserByEnrollee(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getByEnrollee", sql)
-
-	var rows []*User
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -505,6 +546,16 @@ func GetUserByEnrollable(
 	mylog.Log.WithField(
 		"enrollable_id", enrollableID,
 	).Info("GetUserByEnrollable(enrollable_id)")
+	var rows []*User
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*User, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollable_id = ` + args.Append(enrollableID)
@@ -527,8 +578,6 @@ func GetUserByEnrollable(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrollees", sql)
-
-	var rows []*User
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -763,6 +812,16 @@ func SearchUser(
 	po *PageOptions,
 ) ([]*User, error) {
 	mylog.Log.WithField("query", query).Info("SearchUser(query)")
+	var rows []*User
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*User, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"account_updated_at",
 		"bio",
@@ -781,7 +840,11 @@ func SearchUser(
 
 	psName := preparedName("searchUserIndex", sql)
 
-	return getManyUser(db, psName, sql, args...)
+	if err := getManyUser(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func UpdateUserAccount(

@@ -148,15 +148,6 @@ func (r *lessonResolver) BodyText() (string, error) {
 	return body.ToText(), nil
 }
 
-func (r *lessonResolver) CommentCount(ctx context.Context) (int32, error) {
-	lessonID, err := r.Lesson.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.LessonComment().CountByLesson(ctx, lessonID.String)
-}
-
 func (r *lessonResolver) Comments(
 	ctx context.Context,
 	args struct {
@@ -231,25 +222,9 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *lessonResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	lessonID, err := r.Lesson.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.User().CountByEnrollable(ctx, lessonID.String, nil)
-}
-
 func (r *lessonResolver) Enrollees(
 	ctx context.Context,
-	args struct {
-		After    *string
-		Before   *string
-		FilterBy *data.UserFilterOptions
-		First    *int32
-		Last     *int32
-		OrderBy  *OrderArg
-	},
+	args EnrolleesArgs,
 ) (*enrolleeConnectionResolver, error) {
 	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
 	if err != nil {

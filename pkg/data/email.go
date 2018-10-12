@@ -103,13 +103,12 @@ func getManyEmail(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Email,
 	args ...interface{},
-) ([]*Email, error) {
-	var rows []*Email
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -123,14 +122,14 @@ func getManyEmail(
 			&row.Value,
 			&row.VerifiedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get emails")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getEmailByIDSQL = `
@@ -185,6 +184,16 @@ func GetEmailByUser(
 	mylog.Log.WithField(
 		"user_id", userID,
 	).Info("GetEmailByUser(userID)")
+	var rows []*Email
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Email, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -204,7 +213,11 @@ func GetEmailByUser(
 
 	psName := preparedName("getEmailByUser", sql)
 
-	return getManyEmail(db, psName, sql, args...)
+	if err := getManyEmail(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateEmail(db Queryer, row *Email) (*Email, error) {

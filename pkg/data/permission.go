@@ -449,13 +449,12 @@ func getManyPermission(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Permission,
 	args ...interface{},
-) ([]*Permission, error) {
-	var rows []*Permission
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -469,15 +468,13 @@ func getManyPermission(
 			&row.Type,
 			&row.UpdatedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
-		return nil, err
+		mylog.Log.WithError(err).Error("failed to get permissions")
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }

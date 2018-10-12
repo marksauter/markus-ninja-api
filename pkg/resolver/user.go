@@ -448,25 +448,9 @@ func (r *userResolver) Enrolled(
 	)
 }
 
-func (r *userResolver) EnrolleeCount(ctx context.Context) (int32, error) {
-	userID, err := r.User.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.User().CountByEnrollable(ctx, userID.String, nil)
-}
-
 func (r *userResolver) Enrollees(
 	ctx context.Context,
-	args struct {
-		After    *string
-		Before   *string
-		FilterBy *data.UserFilterOptions
-		First    *int32
-		Last     *int32
-		OrderBy  *OrderArg
-	},
+	args EnrolleesArgs,
 ) (*enrolleeConnectionResolver, error) {
 	id, err := r.User.ID()
 	if err != nil {
@@ -762,15 +746,6 @@ func (r *userResolver) Study(
 	}
 
 	return &studyResolver{Study: study, Repos: r.Repos}, nil
-}
-
-func (r *userResolver) StudyCount(ctx context.Context) (int32, error) {
-	userID, err := r.User.ID()
-	if err != nil {
-		var n int32
-		return n, err
-	}
-	return r.Repos.Study().CountByUser(ctx, userID.String, nil)
 }
 
 func (r *userResolver) Studies(

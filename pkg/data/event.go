@@ -254,14 +254,13 @@ func getManyEvent(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Event,
 	args ...interface{},
-) ([]*Event, error) {
-	var rows []*Event
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get events")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -275,15 +274,15 @@ func getManyEvent(
 			&row.Type,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get events")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getEventSQL = `
@@ -314,6 +313,16 @@ func GetEventByStudy(
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetEventByStudy(study_id)")
+	var rows []*Event
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Event, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -333,7 +342,11 @@ func GetEventByStudy(
 
 	psName := preparedName("getEventsByStudy", sql)
 
-	return getManyEvent(db, psName, sql, args...)
+	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetEventByLesson(
@@ -343,6 +356,16 @@ func GetEventByLesson(
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	mylog.Log.WithField("lesson_id", lessonID).Info("GetEventByLesson(lesson_id)")
+	var rows []*Event
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Event, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.lesson_id = ` + args.Append(lessonID)
@@ -362,7 +385,11 @@ func GetEventByLesson(
 
 	psName := preparedName("getEventByLessons", sql)
 
-	return getManyEvent(db, psName, sql, args...)
+	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetEventByUser(
@@ -372,6 +399,16 @@ func GetEventByUser(
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetEventByUser(user_id)")
+	var rows []*Event
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Event, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -391,7 +428,11 @@ func GetEventByUser(
 
 	psName := preparedName("getEventsByUser", sql)
 
-	return getManyEvent(db, psName, sql, args...)
+	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetReceivedEventByUser(
@@ -401,6 +442,16 @@ func GetReceivedEventByUser(
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetReceivedEventByUser(user_id)")
+	var rows []*Event
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Event, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.received_user_id = ` + args.Append(userID)
@@ -420,7 +471,11 @@ func GetReceivedEventByUser(
 
 	psName := preparedName("getReceivedEventsByUser", sql)
 
-	return getManyEvent(db, psName, sql, args...)
+	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetEventByUserAsset(
@@ -430,6 +485,16 @@ func GetEventByUserAsset(
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	mylog.Log.WithField("asset_id", assetID).Info("GetEventByUserAsset(asset_id)")
+	var rows []*Event
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Event, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.asset_id = ` + args.Append(assetID)
@@ -449,7 +514,11 @@ func GetEventByUserAsset(
 
 	psName := preparedName("getEventByUserAssets", sql)
 
-	return getManyEvent(db, psName, sql, args...)
+	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateEvent(

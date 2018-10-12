@@ -103,13 +103,12 @@ func getManyNotification(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Notification,
 	args ...interface{},
-) ([]*Notification, error) {
-	var rows []*Notification
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -127,17 +126,15 @@ func getManyNotification(
 			&row.UpdatedAt,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get notifications")
-		return nil, err
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
 const getNotificationByIDSQL = `
@@ -171,6 +168,16 @@ func GetNotificationByStudy(
 	po *PageOptions,
 ) ([]*Notification, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetNotificationByStudy(study_id)")
+	var rows []*Notification
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Notification, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -194,7 +201,11 @@ func GetNotificationByStudy(
 
 	psName := preparedName("getNotificationsByStudy", sql)
 
-	return getManyNotification(db, psName, sql, args...)
+	if err := getManyNotification(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetNotificationByUser(
@@ -203,6 +214,16 @@ func GetNotificationByUser(
 	po *PageOptions,
 ) ([]*Notification, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetNotificationByUser(user_id)")
+	var rows []*Notification
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Notification, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -226,7 +247,11 @@ func GetNotificationByUser(
 
 	psName := preparedName("getNotificationsByUser", sql)
 
-	return getManyNotification(db, psName, sql, args...)
+	if err := getManyNotification(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func BatchCreateNotification(
