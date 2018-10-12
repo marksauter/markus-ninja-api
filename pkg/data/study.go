@@ -18,7 +18,7 @@ type Study struct {
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
 	ID          mytype.OID         `db:"id" permit:"read"`
-	Name        mytype.URLSafeName `db:"name" permit:"create/read"`
+	Name        mytype.WordsName   `db:"name" permit:"create/read"`
 	Private     pgtype.Bool        `db:"private" permit:"create/read/update"`
 	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`

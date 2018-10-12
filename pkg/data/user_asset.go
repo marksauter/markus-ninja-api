@@ -18,7 +18,7 @@ type UserAsset struct {
 	ID           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
-	OriginalName mytype.Filename    `db:"original_name" permit:"read"`
+	OriginalName pgtype.Text        `db:"original_name" permit:"read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"read"`
 	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`

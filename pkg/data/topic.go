@@ -15,7 +15,7 @@ type Topic struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	ID          mytype.OID         `db:"id" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"create/read"`
+	Name        mytype.WordName    `db:"name" permit:"create/read"`
 	TopicableID mytype.OID         `db:"topicable_id"`
 	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
