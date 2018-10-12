@@ -83,14 +83,13 @@ func getManyAppled(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Appled,
 	args ...interface{},
-) ([]*Appled, error) {
-	var rows []*Appled
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get appleds")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -102,15 +101,15 @@ func getManyAppled(
 			&row.Type,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get appleds")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getAppledSQL = `
@@ -157,6 +156,16 @@ func GetAppledByUser(
 	po *PageOptions,
 ) ([]*Appled, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetAppledByUser(user_id)")
+	var rows []*Appled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Appled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -174,7 +183,11 @@ func GetAppledByUser(
 
 	psName := preparedName("getAppledsByUser", sql)
 
-	return getManyAppled(db, psName, sql, args...)
+	if err := getManyAppled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetAppledByAppleable(
@@ -183,6 +196,16 @@ func GetAppledByAppleable(
 	po *PageOptions,
 ) ([]*Appled, error) {
 	mylog.Log.WithField("appleable_id", appleableID).Info("GetAppledByAppleable(appleable_id)")
+	var rows []*Appled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Appled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.appleable_id = ` + args.Append(appleableID)
@@ -200,7 +223,11 @@ func GetAppledByAppleable(
 
 	psName := preparedName("getAppledsByAppleable", sql)
 
-	return getManyAppled(db, psName, sql, args...)
+	if err := getManyAppled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateAppled(

@@ -132,14 +132,13 @@ func getManyEnrolled(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Enrolled,
 	args ...interface{},
-) ([]*Enrolled, error) {
-	var rows []*Enrolled
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get enrolleds")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -153,15 +152,15 @@ func getManyEnrolled(
 			&row.Type,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get enrolleds")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getEnrolledSQL = `
@@ -223,6 +222,16 @@ func GetEnrolledByUser(
 	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetEnrolledByUser(user_id)")
+	var rows []*Enrolled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Enrolled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -242,7 +251,11 @@ func GetEnrolledByUser(
 
 	psName := preparedName("getEnrolledsByUser", sql)
 
-	return getManyEnrolled(db, psName, sql, args...)
+	if err := getManyEnrolled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetEnrolledByEnrollable(
@@ -252,6 +265,16 @@ func GetEnrolledByEnrollable(
 	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
 	mylog.Log.WithField("enrollable_id", enrollableID).Info("GetEnrolledByEnrollable(enrollable_id)")
+	var rows []*Enrolled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Enrolled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollable_id = ` + args.Append(enrollableID)
@@ -271,7 +294,11 @@ func GetEnrolledByEnrollable(
 
 	psName := preparedName("getEnrolledsByEnrollable", sql)
 
-	return getManyEnrolled(db, psName, sql, args...)
+	if err := getManyEnrolled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateEnrolled(

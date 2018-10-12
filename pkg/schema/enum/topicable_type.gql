@@ -1,5 +1,8 @@
 # Represents the individual types of topicables to return.
 enum TopicableType {
+  # Returns courses.
+  COURSE
+
   # Returns studies.
   STUDY
 }

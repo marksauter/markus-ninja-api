@@ -26,9 +26,6 @@ type Lesson implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
-  # The number of comments on this lesson.
-  commentCount: Int!
-
   # Returns a list of comments for the current lesson.
   comments(
     # Returns the elements in the list that come after the specified global ID.
@@ -52,9 +49,6 @@ type Lesson implements
 
   # Identifies the lesson's number within its associated course, if any.
   courseNumber: Int
-
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
 
   # Returns a list users who have enrolled in this enrollable.
   enrollees(

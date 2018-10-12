@@ -1,7 +1,25 @@
 # Things that can be enrolled in.
 interface Enrollable {
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
+  # Returns a list users who have enrolled in this enrollable.
+  enrollees(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Order for connection.
+    orderBy: EnrolleeOrder
+  ): EnrolleeConnection!
 
   # Is the viewer dismissed, enrolled, or ignoring this enrollable.
   enrollmentStatus: EnrollmentStatus!

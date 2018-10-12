@@ -146,9 +146,6 @@ type User implements
     type: EnrollableType!
   ): EnrollableConnection!
 
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
-
   # A list of users who have enrolled in this enrollable.
   enrollees(
     # Returns the elements in the list that come after the specified global ID.
@@ -258,9 +255,6 @@ type User implements
     # Name of study to find.
     name: String!
   ): Study
-
-  # The number of studies that the user has created.
-  studyCount: Int!
 
   # A list of studies that the user owns.
   studies(

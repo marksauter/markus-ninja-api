@@ -250,13 +250,12 @@ func getManyCourse(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Course,
 	args ...interface{},
-) ([]*Course, error) {
-	var rows []*Course
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -274,15 +273,15 @@ func getManyCourse(
 			&row.UpdatedAt,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get courses")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getCourseByIDSQL = `
@@ -317,6 +316,16 @@ func GetCourseByApplee(
 	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("applee_id", appleeID).Info("GetCourseByApplee(applee_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.applee_id = ` + args.Append(appleeID)
@@ -340,8 +349,6 @@ func GetCourseByApplee(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByAppled", sql)
-
-	var rows []*Course
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -382,6 +389,16 @@ func GetCourseByEnrollee(
 	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetCourseByEnrollee(enrollee_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -405,8 +422,6 @@ func GetCourseByEnrollee(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByEnrollee", sql)
-
-	var rows []*Course
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -447,6 +462,16 @@ func GetCourseByTopic(
 	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("topic_id", topicID).Info("GetCourseByTopic(topic_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topic_id = ` + args.Append(topicID)
@@ -470,8 +495,6 @@ func GetCourseByTopic(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getCoursesByTopic", sql)
-
-	var rows []*Course
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -512,6 +535,16 @@ func GetCourseByStudy(
 	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("study_id", studyID).Info("GetCourseByStudy(study_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -535,7 +568,11 @@ func GetCourseByStudy(
 
 	psName := preparedName("getCoursesByStudyID", sql)
 
-	return getManyCourse(db, psName, sql, args...)
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetCourseByUser(
@@ -545,6 +582,16 @@ func GetCourseByUser(
 	filters *CourseFilterOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("user_id", userID).Info("GetCourseByUser(user_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -568,7 +615,11 @@ func GetCourseByUser(
 
 	psName := preparedName("getCoursesByUserID", sql)
 
-	return getManyCourse(db, psName, sql, args...)
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getCourseByNameSQL = `
@@ -773,6 +824,16 @@ func SearchCourse(
 	po *PageOptions,
 ) ([]*Course, error) {
 	mylog.Log.WithField("query", query).Info("SearchCourse(query)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"advanced_at",
 		"completed_at",
@@ -802,8 +863,7 @@ func SearchCourse(
 
 	psName := preparedName("searchCourseIndex", sql)
 
-	courses, err := getManyCourse(tx, psName, sql, args...)
-	if err != nil {
+	if err := getManyCourse(tx, psName, sql, &rows, args...); err != nil {
 		return nil, err
 	}
 
@@ -815,7 +875,7 @@ func SearchCourse(
 		}
 	}
 
-	return courses, nil
+	return rows, nil
 }
 
 func UpdateCourse(

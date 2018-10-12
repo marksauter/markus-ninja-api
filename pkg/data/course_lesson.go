@@ -68,14 +68,13 @@ func getManyCourseLesson(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*CourseLesson,
 	args ...interface{},
-) ([]*CourseLesson, error) {
-	var rows []*CourseLesson
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get course_lessons")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -86,17 +85,15 @@ func getManyCourseLesson(
 			&row.LessonID,
 			&row.Number,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get course_lessons")
-		return nil, err
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
 const getCourseLessonSQL = `
@@ -151,6 +148,16 @@ func GetCourseLessonByCourse(
 	po *PageOptions,
 ) ([]*CourseLesson, error) {
 	mylog.Log.WithField("course_id", courseID).Info("GetCourseLessonByCourse(course_id)")
+	var rows []*CourseLesson
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*CourseLesson, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.course_id = ` + args.Append(courseID)
@@ -167,7 +174,11 @@ func GetCourseLessonByCourse(
 
 	psName := preparedName("getCourseLessonsByCourseID", sql)
 
-	return getManyCourseLesson(db, psName, sql, args...)
+	if err := getManyCourseLesson(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateCourseLesson(

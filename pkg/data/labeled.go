@@ -87,14 +87,13 @@ func getManyLabeled(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Labeled,
 	args ...interface{},
-) ([]*Labeled, error) {
-	var rows []*Labeled
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get labeleds")
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -106,17 +105,15 @@ func getManyLabeled(
 			&row.LabelableID,
 			&row.Type,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get labeleds")
-		return nil, err
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
 const getLabeledSQL = `
@@ -170,6 +167,16 @@ func GetLabeledByLabel(
 	po *PageOptions,
 ) ([]*Labeled, error) {
 	mylog.Log.WithField("label_id", labelID).Info("GetLabeledByLabel(label_id)")
+	var rows []*Labeled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Labeled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.label_id = ` + args.Append(labelID)
@@ -187,7 +194,11 @@ func GetLabeledByLabel(
 
 	psName := preparedName("getLabeledsByLabel", sql)
 
-	return getManyLabeled(db, psName, sql, args...)
+	if err := getManyLabeled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetLabeledByLabelable(
@@ -196,6 +207,16 @@ func GetLabeledByLabelable(
 	po *PageOptions,
 ) ([]*Labeled, error) {
 	mylog.Log.WithField("labelable_id", labelableID).Info("GetLabeledByLabelable(labelable_id)")
+	var rows []*Labeled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Labeled, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.labelable_id = ` + args.Append(labelableID)
@@ -213,7 +234,11 @@ func GetLabeledByLabelable(
 
 	psName := preparedName("getLabeledsByLabelable", sql)
 
-	return getManyLabeled(db, psName, sql, args...)
+	if err := getManyLabeled(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func CreateLabeled(

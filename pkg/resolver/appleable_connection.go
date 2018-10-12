@@ -11,7 +11,8 @@ import (
 
 func NewAppleableConnectionResolver(
 	repos *repo.Repos,
-	appleables []repo.NodePermit, pageOptions *data.PageOptions,
+	appleables []repo.NodePermit,
+	pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	search *string,
 ) (*appleableConnectionResolver, error) {

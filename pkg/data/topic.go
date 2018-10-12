@@ -125,13 +125,12 @@ func getManyTopic(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Topic,
 	args ...interface{},
-) ([]*Topic, error) {
-	var rows []*Topic
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -143,15 +142,15 @@ func getManyTopic(
 			&row.Name,
 			&row.UpdatedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get topics")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getTopicByIDSQL = `
@@ -215,6 +214,16 @@ func GetTopicByTopicable(
 	mylog.Log.WithField(
 		"topicable_id", topicableID,
 	).Info("GetTopicByTopicable(topicable_id)")
+	var rows []*Topic
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topic, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topicable_id = ` + args.Append(topicableID)
@@ -233,8 +242,6 @@ func GetTopicByTopicable(
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getTopicsByTopicableID", sql)
-
-	var rows []*Topic
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -378,6 +385,16 @@ func SearchTopic(
 	po *PageOptions,
 ) ([]*Topic, error) {
 	mylog.Log.WithField("query", query).Info("SearchTopic(query)")
+	var rows []*Topic
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topic, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	selects := []string{
 		"created_at",
 		"description",
@@ -391,7 +408,11 @@ func SearchTopic(
 
 	psName := preparedName("searchTopicIndex", sql)
 
-	return getManyTopic(db, psName, sql, args...)
+	if err := getManyTopic(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func UpdateTopic(

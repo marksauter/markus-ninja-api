@@ -177,13 +177,12 @@ func getManyLessonComment(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*LessonComment,
 	args ...interface{},
-) ([]*LessonComment, error) {
-	var rows []*LessonComment
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for dbRows.Next() {
@@ -198,15 +197,15 @@ func getManyLessonComment(
 			&row.UpdatedAt,
 			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error("failed to get lesson_comments")
-		return nil, err
+		return err
 	}
 
-	return rows, nil
+	return nil
 }
 
 const getLessonCommentByIDSQL = `
@@ -252,12 +251,20 @@ func BatchGetLessonComment(
 	ids []string,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField("ids", ids).Info("BatchGetLessonComment(ids)")
-	return getManyLessonComment(
+	rows := make([]*LessonComment, 0, len(ids))
+
+	err := getManyLessonComment(
 		db,
 		"batchGetLessonCommentByID",
 		batchGetLessonCommentByIDSQL,
+		&rows,
 		ids,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func GetLessonCommentByLabel(
@@ -266,6 +273,16 @@ func GetLessonCommentByLabel(
 	po *PageOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField("label_id", labelID).Info("GetLessonCommentByLabel(label_id)")
+	var rows []*LessonComment
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*LessonComment, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.label_id = ` + args.Append(labelID)
@@ -286,8 +303,6 @@ func GetLessonCommentByLabel(
 	sql := SQL3(selects, from, where, nil, &args, po)
 
 	psName := preparedName("getLessonCommentsByLabel", sql)
-
-	var rows []*LessonComment
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
@@ -329,6 +344,16 @@ func GetLessonCommentByLesson(
 	mylog.Log.WithField(
 		"lesson_id", lessonID,
 	).Info("GetLessonCommentByLesson(lesson_id)")
+	var rows []*LessonComment
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*LessonComment, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.lesson_id = ` + args.Append(lessonID)
@@ -349,7 +374,11 @@ func GetLessonCommentByLesson(
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 // GetLessonCommentByStudy - get lesson comments by study id
@@ -361,6 +390,16 @@ func GetLessonCommentByStudy(
 	mylog.Log.WithField(
 		"study_id", studyID,
 	).Info("GetLessonCommentByStudy(study_id)")
+	var rows []*LessonComment
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*LessonComment, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -381,7 +420,11 @@ func GetLessonCommentByStudy(
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 // GetLessonCommentByUser - get lesson comments by user id
@@ -393,6 +436,16 @@ func GetLessonCommentByUser(
 	mylog.Log.WithField(
 		"user_id", userID,
 	).Info("GetLessonCommentByUser(user_id)")
+	var rows []*LessonComment
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*LessonComment, 0, limit)
+		} else {
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -413,7 +466,11 @@ func GetLessonCommentByUser(
 
 	psName := preparedName("getLessonCommentsByUser", sql)
 
-	return getManyLessonComment(db, psName, sql, args...)
+	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const updateNewLessonCommentBodySQL = `

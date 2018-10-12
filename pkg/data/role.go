@@ -47,8 +47,6 @@ func getManyRole(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
 	return rows, nil
 }
 
