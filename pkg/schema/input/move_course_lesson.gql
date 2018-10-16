@@ -1,0 +1,11 @@
+# Input type for MoveCourseLesson.
+input MoveCourseLessonInput {
+  # ID of the lesson to move after.
+  afterLessonId: ID!
+
+  # ID of the course.
+  courseId: ID!
+
+  # ID of the lesson.
+  lessonId: ID!
+}

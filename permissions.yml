@@ -84,11 +84,17 @@ permissions:
     authenticated: true
     roles:
       - owner
-  # Owners can read the course lesson.
+  # Owners can read/update course lessons.
   - operation: Read CourseLesson
     authenticated: true
     roles:
       - owner
+  - operation: Update CourseLesson
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - number
 
 
 

@@ -1,0 +1,8 @@
+# Return type for MoveCourseLesson.
+type MoveCourseLessonPayload {
+  # The course in which the lesson was moved.
+  course: Course!
+
+  # The edge from the course's lesson connection.
+  lessonEdge: LessonEdge!
+}

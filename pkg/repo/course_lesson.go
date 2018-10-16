@@ -212,3 +212,26 @@ func (r *CourseLessonRepo) Disconnect(
 	}
 	return data.DeleteCourseLesson(db, courseLesson.LessonID.String)
 }
+
+func (r *CourseLessonRepo) Move(
+	ctx context.Context,
+	courseLesson *data.CourseLesson,
+	afterLessonID string,
+) (*data.CourseLesson, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, courseLesson); err != nil {
+		return nil, err
+	}
+	return data.MoveCourseLesson(
+		db,
+		courseLesson.CourseID.String,
+		courseLesson.LessonID.String,
+		afterLessonID,
+	)
+}
