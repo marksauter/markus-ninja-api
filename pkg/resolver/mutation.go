@@ -31,10 +31,10 @@ func (r *RootResolver) AddCourseLesson(
 ) (*addCourseLessonPayloadResolver, error) {
 	courseLesson := &data.CourseLesson{}
 	if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
-		return nil, errors.New("invalid course lesson course_id")
+		return nil, errors.New("invalid value for courseId")
 	}
 	if err := courseLesson.LessonID.Set(args.Input.LessonID); err != nil {
-		return nil, errors.New("invalid course lesson lesson_id")
+		return nil, errors.New("invalid value for lessonId")
 	}
 
 	_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
@@ -1006,7 +1006,42 @@ func (r *RootResolver) MarkAllStudyNotificationsAsRead(
 	return true, nil
 }
 
+type MoveCourseLessonInput struct {
+	AfterLessonID string
+	CourseID      string
+	LessonID      string
+}
+
+func (r *RootResolver) MoveCourseLesson(
+	ctx context.Context,
+	args struct{ Input MoveCourseLessonInput },
+) (*moveCourseLessonPayloadResolver, error) {
+	courseLesson := &data.CourseLesson{}
+	if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
+		return nil, errors.New("invalid value for courseId")
+	}
+	if err := courseLesson.LessonID.Set(args.Input.LessonID); err != nil {
+		return nil, errors.New("invalid value for lessonId")
+	}
+	afterLessonID, err := mytype.ParseOID(args.Input.AfterLessonID)
+	if err != nil {
+		return nil, errors.New("invalid value for afterLessonId")
+	}
+
+	_, err = r.Repos.CourseLesson().Move(ctx, courseLesson, afterLessonID.String)
+	if err != nil {
+		return nil, err
+	}
+
+	return &moveCourseLessonPayloadResolver{
+		CourseID: &courseLesson.CourseID,
+		LessonID: &courseLesson.LessonID,
+		Repos:    r.Repos,
+	}, nil
+}
+
 type RemoveCourseLessonInput struct {
+	CourseID string
 	LessonID string
 }
 
@@ -1014,13 +1049,15 @@ func (r *RootResolver) RemoveCourseLesson(
 	ctx context.Context,
 	args struct{ Input RemoveCourseLessonInput },
 ) (*removeCourseLessonPayloadResolver, error) {
-	courseLessonPermit, err := r.Repos.CourseLesson().Get(ctx, args.Input.LessonID)
-	if err != nil {
-		return nil, err
+	courseLesson := &data.CourseLesson{}
+	if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
+		return nil, errors.New("invalid value for courseId")
 	}
-	courseLesson := courseLessonPermit.Get()
+	if err := courseLesson.LessonID.Set(args.Input.LessonID); err != nil {
+		return nil, errors.New("invalid value for lessonId")
+	}
 
-	err = r.Repos.CourseLesson().Disconnect(ctx, courseLesson)
+	err := r.Repos.CourseLesson().Disconnect(ctx, courseLesson)
 	if err != nil {
 		return nil, err
 	}

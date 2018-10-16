@@ -126,6 +126,8 @@ type Mutation {
   markAllNotificationsAsRead: Boolean!
   # Mark all viewer's notifications from a study as read.
   markAllStudyNotificationsAsRead(input: MarkAllStudyNotificationAsReadInput!): Boolean!
+  # Move course lesson to another position.
+  moveCourseLesson(input: MoveCourseLessonInput!): MoveCourseLessonPayload
 
   # Removes a lesson from a course.
   removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload

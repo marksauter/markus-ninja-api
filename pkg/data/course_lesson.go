@@ -1,7 +1,9 @@
 package data
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -14,7 +16,7 @@ type CourseLesson struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	CourseID  mytype.OID         `db:"course_id" permit:"read"`
 	LessonID  mytype.OID         `db:"lesson_id" permit:"read"`
-	Number    pgtype.Int4        `db:"number" permit:"read"`
+	Number    pgtype.Int4        `db:"number" permit:"read/update"`
 }
 
 const countCourseLessonByCourseSQL = `
@@ -275,4 +277,125 @@ func DeleteCourseLesson(
 	}
 
 	return nil
+}
+
+const shiftCourseLessonRangeToTheRightSQL = `
+	UPDATE course_lesson 
+	SET number = number + 1 
+	WHERE lesson_id IN (
+		SELECT lesson_id
+		FROM course_lesson
+		WHERE course_id = $1 AND number >= $2 AND number < $3
+	)
+`
+
+const updateCourseLessonNumberSQL = `
+	UPDATE course_lesson
+	SET number = $1
+	WHERE lesson_id = $2
+`
+
+const shiftCourseLessonRangeToTheLeftSQL = `
+	UPDATE course_lesson 
+	SET number = number - 1 
+	WHERE lesson_id IN (
+		SELECT lesson_id
+		FROM course_lesson
+		WHERE course_id = $1 AND number > $2 AND number <= $3
+	)
+`
+
+func MoveCourseLesson(
+	db Queryer,
+	courseID,
+	lessonID,
+	afterLessonID string,
+) (*CourseLesson, error) {
+	mylog.Log.Info("MoveCourseLesson()")
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancelFunc()
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	lesson, err := GetCourseLesson(tx, lessonID)
+	if err != nil {
+		return nil, err
+	}
+
+	if lessonID == afterLessonID {
+		return lesson, nil
+	}
+
+	afterLesson, err := GetCourseLesson(tx, afterLessonID)
+	if err != nil {
+		return nil, err
+	}
+
+	batch := tx.BeginBatch()
+
+	oldPosition := lesson.Number.Int
+	newPosition := afterLesson.Number.Int
+	if newPosition-oldPosition < 0 {
+		newPosition = newPosition + 1
+		if newPosition == oldPosition {
+			return lesson, nil
+		}
+		_, err = prepare(tx, "shiftCourseLessonRangeToTheRight", shiftCourseLessonRangeToTheRightSQL)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to prepare shiftCourseLessonRangeToTheRight")
+			return nil, err
+		}
+		batch.Queue("shiftCourseLessonRangeToTheRight", []interface{}{courseID, newPosition, oldPosition}, nil, nil)
+	} else {
+		_, err = prepare(tx, "shiftCourseLessonRangeToTheLeft", shiftCourseLessonRangeToTheLeftSQL)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to prepare shiftCourseLessonRangeToTheLeft")
+			return nil, err
+		}
+		batch.Queue("shiftCourseLessonRangeToTheLeft", []interface{}{courseID, oldPosition, newPosition}, nil, nil)
+	}
+	_, err = prepare(tx, "updateCourseLessonNumber", updateCourseLessonNumberSQL)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to prepare updateCourseLessonNumber")
+		return nil, err
+	}
+	batch.Queue("updateCourseLessonNumber", []interface{}{newPosition, lesson.LessonID.String}, nil, nil)
+
+	if err := batch.Send(ctx, nil); err != nil {
+		if e := batch.Close(); e != nil {
+			mylog.Log.WithError(e).Error("failed to send/close move course lesson batch")
+		}
+		mylog.Log.WithError(err).Error("failed to send move course lesson batch")
+		return nil, err
+	}
+
+	if err := batch.Close(); err != nil {
+		mylog.Log.WithError(err).Error("failed to close move course lesson batch")
+		return nil, err
+	}
+
+	courseLesson, err := GetCourseLesson(
+		tx,
+		lessonID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error("error during transaction")
+			return nil, err
+		}
+	}
+
+	return courseLesson, nil
 }

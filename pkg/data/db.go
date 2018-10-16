@@ -27,6 +27,7 @@ func Initialize(db Queryer) error {
 }
 
 type Queryer interface {
+	BeginBatch() *pgx.Batch
 	CopyFrom(pgx.Identifier, []string, pgx.CopyFromSource) (int, error)
 	Exec(sql string, arguments ...interface{}) (pgx.CommandTag, error)
 	Query(sql string, args ...interface{}) (*pgx.Rows, error)
@@ -44,7 +45,6 @@ type committer interface {
 
 type preparer interface {
 	Prepare(name, sql string) (*pgx.PreparedStatement, error)
-	Deallocate(name string) error
 }
 
 func BeginTransaction(db Queryer) (Queryer, error, bool) {
@@ -67,6 +67,17 @@ func RollbackTransaction(db Queryer) error {
 		return committer.Rollback()
 	}
 	return nil
+}
+
+func prepare(db Queryer, name, sql string) (*pgx.PreparedStatement, error) {
+	if preparer, ok := db.(preparer); ok {
+		ps, err := preparer.Prepare(name, sql)
+		if err != nil {
+			return nil, err
+		}
+		return ps, nil
+	}
+	return nil, errors.New("db is not a preparer")
 }
 
 func prepareQuery(db Queryer, name, sql string, args ...interface{}) (*pgx.Rows, error) {
