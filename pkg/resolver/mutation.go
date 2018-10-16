@@ -1866,6 +1866,7 @@ func validateTopicNames(topicNames []string) (invalidTopicNames []string) {
 }
 
 type UpdateUserAssetInput struct {
+	Description *string
 	Name        *string
 	UserAssetID string
 }
@@ -1879,6 +1880,11 @@ func (r *RootResolver) UpdateUserAsset(
 		return nil, myerr.UnexpectedError{"failed to set user_asset id"}
 	}
 
+	if args.Input.Description != nil {
+		if err := userAsset.Description.Set(args.Input.Description); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user_asset description"}
+		}
+	}
 	if args.Input.Name != nil {
 		if err := userAsset.Name.Set(args.Input.Name); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user_asset name"}

@@ -39,6 +39,13 @@ func (r *UserAssetPermit) CreatedAt() (time.Time, error) {
 	return r.userAsset.CreatedAt.Time, nil
 }
 
+func (r *UserAssetPermit) Description() (string, error) {
+	if ok := r.checkFieldPermission("description"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.userAsset.Description.String, nil
+}
+
 func (r *UserAssetPermit) Href() (string, error) {
 	key, err := r.Key()
 	if err != nil {

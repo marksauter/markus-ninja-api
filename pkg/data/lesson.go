@@ -32,9 +32,10 @@ func lessonDelimeter(r rune) bool {
 }
 
 type LessonFilterOptions struct {
-	IsCourseLesson *bool
-	Labels         *[]string
-	Search         *string
+	IsCourseLesson   *bool
+	Labels           *[]string
+	CourseNotEqualTo *string
+	Search           *string
 }
 
 func (src *LessonFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
@@ -58,6 +59,13 @@ func (src *LessonFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts 
 			whereParts,
 			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".labels @@ labels_query END",
 		)
+	}
+	if src.CourseNotEqualTo != nil {
+		if courseID, err := mytype.ParseOID(*src.CourseNotEqualTo); err == nil {
+			whereParts = append(whereParts, from+".course_id IS DISTINCT FROM "+args.Append(courseID.String))
+		} else {
+			mylog.Log.WithError(err).Error("invalid course_id for lesson filter CourseNotEqualTo")
+		}
 	}
 	if src.Search != nil {
 		query := ToPrefixTsQuery(*src.Search)
@@ -708,6 +716,8 @@ func GetLessonByStudy(
 	}
 	from := "lesson_search_index"
 	sql := SQL3(selects, from, where, filters, &args, po)
+
+	mylog.Log.Debug(sql)
 
 	psName := preparedName("getLessonsByStudy", sql)
 

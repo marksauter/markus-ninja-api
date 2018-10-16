@@ -6,6 +6,9 @@ input LessonFilters {
   # List lessons where the list of label names exists on the lesson.
   labels: [String!]
 
+  # List lessons that are not part of the course with this ID.
+  courseNotEqualTo: ID
+
   # Query to search lessons by.
   search: String
 }

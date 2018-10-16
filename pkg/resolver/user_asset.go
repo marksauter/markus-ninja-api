@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type UserAsset = userAssetResolver
@@ -21,6 +22,20 @@ type userAssetResolver struct {
 func (r *userAssetResolver) CreatedAt() (graphql.Time, error) {
 	t, err := r.UserAsset.CreatedAt()
 	return graphql.Time{t}, err
+}
+
+func (r *userAssetResolver) Description() (string, error) {
+	return r.UserAsset.Description()
+}
+
+func (r *userAssetResolver) DescriptionHTML() (mygql.HTML, error) {
+	description, err := r.Description()
+	if err != nil {
+		return "", err
+	}
+	descriptionHTML := util.MarkdownToHTML([]byte(description))
+	gqlHTML := mygql.HTML(descriptionHTML)
+	return gqlHTML, nil
 }
 
 func (r *userAssetResolver) Href() (mygql.URI, error) {

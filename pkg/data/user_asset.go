@@ -15,6 +15,7 @@ import (
 type UserAsset struct {
 	AssetID      pgtype.Int8        `db:"asset_id" permit:"create/read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Description  pgtype.Text        `db:"description" permit:"create/read/update"`
 	ID           mytype.OID         `db:"id" permit:"read"`
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
@@ -157,6 +158,7 @@ func getUserAsset(
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.AssetID,
 		&row.CreatedAt,
+		&row.Description,
 		&row.ID,
 		&row.Key,
 		&row.Name,
@@ -196,6 +198,7 @@ func getManyUserAsset(
 		dbRows.Scan(
 			&row.AssetID,
 			&row.CreatedAt,
+			&row.Description,
 			&row.ID,
 			&row.Key,
 			&row.Name,
@@ -223,6 +226,7 @@ const getUserAssetByIDSQL = `
 	SELECT
 		asset_id,
 		created_at,
+		description,
 		id,
 		key,
 		name,
@@ -250,6 +254,7 @@ const batchGetUserAssetSQL = `
 	SELECT
 		asset_id,
 		created_at,
+		description,
 		id,
 		key,
 		name,
@@ -292,6 +297,7 @@ const getUserAssetByNameSQL = `
 	SELECT
 		asset_id,
 		created_at,
+		description,
 		id,
 		key,
 		name,
@@ -326,6 +332,7 @@ const batchGetUserAssetByNameSQL = `
 	SELECT
 		asset_id,
 		created_at,
+		description,
 		id,
 		key,
 		name,
@@ -375,6 +382,7 @@ const getUserAssetByUserStudyAndNameSQL = `
 	SELECT
 		ua.asset_id,
 		ua.created_at,
+		ua.description,
 		ua.id,
 		ua.key,
 		ua.name,
@@ -438,6 +446,7 @@ func GetUserAssetByStudy(
 	selects := []string{
 		"asset_id",
 		"created_at",
+		"description",
 		"id",
 		"key",
 		"name",
@@ -489,6 +498,7 @@ func GetUserAssetByUser(
 	selects := []string{
 		"asset_id",
 		"created_at",
+		"description",
 		"id",
 		"key",
 		"name",
@@ -530,6 +540,10 @@ func CreateUserAsset(
 	if row.AssetID.Status != pgtype.Undefined {
 		columns = append(columns, "asset_id")
 		values = append(values, args.Append(&row.AssetID))
+	}
+	if row.Description.Status != pgtype.Undefined {
+		columns = append(columns, "description")
+		values = append(values, args.Append(&row.Description))
 	}
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
@@ -640,6 +654,7 @@ func SearchUserAsset(
 	selects := []string{
 		"asset_id",
 		"created_at",
+		"description",
 		"id",
 		"key",
 		"name",
@@ -673,6 +688,9 @@ func UpdateUserAsset(
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
+	if row.Description.Status != pgtype.Undefined {
+		sets = append(sets, `description`+"="+args.Append(&row.Description))
+	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
 		nameTokens := &pgtype.Text{}
