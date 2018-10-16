@@ -11,6 +11,12 @@ type UserAsset implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # The description of the asset.
+  description: String!
+
+  # The description of the asset rendered to HTML.
+  descriptionHTML: HTML!
+
   # Source url for use with hyperlinks.
   href: URI!
 

@@ -498,6 +498,7 @@ permissions:
   - operation: Read UserAsset
     fields:
       - created_at
+      - description
       - id
       - key
       - name
@@ -520,6 +521,7 @@ permissions:
       - owner
     fields:
       - asset_id
+      - description
       - name
       - study_id
       - user_id
@@ -529,6 +531,7 @@ permissions:
     roles:
       - owner
     fields:
+      - description
       - name
   - operation: Delete UserAsset
     authenticated: true
