@@ -189,21 +189,29 @@ func (r *Permitter) ViewerCanAdmin(
 		}
 		return vid == userID.String, nil
 	case data.CourseLesson:
-		courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
-		if err != nil {
-			return false, err
+		courseID := &node.CourseID
+		if courseID.Status == pgtype.Undefined {
+			courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
+			if err != nil {
+				return false, err
+			}
+			courseID = &courseLesson.CourseID
 		}
-		course, err := r.repos.Course().load.Get(ctx, courseLesson.CourseID.String)
+		course, err := r.repos.Course().load.Get(ctx, courseID.String)
 		if err != nil {
 			return false, err
 		}
 		return vid == course.UserID.String, nil
 	case *data.CourseLesson:
-		courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
-		if err != nil {
-			return false, err
+		courseID := &node.CourseID
+		if courseID.Status == pgtype.Undefined {
+			courseLesson, err := r.repos.CourseLesson().load.Get(ctx, node.LessonID.String)
+			if err != nil {
+				return false, err
+			}
+			courseID = &courseLesson.CourseID
 		}
-		course, err := r.repos.Course().load.Get(ctx, courseLesson.CourseID.String)
+		course, err := r.repos.Course().load.Get(ctx, courseID.String)
 		if err != nil {
 			return false, err
 		}
