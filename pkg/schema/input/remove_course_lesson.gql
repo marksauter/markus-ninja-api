@@ -1,7 +1,7 @@
 # Input type for RemoveCourseLesson.
 input RemoveCourseLessonInput {
   # ID of the course. 
-  lessonId: ID!
+  courseId: ID!
 
   # ID of the lesson. 
   lessonId: ID!

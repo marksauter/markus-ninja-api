@@ -7,6 +7,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -48,6 +49,8 @@ func (h PreviewHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	text := req.FormValue("text")
+	carriageReturnNewline := regexp.MustCompile(`\r\n`)
+	text = carriageReturnNewline.ReplaceAllString(text, "\n")
 
 	html, err := h.textToHTML(req.Context(), text, study)
 	if err != nil {
@@ -69,6 +72,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 	if err := markdown.Set(text); err != nil {
 		return "", err
 	}
+	markdownStr := markdown.String
 
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
@@ -107,7 +111,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 		)
 		return util.ReplaceWithPadding(s, fmt.Sprintf("![%s](%s)", name, href))
 	}
-	text = mytype.AssetRefRegexp.ReplaceAllStringFunc(text, userAssetRefToLink)
+	markdownStr = mytype.AssetRefRegexp.ReplaceAllStringFunc(markdownStr, userAssetRefToLink)
 
 	study, err := h.Repos.Study().Get(ctx, studyID)
 	if err != nil {
@@ -154,7 +158,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			n,
 		))
 	}
-	text = mytype.NumberRefRegexp.ReplaceAllStringFunc(text, lessonNumberRefToLink)
+	markdownStr = mytype.NumberRefRegexp.ReplaceAllStringFunc(markdownStr, lessonNumberRefToLink)
 
 	crossStudyRefToLink := func(s string) string {
 		result := mytype.CrossStudyRefRegexp.FindStringSubmatch(s)
@@ -182,7 +186,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			n,
 		))
 	}
-	text = mytype.CrossStudyRefRegexp.ReplaceAllStringFunc(text, crossStudyRefToLink)
+	markdownStr = mytype.CrossStudyRefRegexp.ReplaceAllStringFunc(markdownStr, crossStudyRefToLink)
 
 	userRefToLink := func(s string) string {
 		result := mytype.AtRefRegexp.FindStringSubmatch(s)
@@ -202,7 +206,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			name,
 		))
 	}
-	text = mytype.AtRefRegexp.ReplaceAllStringFunc(text, userRefToLink)
+	markdownStr = mytype.AtRefRegexp.ReplaceAllStringFunc(markdownStr, userRefToLink)
 
 	if newTx {
 		err := data.CommitTransaction(tx)
@@ -211,7 +215,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 		}
 	}
 
-	if err := markdown.Set(text); err != nil {
+	if err := markdown.Set(markdownStr); err != nil {
 		return "", err
 	}
 
