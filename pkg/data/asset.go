@@ -176,7 +176,7 @@ func CreateAsset(
 
 	psName := preparedName("createAsset", sql)
 
-	err = prepareQueryRow(tx, psName, sql, args...).Scan(&row.ID)
+	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
