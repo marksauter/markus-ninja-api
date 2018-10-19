@@ -148,13 +148,14 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
+	filename := strings.Replace(multipartFileHeader.Filename, ` `, "_", -1)
 	var assetPermit *repo.AssetPermit
 	if uploadResponse.IsNewObject {
 		asset, err := data.NewAssetFromFile(
 			&viewer.ID,
 			uploadResponse.Key,
 			file,
-			multipartFileHeader.Filename,
+			filename,
 			contentType,
 			fileSize,
 		)
@@ -185,7 +186,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 				&viewer.ID,
 				uploadResponse.Key,
 				file,
-				multipartFileHeader.Filename,
+				filename,
 				contentType,
 				fileSize,
 			)
@@ -226,7 +227,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		ContentType: contentType,
 		Href:        href,
 		ID:          strconv.FormatInt(assetID, 10),
-		Name:        multipartFileHeader.Filename,
+		Name:        filename,
 		Size:        fileSize,
 	}
 
