@@ -440,9 +440,10 @@ func (r *RootResolver) CreateUser(
 }
 
 type CreateUserAssetInput struct {
-	AssetID string
-	Name    string
-	StudyID string
+	AssetID     string
+	Description *string
+	Name        string
+	StudyID     string
 }
 
 func (r *RootResolver) CreateUserAsset(
@@ -462,6 +463,11 @@ func (r *RootResolver) CreateUserAsset(
 	userAsset := &data.UserAsset{}
 	if err := userAsset.AssetID.Set(assetID); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user asset asset_id"}
+	}
+	if args.Input.Description != nil {
+		if err := userAsset.Description.Set(args.Input.Description); err != nil {
+			return nil, myerr.UnexpectedError{"failed to set user asset description"}
+		}
 	}
 	if err := userAsset.Name.Set(args.Input.Name); err != nil {
 		return nil, myerr.UnexpectedError{"failed to set user asset name"}
