@@ -19,7 +19,7 @@ type Label struct {
 	IsDefault   pgtype.Bool        `db:"is_default" permit:"read"`
 	LabelableID mytype.OID         `db:"labelable_id"`
 	LabeledAt   pgtype.Timestamptz `db:"labeled_at"`
-	Name        pgtype.Text        `db:"name" permit:"create/read"`
+	Name        mytype.WordsName   `db:"name" permit:"create/read"`
 	StudyID     mytype.OID         `db:"study_id" permit:"create/read"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
@@ -552,5 +552,5 @@ func UpdateLabel(
 }
 
 func labelDelimeter(r rune) bool {
-	return r == '-'
+	return r == '_' || r == ' '
 }

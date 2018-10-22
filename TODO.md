@@ -10,3 +10,6 @@ THERE IS PROBABLY SOME SORT OF MEMORY LEAK, BECAUSE THE SERVER SLOWS DOWN THE
 LONGER IT RUNS...
   pgx prepare statements seems to be the main culprit, need to figure out how to
   use it appropriately...
+
+Fields that can be used for ordering, cannot not be null.
+  - e.g. study.advanced_at cannot be null, need to change this. 

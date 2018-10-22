@@ -16,11 +16,11 @@ type WordsName struct {
 
 var validWordsNameRegex = regexp.MustCompile(`^[\w-]{1,39}$`)
 
-var InvalidWordsNameLength = errors.New("name must be less than 40 characters")
+var InvalidWordsNameLength = errors.New("name must be at least one character but less than 40 characters")
 var InvalidWordsNameCharacters = errors.New("name may only contain alphanumeric characters, hyphens, or underscores")
 
 func checkWordsName(name []byte) error {
-	if len(name) > 39 {
+	if len(name) < 1 || len(name) > 39 {
 		return InvalidWordsNameLength
 	}
 	if match := validWordsNameRegex.Match(name); !match {
