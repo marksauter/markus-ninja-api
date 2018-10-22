@@ -255,19 +255,16 @@ func (r *RootResolver) CreateLabel(
 ) (*createLabelPayloadResolver, error) {
 	label := &data.Label{}
 	if err := label.Color.Set(args.Input.Color); err != nil {
-		return nil, err
+		return nil, errors.New("Invalid color")
 	}
 	if err := label.Description.Set(args.Input.Description); err != nil {
-		return nil, err
-	}
-	if len(args.Input.Name) < 1 {
-		return nil, errors.New("name must be at least one character long")
+		return nil, errors.New("Invalid description")
 	}
 	if err := label.Name.Set(args.Input.Name); err != nil {
-		return nil, err
+		return nil, errors.New("Invalid name")
 	}
 	if err := label.StudyID.Set(args.Input.StudyID); err != nil {
-		return nil, err
+		return nil, errors.New("Invalid studyId")
 	}
 	labelPermit, err := r.Repos.Label().Create(ctx, label)
 	if err != nil {
@@ -363,14 +360,6 @@ func (r *RootResolver) CreateStudy(
 	ctx context.Context,
 	args struct{ Input CreateStudyInput },
 ) (*createStudyPayloadResolver, error) {
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return nil, err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
-	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
-
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -378,30 +367,22 @@ func (r *RootResolver) CreateStudy(
 
 	study := &data.Study{}
 	if err := study.Description.Set(args.Input.Description); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study description"}
-	}
-	if len(args.Input.Name) < 1 {
-		return nil, errors.New("name must be at least one character long")
+		return nil, errors.New("Invalid description")
 	}
 	if err := study.Name.Set(args.Input.Name); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study name"}
+		return nil, errors.New("Invalid name")
 	}
 	if err := study.UserID.Set(&viewer.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set study user_id"}
+		mylog.Log.Error("failed to set study user_id")
+		return nil, myerr.SomethingWentWrongError
 	}
 
 	studyPermit, err := r.Repos.Study().Create(ctx, study)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error("failed to create study")
+		return nil, myerr.SomethingWentWrongError
 	}
 	study = studyPermit.Get()
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	return &createStudyPayloadResolver{
 		Study:  studyPermit,
@@ -1955,19 +1936,13 @@ func (r *RootResolver) UpdateViewerAccount(
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
 
-	var user *data.User
-	var err error
+	user := &data.User{}
+	if err := user.ID.Set(&viewer.ID); err != nil {
+		return nil, myerr.UnexpectedError{"failed to set user id"}
+	}
 	if args.Input.NewPassword != nil && args.Input.OldPassword != nil {
-		user, err = data.GetUserCredentials(db, viewer.ID.String)
-		if err != nil {
-			return nil, err
-		}
-		if err := user.Password.CompareToPassword(*args.Input.OldPassword); err != nil {
+		if err := viewer.Password.CompareToPassword(*args.Input.OldPassword); err != nil {
 			return nil, errors.New("incorrect password")
 		}
 		if err := user.Password.Set(args.Input.NewPassword); err != nil {
@@ -2018,7 +1993,13 @@ func (r *RootResolver) UpdateViewerProfile(
 			return nil, myerr.UnexpectedError{"failed to set user bio"}
 		}
 	}
-	if args.Input.EmailID != nil && *args.Input.EmailID != "" {
+	if args.Input.EmailID != nil {
+		emailID := args.Input.EmailID
+		// If the email ID is empty, then set pointer to nil. This will ensure a
+		// NULL db value.
+		if *emailID == "" {
+			emailID = nil
+		}
 		if err := user.ProfileEmailID.Set(args.Input.EmailID); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user profile_email_id"}
 		}

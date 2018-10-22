@@ -175,7 +175,7 @@ func (r *LabelRepo) Create(
 	}
 	name := strings.TrimSpace(l.Name.String)
 	innerSpace := regexp.MustCompile(`\s+`)
-	if err := l.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
+	if err := l.Name.Set(innerSpace.ReplaceAllString(name, "_")); err != nil {
 		return nil, err
 	}
 	label, err := data.CreateLabel(db, l)
