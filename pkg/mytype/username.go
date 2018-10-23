@@ -19,7 +19,7 @@ var validUsernameRegex = regexp.MustCompile(`^[a-zA-Z0-9-]{1,39}$`)
 
 var InvalidUsernameLength = errors.New("username must be less than 40 characters")
 var InvalidUsernameHyphens = errors.New("username cannot have multiple consecutive hyphens, and cannot begin or end with a hyphen")
-var InvalidUsernameCharacters = errors.New("username may only contain alphanumeric characters, hyphens, or underscores")
+var InvalidUsernameCharacters = errors.New("username may only contain alphanumeric characters or hyphens")
 
 func checkUsername(username []byte) error {
 	if len(username) > 39 {
