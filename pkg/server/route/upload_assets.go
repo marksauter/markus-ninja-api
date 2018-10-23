@@ -109,7 +109,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	save, err := strconv.ParseBool(saveStr)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to parse form `save`")
-		response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+		response := myhttp.InvalidRequestErrorResponse("invalid save")
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}

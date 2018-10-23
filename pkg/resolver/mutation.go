@@ -304,16 +304,17 @@ func (r *RootResolver) CreateLesson(
 
 	lesson := &data.Lesson{}
 	if err := lesson.Body.Set(args.Input.Body); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson body"}
+		return nil, errors.New("Invalid body")
 	}
 	if err := lesson.StudyID.Set(args.Input.StudyID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson study_id"}
+		return nil, errors.New("Invalid studyId")
 	}
 	if err := lesson.Title.Set(args.Input.Title); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson title"}
+		return nil, errors.New("Invalid title")
 	}
 	if err := lesson.UserID.Set(&viewer.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson user_id"}
+		mylog.Log.WithError(err).Error("failed to set lesson user_id")
+		return nil, myerr.SomethingWentWrongError
 	}
 
 	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
@@ -325,10 +326,11 @@ func (r *RootResolver) CreateLesson(
 	if args.Input.CourseID != nil {
 		courseLesson := &data.CourseLesson{}
 		if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set course lesson course_id"}
+			return nil, errors.New("Invalid courseId")
 		}
 		if err := courseLesson.LessonID.Set(&lesson.ID); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set course lesson lesson_id"}
+			mylog.Log.WithError(err).Error("failed to set course lesson lesson_id")
+			return nil, myerr.SomethingWentWrongError
 		}
 
 		_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
