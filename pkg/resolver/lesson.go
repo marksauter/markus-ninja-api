@@ -42,10 +42,11 @@ func (r *lessonResolver) Body() (string, error) {
 }
 
 func (r *lessonResolver) BodyHTML(ctx context.Context) (mygql.HTML, error) {
-	body, err := r.Lesson.Body()
+	lessonBody, err := r.Lesson.Body()
 	if err != nil {
 		return "", err
 	}
+	body := *lessonBody
 	studyID, err := r.Lesson.StudyID()
 	if err != nil {
 		return "", err

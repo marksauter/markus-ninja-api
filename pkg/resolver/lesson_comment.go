@@ -41,10 +41,11 @@ func (r *lessonCommentResolver) Body() (string, error) {
 }
 
 func (r *lessonCommentResolver) BodyHTML(ctx context.Context) (mygql.HTML, error) {
-	body, err := r.LessonComment.Body()
+	commentBody, err := r.LessonComment.Body()
 	if err != nil {
 		return "", err
 	}
+	body := *commentBody
 	studyID, err := r.LessonComment.StudyID()
 	if err != nil {
 		return "", err
