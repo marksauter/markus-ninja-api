@@ -59,3 +59,10 @@ func (r *emailResolver) VerifiedAt() (*graphql.Time, error) {
 	}
 	return nil, nil
 }
+
+func (r *emailResolver) ViewerCanDelete(
+	ctx context.Context,
+) bool {
+	email := r.Email.Get()
+	return r.Repos.Email().ViewerCanDelete(ctx, email)
+}

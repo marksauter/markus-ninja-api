@@ -238,8 +238,8 @@ func (r *EmailRepo) GetByUser(
 		if err != nil {
 			return nil, err
 		}
-		for i, l := range emails {
-			emailPermits[i] = &EmailPermit{fieldPermFn, l}
+		for i, e := range emails {
+			emailPermits[i] = &EmailPermit{fieldPermFn, e}
 		}
 	}
 	return emailPermits, nil
@@ -268,4 +268,14 @@ func (r *EmailRepo) Update(
 		return nil, err
 	}
 	return &EmailPermit{fieldPermFn, email}, nil
+}
+
+func (r *EmailRepo) ViewerCanDelete(
+	ctx context.Context,
+	e *data.Email,
+) bool {
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, e); err != nil {
+		return false
+	}
+	return e.Type.V != mytype.PrimaryEmail
 }

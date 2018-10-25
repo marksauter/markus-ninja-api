@@ -154,11 +154,12 @@ permissions:
     fields:
       - email_id
       - user_id
-  # Admins can read the following fields for an email verification token.
+  # Admins and owners can read the following fields for an email verification token.
   - operation: Read EVT
     authenticated: true
     roles:
       - admin
+      - owner
     fields:
       - email_id
       - expires_at
