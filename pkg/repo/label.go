@@ -3,8 +3,6 @@ package repo
 import (
 	"context"
 	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -171,11 +169,6 @@ func (r *LabelRepo) Create(
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, l); err != nil {
-		return nil, err
-	}
-	name := strings.TrimSpace(l.Name.String)
-	innerSpace := regexp.MustCompile(`\s+`)
-	if err := l.Name.Set(innerSpace.ReplaceAllString(name, "_")); err != nil {
 		return nil, err
 	}
 	label, err := data.CreateLabel(db, l)

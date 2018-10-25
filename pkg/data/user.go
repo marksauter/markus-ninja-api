@@ -95,7 +95,8 @@ func CountUserByEnrollable(
 	).Info("CountUserByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.enrollable_id = ` + args.Append(enrollableID)
+		return from + `.enrollable_id = ` + args.Append(enrollableID) + `
+			AND ` + from + `.status = 'ENROLLED'`
 	}
 	from := "enrolled"
 

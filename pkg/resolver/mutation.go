@@ -339,6 +339,11 @@ func (r *RootResolver) CreateLesson(
 		}
 	}
 
+	lessonPermit, err = r.Repos.Lesson().Get(ctx, lesson.ID.String)
+	if err != nil {
+		return nil, err
+	}
+
 	if newTx {
 		err := data.CommitTransaction(tx)
 		if err != nil {
@@ -445,21 +450,19 @@ func (r *RootResolver) CreateUserAsset(
 
 	userAsset := &data.UserAsset{}
 	if err := userAsset.AssetID.Set(assetID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user asset asset_id"}
+		return nil, errors.New("Invalid assetId")
 	}
-	if args.Input.Description != nil {
-		if err := userAsset.Description.Set(args.Input.Description); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set user asset description"}
-		}
+	if err := userAsset.Description.Set(args.Input.Description); err != nil {
+		return nil, errors.New("Invalid description")
 	}
 	if err := userAsset.Name.Set(args.Input.Name); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user asset name"}
+		return nil, errors.New("Invalid name")
 	}
 	if err := userAsset.StudyID.Set(args.Input.StudyID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user asset study_id"}
+		return nil, errors.New("Invalid studyId")
 	}
 	if err := userAsset.UserID.Set(&viewer.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user asset user_id"}
+		return nil, errors.New("Invalid userId")
 	}
 
 	userAssetPermit, err := r.Repos.UserAsset().Create(ctx, userAsset)
@@ -1553,17 +1556,17 @@ func (r *RootResolver) UpdateLabel(
 ) (*labelResolver, error) {
 	label := &data.Label{}
 	if err := label.ID.Set(args.Input.LabelID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set label id"}
+		return nil, errors.New("Invalid labelId")
 	}
 
 	if args.Input.Color != nil {
 		if err := label.Color.Set(args.Input.Color); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set label color"}
+			return nil, errors.New("Invalid color")
 		}
 	}
 	if args.Input.Description != nil {
 		if err := label.Description.Set(args.Input.Description); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set label description"}
+			return nil, errors.New("Invalid description")
 		}
 	}
 

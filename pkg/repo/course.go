@@ -3,8 +3,6 @@ package repo
 import (
 	"context"
 	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -263,11 +261,6 @@ func (r *CourseRepo) Create(
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, c); err != nil {
-		return nil, err
-	}
-	name := strings.TrimSpace(c.Name.String)
-	innerSpace := regexp.MustCompile(`\s+`)
-	if err := c.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
 	course, err := data.CreateCourse(db, c)
