@@ -3,8 +3,6 @@ package repo
 import (
 	"context"
 	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -137,11 +135,6 @@ func (r *TopicRepo) Create(
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
-		return nil, err
-	}
-	name := strings.TrimSpace(s.Name.String)
-	innerSpace := regexp.MustCompile(`\s+`)
-	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
 		return nil, err
 	}
 	topic, err := data.CreateTopic(db, s)

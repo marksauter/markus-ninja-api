@@ -500,8 +500,11 @@ func UpdateLabel(
 ) (*Label, error) {
 	mylog.Log.WithField("id", row.ID.String).Info("UpdateLabel(id)")
 	sets := make([]string, 0, 1)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
+	if row.Color.Status != pgtype.Undefined {
+		sets = append(sets, `color`+"="+args.Append(&row.Color))
+	}
 	if row.Description.Status != pgtype.Undefined {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
 	}
