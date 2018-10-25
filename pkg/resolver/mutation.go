@@ -71,11 +71,11 @@ func (r *RootResolver) AddEmail(
 
 	email := &data.Email{}
 	if err := email.Value.Set(args.Input.Email); err != nil {
-		return nil, errors.New("invalid email value")
+		return nil, errors.New("Invalid email")
 	}
 	email.UserID.Set(&viewer.ID)
 	if err := email.UserID.Set(&viewer.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set email user_id"}
+		return nil, errors.New("Invalid userId")
 	}
 
 	emailPermit, err := r.Repos.Email().Create(ctx, email)
@@ -85,10 +85,12 @@ func (r *RootResolver) AddEmail(
 
 	evt := &data.EVT{}
 	if err := evt.EmailID.Set(&email.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set evt email_id"}
+		mylog.Log.WithError(err).Error("failed to set evt email_id")
+		return nil, myerr.SomethingWentWrongError
 	}
 	if err := evt.UserID.Set(&viewer.ID); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set evt user_id"}
+		mylog.Log.WithError(err).Error("failed to set evt user_id")
+		return nil, myerr.SomethingWentWrongError
 	}
 
 	evtPermit, err := r.Repos.EVT().Create(ctx, evt)

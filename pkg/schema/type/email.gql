@@ -19,6 +19,9 @@ type Email implements Node {
 
   # Identifies when the email was verified.
   verifiedAt: Time
+
+  # Can the viewer delete this object?
+  viewerCanDelete: Boolean!
 }
 
 # An edge type for Email.
