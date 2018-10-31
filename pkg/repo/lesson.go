@@ -62,11 +62,25 @@ func (r *LessonPermit) CreatedAt() (time.Time, error) {
 	return r.lesson.CreatedAt.Time, nil
 }
 
+func (r *LessonPermit) Draft() (string, error) {
+	if ok := r.checkFieldPermission("draft"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.lesson.Draft.String, nil
+}
+
 func (r *LessonPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.lesson.ID, nil
+}
+
+func (r *LessonPermit) LastEditedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("last_edited_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.lesson.LastEditedAt.Time, nil
 }
 
 func (r *LessonPermit) Number() (int32, error) {

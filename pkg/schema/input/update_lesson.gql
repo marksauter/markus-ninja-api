@@ -1,7 +1,7 @@
 # Input type for UpdateLesson.
 input UpdateLessonInput {
-  # The body of the lesson.
-  body: String
+  # The draft of the lesson.
+  draft: String
 
   # ID of the lesson.
   lessonId: ID!
