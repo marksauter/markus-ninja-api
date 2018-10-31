@@ -50,6 +50,9 @@ type Lesson implements
   # Identifies the lesson's number within its associated course, if any.
   courseNumber: Int
 
+  # The current draft of changes for the lesson body as Markdown.
+  draft: String!
+
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
     # Returns the elements in the list that come after the specified global ID.
@@ -100,6 +103,9 @@ type Lesson implements
     orderBy: LabelOrder
   ): LabelConnection!
 
+  # Identifies when the lesson draft was last edited.
+  lastEditedAt: Time!
+
   # The next lesson within this lesson's course, if any.
   nextLesson: Lesson
 
@@ -109,7 +115,7 @@ type Lesson implements
   # The previous lesson within this lesson's course, if any.
   previousLesson: Lesson
 
-  # Identifies when the lesson was published at.
+  # Identifies when the lesson was last published.
   publishedAt: Time!
 
   # The study associated with this lesson.

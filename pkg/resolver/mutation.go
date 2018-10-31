@@ -281,10 +281,8 @@ func (r *RootResolver) CreateLabel(
 }
 
 type CreateLessonInput struct {
-	Body     string
-	CourseID *string
-	StudyID  string
-	Title    string
+	StudyID string
+	Title   string
 }
 
 func (r *RootResolver) CreateLesson(
@@ -305,9 +303,6 @@ func (r *RootResolver) CreateLesson(
 	}
 
 	lesson := &data.Lesson{}
-	if err := lesson.Body.Set(args.Input.Body); err != nil {
-		return nil, errors.New("Invalid body")
-	}
 	if err := lesson.StudyID.Set(args.Input.StudyID); err != nil {
 		return nil, errors.New("Invalid studyId")
 	}
@@ -320,28 +315,6 @@ func (r *RootResolver) CreateLesson(
 	}
 
 	lessonPermit, err := r.Repos.Lesson().Create(ctx, lesson)
-	if err != nil {
-		return nil, err
-	}
-	lesson = lessonPermit.Get()
-
-	if args.Input.CourseID != nil {
-		courseLesson := &data.CourseLesson{}
-		if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
-			return nil, errors.New("Invalid courseId")
-		}
-		if err := courseLesson.LessonID.Set(&lesson.ID); err != nil {
-			mylog.Log.WithError(err).Error("failed to set course lesson lesson_id")
-			return nil, myerr.SomethingWentWrongError
-		}
-
-		_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	lessonPermit, err = r.Repos.Lesson().Get(ctx, lesson.ID.String)
 	if err != nil {
 		return nil, err
 	}
@@ -1034,6 +1007,44 @@ func (r *RootResolver) MoveCourseLesson(
 	}, nil
 }
 
+type PublishLessonDraftInput struct {
+	LessonID string
+}
+
+func (r *RootResolver) PublishLessonDraft(
+	ctx context.Context,
+	args struct{ Input PublishLessonDraftInput },
+) (*lessonResolver, error) {
+	currentLessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonID)
+	if err != nil {
+		return nil, errors.New("lesson not found")
+	}
+	draft, err := currentLessonPermit.Draft()
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := &data.Lesson{}
+	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
+		return nil, errors.New("Invalid lessonId")
+	}
+	if err := lesson.Body.Set(draft); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson body to lesson draft")
+		return nil, myerr.SomethingWentWrongError
+	}
+	if err := lesson.PublishedAt.Set(time.Now()); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson published_at")
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+}
+
 type RemoveCourseLessonInput struct {
 	CourseID string
 	LessonID string
@@ -1580,7 +1591,7 @@ func (r *RootResolver) UpdateLabel(
 }
 
 type UpdateLessonInput struct {
-	Body     *string
+	Draft    *string
 	LessonID string
 	Title    *string
 }
@@ -1589,46 +1600,28 @@ func (r *RootResolver) UpdateLesson(
 	ctx context.Context,
 	args struct{ Input UpdateLessonInput },
 ) (*lessonResolver, error) {
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return nil, err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
-	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	lessonID, err := mytype.ParseOID(args.Input.LessonID)
-	if err != nil {
-		return nil, errors.New("invalid lesson id")
+	lesson := &data.Lesson{}
+	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson id")
+		return nil, errors.New("Invalid lessonId")
 	}
-	currentLessonPermit, err := r.Repos.Lesson().Get(ctx, lessonID.String)
-	if err != nil {
-		mylog.Log.Error(err)
-		return nil, errors.New("lesson not found")
-	}
-	lesson := currentLessonPermit.Get()
-
-	if args.Input.Body != nil {
-		if err := lesson.Body.Set(args.Input.Body); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson body"}
+	if args.Input.Draft != nil {
+		if err := lesson.Draft.Set(args.Input.Draft); err != nil {
+			mylog.Log.WithError(err).Error("failed to set lesson draft")
+			return nil, errors.New("Invalid draft")
 		}
 	}
 	if args.Input.Title != nil {
 		if err := lesson.Title.Set(args.Input.Title); err != nil {
-			return nil, myerr.UnexpectedError{"failed to set lesson title"}
+			mylog.Log.WithError(err).Error("failed to set lesson title")
+			return nil, errors.New("Invalid title")
 		}
 	}
 
 	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
 	if err != nil {
 		return nil, err
-	}
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil

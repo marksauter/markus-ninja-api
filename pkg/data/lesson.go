@@ -16,9 +16,11 @@ type Lesson struct {
 	CourseID     mytype.OID         `db:"course_id" permit:"read"`
 	CourseNumber pgtype.Int4        `db:"course_number" permit:"read"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Draft        pgtype.Text        `db:"draft" permit:"read/update"`
 	EnrolledAt   pgtype.Timestamptz `db:"enrolled_at"`
 	ID           mytype.OID         `db:"id" permit:"read"`
 	LabeledAt    pgtype.Timestamptz `db:"labeled_at"`
+	LastEditedAt pgtype.Timestamptz `db:"last_edited_at" permit:"read"`
 	Number       pgtype.Int4        `db:"number" permit:"read"`
 	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read/update"`
 	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
@@ -314,7 +316,9 @@ func getLesson(
 		&row.CourseID,
 		&row.CourseNumber,
 		&row.CreatedAt,
+		&row.Draft,
 		&row.ID,
+		&row.LastEditedAt,
 		&row.Number,
 		&row.PublishedAt,
 		&row.StudyID,
@@ -351,7 +355,9 @@ func getManyLesson(
 			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
+			&row.Draft,
 			&row.ID,
+			&row.LastEditedAt,
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyID,
@@ -376,7 +382,9 @@ const getLessonByIDSQL = `
 		course_id,
 		course_number,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		number,
 		published_at,
 		study_id,
@@ -401,7 +409,9 @@ const getLessonByOwnerStudyAndNumberSQL = `
 		lesson_master.course_id,
 		lesson_master.course_number,
 		lesson_master.created_at,
+		lesson_master.draft,
 		lesson_master.id,
+		lesson_master.last_edited_at,
 		lesson_master.number,
 		lesson_master.published_at,
 		lesson_master.study_id,
@@ -458,8 +468,10 @@ func GetLessonByEnrollee(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"enrolled_at",
 		"id",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -484,8 +496,10 @@ func GetLessonByEnrollee(
 			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
+			&row.Draft,
 			&row.ID,
 			&row.LabeledAt,
+			&row.LastEditedAt,
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyID,
@@ -533,8 +547,10 @@ func GetLessonByLabel(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"id",
 		"labeled_at",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -559,8 +575,10 @@ func GetLessonByLabel(
 			&row.CourseID,
 			&row.CourseNumber,
 			&row.CreatedAt,
+			&row.Draft,
 			&row.ID,
 			&row.LabeledAt,
+			&row.LastEditedAt,
 			&row.Number,
 			&row.PublishedAt,
 			&row.StudyID,
@@ -608,7 +626,9 @@ func GetLessonByUser(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -657,7 +677,9 @@ func GetLessonByCourse(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -706,7 +728,9 @@ func GetLessonByStudy(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -734,7 +758,9 @@ const getLessonByNumberSQL = `
 		course_id,
 		course_number,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		number,
 		published_at,
 		study_id,
@@ -769,7 +795,9 @@ const getLessonByCourseNumberSQL = `
 		course_id,
 		course_number,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		number,
 		published_at,
 		study_id,
@@ -804,7 +832,9 @@ const batchGetLessonByNumberSQL = `
 		course_id,
 		course_number,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		number,
 		published_at,
 		study_id,
@@ -864,6 +894,10 @@ func CreateLesson(
 	if row.Body.Status != pgtype.Undefined {
 		columns = append(columns, "body")
 		values = append(values, args.Append(&row.Body))
+	}
+	if row.Draft.Status != pgtype.Undefined {
+		columns = append(columns, "draft")
+		values = append(values, args.Append(&row.Draft))
 	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		columns = append(columns, "published_at")
@@ -1013,7 +1047,9 @@ func SearchLesson(
 		"course_id",
 		"course_number",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"number",
 		"published_at",
 		"study_id",
@@ -1056,17 +1092,22 @@ func UpdateLesson(
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
-	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
-	if err != nil {
-		return nil, err
-	}
-	if updated {
-		if err := row.Body.Set(body); err != nil {
+	if row.Body.Status != pgtype.Undefined {
+		body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
+		if err != nil {
 			return nil, err
 		}
+		if updated {
+			if err := row.Body.Set(body); err != nil {
+				return nil, err
+			}
+		}
+		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
-	sets = append(sets, `body`+"="+args.Append(&row.Body))
 
+	if row.Draft.Status != pgtype.Undefined {
+		sets = append(sets, `draft`+"="+args.Append(&row.Draft))
+	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}

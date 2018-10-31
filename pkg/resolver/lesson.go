@@ -223,6 +223,10 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonResolver) Draft() (string, error) {
+	return r.Lesson.Draft()
+}
+
 func (r *lessonResolver) Enrollees(
 	ctx context.Context,
 	args EnrolleesArgs,
@@ -365,6 +369,11 @@ func (r *lessonResolver) Labels(
 		return nil, err
 	}
 	return labelConnectionResolver, nil
+}
+
+func (r *lessonResolver) LastEditedAt() (graphql.Time, error) {
+	t, err := r.Lesson.LastEditedAt()
+	return graphql.Time{t}, err
 }
 
 func (r *lessonResolver) Number() (int32, error) {

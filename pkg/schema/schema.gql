@@ -129,6 +129,9 @@ type Mutation {
   # Move course lesson to another position.
   moveCourseLesson(input: MoveCourseLessonInput!): MoveCourseLessonPayload
 
+  # Publishes the body changes proposed in the lesson's draft.
+  publishLessonDraft(input: PublishLessonDraftInput!): Lesson
+
   # Removes a lesson from a course.
   removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload
   # Removes a label from a labelable.
