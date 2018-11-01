@@ -164,6 +164,7 @@ func getManyLabel(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Label
@@ -254,6 +255,7 @@ func GetLabelByLabelable(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Label

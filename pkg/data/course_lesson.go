@@ -78,6 +78,7 @@ func getManyCourseLesson(
 		mylog.Log.WithError(err).Error("failed to get course_lessons")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row CourseLesson

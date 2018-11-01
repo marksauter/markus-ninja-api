@@ -44,11 +44,25 @@ func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {
 	return r.lessonComment.CreatedAt.Time, nil
 }
 
+func (r *LessonCommentPermit) Draft() (string, error) {
+	if ok := r.checkFieldPermission("draft"); !ok {
+		return "", ErrAccessDenied
+	}
+	return r.lessonComment.Draft.String, nil
+}
+
 func (r *LessonCommentPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		return nil, ErrAccessDenied
 	}
 	return &r.lessonComment.ID, nil
+}
+
+func (r *LessonCommentPermit) LastEditedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("last_edited_at"); !ok {
+		return time.Time{}, ErrAccessDenied
+	}
+	return r.lessonComment.LastEditedAt.Time, nil
 }
 
 func (r *LessonCommentPermit) LessonID() (*mytype.OID, error) {
@@ -224,6 +238,29 @@ func (r *LessonCommentRepo) BatchGet(
 		}
 	}
 	return lessonCommentPermits, nil
+}
+
+func (r *LessonCommentRepo) GetUserNewComment(
+	ctx context.Context,
+	userID,
+	lessonID string,
+) (*LessonCommentPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessonComment, err := data.GetUserNewLessonComment(db, userID, lessonID)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	if err != nil {
+		return nil, err
+	}
+	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
 }
 
 func (r *LessonCommentRepo) GetByLabel(

@@ -3,6 +3,7 @@ package mydb
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -17,8 +18,9 @@ func Open(config pgx.ConnConfig) (*DB, error) {
 	mylog.Log.Println("Connecting to database...")
 	pgxConnPoolConfig := pgx.ConnPoolConfig{
 		ConnConfig:     config,
-		MaxConnections: 3,
+		MaxConnections: 5,
 		AfterConnect:   nil,
+		AcquireTimeout: 5 * time.Second,
 	}
 	conn, err := pgx.NewConnPool(pgxConnPoolConfig)
 	if err != nil {

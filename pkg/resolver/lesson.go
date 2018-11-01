@@ -10,7 +10,9 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -589,4 +591,49 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	}
 
 	return viewer.ID.String == userID.String, nil
+}
+
+func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*lessonCommentResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	lessonID, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	lessonCommentPermit, err := r.Repos.LessonComment().GetUserNewComment(
+		ctx,
+		viewer.ID.String,
+		lessonID.String,
+	)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return nil, err
+		}
+		studyID, err := r.Lesson.StudyID()
+		if err != nil {
+			return nil, err
+		}
+		lessonComment := &data.LessonComment{}
+		if err := lessonComment.LessonID.Set(lessonID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set lesson comment lesson_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		if err := lessonComment.StudyID.Set(studyID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set lesson comment user_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		if err := lessonComment.UserID.Set(&viewer.ID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set lesson comment user_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		lessonCommentPermit, err = r.Repos.LessonComment().Create(ctx, lessonComment)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
 }

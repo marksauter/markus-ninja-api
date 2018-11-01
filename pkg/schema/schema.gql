@@ -131,6 +131,8 @@ type Mutation {
 
   # Publishes the body changes proposed in the lesson's draft.
   publishLessonDraft(input: PublishLessonDraftInput!): Lesson
+  # Publishes the body changes proposed in the lesson comment's draft.
+  publishLessonCommentDraft(input: PublishLessonCommentDraftInput!): LessonComment
 
   # Removes a lesson from a course.
   removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload

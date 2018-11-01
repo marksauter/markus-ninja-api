@@ -24,6 +24,9 @@ type LessonComment implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # The current draft of changes for the lesson comment body as Markdown.
+  draft: String!
+
   id: ID!
 
   # Returns a list of labels for the current lesson comment.
@@ -46,6 +49,9 @@ type LessonComment implements
     # Ordering options for labels returned from the connection.
     orderBy: LabelOrder
   ): LabelConnection!
+
+  # Identifies when the lesson comment draft was last edited.
+  lastEditedAt: Time!
 
   # The lesson associated with this comment.
   lesson: Lesson!

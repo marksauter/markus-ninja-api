@@ -438,7 +438,7 @@ func getPermission(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get study")
+		mylog.Log.WithError(err).Error("failed to get permission")
 		return nil, err
 	}
 
@@ -456,6 +456,7 @@ func getManyPermission(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Permission

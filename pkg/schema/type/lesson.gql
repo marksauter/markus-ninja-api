@@ -159,6 +159,9 @@ type Lesson implements
 
   # Did the viewer author this lesson.
   viewerDidAuthor: Boolean!
+
+  # The viewer's current working draft comment.
+  viewerNewComment: LessonComment!
 }
 
 # An edge type for Lesson.

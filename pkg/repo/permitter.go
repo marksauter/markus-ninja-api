@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/fatih/structs"
@@ -51,6 +52,9 @@ func (r *Permitter) Check(
 	var f FieldPermissionFunc
 	if err := r.CheckConnection(); err != nil {
 		return f, err
+	}
+	if node == nil {
+		return f, errors.New("Permitter.Check: node is nil")
 	}
 	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
