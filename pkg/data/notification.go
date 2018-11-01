@@ -110,6 +110,7 @@ func getManyNotification(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Notification

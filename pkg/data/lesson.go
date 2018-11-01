@@ -347,6 +347,7 @@ func getManyLesson(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Lesson
@@ -488,6 +489,7 @@ func GetLessonByEnrollee(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Lesson
@@ -567,6 +569,7 @@ func GetLessonByLabel(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Lesson
@@ -1118,24 +1121,22 @@ func UpdateLesson(
 		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
 
-	if len(sets) == 0 {
-		return GetLesson(db, row.ID.String)
-	}
+	if len(sets) > 0 {
+		sql := `
+			UPDATE lesson
+			SET ` + strings.Join(sets, ",") + `
+			WHERE id = ` + args.Append(row.ID.String) + `
+		`
 
-	sql := `
-		UPDATE lesson
-		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.ID.String) + `
-	`
+		psName := preparedName("updateLesson", sql)
 
-	psName := preparedName("updateLesson", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		commandTag, err := prepareExec(tx, psName, sql, args...)
+		if err != nil {
+			return nil, err
+		}
+		if commandTag.RowsAffected() != 1 {
+			return nil, ErrNotFound
+		}
 	}
 
 	lesson, err := GetLesson(tx, row.ID.String)

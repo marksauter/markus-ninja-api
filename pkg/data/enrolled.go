@@ -140,6 +140,7 @@ func getManyEnrolled(
 		mylog.Log.WithError(err).Error("failed to get enrolleds")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Enrolled

@@ -91,6 +91,7 @@ func getManyAppled(
 		mylog.Log.WithError(err).Error("failed to get appleds")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Appled

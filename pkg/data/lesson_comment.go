@@ -7,23 +7,27 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/sirupsen/logrus"
 )
 
 // LessonComment - data type lesson_comment
 type LessonComment struct {
-	Body        mytype.Markdown    `db:"body" permit:"create/read/update"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
-	ID          mytype.OID         `db:"id" permit:"read"`
-	LabeledAt   pgtype.Timestamptz `db:"labeled_at" permit:"read"`
-	LessonID    mytype.OID         `db:"lesson_id" permit:"create/read"`
-	PublishedAt pgtype.Timestamptz `db:"published_at" permit:"read/update"`
-	StudyID     mytype.OID         `db:"study_id" permit:"create/read"`
-	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserID      mytype.OID         `db:"user_id" permit:"create/read"`
+	Body         mytype.Markdown    `db:"body" permit:"create/read/update"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Draft        pgtype.Text        `db:"draft" permit:"read/update"`
+	ID           mytype.OID         `db:"id" permit:"read"`
+	LabeledAt    pgtype.Timestamptz `db:"labeled_at" permit:"read"`
+	LastEditedAt pgtype.Timestamptz `db:"last_edited_at" permit:"read"`
+	LessonID     mytype.OID         `db:"lesson_id" permit:"create/read"`
+	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read/update"`
+	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserID       mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 type LessonCommentFilterOptions struct {
-	Labels *[]string
+	IsPublished *bool
+	Labels      *[]string
 }
 
 func (src *LessonCommentFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
@@ -33,6 +37,13 @@ func (src *LessonCommentFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQ
 
 	fromParts := make([]string, 0, 2)
 	whereParts := make([]string, 0, 3)
+	if src.IsPublished != nil {
+		if *src.IsPublished {
+			whereParts = append(whereParts, from+".published_at IS NOT NULL")
+		} else {
+			whereParts = append(whereParts, from+".published_at IS NULL")
+		}
+	}
 	if src.Labels != nil && len(*src.Labels) > 0 {
 		query := ToTsQuery(strings.Join(*src.Labels, " "))
 		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS labels_query")
@@ -156,7 +167,9 @@ func getLessonComment(
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.Body,
 		&row.CreatedAt,
+		&row.Draft,
 		&row.ID,
+		&row.LastEditedAt,
 		&row.LessonID,
 		&row.PublishedAt,
 		&row.StudyID,
@@ -184,13 +197,16 @@ func getManyLessonComment(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row LessonComment
 		dbRows.Scan(
 			&row.Body,
 			&row.CreatedAt,
+			&row.Draft,
 			&row.ID,
+			&row.LastEditedAt,
 			&row.LessonID,
 			&row.PublishedAt,
 			&row.StudyID,
@@ -212,7 +228,9 @@ const getLessonCommentByIDSQL = `
 	SELECT
 		body,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		lesson_id,
 		published_at,
 		study_id,
@@ -235,7 +253,9 @@ const batchGetLessonCommentByIDSQL = `
 	SELECT
 		body,
 		created_at,
+		draft,
 		id,
+		last_edited_at,
 		lesson_id,
 		published_at,
 		study_id,
@@ -267,6 +287,41 @@ func BatchGetLessonComment(
 	return rows, nil
 }
 
+const getUserNewLessonCommentSQL = `
+	SELECT
+		body,
+		created_at,
+		draft,
+		id,
+		last_edited_at,
+		lesson_id,
+		published_at,
+		study_id,
+		updated_at,
+		user_id
+	FROM lesson_comment
+	WHERE user_id = $1 AND lesson_id = $2 AND published_at IS NULL
+`
+
+// GetUserNewLessonComment - get user's current comment draft
+func GetUserNewLessonComment(
+	db Queryer,
+	userID,
+	lessonID string,
+) (*LessonComment, error) {
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id":   userID,
+		"lesson_id": lessonID,
+	}).Info("GetLessonComment(user_id, lesson_id)")
+	return getLessonComment(
+		db,
+		"getUserNewLessonComment",
+		getUserNewLessonCommentSQL,
+		userID,
+		lessonID,
+	)
+}
+
 func GetLessonCommentByLabel(
 	db Queryer,
 	labelID string,
@@ -291,8 +346,10 @@ func GetLessonCommentByLabel(
 	selects := []string{
 		"body",
 		"created_at",
+		"draft",
 		"id",
 		"labeled_at",
+		"last_edited_at",
 		"lesson_id",
 		"published_at",
 		"study_id",
@@ -308,6 +365,7 @@ func GetLessonCommentByLabel(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row LessonComment
@@ -362,7 +420,9 @@ func GetLessonCommentByLesson(
 	selects := []string{
 		"body",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"lesson_id",
 		"published_at",
 		"study_id",
@@ -408,7 +468,9 @@ func GetLessonCommentByStudy(
 	selects := []string{
 		"body",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"lesson_id",
 		"published_at",
 		"study_id",
@@ -454,7 +516,9 @@ func GetLessonCommentByUser(
 	selects := []string{
 		"body",
 		"created_at",
+		"draft",
 		"id",
+		"last_edited_at",
 		"lesson_id",
 		"published_at",
 		"study_id",
@@ -497,6 +561,10 @@ func CreateLessonComment(
 	if row.Body.Status != pgtype.Undefined {
 		columns = append(columns, "body")
 		values = append(values, args.Append(&row.Body))
+	}
+	if row.Draft.Status != pgtype.Undefined {
+		columns = append(columns, "draft")
+		values = append(values, args.Append(&row.Draft))
 	}
 	if row.LessonID.Status != pgtype.Undefined {
 		columns = append(columns, "lesson_id")
@@ -549,18 +617,6 @@ func CreateLessonComment(
 
 	lessonComment, err := GetLessonComment(tx, row.ID.String)
 	if err != nil {
-		return nil, err
-	}
-
-	eventPayload, err := NewLessonCommentedPayload(&lessonComment.LessonID, &lessonComment.ID)
-	if err != nil {
-		return nil, err
-	}
-	event, err := NewLessonEvent(eventPayload, &lessonComment.StudyID, &lessonComment.UserID)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := CreateEvent(tx, event); err != nil {
 		return nil, err
 	}
 
@@ -643,6 +699,11 @@ func UpdateLessonComment(
 		defer RollbackTransaction(tx)
 	}
 
+	currentLessonComment, err := GetLessonComment(tx, row.ID.String)
+	if err != nil {
+		return nil, err
+	}
+
 	err = ParseLessonCommentBodyForEvents(tx, row)
 	if err != nil {
 		return nil, err
@@ -651,43 +712,61 @@ func UpdateLessonComment(
 	sets := make([]string, 0, 5)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
-	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
-	if err != nil {
-		return nil, err
-	}
-	if updated {
-		if err := row.Body.Set(body); err != nil {
+	if row.Body.Status != pgtype.Undefined {
+		body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
+		if err != nil {
 			return nil, err
 		}
+		if updated {
+			if err := row.Body.Set(body); err != nil {
+				return nil, err
+			}
+		}
+		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
-	sets = append(sets, `body`+"="+args.Append(&row.Body))
 
+	if row.Draft.Status != pgtype.Undefined {
+		sets = append(sets, `draft`+"="+args.Append(&row.Draft))
+	}
 	if row.PublishedAt.Status != pgtype.Undefined {
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
 
-	if len(sets) == 0 {
-		return nil, nil
-	}
+	if len(sets) > 0 {
+		sql := `
+			UPDATE lesson_comment
+			SET ` + strings.Join(sets, ",") + `
+			WHERE id = ` + args.Append(row.ID.String)
 
-	sql := `
-		UPDATE lesson_comment
-		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.ID.String)
+		psName := preparedName("updateLessonComment", sql)
 
-	psName := preparedName("updateLessonComment", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		commandTag, err := prepareExec(tx, psName, sql, args...)
+		if err != nil {
+			return nil, err
+		}
+		if commandTag.RowsAffected() != 1 {
+			return nil, ErrNotFound
+		}
 	}
 
 	lessonComment, err := GetLessonComment(tx, row.ID.String)
 	if err != nil {
 		return nil, err
+	}
+
+	if currentLessonComment.PublishedAt.Status == pgtype.Null &&
+		lessonComment.PublishedAt.Status != pgtype.Null {
+		eventPayload, err := NewLessonCommentedPayload(&lessonComment.LessonID, &lessonComment.ID)
+		if err != nil {
+			return nil, err
+		}
+		event, err := NewLessonEvent(eventPayload, &lessonComment.StudyID, &lessonComment.UserID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := CreateEvent(tx, event); err != nil {
+			return nil, err
+		}
 	}
 
 	if newTx {

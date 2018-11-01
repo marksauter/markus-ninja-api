@@ -257,6 +257,7 @@ func getManyCourse(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Course
@@ -354,6 +355,7 @@ func GetCourseByApplee(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Course
@@ -427,6 +429,7 @@ func GetCourseByEnrollee(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Course
@@ -500,6 +503,7 @@ func GetCourseByTopic(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Course

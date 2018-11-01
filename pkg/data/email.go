@@ -110,6 +110,7 @@ func getManyEmail(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Email

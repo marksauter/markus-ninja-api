@@ -1,0 +1,5 @@
+# Input type for PublishLessonCommentDraft.
+input PublishLessonCommentDraftInput {
+  # ID of the lesson comment.
+  lessonCommentId: ID!
+}

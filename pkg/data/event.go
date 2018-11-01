@@ -262,6 +262,7 @@ func getManyEvent(
 		mylog.Log.WithError(err).Error("failed to get events")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Event

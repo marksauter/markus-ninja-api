@@ -132,6 +132,7 @@ func getManyTopic(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Topic
@@ -247,6 +248,7 @@ func GetTopicByTopicable(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Topic

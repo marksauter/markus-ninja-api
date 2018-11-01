@@ -95,6 +95,7 @@ func getManyLabeled(
 		mylog.Log.WithError(err).Error("failed to get labeleds")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Labeled

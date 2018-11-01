@@ -49,6 +49,11 @@ func (h PreviewHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	text := req.FormValue("text")
+	if text == "" {
+		rw.Write([]byte(""))
+		return
+	}
+
 	carriageReturnNewline := regexp.MustCompile(`\r\n`)
 	text = carriageReturnNewline.ReplaceAllString(text, "\n")
 

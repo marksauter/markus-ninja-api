@@ -242,6 +242,7 @@ func getManyUser(
 	if err != nil {
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row User
@@ -437,6 +438,7 @@ func GetUserByAppleable(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row User
@@ -511,6 +513,7 @@ func GetUserByEnrollee(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row User
@@ -584,6 +587,7 @@ func GetUserByEnrollable(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row User

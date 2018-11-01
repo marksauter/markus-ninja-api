@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"time"
 
 	"github.com/gorilla/mux"
 	graphql "github.com/graph-gophers/graphql-go"
@@ -146,9 +147,12 @@ func main() {
 			fmt.Fprintf(rw, "Connected to: %s", version)
 		},
 	))
+
+	router := http.TimeoutHandler(r, 3*time.Second, "Timeout!")
+
 	port := util.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
-	mylog.Log.Fatal(http.ListenAndServe(address, r))
+	mylog.Log.Fatal(http.ListenAndServe(address, router))
 }
 
 func initDB(conf *myconf.Config) error {

@@ -153,8 +153,7 @@ func (r *RootResolver) AddLabel(
 }
 
 type AddLessonCommentInput struct {
-	Body     string
-	LessonID string
+	LessonCommentID string
 }
 
 func (r *RootResolver) AddLessonComment(
@@ -169,23 +168,29 @@ func (r *RootResolver) AddLessonComment(
 	}
 	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		return nil, errors.New("viewer not found")
+	currentLessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, args.Input.LessonCommentID)
+	if err != nil {
+		return nil, errors.New("lesson comment not found")
+	}
+	draft, err := currentLessonCommentPermit.Draft()
+	if err != nil {
+		return nil, err
 	}
 
 	lessonComment := &data.LessonComment{}
-	if err := lessonComment.Body.Set(args.Input.Body); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lesson_comment body"}
+	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
+		return nil, errors.New("Invalid lessonCommentId")
 	}
-	if err := lessonComment.LessonID.Set(args.Input.LessonID); err != nil {
-		return nil, errors.New("invalid lesson_comment lesson_id")
+	if err := lessonComment.Body.Set(draft); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson comment's body to its draft")
+		return nil, myerr.SomethingWentWrongError
 	}
-	if err := lessonComment.UserID.Set(&viewer.ID); err != nil {
-		return nil, errors.New("invalid lesson_comment user_id")
+	if err := lessonComment.PublishedAt.Set(time.Now()); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson comment published_at")
+		return nil, myerr.SomethingWentWrongError
 	}
 
-	lessonCommentPermit, err := r.Repos.LessonComment().Create(ctx, lessonComment)
+	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
 	if err != nil {
 		return nil, err
 	}
@@ -1029,7 +1034,7 @@ func (r *RootResolver) PublishLessonDraft(
 		return nil, errors.New("Invalid lessonId")
 	}
 	if err := lesson.Body.Set(draft); err != nil {
-		mylog.Log.WithError(err).Error("failed to set lesson body to lesson draft")
+		mylog.Log.WithError(err).Error("failed to set lesson's body to its draft")
 		return nil, myerr.SomethingWentWrongError
 	}
 	if err := lesson.PublishedAt.Set(time.Now()); err != nil {
@@ -1043,6 +1048,46 @@ func (r *RootResolver) PublishLessonDraft(
 	}
 
 	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+}
+
+type PublishLessonCommentDraftInput struct {
+	LessonCommentID string
+}
+
+func (r *RootResolver) PublishLessonCommentDraft(
+	ctx context.Context,
+	args struct {
+		Input PublishLessonCommentDraftInput
+	},
+) (*lessonCommentResolver, error) {
+	currentLessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, args.Input.LessonCommentID)
+	if err != nil {
+		return nil, errors.New("lesson comment not found")
+	}
+	draft, err := currentLessonCommentPermit.Draft()
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComment := &data.LessonComment{}
+	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
+		return nil, errors.New("Invalid lessonCommentId")
+	}
+	if err := lessonComment.Body.Set(draft); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson comment's body to its draft")
+		return nil, myerr.SomethingWentWrongError
+	}
+	if err := lessonComment.PublishedAt.Set(time.Now()); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson comment published_at")
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
 }
 
 type RemoveCourseLessonInput struct {
@@ -1600,7 +1645,6 @@ func (r *RootResolver) UpdateLesson(
 	ctx context.Context,
 	args struct{ Input UpdateLessonInput },
 ) (*lessonResolver, error) {
-
 	lesson := &data.Lesson{}
 	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
 		mylog.Log.WithError(err).Error("failed to set lesson id")
@@ -1628,7 +1672,7 @@ func (r *RootResolver) UpdateLesson(
 }
 
 type UpdateLessonCommentInput struct {
-	Body            string
+	Draft           *string
 	LessonCommentID string
 }
 
@@ -1636,39 +1680,21 @@ func (r *RootResolver) UpdateLessonComment(
 	ctx context.Context,
 	args struct{ Input UpdateLessonCommentInput },
 ) (*lessonCommentResolver, error) {
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return nil, err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
+	lessonComment := &data.LessonComment{}
+	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
+		mylog.Log.WithError(err).Error("failed to set lesson comment id")
+		return nil, errors.New("Invalid lessonCommentId")
 	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
-
-	lessonCommentID, err := mytype.ParseOID(args.Input.LessonCommentID)
-	if err != nil {
-		return nil, errors.New("invalid lesson comment id")
-	}
-	currentLessonCommentPermit, err := r.Repos.LessonComment().Get(ctx, lessonCommentID.String)
-	if err != nil {
-		mylog.Log.Error(err)
-		return nil, errors.New("lesson comment not found")
-	}
-	lessonComment := currentLessonCommentPermit.Get()
-
-	if err := lessonComment.Body.Set(args.Input.Body); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set lessonComment body"}
+	if args.Input.Draft != nil {
+		if err := lessonComment.Draft.Set(args.Input.Draft); err != nil {
+			mylog.Log.WithError(err).Error("failed to set lesson comment draft")
+			return nil, errors.New("Invalid draft")
+		}
 	}
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
 	if err != nil {
 		return nil, err
-	}
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &lessonCommentResolver{

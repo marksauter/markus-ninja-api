@@ -153,6 +153,10 @@ func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonCommentResolver) Draft() (string, error) {
+	return r.LessonComment.Draft()
+}
+
 func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	id, err := r.LessonComment.ID()
 	return graphql.ID(id.String), err
@@ -212,6 +216,11 @@ func (r *lessonCommentResolver) Labels(
 		return nil, err
 	}
 	return labelConnectionResolver, nil
+}
+
+func (r *lessonCommentResolver) LastEditedAt() (graphql.Time, error) {
+	t, err := r.LessonComment.LastEditedAt()
+	return graphql.Time{t}, err
 }
 
 func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {

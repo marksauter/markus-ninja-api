@@ -31,6 +31,7 @@ func getManyRole(
 	if err != nil {
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Role

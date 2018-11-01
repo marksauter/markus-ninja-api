@@ -95,6 +95,7 @@ func getManyTopiced(
 		mylog.Log.WithError(err).Error("failed to get topiceds")
 		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Topiced
