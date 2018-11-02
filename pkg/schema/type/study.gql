@@ -120,6 +120,12 @@ type Study implements
   # Is this study private?
   isPrivate: Boolean!
 
+  # Returns a single label from the current study by name.
+  label(
+    # The name for the label to be returned.
+    name: String!  
+  ): Label
+
   # Returns a list of labels from the current study.
   labels(
     # Returns the elements in the list that come after the specified global ID.
