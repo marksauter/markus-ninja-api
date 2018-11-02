@@ -331,6 +331,25 @@ func (r *studyResolver) IsPrivate(ctx context.Context) (bool, error) {
 	return r.Study.Private()
 }
 
+func (r *studyResolver) Label(
+	ctx context.Context,
+	args struct{ Name string },
+) (*labelResolver, error) {
+	studyID, err := r.Study.ID()
+	if err != nil {
+		return nil, err
+	}
+	label, err := r.Repos.Label().GetByName(
+		ctx,
+		studyID.String,
+		args.Name,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &labelResolver{Label: label, Repos: r.Repos}, nil
+}
+
 func (r *studyResolver) Labels(
 	ctx context.Context,
 	args struct {

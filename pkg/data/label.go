@@ -336,17 +336,18 @@ const getLabelByNameSQL = `
 		study_id,
 		updated_at
 	FROM label
-	WHERE lower(name) = lower($1)
+	WHERE study_id = $1 AND lower(name) = lower($2)
 `
 
 func GetLabelByName(
 	db Queryer,
+	studyID,
 	name string,
 ) (*Label, error) {
 	mylog.Log.WithFields(logrus.Fields{
 		"name": name,
 	}).Info("GetLabelByName(name)")
-	return getLabel(db, "getLabelByName", getLabelByNameSQL, name)
+	return getLabel(db, "getLabelByName", getLabelByNameSQL, studyID, name)
 }
 
 func CreateLabel(

@@ -262,12 +262,13 @@ func (r *LabelRepo) GetByStudy(
 
 func (r *LabelRepo) GetByName(
 	ctx context.Context,
+	studyID,
 	name string,
 ) (*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
 	}
-	label, err := r.load.GetByName(ctx, name)
+	label, err := r.load.GetByName(ctx, studyID, name)
 	if err != nil {
 		return nil, err
 	}

@@ -53,12 +53,13 @@ func NewLabelLoader() *LabelLoader {
 				for i, key := range keys {
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
+						ks := splitCompositeKey(key)
 						db, ok := myctx.QueryerFromContext(ctx)
 						if !ok {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						label, err := data.GetLabelByName(db, key.String())
+						label, err := data.GetLabelByName(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: label, Error: err}
 					}(i, key)
 				}
@@ -104,9 +105,11 @@ func (r *LabelLoader) Get(
 
 func (r *LabelLoader) GetByName(
 	ctx context.Context,
+	studyID,
 	name string,
 ) (*data.Label, error) {
-	labelData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(name))()
+	compositeKey := newCompositeKey(studyID, name)
+	labelData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +117,8 @@ func (r *LabelLoader) GetByName(
 	if !ok {
 		return nil, fmt.Errorf("wrong type")
 	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(label.ID.String), label)
 
 	return label, nil
 }
