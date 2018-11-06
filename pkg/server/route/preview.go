@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -79,17 +78,9 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 	}
 	markdownStr := markdown.String
 
-	tx, err, newTx := myctx.TransactionFromContext(ctx)
-	if err != nil {
-		return "", err
-	} else if newTx {
-		defer data.RollbackTransaction(tx)
-	}
-	ctx = myctx.NewQueryerContext(ctx, tx)
-
 	userAssetRefToLink := func(s string) string {
 		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
+		if len(result) < 2 {
 			return s
 		}
 		name := result[1]
@@ -141,7 +132,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 
 	lessonNumberRefToLink := func(s string) string {
 		result := mytype.NumberRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
+		if len(result) < 2 {
 			return s
 		}
 		number := result[1]
@@ -167,7 +158,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 
 	crossStudyRefToLink := func(s string) string {
 		result := mytype.CrossStudyRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
+		if len(result) < 4 {
 			return s
 		}
 		owner := result[1]
@@ -195,7 +186,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 
 	userRefToLink := func(s string) string {
 		result := mytype.AtRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
+		if len(result) < 2 {
 			return s
 		}
 		name := result[1]
@@ -212,13 +203,6 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 		))
 	}
 	markdownStr = mytype.AtRefRegexp.ReplaceAllStringFunc(markdownStr, userRefToLink)
-
-	if newTx {
-		err := data.CommitTransaction(tx)
-		if err != nil {
-			return "", err
-		}
-	}
 
 	if err := markdown.Set(markdownStr); err != nil {
 		return "", err

@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/fatih/structs"
@@ -283,6 +284,22 @@ func GetByRole(
 	return permissions, nil
 }
 
+var getQueryPermissionSQL = `
+	SELECT
+		array_agg(field)
+	FROM
+		permission
+	WHERE access_level = $1
+		AND type = $2
+		AND (audience = 'EVERYONE'
+			OR id IN (
+				SELECT permission_id
+				FROM role_permission
+				WHERE role = ANY($3)
+			)
+		)
+`
+
 func GetQueryPermission(
 	db Queryer,
 	o *mytype.Operation,
@@ -292,49 +309,17 @@ func GetQueryPermission(
 		"operation": o,
 		"roles":     roles,
 	}).Info("GetQueryPermission(operation, roles)")
-	p := &QueryPermission{}
-
-	permissionSQL := `
-		SELECT
-			access_level || ' ' || type AS operation,
-			array_agg(field) AS fields
-		FROM
-			permission
-		WHERE access_level = $1
-			AND type = $2
-	`
-	andAudienceSQL := `
-		AND audience = 'EVERYONE'
-	`
-	andRoleNameSQL := `
-		AND (audience = 'EVERYONE'
-			OR id IN (
-				SELECT permission_id
-				FROM role_permission
-				WHERE role = ANY($3)
-			)
-		)
-	`
-	groupBySQL := `
-		Group By operation
-	`
-	var row *pgx.Row
-	if len(roles) != 0 {
-		row = db.QueryRow(
-			permissionSQL+andRoleNameSQL+groupBySQL,
-			o.AccessLevel,
-			o.NodeType,
-			roles,
-		)
-	} else {
-		row = db.QueryRow(
-			permissionSQL+andAudienceSQL+groupBySQL,
-			o.AccessLevel,
-			o.NodeType,
-		)
+	if o == nil {
+		return nil, errors.New("GetQueryPermission: operation must not be nil")
 	}
+	p := &QueryPermission{Operation: *o}
 
-	err := row.Scan(&p.Operation, &p.Fields)
+	err := db.QueryRow(
+		getQueryPermissionSQL,
+		o.AccessLevel,
+		o.NodeType,
+		roles,
+	).Scan(&p.Fields)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
