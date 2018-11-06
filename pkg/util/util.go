@@ -103,11 +103,21 @@ func IsHexColor(str string) bool {
 func ReplaceWithPadding(match, replace string) string {
 	paddingLeft := ""
 	paddingRight := ""
-	if match[0] == ' ' {
+	switch match[0] {
+	case ' ':
 		paddingLeft = " "
+	case '\n':
+		paddingLeft = "\n"
+	case '\t':
+		paddingLeft = "\t"
 	}
-	if match[len(match)-1] == ' ' {
+	switch match[len(match)-1] {
+	case ' ':
 		paddingRight = " "
+	case '\n':
+		paddingRight = "\n"
+	case '\t':
+		paddingRight = "\t"
 	}
 	return paddingLeft + replace + paddingRight
 }
