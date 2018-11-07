@@ -181,10 +181,14 @@ func (r *lessonResolver) Comments(
 		return nil, err
 	}
 
+	filters := data.LessonCommentFilterOptions{
+		IsPublished: util.NewBool(true),
+	}
 	lessonComments, err := r.Repos.LessonComment().GetByLesson(
 		ctx,
 		lessonID.String,
 		pageOptions,
+		&filters,
 	)
 	if err != nil {
 		return nil, err
@@ -194,6 +198,7 @@ func (r *lessonResolver) Comments(
 		lessonComments,
 		pageOptions,
 		lessonID,
+		&filters,
 	)
 	if err != nil {
 		return nil, err
@@ -315,6 +320,10 @@ func (r *lessonResolver) IsCourseLesson() (bool, error) {
 	}
 
 	return courseID.Status != pgtype.Null, nil
+}
+
+func (r *lessonResolver) IsPublished() (bool, error) {
+	return r.Lesson.IsPublished()
 }
 
 func (r *lessonResolver) Labels(

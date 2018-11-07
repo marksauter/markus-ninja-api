@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,6 +57,11 @@ func CountPermissionByType(
 		countPermissionByTypeSQL,
 		mType,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("permissions found"))
+	}
 	return n, err
 }
 
@@ -305,12 +311,10 @@ func GetQueryPermission(
 	o *mytype.Operation,
 	roles []string,
 ) (*QueryPermission, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"operation": o,
-		"roles":     roles,
-	}).Info("GetQueryPermission(operation, roles)")
 	if o == nil {
-		return nil, errors.New("GetQueryPermission: operation must not be nil")
+		err := errors.New("operation is nil")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	p := &QueryPermission{Operation: *o}
 
@@ -323,7 +327,7 @@ func GetQueryPermission(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("error during scan")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -331,7 +335,10 @@ func GetQueryPermission(
 	for i, f := range p.Fields.Elements {
 		fields[i] = f.String
 	}
-	mylog.Log.WithField("fields", fields).Info("query granted permission")
+	mylog.Log.WithFields(logrus.Fields{
+		"fields":    fields,
+		"operation": o,
+	}).Info(util.Trace("query granted permission"))
 	return p, nil
 }
 

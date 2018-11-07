@@ -74,7 +74,6 @@ func CountStudyByApplee(
 	appleeID string,
 	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("applee_id", appleeID).Info("CountStudyByApplee(applee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.applee_id = ` + args.Append(appleeID)
@@ -86,6 +85,11 @@ func CountStudyByApplee(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
 	return n, err
 }
 
@@ -94,7 +98,6 @@ func CountStudyByEnrollee(
 	enrolleeID string,
 	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountStudyByEnrollee(enrollee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -106,6 +109,11 @@ func CountStudyByEnrollee(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
 	return n, err
 }
 
@@ -114,9 +122,6 @@ func CountStudyByTopic(
 	topicID string,
 	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"topic_id", topicID,
-	).Info("CountStudyByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topic_id = ` + args.Append(topicID)
@@ -126,10 +131,13 @@ func CountStudyByTopic(
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countStudyByTopic", sql)
 
-	mylog.Log.Debug(sql)
-
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
 	return n, err
 }
 
@@ -138,7 +146,6 @@ func CountStudyByUser(
 	userID string,
 	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountStudyByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -150,48 +157,32 @@ func CountStudyByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
 	return n, err
 }
-
-const countStudyBySearchSQL = `
-	SELECT COUNT(*)
-	FROM study_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
 
 func CountStudyBySearch(
 	db Queryer,
-	query string,
+	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
-	var n int32
-	err := prepareQueryRow(
-		db,
-		"countStudyBySearch",
-		countStudyBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
-	return n, err
-}
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "study_search_index"
 
-const countStudyByTopicSearchSQL = `
-	SELECT COUNT(*)
-	FROM study_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE topics @@ query END)
-`
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyBySearch", sql)
 
-func CountStudyByTopicSearch(
-	db Queryer,
-	query string,
-) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countStudyByTopicSearch",
-		countStudyByTopicSearchSQL,
-		ToTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
 	return n, err
 }
 
@@ -268,7 +259,7 @@ const getStudyByIDSQL = `
 		private,
 		updated_at,
 		user_id
-	FROM study
+	FROM study_search_index
 	WHERE id = $1
 `
 
@@ -538,7 +529,7 @@ const getStudyByNameSQL = `
 		private,
 		updated_at,
 		user_id
-	FROM study
+	FROM study_search_index
 	WHERE user_id = $1 AND lower(name) = lower($2)
 `
 
@@ -564,7 +555,7 @@ const getStudyByUserAndNameSQL = `
 		s.private,
 		s.updated_at,
 		s.user_id
-	FROM study s
+	FROM study_search_index s
 	JOIN account a ON lower(a.login) = lower($1)
 	WHERE s.user_id = a.id AND lower(s.name) = lower($2)  
 `
@@ -699,10 +690,9 @@ func DeleteStudy(
 
 func SearchStudy(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("query", query).Info("SearchStudy(query)")
 	var rows []*Study
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -712,6 +702,9 @@ func SearchStudy(
 			return rows, nil
 		}
 	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
 
 	selects := []string{
 		"advanced_at",
@@ -724,12 +717,12 @@ func SearchStudy(
 		"user_id",
 	}
 	from := "study_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchStudyIndex", sql)
 
 	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 

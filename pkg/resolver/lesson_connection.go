@@ -76,6 +76,10 @@ func (r *lessonConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *lessonConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	var n int32
+	if r.nodeID == nil {
+		return n, nil
+	}
 	switch r.nodeID.Type {
 	case "Course":
 		return r.repos.Lesson().CountByCourse(ctx, r.nodeID.String, r.filters)
@@ -84,7 +88,6 @@ func (r *lessonConnectionResolver) TotalCount(ctx context.Context) (int32, error
 	case "User":
 		return r.repos.Lesson().CountByUser(ctx, r.nodeID.String, r.filters)
 	default:
-		var n int32
 		return n, errors.New("invalid node id for lesson total count")
 	}
 }

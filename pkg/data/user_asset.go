@@ -37,15 +37,19 @@ func NewUserAsset(
 ) (*UserAsset, error) {
 	userAsset := &UserAsset{}
 	if err := userAsset.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := userAsset.Name.Set(name); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := userAsset.StudyID.Set(studyID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := userAsset.UserID.Set(userID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -87,24 +91,24 @@ func (src *UserAssetFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLPar
 	}
 }
 
-const countUserAssetBySearchSQL = `
-	SELECT COUNT(*)
-	FROM user_asset_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
-
 func CountUserAssetBySearch(
 	db Queryer,
-	query string,
+	filters *UserAssetFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountUserAssetBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "user_asset_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserAssetBySearch", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserAssetBySearch",
-		countUserAssetBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("user assets found"))
+	}
 	return n, err
 }
 
@@ -113,7 +117,6 @@ func CountUserAssetByStudy(
 	studyID string,
 	filters *UserAssetFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyID).Info("CountUserAssetByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -125,6 +128,11 @@ func CountUserAssetByStudy(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("user assets found"))
+	}
 	return n, err
 }
 
@@ -133,7 +141,6 @@ func CountUserAssetByUser(
 	userID string,
 	filters *UserAssetFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountUserAssetByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -145,6 +152,11 @@ func CountUserAssetByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("user assets found"))
+	}
 	return n, err
 }
 
@@ -174,7 +186,7 @@ func getUserAsset(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_asset")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -288,6 +300,7 @@ func BatchGetUserAsset(
 		ids,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -373,6 +386,7 @@ func BatchGetUserAssetByName(
 		lowerNames,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -466,6 +480,7 @@ func GetUserAssetByStudy(
 	psName := preparedName("getUserAssetsByStudy", sql)
 
 	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -518,6 +533,7 @@ func GetUserAssetByUser(
 	psName := preparedName("getUserAssetsByUser", sql)
 
 	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -569,7 +585,7 @@ func CreateUserAsset(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -593,21 +609,24 @@ func CreateUserAsset(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -638,10 +657,9 @@ func DeleteUserAsset(
 
 func SearchUserAsset(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *UserAssetFilterOptions,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithField("query", query).Info("SearchUserAsset(query)")
 	var rows []*UserAsset
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -651,6 +669,9 @@ func SearchUserAsset(
 			return rows, nil
 		}
 	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
 
 	selects := []string{
 		"asset_id",
@@ -669,12 +690,12 @@ func SearchUserAsset(
 		"user_id",
 	}
 	from := "user_asset_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchUserAssetIndex", sql)
 
 	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -708,7 +729,7 @@ func UpdateUserAsset(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -733,9 +754,11 @@ func UpdateUserAsset(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -744,13 +767,14 @@ func UpdateUserAsset(
 
 	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -788,6 +812,7 @@ func ReplaceMarkdownUserAssetRefsWithLinks(
 	}
 	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err, false
 	}
 

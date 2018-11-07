@@ -13,3 +13,7 @@ LONGER IT RUNS...
 
 Fields that can be used for ordering, cannot not be null.
   - e.g. study.advanced_at cannot be null, need to change this. 
+
+
+Update ViewerCanUpdate in different repos to reflect change made to
+permitter.Check function

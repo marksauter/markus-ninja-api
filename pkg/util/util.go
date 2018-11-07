@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/fatih/camelcase"
@@ -130,4 +133,17 @@ func RemoveEmptyStrings(strs []string) []string {
 		}
 	}
 	return noEmpties
+}
+
+func Trace(message string) string {
+	pc := make([]uintptr, 15)
+	n := runtime.Callers(2, pc)
+	frames := runtime.CallersFrames(pc[:n])
+	frame, _ := frames.Next()
+	return fmt.Sprintf("%s:%d: %s", filepath.Base(frame.Function), frame.Line, message)
+}
+
+func NewBool(value bool) *bool {
+	b := value
+	return &b
 }

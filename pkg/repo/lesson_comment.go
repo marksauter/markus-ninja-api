@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -56,6 +57,13 @@ func (r *LessonCommentPermit) ID() (*mytype.OID, error) {
 		return nil, ErrAccessDenied
 	}
 	return &r.lessonComment.ID, nil
+}
+
+func (r *LessonCommentPermit) IsPublished() (bool, error) {
+	if ok := r.checkFieldPermission("published_at"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.lessonComment.PublishedAt.Status != pgtype.Null, nil
 }
 
 func (r *LessonCommentPermit) LastEditedAt() (time.Time, error) {
@@ -111,6 +119,25 @@ type LessonCommentRepo struct {
 	permit *Permitter
 }
 
+func (r *LessonCommentRepo) filterPermittable(
+	ctx context.Context,
+	accessLevel mytype.AccessLevel,
+	lessonComments []*data.LessonComment,
+) ([]*LessonCommentPermit, error) {
+	lessonCommentPermits := make([]*LessonCommentPermit, 0, len(lessonComments))
+	for _, l := range lessonComments {
+		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
+		if err != nil {
+			if err != ErrAccessDenied {
+				return nil, err
+			}
+		} else {
+			lessonCommentPermits = append(lessonCommentPermits, &LessonCommentPermit{fieldPermFn, l})
+		}
+	}
+	return lessonCommentPermits, nil
+}
+
 func (r *LessonCommentRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
@@ -133,40 +160,56 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonCommentRepo) CountByLesson(
+func (r *LessonCommentRepo) CountByLabel(
 	ctx context.Context,
-	lessonID string,
+	labelID string,
+	filters *data.LessonCommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByLesson(db, lessonID)
+	return data.CountLessonCommentByLabel(db, labelID, filters)
+}
+
+func (r *LessonCommentRepo) CountByLesson(
+	ctx context.Context,
+	lessonID string,
+	filters *data.LessonCommentFilterOptions,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return n, &myctx.ErrNotFound{"queryer"}
+	}
+	return data.CountLessonCommentByLesson(db, lessonID, filters)
 }
 
 func (r *LessonCommentRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
+	filters *data.LessonCommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByStudy(db, studyID)
+	return data.CountLessonCommentByStudy(db, studyID, filters)
 }
 
 func (r *LessonCommentRepo) CountByUser(
 	ctx context.Context,
 	userID string,
+	filters *data.LessonCommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonCommentByUser(db, userID)
+	return data.CountLessonCommentByUser(db, userID, filters)
 }
 
 func (r *LessonCommentRepo) Create(
@@ -227,17 +270,7 @@ func (r *LessonCommentRepo) BatchGet(
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessonComments {
-			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
-		}
-	}
-	return lessonCommentPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
 }
 
 func (r *LessonCommentRepo) GetUserNewComment(
@@ -267,6 +300,7 @@ func (r *LessonCommentRepo) GetByLabel(
 	ctx context.Context,
 	labelID string,
 	po *data.PageOptions,
+	filters *data.LessonCommentFilterOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -275,27 +309,18 @@ func (r *LessonCommentRepo) GetByLabel(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByLabel(db, labelID, po)
+	lessonComments, err := data.GetLessonCommentByLabel(db, labelID, po, filters)
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessonComments {
-			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
-		}
-	}
-	return lessonCommentPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
 }
 
 func (r *LessonCommentRepo) GetByLesson(
 	ctx context.Context,
 	lessonID string,
 	po *data.PageOptions,
+	filters *data.LessonCommentFilterOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -304,27 +329,18 @@ func (r *LessonCommentRepo) GetByLesson(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByLesson(db, lessonID, po)
+	lessonComments, err := data.GetLessonCommentByLesson(db, lessonID, po, filters)
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessonComments {
-			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
-		}
-	}
-	return lessonCommentPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
 }
 
 func (r *LessonCommentRepo) GetByStudy(
 	ctx context.Context,
 	studyID string,
 	po *data.PageOptions,
+	filters *data.LessonCommentFilterOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -333,27 +349,18 @@ func (r *LessonCommentRepo) GetByStudy(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByStudy(db, studyID, po)
+	lessonComments, err := data.GetLessonCommentByStudy(db, studyID, po, filters)
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessonComments {
-			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
-		}
-	}
-	return lessonCommentPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
 }
 
 func (r *LessonCommentRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
+	filters *data.LessonCommentFilterOptions,
 ) ([]*LessonCommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -362,21 +369,11 @@ func (r *LessonCommentRepo) GetByUser(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessonComments, err := data.GetLessonCommentByUser(db, userID, po)
+	lessonComments, err := data.GetLessonCommentByUser(db, userID, po, filters)
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentPermits := make([]*LessonCommentPermit, len(lessonComments))
-	if len(lessonComments) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComments[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessonComments {
-			lessonCommentPermits[i] = &LessonCommentPermit{fieldPermFn, l}
-		}
-	}
-	return lessonCommentPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
 }
 
 func (r *LessonCommentRepo) Delete(

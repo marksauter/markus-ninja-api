@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Labeled struct {
@@ -27,7 +28,6 @@ func CountLabeledByLabel(
 	db Queryer,
 	labelID string,
 ) (int32, error) {
-	mylog.Log.WithField("label_id", labelID).Info("CountLabeledByLabel()")
 	var n int32
 	err := prepareQueryRow(
 		db,
@@ -35,6 +35,11 @@ func CountLabeledByLabel(
 		countLabeledByLabelSQL,
 		labelID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("labeleds found"))
+	}
 	return n, err
 }
 
@@ -48,7 +53,6 @@ func CountLabeledByLabelable(
 	db Queryer,
 	labelableID string,
 ) (int32, error) {
-	mylog.Log.WithField("labelable_id", labelableID).Info("CountLabeledByLabelable()")
 	var n int32
 	err := prepareQueryRow(
 		db,
@@ -56,6 +60,11 @@ func CountLabeledByLabelable(
 		countLabeledByLabelableSQL,
 		labelableID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("labeleds found"))
+	}
 	return n, err
 }
 

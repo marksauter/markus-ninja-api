@@ -12,6 +12,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 const Guest = "guest"
@@ -54,7 +55,9 @@ func (r *Permitter) Check(
 		return f, err
 	}
 	if node == nil {
-		return f, errors.New("Permitter.Check: node is nil")
+		err := errors.New("node is nil")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return f, err
 	}
 	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
@@ -62,9 +65,20 @@ func (r *Permitter) Check(
 	}
 	o := mytype.NewOperation(a, nt)
 
+	// If we are attempting to read the object, then check if the viewer has
+	// access to the object.
+	if a == mytype.ReadAccess {
+		ok, err := r.ViewerCanRead(ctx, node)
+		if err != nil {
+			return f, err
+		} else if !ok {
+			return f, ErrAccessDenied
+		}
+	}
+
 	additionalRoles := []string{}
-	// If we are not creating, then check if the viewer can admin the object. If
-	// yes, then grant the owner role to the user.
+	// If we are not creating or connecting, then check if the viewer can admin
+	// the object. If yes, then grant the owner role to the user.
 	if a != mytype.CreateAccess && a != mytype.ConnectAccess {
 		ok, err := r.ViewerCanAdmin(ctx, node)
 		if err != nil {
@@ -119,7 +133,7 @@ func (r *Permitter) Check(
 			if createable && !field.IsZero() {
 				dbField := field.Tag("db")
 				if ok := f(dbField); !ok {
-					return f, ErrAccessDenied
+					return f, ErrFieldAccessDenied
 				}
 			}
 		}
@@ -130,12 +144,48 @@ func (r *Permitter) Check(
 			if updateable && !field.IsZero() {
 				dbField := field.Tag("db")
 				if ok := f(dbField); !ok {
-					return f, ErrAccessDenied
+					return f, ErrFieldAccessDenied
 				}
 			}
 		}
 	}
 	return f, nil
+}
+
+// Can the viewer read the node?
+func (r *Permitter) ViewerCanRead(
+	ctx context.Context,
+	node interface{},
+) (bool, error) {
+	switch node := node.(type) {
+	case data.Lesson:
+		// If the lesson has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case *data.Lesson:
+		// If the lesson has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case data.LessonComment:
+		// If the lesson comment has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case *data.LessonComment:
+		// If the lesson comment has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	default:
+		return true, nil
+	}
+	return true, nil
 }
 
 // Can the viewer admin the node, i.e. is the viewer the owner of the object?

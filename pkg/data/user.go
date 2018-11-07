@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type User struct {
@@ -66,10 +67,6 @@ func CountUserByAppleable(
 	appleableID string,
 	filters *UserFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"appleable_id",
-		appleableID,
-	).Info("CountUserByAppleable(appleable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.appleable_id = ` + args.Append(appleableID)
@@ -81,6 +78,11 @@ func CountUserByAppleable(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("users found"))
+	}
 	return n, err
 }
 
@@ -89,10 +91,6 @@ func CountUserByEnrollable(
 	enrollableID string,
 	filters *UserFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"enrollable_id",
-		enrollableID,
-	).Info("CountUserByEnrollable(enrollable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollable_id = ` + args.Append(enrollableID) + `
@@ -105,6 +103,11 @@ func CountUserByEnrollable(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("users found"))
+	}
 	return n, err
 }
 
@@ -113,7 +116,6 @@ func CountUserByEnrollee(
 	enrolleeID string,
 	filters *UserFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", enrolleeID).Info("CountUserByEnrollee(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -125,27 +127,32 @@ func CountUserByEnrollee(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("users found"))
+	}
 	return n, err
 }
 
-const countUserBySearchSQL = `
-	SELECT COUNT(*)
-	FROM user_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
-
 func CountUserBySearch(
 	db Queryer,
-	query string,
+	filters *UserFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountUserBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "user_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserBySearch", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countUserBySearch",
-		countUserBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("users found"))
+	}
 	return n, err
 }
 
@@ -224,7 +231,7 @@ func getUser(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -324,6 +331,7 @@ func BatchGetUser(
 		ids,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -385,6 +393,7 @@ func BatchGetUserByLogin(
 		logins,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -436,6 +445,7 @@ func GetUserByAppleable(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -459,7 +469,7 @@ func GetUserByAppleable(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -511,6 +521,7 @@ func GetUserByEnrollee(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -534,7 +545,7 @@ func GetUserByEnrollee(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -585,6 +596,7 @@ func GetUserByEnrollable(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -608,7 +620,7 @@ func GetUserByEnrollable(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -633,7 +645,7 @@ func getUserCredentials(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithField("error", err).Error("error during scan")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -738,6 +750,7 @@ func CreateUser(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -760,9 +773,11 @@ func CreateUser(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -772,17 +787,20 @@ func CreateUser(
 	primaryEmail.Value.Set(row.PrimaryEmail.String)
 	_, err = CreateEmail(tx, primaryEmail)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	user, err := GetUser(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -813,10 +831,9 @@ func DeleteUser(
 
 func SearchUser(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *UserFilterOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField("query", query).Info("SearchUser(query)")
 	var rows []*User
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -826,6 +843,9 @@ func SearchUser(
 			return rows, nil
 		}
 	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
 
 	selects := []string{
 		"account_updated_at",
@@ -840,12 +860,12 @@ func SearchUser(
 		"verified",
 	}
 	from := "user_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchUserIndex", sql)
 
 	if err := getManyUser(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -874,7 +894,7 @@ func UpdateUserAccount(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -898,10 +918,11 @@ func UpdateUserAccount(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -910,13 +931,14 @@ func UpdateUserAccount(
 
 	user, err := GetUser(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -949,7 +971,7 @@ func UpdateUserProfile(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -973,10 +995,11 @@ func UpdateUserProfile(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -985,13 +1008,14 @@ func UpdateUserProfile(
 
 	user, err := GetUser(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}

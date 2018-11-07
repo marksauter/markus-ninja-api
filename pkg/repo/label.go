@@ -134,14 +134,14 @@ func (r *LabelRepo) CountByLabelable(
 
 func (r *LabelRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.LabelFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLabelBySearch(db, query)
+	return data.CountLabelBySearch(db, filters)
 }
 
 func (r *LabelRepo) CountByStudy(
@@ -298,8 +298,8 @@ func (r *LabelRepo) Delete(
 
 func (r *LabelRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.LabelFilterOptions,
 ) ([]*LabelPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -308,7 +308,7 @@ func (r *LabelRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	labels, err := data.SearchLabel(db, query, po)
+	labels, err := data.SearchLabel(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

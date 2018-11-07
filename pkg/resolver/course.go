@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -142,13 +143,18 @@ func (r *courseResolver) Lessons(
 		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
+	resolver := lessonConnectionResolver{}
 	courseID, err := r.Course.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	lessonOrder, err := ParseLessonOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -159,27 +165,42 @@ func (r *courseResolver) Lessons(
 		lessonOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
+	filters := data.LessonFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	lessons, err := r.Repos.Lesson().GetByCourse(
 		ctx,
 		courseID.String,
 		pageOptions,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		r.Repos,
 		lessons,
 		pageOptions,
 		courseID,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return lessonConnectionResolver, nil
 }

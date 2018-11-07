@@ -77,7 +77,6 @@ func CountCourseByApplee(
 	appleeID string,
 	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("applee_id", appleeID).Info("CountCourseByApplee(applee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.applee_id = ` + args.Append(appleeID)
@@ -89,6 +88,11 @@ func CountCourseByApplee(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
 
@@ -97,7 +101,6 @@ func CountCourseByEnrollee(
 	enrolleeID string,
 	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("enrollee_id", enrolleeID).Info("CountCourseByEnrollee(enrollee_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollee_id = ` + args.Append(enrolleeID)
@@ -109,6 +112,11 @@ func CountCourseByEnrollee(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
 
@@ -117,7 +125,6 @@ func CountCourseByStudy(
 	studyID string,
 	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyID).Info("CountCourseByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -129,6 +136,11 @@ func CountCourseByStudy(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
 
@@ -137,9 +149,6 @@ func CountCourseByTopic(
 	topicID string,
 	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"topic_id", topicID,
-	).Info("CountCourseByTopic(topic_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topic_id = ` + args.Append(topicID)
@@ -151,6 +160,11 @@ func CountCourseByTopic(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
 
@@ -159,7 +173,6 @@ func CountCourseByUser(
 	userID string,
 	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountCourseByUser(user_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -171,48 +184,32 @@ func CountCourseByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
-
-const countCourseBySearchSQL = `
-	SELECT COUNT(*)
-	FROM course_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
 
 func CountCourseBySearch(
 	db Queryer,
-	query string,
+	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountCourseBySearch(query)")
-	var n int32
-	err := prepareQueryRow(
-		db,
-		"countCourseBySearch",
-		countCourseBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
-	return n, err
-}
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "course_search_index"
 
-const countCourseByTopicSearchSQL = `
-	SELECT COUNT(*)
-	FROM course_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE topics @@ query END)
-`
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseBySearch", sql)
 
-func CountCourseByTopicSearch(
-	db Queryer,
-	query string,
-) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountCourseByTopicSearch(query)")
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countCourseByTopicSearch",
-		countCourseByTopicSearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
 	return n, err
 }
 
@@ -824,10 +821,9 @@ func DeleteCourse(
 
 func SearchCourse(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *CourseFilterOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("query", query).Info("SearchCourse(query)")
 	var rows []*Course
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -837,6 +833,9 @@ func SearchCourse(
 			return rows, nil
 		}
 	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
 
 	selects := []string{
 		"advanced_at",
@@ -852,31 +851,12 @@ func SearchCourse(
 		"user_id",
 	}
 	from := "course_search_index"
-	var args pgx.QueryArgs
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchCourseIndex", sql)
 
-	if err := getManyCourse(tx, psName, sql, &rows, args...); err != nil {
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
 		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
 	}
 
 	return rows, nil

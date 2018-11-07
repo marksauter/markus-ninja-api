@@ -29,6 +29,9 @@ type LessonComment implements
 
   id: ID!
 
+  # Is this lesson comment published?
+  isPublished: Boolean!
+
   # Returns a list of labels for the current lesson comment.
   labels(
     # Returns the elements in the list that come after the specified global ID.

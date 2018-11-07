@@ -162,6 +162,10 @@ func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *lessonCommentResolver) IsPublished() (bool, error) {
+	return r.LessonComment.IsPublished()
+}
+
 func (r *lessonCommentResolver) Labels(
 	ctx context.Context,
 	args struct {

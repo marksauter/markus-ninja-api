@@ -12,6 +12,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LessonPermit struct {
@@ -76,6 +77,13 @@ func (r *LessonPermit) ID() (*mytype.OID, error) {
 	return &r.lesson.ID, nil
 }
 
+func (r *LessonPermit) IsPublished() (bool, error) {
+	if ok := r.checkFieldPermission("published_at"); !ok {
+		return false, ErrAccessDenied
+	}
+	return r.lesson.PublishedAt.Status != pgtype.Null, nil
+}
+
 func (r *LessonPermit) LastEditedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("last_edited_at"); !ok {
 		return time.Time{}, ErrAccessDenied
@@ -137,6 +145,25 @@ type LessonRepo struct {
 	permit *Permitter
 }
 
+func (r *LessonRepo) filterPermittable(
+	ctx context.Context,
+	accessLevel mytype.AccessLevel,
+	lessons []*data.Lesson,
+) ([]*LessonPermit, error) {
+	lessonPermits := make([]*LessonPermit, 0, len(lessons))
+	for _, l := range lessons {
+		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
+		if err != nil {
+			if err != ErrAccessDenied {
+				return nil, err
+			}
+		} else {
+			lessonPermits = append(lessonPermits, &LessonPermit{fieldPermFn, l})
+		}
+	}
+	return lessonPermits, nil
+}
+
 func (r *LessonRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
@@ -187,14 +214,14 @@ func (r *LessonRepo) CountByLabel(
 
 func (r *LessonRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountLessonBySearch(db, query)
+	return data.CountLessonBySearch(db, filters)
 }
 
 func (r *LessonRepo) CountByCourse(
@@ -337,17 +364,7 @@ func (r *LessonRepo) GetByEnrollee(
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByLabel(
@@ -367,17 +384,7 @@ func (r *LessonRepo) GetByLabel(
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByCourse(
@@ -397,17 +404,7 @@ func (r *LessonRepo) GetByCourse(
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByStudy(
@@ -427,17 +424,7 @@ func (r *LessonRepo) GetByStudy(
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByUser(
@@ -457,17 +444,7 @@ func (r *LessonRepo) GetByUser(
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByCourseNumber(
@@ -535,8 +512,8 @@ func (r *LessonRepo) Delete(
 
 func (r *LessonRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -545,21 +522,11 @@ func (r *LessonRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	lessons, err := data.SearchLesson(db, query, po)
+	lessons, err := data.SearchLesson(db, po, filters)
 	if err != nil {
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
-	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) Update(
@@ -592,6 +559,9 @@ func (r *LessonRepo) ViewerCanDelete(
 	l *data.Lesson,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
+		if err != ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
 		return false
 	}
 	return true
@@ -602,6 +572,11 @@ func (r *LessonRepo) ViewerCanUpdate(
 	l *data.Lesson,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
+		if err == ErrFieldAccessDenied {
+			return true
+		} else if err != ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
 		return false
 	}
 	return true

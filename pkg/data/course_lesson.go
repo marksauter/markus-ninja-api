@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,19 +29,20 @@ const countCourseLessonByCourseSQL = `
 func CountCourseLessonByCourse(
 	db Queryer,
 	courseID string,
-) (n int32, err error) {
-	mylog.Log.WithField("course_id", courseID).Info("CountCourseLessonByCourse()")
-
-	err = prepareQueryRow(
+) (int32, error) {
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countCourseLessonByCourse",
 		countCourseLessonByCourseSQL,
 		courseID,
 	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("course lessons found"))
+	}
+	return n, err
 }
 
 func getCourseLesson(

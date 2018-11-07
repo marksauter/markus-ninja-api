@@ -9,8 +9,10 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type User = userResolver
@@ -38,8 +40,7 @@ func (r *userResolver) Activity(
 	filters := &data.EventFilterOptions{}
 	_, ok := myctx.UserFromContext(ctx)
 	if !ok {
-		isPublic := true
-		filters.IsPublic = &isPublic
+		filters.IsPublic = util.NewBool(true)
 	}
 
 	userID, err := r.User.ID()
@@ -618,13 +619,18 @@ func (r *userResolver) Lessons(
 		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	id, err := r.User.ID()
+	resolver := lessonConnectionResolver{}
+	userID, err := r.User.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	lessonOrder, err := ParseLessonOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -635,29 +641,44 @@ func (r *userResolver) Lessons(
 		lessonOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
+	filters := data.LessonFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	ok, err := r.IsViewer(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	lessons, err := r.Repos.Lesson().GetByUser(
 		ctx,
-		id.String,
+		userID.String,
 		pageOptions,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
-	resolver, err := NewLessonConnectionResolver(
+	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		r.Repos,
 		lessons,
 		pageOptions,
-		id,
-		args.FilterBy,
+		userID,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
-	return resolver, nil
+	return lessonConnectionResolver, nil
 }
 
 func (r *userResolver) Login() (string, error) {

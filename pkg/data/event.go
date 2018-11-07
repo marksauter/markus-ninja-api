@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 const (
@@ -129,7 +130,6 @@ func CountEventByLesson(
 	lessonID string,
 	filters *EventFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("lesson_id", lessonID).Info("CountEventByLesson()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.lesson_id = ` + args.Append(lessonID)
@@ -141,6 +141,11 @@ func CountEventByLesson(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("events found"))
+	}
 	return n, err
 }
 
@@ -149,7 +154,6 @@ func CountEventByStudy(
 	studyID string,
 	filters *EventFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyID).Info("CountEventByStudy()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -161,6 +165,11 @@ func CountEventByStudy(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("events found"))
+	}
 	return n, err
 }
 
@@ -169,7 +178,6 @@ func CountEventByUser(
 	userID string,
 	filters *EventFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountEventByUser()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -181,6 +189,11 @@ func CountEventByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("events found"))
+	}
 	return n, err
 }
 
@@ -189,7 +202,6 @@ func CountReceivedEventByUser(
 	userID string,
 	filters *EventFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountReceivedEventByUser()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.received_user_id = ` + args.Append(userID)
@@ -201,6 +213,11 @@ func CountReceivedEventByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("events found"))
+	}
 	return n, err
 }
 
@@ -209,7 +226,6 @@ func CountEventByUserAsset(
 	assetID string,
 	filters *EventFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("asset_id", assetID).Info("CountEventByUserAsset()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.asset_id = ` + args.Append(assetID)
@@ -221,6 +237,11 @@ func CountEventByUserAsset(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("events found"))
+	}
 	return n, err
 }
 

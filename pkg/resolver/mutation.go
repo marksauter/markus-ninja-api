@@ -37,7 +37,19 @@ func (r *RootResolver) AddCourseLesson(
 		return nil, errors.New("invalid value for lessonId")
 	}
 
-	_, err := r.Repos.CourseLesson().Connect(ctx, courseLesson)
+	lesson, err := r.Repos.Lesson().Get(ctx, args.Input.LessonID)
+	if err != nil {
+		return nil, errors.New("lesson not found")
+	}
+	isPublished, err := lesson.IsPublished()
+	if err != nil {
+		return nil, myerr.SomethingWentWrongError
+	}
+	if !isPublished {
+		return nil, errors.New("lesson not published")
+	}
+
+	_, err = r.Repos.CourseLesson().Connect(ctx, courseLesson)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -36,9 +37,11 @@ func (r *studyResolver) AppleGivers(
 	ctx context.Context,
 	args AppleGiversArgs,
 ) (*appleGiverConnectionResolver, error) {
+	resolver := appleGiverConnectionResolver{}
 	appleGiverOrder, err := ParseAppleGiverOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -49,12 +52,16 @@ func (r *studyResolver) AppleGivers(
 		appleGiverOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	users, err := r.Repos.User().GetByAppleable(
 		ctx,
@@ -63,7 +70,8 @@ func (r *studyResolver) AppleGivers(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
 		r.Repos,
@@ -73,7 +81,8 @@ func (r *studyResolver) AppleGivers(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return appleGiverConnectionResolver, nil
 }
@@ -108,9 +117,11 @@ func (r *studyResolver) Assets(
 		OrderBy  *OrderArg
 	},
 ) (*userAssetConnectionResolver, error) {
+	resolver := userAssetConnectionResolver{}
 	userAssetOrder, err := ParseUserAssetOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -121,12 +132,16 @@ func (r *studyResolver) Assets(
 		userAssetOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	userAssets, err := r.Repos.UserAsset().GetByStudy(
 		ctx,
@@ -135,7 +150,8 @@ func (r *studyResolver) Assets(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
 		r.Repos,
@@ -145,7 +161,8 @@ func (r *studyResolver) Assets(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return userAssetConnectionResolver, nil
 }
@@ -180,13 +197,18 @@ func (r *studyResolver) Courses(
 		OrderBy  *OrderArg
 	},
 ) (*courseConnectionResolver, error) {
+	resolver := courseConnectionResolver{}
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	courseOrder, err := ParseCourseOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -197,7 +219,8 @@ func (r *studyResolver) Courses(
 		courseOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	courses, err := r.Repos.Course().GetByStudy(
@@ -207,7 +230,8 @@ func (r *studyResolver) Courses(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	count, err := r.Repos.Course().CountByStudy(
 		ctx,
@@ -215,18 +239,20 @@ func (r *studyResolver) Courses(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
-	resolver, err := NewCourseConnectionResolver(
+	courseConnectionResolver, err := NewCourseConnectionResolver(
 		courses,
 		pageOptions,
 		count,
 		r.Repos,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
-	return resolver, nil
+	return courseConnectionResolver, nil
 }
 
 func (r *studyResolver) CreatedAt() (graphql.Time, error) {
@@ -252,9 +278,11 @@ func (r *studyResolver) Enrollees(
 	ctx context.Context,
 	args EnrolleesArgs,
 ) (*enrolleeConnectionResolver, error) {
+	resolver := enrolleeConnectionResolver{}
 	enrolleeOrder, err := ParseEnrolleeOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -265,12 +293,14 @@ func (r *studyResolver) Enrollees(
 		enrolleeOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	users, err := r.Repos.User().GetByEnrollable(
 		ctx,
@@ -279,7 +309,8 @@ func (r *studyResolver) Enrollees(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
 		r.Repos,
@@ -289,7 +320,8 @@ func (r *studyResolver) Enrollees(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return enrolleeConnectionResolver, nil
 }
@@ -361,13 +393,18 @@ func (r *studyResolver) Labels(
 		OrderBy  *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
+	resolver := labelConnectionResolver{}
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	labelOrder, err := ParseLabelOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -378,16 +415,19 @@ func (r *studyResolver) Labels(
 		labelOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	count, err := r.Repos.Label().CountByStudy(ctx, studyID.String, args.FilterBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	labels, err := r.Repos.Label().GetByStudy(ctx, studyID.String, pageOptions, args.FilterBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
 		r.Repos,
@@ -396,7 +436,8 @@ func (r *studyResolver) Labels(
 		count,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return labelConnectionResolver, nil
 }
@@ -431,13 +472,18 @@ func (r *studyResolver) Lessons(
 		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
+	resolver := lessonConnectionResolver{}
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	lessonOrder, err := ParseLessonOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -448,27 +494,42 @@ func (r *studyResolver) Lessons(
 		lessonOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
+	filters := data.LessonFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	lessons, err := r.Repos.Lesson().GetByStudy(
 		ctx,
 		studyID.String,
 		pageOptions,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
 		r.Repos,
 		lessons,
 		pageOptions,
 		studyID,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return lessonConnectionResolver, nil
 }
@@ -482,9 +543,13 @@ func (r *studyResolver) LessonComments(
 		Last   *int32
 	},
 ) (*lessonCommentConnectionResolver, error) {
+	resolver := lessonCommentConnectionResolver{}
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	lessonCommentOrder := NewLessonCommentOrder(data.DESC, LessonCommentCreatedAt)
 
@@ -496,25 +561,38 @@ func (r *studyResolver) LessonComments(
 		lessonCommentOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
+	filters := data.LessonCommentFilterOptions{}
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	lessonComments, err := r.Repos.LessonComment().GetByStudy(
 		ctx,
 		studyID.String,
 		pageOptions,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
 		r.Repos,
 		lessonComments,
 		pageOptions,
 		studyID,
+		&filters,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return lessonCommentConnectionResolver, nil
 }
@@ -576,13 +654,18 @@ func (r *studyResolver) Topics(
 		OrderBy  *OrderArg
 	},
 ) (*topicConnectionResolver, error) {
+	resolver := topicConnectionResolver{}
 	studyID, err := r.Study.ID()
 	if err != nil {
-		return nil, err
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
 	}
 	topicOrder, err := ParseTopicOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -593,7 +676,8 @@ func (r *studyResolver) Topics(
 		topicOrder,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 
 	topics, err := r.Repos.Topic().GetByTopicable(
@@ -603,7 +687,8 @@ func (r *studyResolver) Topics(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	topicConnectionResolver, err := NewTopicConnectionResolver(
 		r.Repos,
@@ -613,7 +698,8 @@ func (r *studyResolver) Topics(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
 	}
 	return topicConnectionResolver, nil
 }
