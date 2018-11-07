@@ -100,14 +100,14 @@ func (r *TopicRepo) CheckConnection() error {
 
 func (r *TopicRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.TopicFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountTopicBySearch(db, query)
+	return data.CountTopicBySearch(db, filters)
 }
 
 func (r *TopicRepo) CountByTopicable(
@@ -216,8 +216,8 @@ func (r *TopicRepo) GetByName(
 
 func (r *TopicRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.TopicFilterOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (r *TopicRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	topics, err := data.SearchTopic(db, query, po)
+	topics, err := data.SearchTopic(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

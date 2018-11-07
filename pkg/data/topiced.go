@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Topiced struct {
@@ -27,7 +28,6 @@ func CountTopicedByTopic(
 	db Queryer,
 	topicID string,
 ) (int32, error) {
-	mylog.Log.WithField("topic_id", topicID).Info("CountTopicedByTopic()")
 	var n int32
 	err := prepareQueryRow(
 		db,
@@ -35,6 +35,11 @@ func CountTopicedByTopic(
 		countTopicedByTopicSQL,
 		topicID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topiceds found"))
+	}
 	return n, err
 }
 
@@ -48,7 +53,6 @@ func CountTopicedByTopicable(
 	db Queryer,
 	topicableID string,
 ) (int32, error) {
-	mylog.Log.WithField("topicable_id", topicableID).Info("CountTopicedByTopicable()")
 	var n int32
 	err := prepareQueryRow(
 		db,
@@ -56,6 +60,11 @@ func CountTopicedByTopicable(
 		countTopicedByTopicableSQL,
 		topicableID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topiceds found"))
+	}
 	return n, err
 }
 

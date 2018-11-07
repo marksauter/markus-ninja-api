@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -64,96 +65,102 @@ func (src *LessonCommentFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQ
 	}
 }
 
-const countLessonCommentByLabelSQL = `
-	SELECT COUNT(*)
-	FROM labeled
-	WHERE label_id = $1 AND type = 'LessonComment'
-`
-
 func CountLessonCommentByLabel(
 	db Queryer,
 	labelID string,
+	filters *LessonCommentFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("label_id", labelID).Info("CountLessonCommentByLabel(label_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID)
+	}
+	from := "labeled_lesson_comment"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonCommentByLabel", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonCommentByLabel",
-		countLessonCommentByLabelSQL,
-		labelID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("lesson comments found"))
+	}
 	return n, err
 }
-
-const countLessonCommentByLessonSQL = `
-	SELECT COUNT(*)
-	FROM lesson_comment
-	WHERE lesson_id = $1
-`
 
 // CountLessonCommentByLesson - count lesson comments by lesson id
 func CountLessonCommentByLesson(
 	db Queryer,
 	lessonID string,
+	filters *LessonCommentFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"lesson_id", lessonID,
-	).Info("CountLessonCommentByLesson(lesson_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.lesson_id = ` + args.Append(lessonID)
+	}
+	from := "lesson_comment"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonCommentByLesson", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonCommentByLesson",
-		countLessonCommentByLessonSQL,
-		lessonID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("lesson comments found"))
+	}
 	return n, err
 }
-
-const countLessonCommentByStudySQL = `
-	SELECT COUNT(*)
-	FROM lesson_comment
-	WHERE study_id = $1
-`
 
 // CountLessonCommentByStudy - count lesson comments by study id
 func CountLessonCommentByStudy(
 	db Queryer,
 	studyID string,
+	filters *LessonCommentFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"study_id", studyID,
-	).Info("CountLessonCommentByStudy(study_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+	from := "lesson_comment"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonCommentByStudy", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonCommentByStudy",
-		countLessonCommentByStudySQL,
-		studyID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("lesson comments found"))
+	}
 	return n, err
 }
-
-const countLessonCommentByUserSQL = `
-	SELECT COUNT(*)
-	FROM lesson_comment
-	WHERE user_id = $1
-`
 
 // CountLessonCommentByUser - count lesson comments by user id
 func CountLessonCommentByUser(
 	db Queryer,
 	userID string,
+	filters *LessonCommentFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"user_id", userID,
-	).Info("CountLessonCommentByUser(user_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
+	from := "lesson_comment"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonCommentByUser", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLessonCommentByUser",
-		countLessonCommentByUserSQL,
-		userID,
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("lesson comments found"))
+	}
 	return n, err
 }
 
@@ -326,6 +333,7 @@ func GetLessonCommentByLabel(
 	db Queryer,
 	labelID string,
 	po *PageOptions,
+	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField("label_id", labelID).Info("GetLessonCommentByLabel(label_id)")
 	var rows []*LessonComment
@@ -357,7 +365,7 @@ func GetLessonCommentByLabel(
 		"user_id",
 	}
 	from := "labeled_lesson_comment"
-	sql := SQL3(selects, from, where, nil, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLessonCommentsByLabel", sql)
 
@@ -398,6 +406,7 @@ func GetLessonCommentByLesson(
 	db Queryer,
 	lessonID string,
 	po *PageOptions,
+	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"lesson_id", lessonID,
@@ -430,7 +439,7 @@ func GetLessonCommentByLesson(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL3(selects, from, where, nil, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
@@ -446,6 +455,7 @@ func GetLessonCommentByStudy(
 	db Queryer,
 	studyID string,
 	po *PageOptions,
+	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"study_id", studyID,
@@ -478,7 +488,7 @@ func GetLessonCommentByStudy(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL3(selects, from, where, nil, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
@@ -494,6 +504,7 @@ func GetLessonCommentByUser(
 	db Queryer,
 	userID string,
 	po *PageOptions,
+	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
 	mylog.Log.WithField(
 		"user_id", userID,
@@ -526,7 +537,7 @@ func GetLessonCommentByUser(
 		"user_id",
 	}
 	from := "lesson_comment"
-	sql := SQL3(selects, from, where, nil, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getLessonCommentsByUser", sql)
 

@@ -68,9 +68,6 @@ func CountLabelByLabelable(
 	labelableID string,
 	filters *LabelFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField(
-		"labelable_id", labelableID,
-	).Info("CountLabelByLabelable(labelable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.labelable_id = ` + args.Append(labelableID)
@@ -82,6 +79,11 @@ func CountLabelByLabelable(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("labels found"))
+	}
 	return n, err
 }
 
@@ -90,7 +92,6 @@ func CountLabelByStudy(
 	studyID string,
 	filters *LabelFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyID).Info("CountLabelByStudy(study_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
@@ -102,27 +103,32 @@ func CountLabelByStudy(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("labels found"))
+	}
 	return n, err
 }
 
-const countLabelBySearchSQL = `
-	SELECT COUNT(*)
-	FROM label_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
-
 func CountLabelBySearch(
 	db Queryer,
-	query string,
+	filters *LabelFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountLabelBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "label_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLabelBySearch", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countLabelBySearch",
-		countLabelBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("labels found"))
+	}
 	return n, err
 }
 
@@ -146,7 +152,7 @@ func getLabel(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get label")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -253,6 +259,7 @@ func GetLabelByLabelable(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -274,7 +281,7 @@ func GetLabelByLabelable(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get labels")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -319,6 +326,7 @@ func GetLabelByStudy(
 	psName := preparedName("getLabelsByStudyID", sql)
 
 	if err := getManyLabel(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -391,7 +399,7 @@ func CreateLabel(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -415,21 +423,24 @@ func CreateLabel(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	label, err := GetLabel(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -460,10 +471,9 @@ func DeleteLabel(
 
 func SearchLabel(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *LabelFilterOptions,
 ) ([]*Label, error) {
-	mylog.Log.WithField("query", query).Info("Search(query)")
 	var rows []*Label
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -473,6 +483,9 @@ func SearchLabel(
 			return rows, nil
 		}
 	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
 
 	selects := []string{
 		"color",
@@ -485,12 +498,12 @@ func SearchLabel(
 		"updated_at",
 	}
 	from := "label_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchLabelIndex", sql)
 
 	if err := getManyLabel(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -518,7 +531,7 @@ func UpdateLabel(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -535,6 +548,7 @@ func UpdateLabel(
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -543,13 +557,14 @@ func UpdateLabel(
 
 	label, err := GetLabel(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}

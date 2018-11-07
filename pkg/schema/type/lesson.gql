@@ -82,6 +82,9 @@ type Lesson implements
   # Is this lesson part of a course?
   isCourseLesson: Boolean!
 
+  # Is this lesson published?
+  isPublished: Boolean!
+
   # Returns a list of labels for the current lesson.
   labels(
     # Returns the elements in the list that come after the specified global ID.

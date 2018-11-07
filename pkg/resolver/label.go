@@ -96,7 +96,7 @@ func (r *labelResolver) Labelables(
 			permits[i] = l
 		}
 	case LabelableTypeLessonComment:
-		lessonComments, err := r.Repos.LessonComment().GetByLabel(ctx, id.String, pageOptions)
+		lessonComments, err := r.Repos.LessonComment().GetByLabel(ctx, id.String, pageOptions, nil)
 		if err != nil {
 			return nil, err
 		}

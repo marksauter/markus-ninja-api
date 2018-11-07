@@ -61,7 +61,6 @@ func CountTopicByTopicable(
 	topicableID string,
 	filters *TopicFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("topicable_id", topicableID).Info("CountTopicByTopicable(topicable_id)")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.topicable_id = ` + args.Append(topicableID)
@@ -73,27 +72,32 @@ func CountTopicByTopicable(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topics found"))
+	}
 	return n, err
 }
 
-const countTopicBySearchSQL = `
-	SELECT COUNT(*)
-	FROM topic_search_index, to_tsquery('simple', $1) as query
-	WHERE (CASE $1 WHEN '*' THEN true ELSE document @@ query END)
-`
-
 func CountTopicBySearch(
 	db Queryer,
-	query string,
+	filters *TopicFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountTopicBySearch(query)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "topic_search_index"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countTopicBySearch", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countTopicBySearch",
-		countTopicBySearchSQL,
-		ToPrefixTsQuery(query),
-	).Scan(&n)
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topics found"))
+	}
 	return n, err
 }
 
@@ -114,7 +118,7 @@ func getTopic(
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get topic")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -246,6 +250,7 @@ func GetTopicByTopicable(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -265,7 +270,7 @@ func GetTopicByTopicable(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get topics")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -322,7 +327,7 @@ func CreateTopic(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -349,9 +354,11 @@ func CreateTopic(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -361,19 +368,21 @@ func CreateTopic(
 		topiced.TopicableID.Set(&row.TopicableID)
 		_, err := CreateTopiced(tx, topiced)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
 	topic, err := GetTopic(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -383,10 +392,9 @@ func CreateTopic(
 
 func SearchTopic(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *TopicFilterOptions,
 ) ([]*Topic, error) {
-	mylog.Log.WithField("query", query).Info("SearchTopic(query)")
 	var rows []*Topic
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -397,6 +405,9 @@ func SearchTopic(
 		}
 	}
 
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
+
 	selects := []string{
 		"created_at",
 		"description",
@@ -405,12 +416,12 @@ func SearchTopic(
 		"updated_at",
 	}
 	from := "topic_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL2(selects, from, ToPrefixTsQuery(query), &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchTopicIndex", sql)
 
 	if err := getManyTopic(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -435,7 +446,7 @@ func UpdateTopic(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -452,6 +463,7 @@ func UpdateTopic(
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
@@ -460,13 +472,14 @@ func UpdateTopic(
 
 	topic, err := GetTopic(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}

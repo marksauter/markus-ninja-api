@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Appled struct {
@@ -23,17 +24,20 @@ const countAppledByUserSQL = `
 	WHERE user_id = $1
 `
 
-func CountAppledByUser(db Queryer, userID string) (n int32, err error) {
-	mylog.Log.WithField("user_id", userID).Info("CountAppledByUser()")
-
-	err = prepareQueryRow(
+func CountAppledByUser(db Queryer, userID string) (int32, error) {
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countAppledByUser",
 		countAppledByUserSQL,
 		userID,
 	).Scan(&n)
-
-	return
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("appleds found"))
+	}
+	return n, err
 }
 
 const countAppledByAppleableSQL = `
@@ -42,17 +46,20 @@ const countAppledByAppleableSQL = `
 	WHERE appleable_id = $1
 `
 
-func CountAppledByAppleable(db Queryer, appleableID string) (n int32, err error) {
-	mylog.Log.WithField("appleable_id", appleableID).Info("CountAppledByAppleable()")
-
-	err = prepareQueryRow(
+func CountAppledByAppleable(db Queryer, appleableID string) (int32, error) {
+	var n int32
+	err := prepareQueryRow(
 		db,
 		"countAppledByAppleable",
 		countAppledByAppleableSQL,
 		appleableID,
 	).Scan(&n)
-
-	return
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("appleds found"))
+	}
+	return n, err
 }
 
 func getAppled(

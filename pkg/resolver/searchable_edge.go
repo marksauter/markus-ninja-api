@@ -9,7 +9,8 @@ import (
 
 func NewSearchableEdgeResolver(
 	repos *repo.Repos,
-	node repo.NodePermit) (*searchableEdgeResolver, error) {
+	node repo.NodePermit,
+) (*searchableEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err

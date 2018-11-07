@@ -184,14 +184,14 @@ func (r *UserRepo) CountByEnrollee(
 
 func (r *UserRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.UserFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserBySearch(db, query)
+	return data.CountUserBySearch(db, filters)
 }
 
 func (r *UserRepo) Create(
@@ -385,8 +385,8 @@ func (r *UserRepo) Delete(
 
 func (r *UserRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.UserFilterOptions,
 ) ([]*UserPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (r *UserRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	users, err := data.SearchUser(db, query, po)
+	users, err := data.SearchUser(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

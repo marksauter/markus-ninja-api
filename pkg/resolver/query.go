@@ -6,8 +6,10 @@ import (
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func (r *RootResolver) Asset(
@@ -95,13 +97,14 @@ func (r *RootResolver) Search(
 		Type    string
 	},
 ) (*searchableConnectionResolver, error) {
+	resolver := searchableConnectionResolver{}
 	searchType, err := ParseSearchType(args.Type)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 	searchOrder, err := ParseSearchOrder(searchType, args.OrderBy)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -112,70 +115,93 @@ func (r *RootResolver) Search(
 		searchOrder,
 	)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	permits := []repo.NodePermit{}
 
 	switch searchType {
 	case SearchTypeCourse:
-		courses, err := r.Repos.Course().Search(ctx, args.Query, pageOptions)
+		filters := &data.CourseFilterOptions{
+			Search: &args.Query,
+		}
+		courses, err := r.Repos.Course().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(courses))
 		for i, l := range courses {
 			permits[i] = l
 		}
 	case SearchTypeLabel:
-		labels, err := r.Repos.Label().Search(ctx, args.Query, pageOptions)
+		filters := &data.LabelFilterOptions{
+			Search: &args.Query,
+		}
+		labels, err := r.Repos.Label().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(labels))
 		for i, l := range labels {
 			permits[i] = l
 		}
 	case SearchTypeLesson:
-		lessons, err := r.Repos.Lesson().Search(ctx, args.Query, pageOptions)
+		filters := &data.LessonFilterOptions{
+			IsPublished: util.NewBool(true),
+			Search:      &args.Query,
+		}
+		lessons, err := r.Repos.Lesson().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(lessons))
 		for i, l := range lessons {
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().Search(ctx, args.Query, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: &args.Query,
+		}
+		studies, err := r.Repos.Study().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}
 	case SearchTypeTopic:
-		topics, err := r.Repos.Topic().Search(ctx, args.Query, pageOptions)
+		filters := &data.TopicFilterOptions{
+			Search: &args.Query,
+		}
+		topics, err := r.Repos.Topic().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(topics))
 		for i, l := range topics {
 			permits[i] = l
 		}
 	case SearchTypeUser:
-		users, err := r.Repos.User().Search(ctx, args.Query, pageOptions)
+		filters := &data.UserFilterOptions{
+			Search: &args.Query,
+		}
+		users, err := r.Repos.User().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(users))
 		for i, l := range users {
 			permits[i] = l
 		}
 	case SearchTypeUserAsset:
-		userAssets, err := r.Repos.UserAsset().Search(ctx, args.Query, pageOptions)
+		filters := &data.UserAssetFilterOptions{
+			Search: &args.Query,
+		}
+		userAssets, err := r.Repos.UserAsset().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(userAssets))
 		for i, l := range userAssets {

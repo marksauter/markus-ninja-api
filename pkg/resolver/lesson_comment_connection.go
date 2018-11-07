@@ -14,6 +14,7 @@ func NewLessonCommentConnectionResolver(
 	lessonComments []*repo.LessonCommentPermit,
 	pageOptions *data.PageOptions,
 	nodeID *mytype.OID,
+	filters *data.LessonCommentFilterOptions,
 ) (*lessonCommentConnectionResolver, error) {
 	edges := make([]*lessonCommentEdgeResolver, len(lessonComments))
 	for i := range edges {
@@ -32,6 +33,7 @@ func NewLessonCommentConnectionResolver(
 
 	resolver := &lessonCommentConnectionResolver{
 		edges:          edges,
+		filters:        filters,
 		lessonComments: lessonComments,
 		nodeID:         nodeID,
 		pageInfo:       pageInfo,
@@ -42,6 +44,7 @@ func NewLessonCommentConnectionResolver(
 
 type lessonCommentConnectionResolver struct {
 	edges          []*lessonCommentEdgeResolver
+	filters        *data.LessonCommentFilterOptions
 	lessonComments []*repo.LessonCommentPermit
 	nodeID         *mytype.OID
 	pageInfo       *pageInfoResolver
@@ -75,9 +78,9 @@ func (r *lessonCommentConnectionResolver) PageInfo() (*pageInfoResolver, error) 
 func (r *lessonCommentConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
 	switch r.nodeID.Type {
 	case "Lesson":
-		return r.repos.LessonComment().CountByLesson(ctx, r.nodeID.String)
+		return r.repos.LessonComment().CountByLesson(ctx, r.nodeID.String, r.filters)
 	case "Study":
-		return r.repos.LessonComment().CountByStudy(ctx, r.nodeID.String)
+		return r.repos.LessonComment().CountByStudy(ctx, r.nodeID.String, r.filters)
 	default:
 		var n int32
 		return n, errors.New("invalid node id for lesson comment total count")

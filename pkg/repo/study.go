@@ -176,26 +176,14 @@ func (r *StudyRepo) CountByTopic(
 
 func (r *StudyRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountStudyBySearch(db, query)
-}
-
-func (r *StudyRepo) CountByTopicSearch(
-	ctx context.Context,
-	query string,
-) (int32, error) {
-	var n int32
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
-	}
-	return data.CountStudyByTopicSearch(db, query)
+	return data.CountStudyBySearch(db, filters)
 }
 
 func (r *StudyRepo) CountByUser(
@@ -431,8 +419,8 @@ func (r *StudyRepo) Delete(
 
 func (r *StudyRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -441,7 +429,7 @@ func (r *StudyRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	studies, err := data.SearchStudy(db, query, po)
+	studies, err := data.SearchStudy(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

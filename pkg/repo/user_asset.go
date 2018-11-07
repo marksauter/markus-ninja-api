@@ -174,14 +174,14 @@ func (r *UserAssetRepo) CheckConnection() error {
 
 func (r *UserAssetRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.UserAssetFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountUserAssetBySearch(db, query)
+	return data.CountUserAssetBySearch(db, filters)
 }
 
 func (r *UserAssetRepo) CountByStudy(
@@ -398,8 +398,8 @@ func (r *UserAssetRepo) GetByUser(
 
 func (r *UserAssetRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -408,7 +408,7 @@ func (r *UserAssetRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	userAssets, err := data.SearchUserAsset(db, query, po)
+	userAssets, err := data.SearchUserAsset(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

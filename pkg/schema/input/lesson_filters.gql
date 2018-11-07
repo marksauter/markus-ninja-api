@@ -3,6 +3,9 @@ input LessonFilters {
   # List lessons that are part of a course.
   isCourseLesson: Boolean
 
+  # List lessons that are published.
+  isPublished: Boolean
+
   # List lessons where the list of label names exists on the lesson.
   labels: [String!]
 

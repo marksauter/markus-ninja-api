@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,7 +68,6 @@ func CountEnrolledByUser(
 	userID string,
 	filters *EnrolledFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountEnrolledByUser()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -79,6 +79,11 @@ func CountEnrolledByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("enrolleds found"))
+	}
 	return n, err
 }
 
@@ -87,7 +92,6 @@ func CountEnrolledByEnrollable(
 	enrollableID string,
 	filters *EnrolledFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("enrollable_id", enrollableID).Info("CountEnrolledByEnrollable()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.enrollable_id = ` + args.Append(enrollableID)
@@ -99,6 +103,11 @@ func CountEnrolledByEnrollable(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("enrolleds found"))
+	}
 	return n, err
 }
 

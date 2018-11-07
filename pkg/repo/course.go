@@ -201,14 +201,14 @@ func (r *CourseRepo) CountByTopic(
 
 func (r *CourseRepo) CountBySearch(
 	ctx context.Context,
-	query string,
+	filters *data.CourseFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
-	return data.CountCourseBySearch(db, query)
+	return data.CountCourseBySearch(db, filters)
 }
 
 func (r *CourseRepo) CountByStudy(
@@ -222,18 +222,6 @@ func (r *CourseRepo) CountByStudy(
 		return n, &myctx.ErrNotFound{"queryer"}
 	}
 	return data.CountCourseByStudy(db, studyID, filters)
-}
-
-func (r *CourseRepo) CountByTopicSearch(
-	ctx context.Context,
-	query string,
-) (int32, error) {
-	var n int32
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
-	}
-	return data.CountCourseByTopicSearch(db, query)
 }
 
 func (r *CourseRepo) CountByUser(
@@ -518,8 +506,8 @@ func (r *CourseRepo) Delete(
 
 func (r *CourseRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.CourseFilterOptions,
 ) ([]*CoursePermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err
@@ -528,7 +516,7 @@ func (r *CourseRepo) Search(
 	if !ok {
 		return nil, &myctx.ErrNotFound{"queryer"}
 	}
-	courses, err := data.SearchCourse(db, query, po)
+	courses, err := data.SearchCourse(db, po, filters)
 	if err != nil {
 		return nil, err
 	}

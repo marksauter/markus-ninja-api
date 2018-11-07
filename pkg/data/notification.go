@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 const (
@@ -37,7 +38,6 @@ func CountNotificationByStudy(
 	db Queryer,
 	studyID string,
 ) (int32, error) {
-	mylog.Log.WithField("study_id", studyID).Info("CountNotificationByStudy(study_id)")
 	var n int32
 	err := prepareQueryRow(
 		db,
@@ -45,6 +45,11 @@ func CountNotificationByStudy(
 		countNotificationByStudySQL,
 		studyID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("notifications found"))
+	}
 	return n, err
 }
 
@@ -66,6 +71,11 @@ func CountNotificationByUser(
 		countNotificationByUserSQL,
 		userID,
 	).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("notifications found"))
+	}
 	return n, err
 }
 

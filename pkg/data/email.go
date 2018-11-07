@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Email struct {
@@ -63,7 +64,6 @@ func CountEmailByUser(
 	userID string,
 	filters *EmailFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("user_id", userID).Info("CountEmailByUser(user_id) Email")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
 		return from + `.user_id = ` + args.Append(userID)
@@ -75,6 +75,11 @@ func CountEmailByUser(
 
 	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("emails found"))
+	}
 	return n, err
 }
 

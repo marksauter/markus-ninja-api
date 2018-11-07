@@ -39,6 +39,7 @@ const (
 
 var ErrConnClosed = errors.New("connection is closed")
 var ErrAccessDenied = errors.New("access denied")
+var ErrFieldAccessDenied = errors.New("field access denied")
 
 type FieldPermissionFunc = func(field string) bool
 
