@@ -204,9 +204,10 @@ func getStudy(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get study")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -242,7 +243,7 @@ func getManyStudy(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
@@ -267,8 +268,13 @@ func GetStudy(
 	db Queryer,
 	id string,
 ) (*Study, error) {
-	mylog.Log.WithField("id", id).Info("GetStudy(id)")
-	return getStudy(db, "getStudyByID", getStudyByIDSQL, id)
+	study, err := getStudy(db, "getStudyByID", getStudyByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 func GetStudyByApplee(
@@ -277,13 +283,13 @@ func GetStudyByApplee(
 	po *PageOptions,
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("applee_id", appleeID).Info("GetStudyByApplee(applee_id)")
 	var rows []*Study
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Study, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -311,6 +317,7 @@ func GetStudyByApplee(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -332,10 +339,11 @@ func GetStudyByApplee(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
@@ -345,13 +353,13 @@ func GetStudyByEnrollee(
 	po *PageOptions,
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetStudyByEnrollee(enrollee_id)")
 	var rows []*Study
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Study, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -379,6 +387,7 @@ func GetStudyByEnrollee(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -400,10 +409,11 @@ func GetStudyByEnrollee(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
@@ -413,13 +423,13 @@ func GetStudyByTopic(
 	po *PageOptions,
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("topic_id", topicID).Info("GetStudyByTopic(topic_id)")
 	var rows []*Study
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Study, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -447,6 +457,7 @@ func GetStudyByTopic(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -468,10 +479,11 @@ func GetStudyByTopic(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
@@ -481,13 +493,13 @@ func GetStudyByUser(
 	po *PageOptions,
 	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetStudyByUser(user_id)")
 	var rows []*Study
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Study, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -513,6 +525,7 @@ func GetStudyByUser(
 	psName := preparedName("getStudiesByUserID", sql)
 
 	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -538,11 +551,13 @@ func GetStudyByName(
 	userID,
 	name string,
 ) (*Study, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userID,
-		"name":    name,
-	}).Info("GetStudyByName(user_id, name)")
-	return getStudy(db, "getStudyByName", getStudyByNameSQL, userID, name)
+	study, err := getStudy(db, "getStudyByName", getStudyByNameSQL, userID, name)
+	if err != nil {
+		mylog.Log.WithField("name", name).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("name", name).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 const getStudyByUserAndNameSQL = `
@@ -565,18 +580,25 @@ func GetStudyByUserAndName(
 	owner,
 	name string,
 ) (*Study, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"owner": owner,
-		"name":  name,
-	}).Info("GetStudyByUserAndName(owner, name)")
-	return getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	study, err := getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"name":  name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"name":  name,
+		}).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 func CreateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
-	mylog.Log.Info("CreateStudy()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	var columns, values []string
@@ -609,7 +631,7 @@ func CreateStudy(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -629,41 +651,50 @@ func CreateStudy(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(pgErr.ConstraintName)
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	eventPayload, err := NewStudyCreatedPayload(&row.ID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	e, err := NewStudyEvent(eventPayload, &row.ID, &row.UserID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if _, err = CreateEvent(tx, e); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	study, err := GetStudy(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("study created"))
 	return study, nil
 }
 
@@ -676,15 +707,18 @@ func DeleteStudy(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteStudy(id)")
 	commandTag, err := prepareExec(db, "deleteStudy", deleteStudySQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
 	return nil
 }
 
@@ -699,6 +733,7 @@ func SearchStudy(
 		if limit > 0 {
 			rows = make([]*Study, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -726,6 +761,7 @@ func SearchStudy(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
@@ -733,7 +769,6 @@ func UpdateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateStudy(id)")
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -751,12 +786,13 @@ func UpdateStudy(
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetStudy(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -777,31 +813,39 @@ func UpdateStudy(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(pgErr.ConstraintName)
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	study, err := GetStudy(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("study updated"))
 	return study, nil
 }

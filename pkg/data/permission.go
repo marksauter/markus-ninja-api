@@ -292,7 +292,8 @@ func GetByRole(
 
 var getQueryPermissionSQL = `
 	SELECT
-		array_agg(field)
+		access_level || ' ' || type AS operation,
+		array_agg(field) AS fields
 	FROM
 		permission
 	WHERE access_level = $1
@@ -304,6 +305,7 @@ var getQueryPermissionSQL = `
 				WHERE role = ANY($3)
 			)
 		)
+	GROUP BY operation
 `
 
 func GetQueryPermission(
@@ -316,19 +318,22 @@ func GetQueryPermission(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	p := &QueryPermission{Operation: *o}
+	p := &QueryPermission{}
 
 	err := db.QueryRow(
 		getQueryPermissionSQL,
 		o.AccessLevel,
 		o.NodeType,
 		roles,
-	).Scan(&p.Fields)
-	if err == pgx.ErrNoRows {
-		return nil, ErrNotFound
-	} else if err != nil {
+	).Scan(
+		&p.Operation,
+		&p.Fields,
+	)
+	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	} else if len(p.Fields.Elements) == 0 {
+		return nil, ErrNotFound
 	}
 
 	fields := make([]string, len(p.Fields.Elements))
@@ -338,6 +343,7 @@ func GetQueryPermission(
 	mylog.Log.WithFields(logrus.Fields{
 		"fields":    fields,
 		"operation": o,
+		"roles":     roles,
 	}).Info(util.Trace("query granted permission"))
 	return p, nil
 }

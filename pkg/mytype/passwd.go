@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/nbutton23/zxcvbn-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -53,6 +54,7 @@ func hash(password string) []byte {
 func (p *Password) CheckStrength(s PasswordStrength) error {
 	entropy := zxcvbn.PasswordStrength(p.value, nil)
 	strength := PasswordStrength(entropy.Score)
+	mylog.Log.Debug(strength)
 	if strength < s {
 		return ErrPasswordTooWeak
 	}

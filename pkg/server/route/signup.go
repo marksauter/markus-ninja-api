@@ -89,7 +89,7 @@ func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := u.Password.CheckStrength(mytype.VeryWeak); err != nil {
+	if err := u.Password.CheckStrength(mytype.Moderate); err != nil {
 		response := myhttp.PasswordStrengthErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
