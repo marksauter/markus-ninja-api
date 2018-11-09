@@ -184,9 +184,10 @@ func getUserAsset(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -228,7 +229,7 @@ func getManyUserAsset(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_assets")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -259,8 +260,13 @@ func GetUserAsset(
 	db Queryer,
 	id string,
 ) (*UserAsset, error) {
-	mylog.Log.WithField("id", id).Info("GetUserAsset(id)")
-	return getUserAsset(db, "getUserAssetByID", getUserAssetByIDSQL, id)
+	userAsset, err := getUserAsset(db, "getUserAssetByID", getUserAssetByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("user asset found"))
+	}
+	return userAsset, err
 }
 
 const batchGetUserAssetSQL = `
@@ -287,9 +293,6 @@ func BatchGetUserAsset(
 	db Queryer,
 	ids []string,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithField(
-		"ids", ids,
-	).Info("BatchGetUserAsset(ids)")
 	rows := make([]*UserAsset, 0, len(ids))
 
 	err := getManyUserAsset(
@@ -304,6 +307,7 @@ func BatchGetUserAsset(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
 	return rows, nil
 }
 
@@ -333,13 +337,25 @@ func GetUserAssetByName(
 	name string,
 ) (*UserAsset, error) {
 	mylog.Log.WithField("name", name).Info("GetUserAssetByName(name)")
-	return getUserAsset(
+	userAsset, err := getUserAsset(
 		db,
 		"getUserAssetByName",
 		getUserAssetByNameSQL,
 		studyID,
 		name,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"name":     name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"name":     name,
+		}).Info(util.Trace("user asset found"))
+	}
+	return userAsset, err
 }
 
 const batchGetUserAssetByNameSQL = `
@@ -367,10 +383,6 @@ func BatchGetUserAssetByName(
 	studyID string,
 	names []string,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"names":    names,
-	}).Info("BatchGetUserAssetByName(studyID, names)")
 	rows := make([]*UserAsset, 0, len(names))
 
 	lowerNames := make([]string, len(names))
@@ -390,6 +402,7 @@ func BatchGetUserAssetByName(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
 	return rows, nil
 }
 
@@ -417,21 +430,35 @@ const getUserAssetByUserStudyAndNameSQL = `
 
 func GetUserAssetByUserStudyAndName(
 	db Queryer,
-	userLogin,
-	studyName,
+	owner,
+	study,
 	name string,
 ) (*UserAsset, error) {
 	mylog.Log.WithField(
 		"name", name,
 	).Info("GetUserAssetByUserStudyAndName(name)")
-	return getUserAsset(
+	userAsset, err := getUserAsset(
 		db,
 		"getUserAssetByUserStudyAndName",
 		getUserAssetByUserStudyAndNameSQL,
-		userLogin,
-		studyName,
+		owner,
+		study,
 		name,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"study": study,
+			"name":  name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"study": study,
+			"name":  name,
+		}).Info(util.Trace("user asset found"))
+	}
+	return userAsset, err
 }
 
 func GetUserAssetByStudy(
@@ -449,6 +476,7 @@ func GetUserAssetByStudy(
 		if limit > 0 {
 			rows = make([]*UserAsset, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -484,6 +512,7 @@ func GetUserAssetByStudy(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
 	return rows, nil
 }
 
@@ -502,6 +531,7 @@ func GetUserAssetByUser(
 		if limit > 0 {
 			rows = make([]*UserAsset, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -537,6 +567,7 @@ func GetUserAssetByUser(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
 	return rows, nil
 }
 
@@ -631,6 +662,7 @@ func CreateUserAsset(
 		}
 	}
 
+	mylog.Log.Info(util.Trace("user asset created"))
 	return userAsset, nil
 }
 
@@ -643,15 +675,18 @@ func DeleteUserAsset(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteUserAsset(id)")
 	commandTag, err := prepareExec(db, "deleteUserAsset", deleteUserAssetSQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("user asset deleted"))
 	return nil
 }
 
@@ -666,6 +701,7 @@ func SearchUserAsset(
 		if limit > 0 {
 			rows = make([]*UserAsset, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -699,6 +735,7 @@ func SearchUserAsset(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
 	return rows, nil
 }
 
@@ -724,6 +761,7 @@ func UpdateUserAsset(
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetUserAsset(db, row.ID.String)
 	}
 
@@ -779,6 +817,7 @@ func UpdateUserAsset(
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("user asset updated"))
 	return userAsset, nil
 }
 
@@ -799,7 +838,22 @@ func ReplaceMarkdownUserAssetRefsWithLinks(
 			studyID,
 			name,
 		)
-		if err != nil && err != ErrNotFound {
+		if err != nil {
+			if err == ErrNotFound {
+				return s
+			} else {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return s
+			}
+		}
+		study, err := GetStudy(db, studyID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return s
+		}
+		user, err := GetUser(db, study.UserID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return s
 		}
 		updated = true
@@ -808,7 +862,13 @@ func ReplaceMarkdownUserAssetRefsWithLinks(
 			userAsset.UserID.Short,
 			userAsset.Key.String,
 		)
-		return util.ReplaceWithPadding(s, fmt.Sprintf("![%s](%s)", name, href))
+		link := fmt.Sprintf(
+			"http://localhost:3000/%s/%s/asset/%s",
+			user.Login.String,
+			study.Name.String,
+			userAsset.Name.String,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("[![%s](%s)](%s)", name, href, link))
 	}
 	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
 	if err != nil {

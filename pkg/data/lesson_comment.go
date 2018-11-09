@@ -548,12 +548,6 @@ func GetLessonCommentByUser(
 	return rows, nil
 }
 
-const updateNewLessonCommentBodySQL = `
-	UPDATE lesson_comment
-	SET body = $1
-	WHERE id = $2
-`
-
 // CreateLessonComment - create a lesson comment
 func CreateLessonComment(
 	db Queryer,
@@ -569,10 +563,6 @@ func CreateLessonComment(
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.ID))
 
-	if row.Body.Status != pgtype.Undefined {
-		columns = append(columns, "body")
-		values = append(values, args.Append(&row.Body))
-	}
 	if row.Draft.Status != pgtype.Undefined {
 		columns = append(columns, "draft")
 		values = append(values, args.Append(&row.Draft))
@@ -580,10 +570,6 @@ func CreateLessonComment(
 	if row.LessonID.Status != pgtype.Undefined {
 		columns = append(columns, "lesson_id")
 		values = append(values, args.Append(&row.LessonID))
-	}
-	if row.PublishedAt.Status != pgtype.Undefined {
-		columns = append(columns, "published_at")
-		values = append(values, args.Append(&row.PublishedAt))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
@@ -633,27 +619,6 @@ func CreateLessonComment(
 
 	if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
 		return nil, err
-	}
-
-	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, lessonComment.Body, lessonComment.StudyID.String)
-	if err != nil {
-		return nil, err
-	}
-	if updated {
-		if err := lessonComment.Body.Set(body); err != nil {
-			return nil, err
-		}
-
-		_, err := prepareExec(
-			tx,
-			"updateNewLessonCommentBody",
-			updateNewLessonCommentBodySQL,
-			lessonComment.Body.String,
-			lessonComment.ID.String,
-		)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if newTx {
@@ -724,18 +689,8 @@ func UpdateLessonComment(
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	if row.Body.Status != pgtype.Undefined {
-		body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
-		if err != nil {
-			return nil, err
-		}
-		if updated {
-			if err := row.Body.Set(body); err != nil {
-				return nil, err
-			}
-		}
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
-
 	if row.Draft.Status != pgtype.Undefined {
 		sets = append(sets, `draft`+"="+args.Append(&row.Draft))
 	}

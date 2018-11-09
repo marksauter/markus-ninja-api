@@ -8,7 +8,9 @@ import (
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type key string
@@ -321,4 +323,64 @@ func (r *Repos) GetTopicable(
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableID.Type)
 	}
+}
+
+func (r *Repos) ReplaceMarkdownUserAssetRefsWithLinks(
+	ctx context.Context,
+	markdown mytype.Markdown,
+	studyID string,
+) (*mytype.Markdown, error, bool) {
+	updated := false
+	userAssetRefToLink := func(s string) string {
+		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		name := result[1]
+		userAssetPermit, err := r.UserAsset().GetByName(
+			ctx,
+			studyID,
+			name,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return s
+		}
+		userAsset := userAssetPermit.Get()
+
+		studyPermit, err := r.Study().Get(ctx, studyID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return s
+		}
+		study := studyPermit.Get()
+
+		userPermit, err := r.User().Get(ctx, study.UserID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return s
+		}
+		user := userPermit.Get()
+
+		updated = true
+		href := fmt.Sprintf(
+			"http://localhost:5000/user/assets/%s/%s",
+			userAsset.UserID.Short,
+			userAsset.Key.String,
+		)
+		link := fmt.Sprintf(
+			"http://localhost:3000/%s/%s/asset/%s",
+			user.Login.String,
+			study.Name.String,
+			userAsset.Name.String,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("[![%s](%s)](%s)", name, href, link))
+	}
+	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err, false
+	}
+
+	return &markdown, nil, updated
 }
