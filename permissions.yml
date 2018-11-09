@@ -297,6 +297,7 @@ permissions:
       - owner
     fields:
       - body
+      - draft
       - number
       - published_at
       - title
@@ -340,6 +341,7 @@ permissions:
       - owner
     fields:
       - body
+      - draft
       - published_at
   - operation: Delete LessonComment
     authenticated: true

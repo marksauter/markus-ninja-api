@@ -901,12 +901,6 @@ func BatchGetLessonByNumber(
 	return rows, nil
 }
 
-const updateNewLessonBodySQL = `
-	UPDATE lesson
-	SET body = $1
-	WHERE id = $2
-`
-
 func CreateLesson(
 	db Queryer,
 	row *Lesson,
@@ -921,17 +915,9 @@ func CreateLesson(
 	columns = append(columns, "id")
 	values = append(values, args.Append(&row.ID))
 
-	if row.Body.Status != pgtype.Undefined {
-		columns = append(columns, "body")
-		values = append(values, args.Append(&row.Body))
-	}
 	if row.Draft.Status != pgtype.Undefined {
 		columns = append(columns, "draft")
 		values = append(values, args.Append(&row.Draft))
-	}
-	if row.PublishedAt.Status != pgtype.Undefined {
-		columns = append(columns, "published_at")
-		values = append(values, args.Append(&row.PublishedAt))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
@@ -1008,30 +994,6 @@ func CreateLesson(
 	if err := ParseLessonBodyForEvents(tx, lesson); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
-	}
-
-	body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, lesson.Body, lesson.StudyID.String)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if updated {
-		if err := lesson.Body.Set(body); err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
-
-		_, err := prepareExec(
-			tx,
-			"updateNewLessonBody",
-			updateNewLessonBodySQL,
-			lesson.Body.String,
-			lesson.ID.String,
-		)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
 	}
 
 	if newTx {
@@ -1136,20 +1098,8 @@ func UpdateLesson(
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
 	if row.Body.Status != pgtype.Undefined {
-		body, err, updated := ReplaceMarkdownUserAssetRefsWithLinks(tx, row.Body, row.StudyID.String)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
-		if updated {
-			if err := row.Body.Set(body); err != nil {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
-		}
 		sets = append(sets, `body`+"="+args.Append(&row.Body))
 	}
-
 	if row.Draft.Status != pgtype.Undefined {
 		sets = append(sets, `draft`+"="+args.Append(&row.Draft))
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type AddCourseLessonInput struct {
@@ -1040,17 +1041,38 @@ func (r *RootResolver) PublishLessonDraft(
 	if err != nil {
 		return nil, err
 	}
+	studyID, err := currentLessonPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
 
 	lesson := &data.Lesson{}
 	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
 		return nil, errors.New("Invalid lessonId")
 	}
+
 	if err := lesson.Body.Set(draft); err != nil {
-		mylog.Log.WithError(err).Error("failed to set lesson's body to its draft")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
+	body, err, updated := r.Repos.ReplaceMarkdownUserAssetRefsWithLinks(
+		ctx,
+		lesson.Body,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := lesson.Body.Set(body); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
 	if err := lesson.PublishedAt.Set(time.Now()); err != nil {
-		mylog.Log.WithError(err).Error("failed to set lesson published_at")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
 
@@ -1080,17 +1102,38 @@ func (r *RootResolver) PublishLessonCommentDraft(
 	if err != nil {
 		return nil, err
 	}
+	studyID, err := currentLessonCommentPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
 
 	lessonComment := &data.LessonComment{}
 	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
 		return nil, errors.New("Invalid lessonCommentId")
 	}
+
 	if err := lessonComment.Body.Set(draft); err != nil {
-		mylog.Log.WithError(err).Error("failed to set lesson comment's body to its draft")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
+	body, err, updated := r.Repos.ReplaceMarkdownUserAssetRefsWithLinks(
+		ctx,
+		lessonComment.Body,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := lessonComment.Body.Set(body); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
 	if err := lessonComment.PublishedAt.Set(time.Now()); err != nil {
-		mylog.Log.WithError(err).Error("failed to set lesson comment published_at")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
 
