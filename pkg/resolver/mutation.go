@@ -1055,7 +1055,7 @@ func (r *RootResolver) PublishLessonDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
-	body, err, updated := r.Repos.ReplaceMarkdownUserAssetRefsWithLinks(
+	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
 		ctx,
 		lesson.Body,
 		studyID.String,
@@ -1116,7 +1116,7 @@ func (r *RootResolver) PublishLessonCommentDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
-	body, err, updated := r.Repos.ReplaceMarkdownUserAssetRefsWithLinks(
+	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
 		ctx,
 		lessonComment.Body,
 		studyID.String,
@@ -1343,6 +1343,111 @@ func (r *RootResolver) RequestPasswordReset(
 	}
 
 	return resolver, nil
+}
+
+type ResetLessonDraftInput struct {
+	LessonID string
+}
+
+func (r *RootResolver) ResetLessonDraft(
+	ctx context.Context,
+	args struct{ Input ResetLessonDraftInput },
+) (*lessonResolver, error) {
+	currentLessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonID)
+	if err != nil {
+		return nil, errors.New("lesson not found")
+	}
+	body, err := currentLessonPermit.Body()
+	if err != nil {
+		return nil, err
+	}
+	studyID, err := currentLessonPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := &data.Lesson{}
+	if err := lesson.ID.Set(args.Input.LessonID); err != nil {
+		return nil, errors.New("Invalid lessonId")
+	}
+
+	draft, err, updated := r.Repos.ReplaceMarkdownLinksWithRefs(
+		ctx,
+		body.String,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := lesson.Draft.Set(draft); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+}
+
+type ResetLessonCommentDraftInput struct {
+	LessonCommentID string
+}
+
+func (r *RootResolver) ResetLessonCommentDraft(
+	ctx context.Context,
+	args struct {
+		Input ResetLessonCommentDraftInput
+	},
+) (*lessonCommentResolver, error) {
+	currentLessonCommentPermit, err := r.Repos.LessonComment().Get(
+		ctx,
+		args.Input.LessonCommentID,
+	)
+	if err != nil {
+		return nil, errors.New("lesson comment not found")
+	}
+	body, err := currentLessonCommentPermit.Body()
+	if err != nil {
+		return nil, err
+	}
+	studyID, err := currentLessonCommentPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
+
+	lessonComment := &data.LessonComment{}
+	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
+		return nil, errors.New("Invalid lessonCommentId")
+	}
+
+	draft, err, updated := r.Repos.ReplaceMarkdownLinksWithRefs(
+		ctx,
+		body.String,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := lessonComment.Draft.Set(draft); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
 }
 
 type ResetPasswordInput struct {

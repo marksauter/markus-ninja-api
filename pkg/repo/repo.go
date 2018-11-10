@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -383,4 +385,202 @@ func (r *Repos) ReplaceMarkdownUserAssetRefsWithLinks(
 	}
 
 	return &markdown, nil, updated
+}
+
+func (r *Repos) ReplaceMarkdownRefsWithLinks(
+	ctx context.Context,
+	markdown mytype.Markdown,
+	studyID string,
+) (*mytype.Markdown, error, bool) {
+	updated := false
+	body := markdown.String
+	studyPermit, err := r.Study().Get(ctx, studyID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err, false
+	}
+	study := studyPermit.Get()
+
+	userPermit, err := r.User().Get(ctx, study.UserID.String)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err, false
+	}
+	user := userPermit.Get()
+
+	userAssetRefToLink := func(s string) string {
+		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		name := result[1]
+		userAssetPermit, err := r.UserAsset().GetByName(
+			ctx,
+			studyID,
+			name,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return s
+		}
+		userAsset := userAssetPermit.Get()
+
+		updated = true
+		src := fmt.Sprintf(
+			"http://localhost:5000/user/assets/%s/%s",
+			userAsset.UserID.Short,
+			userAsset.Key.String,
+		)
+		href := fmt.Sprintf(
+			"http://localhost:3000/%s/%s/asset/%s",
+			user.Login.String,
+			study.Name.String,
+			userAsset.Name.String,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---USER_ASSET_LINK--->[![$$%s](%s)](%s)", name, src, href))
+	}
+	body = mytype.AssetRefRegexp.ReplaceAllStringFunc(body, userAssetRefToLink)
+
+	lessonNumberRefToLink := func(s string) string {
+		result := mytype.NumberRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		number := result[1]
+		n, err := strconv.ParseInt(number, 10, 32)
+		if err != nil {
+			return s
+		}
+		exists, err := r.Lesson().ExistsByNumber(ctx, studyID, int32(n))
+		if err != nil {
+			return s
+		}
+		if !exists {
+			return s
+		}
+
+		updated = true
+		href := fmt.Sprintf(
+			"http://localhost:3000/%s/%s/lesson/%d",
+			user.Login.String,
+			study.Name.String,
+			n,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---LESSON_LINK--->[#%d](%s)", n, href))
+	}
+	body = mytype.NumberRefRegexp.ReplaceAllStringFunc(body, lessonNumberRefToLink)
+
+	crossStudyRefToLink := func(s string) string {
+		result := mytype.CrossStudyRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		owner := result[1]
+		name := result[2]
+		number := result[3]
+		n, err := strconv.ParseInt(number, 10, 32)
+		if err != nil {
+			return s
+		}
+		exists, err := r.Lesson().ExistsByOwnerStudyAndNumber(ctx, owner, name, int32(n))
+		if err != nil {
+			return s
+		}
+		if !exists {
+			return s
+		}
+
+		updated = true
+		link := fmt.Sprintf("%s/%s#%d", owner, name, n)
+		href := fmt.Sprintf(
+			"http://localhost:3000/%s/%s/lesson/%d",
+			owner,
+			name,
+			n,
+		)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---STUDY_LINK--->[%s](%s)", link, href))
+	}
+	body = mytype.CrossStudyRefRegexp.ReplaceAllStringFunc(body, crossStudyRefToLink)
+
+	userRefToLink := func(s string) string {
+		result := mytype.AtRefRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		name := result[1]
+		exists, err := r.User().ExistsByLogin(ctx, name)
+		if err != nil {
+			return s
+		}
+		if !exists {
+			return s
+		}
+
+		updated = true
+		href := fmt.Sprintf("http://localhost:3000/%s", user.Login.String)
+		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---USER_LINK--->[@%s](%s)", name, href))
+	}
+	body = mytype.AtRefRegexp.ReplaceAllStringFunc(body, userRefToLink)
+
+	if err := markdown.Set(body); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err, false
+	}
+
+	return &markdown, nil, updated
+}
+
+var UserLinkRegexp = regexp.MustCompile(`<!---USER_LINK--->\[(@\w+)\]\(.*?\)`)
+var UserAssetLinkRegexp = regexp.MustCompile(`<!---USER_ASSET_LINK--->\[(\$\$\w+)\]\(.*?\)`)
+var LessonLinkRegexp = regexp.MustCompile(`<!---LESSON_LINK--->\[(#\d+)\]\(.*?\)`)
+var StudyLinkRegexp = regexp.MustCompile(`<!---STUDY_LINK--->\[(\w+\/[\w-]{1,39}#\d+)\]\(.*?\)`)
+
+func (r *Repos) ReplaceMarkdownLinksWithRefs(
+	ctx context.Context,
+	markdown,
+	studyID string,
+) (string, error, bool) {
+	updated := false
+
+	userAssetLinkToRef := func(s string) string {
+		result := UserAssetLinkRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		updated = true
+		return result[1]
+	}
+	markdown = UserAssetLinkRegexp.ReplaceAllStringFunc(markdown, userAssetLinkToRef)
+
+	lessonNumberLinkToRef := func(s string) string {
+		result := LessonLinkRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		updated = true
+		return result[1]
+	}
+	markdown = LessonLinkRegexp.ReplaceAllStringFunc(markdown, lessonNumberLinkToRef)
+
+	crossStudyLinkToRef := func(s string) string {
+		result := StudyLinkRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		updated = true
+		return result[1]
+	}
+	markdown = StudyLinkRegexp.ReplaceAllStringFunc(markdown, crossStudyLinkToRef)
+
+	userLinkToRef := func(s string) string {
+		result := UserLinkRegexp.FindStringSubmatch(s)
+		if len(result) == 0 {
+			return s
+		}
+		updated = true
+		return result[1]
+	}
+	markdown = UserLinkRegexp.ReplaceAllStringFunc(markdown, userLinkToRef)
+
+	return markdown, nil, updated
 }

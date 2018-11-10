@@ -129,9 +129,9 @@ type Mutation {
   # Move course lesson to another position.
   moveCourseLesson(input: MoveCourseLessonInput!): MoveCourseLessonPayload
 
-  # Publishes the body changes proposed in the lesson's draft.
+  # Publishes the body changes proposed in a lesson's draft.
   publishLessonDraft(input: PublishLessonDraftInput!): Lesson
-  # Publishes the body changes proposed in the lesson comment's draft.
+  # Publishes the body changes proposed in a lesson comment's draft.
   publishLessonCommentDraft(input: PublishLessonCommentDraftInput!): LessonComment
 
   # Removes a lesson from a course.
@@ -142,6 +142,10 @@ type Mutation {
   requestEmailVerification(input: RequestEmailVerificationInput!): Boolean!
   # Requests a password reset mail to be sent.
   requestPasswordReset(input: RequestPasswordResetInput!): PRT
+  # Resets a lesson's draft to match its body.
+  resetLessonDraft(input: ResetLessonDraftInput!): Lesson
+  # Resets a lesson comment's draft to match its body.
+  resetLessonCommentDraft(input: ResetLessonCommentDraftInput!): LessonComment
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
 
