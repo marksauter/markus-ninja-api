@@ -4,15 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type lessonCommentResolver struct {
@@ -41,102 +38,10 @@ func (r *lessonCommentResolver) Body() (string, error) {
 }
 
 func (r *lessonCommentResolver) BodyHTML(ctx context.Context) (mygql.HTML, error) {
-	commentBody, err := r.LessonComment.Body()
+	body, err := r.LessonComment.Body()
 	if err != nil {
 		return "", err
 	}
-	body := *commentBody
-	studyID, err := r.LessonComment.StudyID()
-	if err != nil {
-		return "", err
-	}
-	bodyStr := body.String
-
-	study, err := r.Study(ctx)
-	if err != nil {
-		return "", err
-	}
-	studyPath, err := study.ResourcePath(ctx)
-	if err != nil {
-		return "", err
-	}
-	lessonNumberRefToLink := func(s string) string {
-		result := mytype.NumberRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
-			return s
-		}
-		number := result[1]
-		n, err := strconv.ParseInt(number, 10, 32)
-		if err != nil {
-			return s
-		}
-		exists, err := r.Repos.Lesson().ExistsByNumber(ctx, studyID.String, int32(n))
-		if err != nil {
-			return s
-		}
-		if !exists {
-			return s
-		}
-		return util.ReplaceWithPadding(s, fmt.Sprintf("[#%[3]d](%[1]s%[2]s/lesson/%[3]d)",
-			clientURL,
-			studyPath,
-			n,
-		))
-	}
-	bodyStr = mytype.NumberRefRegexp.ReplaceAllStringFunc(bodyStr, lessonNumberRefToLink)
-
-	crossStudyRefToLink := func(s string) string {
-		result := mytype.CrossStudyRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
-			return s
-		}
-		owner := result[1]
-		name := result[2]
-		number := result[3]
-		n, err := strconv.ParseInt(number, 10, 32)
-		if err != nil {
-			return s
-		}
-		exists, err := r.Repos.Lesson().ExistsByOwnerStudyAndNumber(ctx, owner, name, int32(n))
-		if err != nil {
-			return s
-		}
-		if !exists {
-			return s
-		}
-		return util.ReplaceWithPadding(s, fmt.Sprintf("[%[2]s/%[3]s#%[4]d](%[1]s/%[2]s/%[3]s/lesson/%[4]d)",
-			clientURL,
-			owner,
-			name,
-			n,
-		))
-	}
-	bodyStr = mytype.CrossStudyRefRegexp.ReplaceAllStringFunc(bodyStr, crossStudyRefToLink)
-
-	userRefToLink := func(s string) string {
-		result := mytype.AtRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
-			return s
-		}
-		name := result[1]
-		exists, err := r.Repos.User().ExistsByLogin(ctx, name)
-		if err != nil {
-			return s
-		}
-		if !exists {
-			return s
-		}
-		return util.ReplaceWithPadding(s, fmt.Sprintf("[@%[2]s](%[1]s/%[2]s)",
-			clientURL,
-			name,
-		))
-	}
-	bodyStr = mytype.AtRefRegexp.ReplaceAllStringFunc(bodyStr, userRefToLink)
-
-	if err := body.Set(bodyStr); err != nil {
-		return "", err
-	}
-
 	return mygql.HTML(body.ToHTML()), nil
 }
 
