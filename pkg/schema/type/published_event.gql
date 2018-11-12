@@ -1,16 +1,15 @@
-# Represents an created event on a given subject.
-type CreatedEvent implements 
+# Represents a published event on a given subject.
+type PublishedEvent implements 
   Node,
-  UserActivityEvent,
   StudyActivityEvent
 {
-  # The createable assocated with this `created` event.
-  createable: Createable!
-
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
   id: ID!
+
+  # The publishable associated with this `published` event.
+  publishable: Publishable!
 
   # The study from which the event occurred.
   study: Study!

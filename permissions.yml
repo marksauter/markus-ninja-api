@@ -368,22 +368,20 @@ permissions:
 
 
 
-  # Everyone can create password reset tokens.
-  - operation: Create PRT
-    fields:
-      - email_id
-      - expires_at
-      - issued_at
-      - request_ip
-      - user_id
-  # Only owners can update password reset tokens.
-  - operation: Update PRT
+  # Owners can read the following fields for a password reset token.
+  - operation: Read PRT
     authenticated: true
     roles:
       - owner
     fields:
+      - email_id
       - end_ip
       - ended_at
+      - expires_at
+      - issued_at
+      - request_ip
+      - token
+      - user_id
   # Admins can read the following fields for a password reset token.
   - operation: Read PRT
     authenticated: true
@@ -397,12 +395,25 @@ permissions:
       - issued_at
       - request_ip
       - user_id
+  # Everyone can create password reset tokens.
+  - operation: Create PRT
+    fields:
+      - email_id
+      - request_ip
+      - user_id
+  # Only owners can update password reset tokens.
+  - operation: Update PRT
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - end_ip
+      - ended_at
 
 
 
   # Everyone can read studies.
   - operation: Read Study
-
   # Only authenticated users can create studies.
   - operation: Create Study
     authenticated: true

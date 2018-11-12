@@ -1033,6 +1033,14 @@ func (r *RootResolver) PublishLessonDraft(
 	ctx context.Context,
 	args struct{ Input PublishLessonDraftInput },
 ) (*lessonResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	currentLessonPermit, err := r.Repos.Lesson().Get(ctx, args.Input.LessonID)
 	if err != nil {
 		return nil, errors.New("lesson not found")
@@ -1042,6 +1050,10 @@ func (r *RootResolver) PublishLessonDraft(
 		return nil, err
 	}
 	studyID, err := currentLessonPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
+	userID, err := currentLessonPermit.UserID()
 	if err != nil {
 		return nil, err
 	}
@@ -1055,6 +1067,19 @@ func (r *RootResolver) PublishLessonDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
+
+	err = r.Repos.ParseLessonBodyForEvents(
+		ctx,
+		&lesson.Body,
+		&lesson.ID,
+		studyID,
+		userID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
 	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
 		ctx,
 		lesson.Body,
@@ -1079,6 +1104,13 @@ func (r *RootResolver) PublishLessonDraft(
 	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
 	if err != nil {
 		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
@@ -1106,6 +1138,10 @@ func (r *RootResolver) PublishLessonCommentDraft(
 	if err != nil {
 		return nil, err
 	}
+	userID, err := currentLessonCommentPermit.UserID()
+	if err != nil {
+		return nil, err
+	}
 
 	lessonComment := &data.LessonComment{}
 	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
@@ -1116,6 +1152,19 @@ func (r *RootResolver) PublishLessonCommentDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
+
+	err = r.Repos.ParseLessonBodyForEvents(
+		ctx,
+		&lessonComment.Body,
+		&lessonComment.LessonID,
+		studyID,
+		userID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
 	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
 		ctx,
 		lessonComment.Body,
@@ -1279,7 +1328,8 @@ func (r *RootResolver) RequestPasswordReset(
 ) (*prtResolver, error) {
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	} else if newTx {
 		defer data.RollbackTransaction(tx)
 	}
@@ -1288,12 +1338,14 @@ func (r *RootResolver) RequestPasswordReset(
 	email, err := data.GetEmailByValue(tx, args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
-			return nil, errors.New("`email` not found")
+			return nil, errors.New("email not found")
 		}
-		return nil, err
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	}
 	user, err := data.GetUser(tx, email.UserID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("no user with that email was found")
 	}
 
@@ -1301,25 +1353,34 @@ func (r *RootResolver) RequestPasswordReset(
 
 	requestIp, ok := myctx.RequesterIpFromContext(ctx)
 	if !ok {
-		return nil, errors.New("requester ip not found")
+		err := errors.New("requester ip not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	prt := &data.PRT{}
 	if err := prt.EmailID.Set(&email.ID); err != nil {
-		mylog.Log.Error(err)
-		return nil, myerr.UnexpectedError{"failed to set prt email_id"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	}
 	if err := prt.UserID.Set(&email.UserID); err != nil {
-		mylog.Log.Error(err)
-		return nil, myerr.UnexpectedError{"failed to set prt user_id"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	}
 	if err := prt.RequestIP.Set(requestIp); err != nil {
-		mylog.Log.Error(err)
-		return nil, myerr.UnexpectedError{"failed to set prt request_ip"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	}
 
 	prtPermit, err := r.Repos.PRT().Create(ctx, prt)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	token, err := prtPermit.Token()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -1328,7 +1389,7 @@ func (r *RootResolver) RequestPasswordReset(
 	sendMailInput := &service.SendPasswordResetInput{
 		To:        args.Input.Email,
 		UserLogin: user.Login.String,
-		Token:     prt.Token.String,
+		Token:     token,
 	}
 	err = r.Svcs.Mail.SendPasswordResetMail(sendMailInput)
 	if err != nil {
@@ -1338,6 +1399,7 @@ func (r *RootResolver) RequestPasswordReset(
 	if newTx {
 		err := data.CommitTransaction(tx)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return resolver, err
 		}
 	}

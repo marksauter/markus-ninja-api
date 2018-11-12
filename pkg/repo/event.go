@@ -116,7 +116,7 @@ func (r *EventRepo) CheckConnection() error {
 func (r *EventRepo) CountByLesson(
 	ctx context.Context,
 	lessonID string,
-	filters *data.EventFilterOptions,
+	filters *data.LessonEventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -195,6 +195,8 @@ func (r *EventRepo) Create(
 	event, err := data.CreateEvent(db, event)
 	if err != nil {
 		return nil, err
+	} else if event == nil {
+		return nil, nil
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, event)
 	if err != nil {
@@ -225,7 +227,7 @@ func (r *EventRepo) GetByLesson(
 	ctx context.Context,
 	lessonID string,
 	po *data.PageOptions,
-	filters *data.EventFilterOptions,
+	filters *data.LessonEventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err

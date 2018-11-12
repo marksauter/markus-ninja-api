@@ -344,9 +344,12 @@ func (r *lessonResolver) PreviousLesson(ctx context.Context) (*lessonResolver, e
 	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
 }
 
-func (r *lessonResolver) PublishedAt() (graphql.Time, error) {
+func (r *lessonResolver) PublishedAt() (*graphql.Time, error) {
 	t, err := r.Lesson.PublishedAt()
-	return graphql.Time{t}, err
+	if err != nil {
+		return nil, err
+	}
+	return &graphql.Time{t}, nil
 }
 
 func (r *lessonResolver) ResourcePath(
@@ -415,7 +418,7 @@ func (r *lessonResolver) Timeline(
 		mytype.CreatedAction.String(),
 		mytype.MentionedAction.String(),
 	}
-	filters := &data.EventFilterOptions{
+	filters := &data.LessonEventFilterOptions{
 		ActionIsNot: &actionIsNot,
 	}
 	events, err := r.Repos.Event().GetByLesson(

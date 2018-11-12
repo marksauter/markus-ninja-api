@@ -493,6 +493,49 @@ func (r *LessonRepo) GetByNumber(
 	return &LessonPermit{fieldPermFn, lesson}, nil
 }
 
+func (r *LessonRepo) BatchGetByNumber(
+	ctx context.Context,
+	studyID string,
+	numbers []int32,
+) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lessons, err := data.BatchGetLessonByNumber(db, studyID, numbers)
+	if err != nil {
+		return nil, err
+	}
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
+}
+
+func (r *LessonRepo) GetByOwnerStudyAndNumber(
+	ctx context.Context,
+	owner,
+	study string,
+	number int32,
+) (*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	lesson, err := data.GetLessonByOwnerStudyAndNumber(db, owner, study, number)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
+	if err != nil {
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
 func (r *LessonRepo) Delete(
 	ctx context.Context,
 	lesson *data.Lesson,

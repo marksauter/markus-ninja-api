@@ -553,7 +553,6 @@ func CreateLessonComment(
 	db Queryer,
 	row *LessonComment,
 ) (*LessonComment, error) {
-	mylog.Log.Info("CreateLessonComment()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
 
 	var columns, values []string
@@ -580,15 +579,6 @@ func CreateLessonComment(
 		values = append(values, args.Append(&row.UserID))
 	}
 
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
 	sql := `
 		INSERT INTO lesson_comment(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
@@ -596,7 +586,7 @@ func CreateLessonComment(
 
 	psName := preparedName("createLessonComment", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
+	_, err := prepareExec(db, psName, sql, args...)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to create lesson_comment")
 		if pgErr, ok := err.(pgx.PgError); ok {
@@ -606,29 +596,21 @@ func CreateLessonComment(
 			case UniqueViolation:
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	lessonComment, err := GetLessonComment(tx, row.ID.String)
+	lessonComment, err := GetLessonComment(db, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if err := ParseLessonCommentBodyForEvents(tx, lessonComment); err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
+	mylog.Log.WithField("id", lessonComment.ID.String).Info(util.Trace("lesson comment created"))
 	return lessonComment, nil
 }
 
@@ -664,8 +646,6 @@ func UpdateLessonComment(
 	db Queryer,
 	row *LessonComment,
 ) (*LessonComment, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateLessonComment(id)")
-
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
 		mylog.Log.WithError(err).Error("error starting transaction")
@@ -676,11 +656,6 @@ func UpdateLessonComment(
 	}
 
 	currentLessonComment, err := GetLessonComment(tx, row.ID.String)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ParseLessonCommentBodyForEvents(tx, row)
 	if err != nil {
 		return nil, err
 	}
@@ -708,15 +683,19 @@ func UpdateLessonComment(
 
 		commandTag, err := prepareExec(tx, psName, sql, args...)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		if commandTag.RowsAffected() != 1 {
-			return nil, ErrNotFound
+			err := ErrNotFound
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
 		}
 	}
 
 	lessonComment, err := GetLessonComment(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -724,13 +703,16 @@ func UpdateLessonComment(
 		lessonComment.PublishedAt.Status != pgtype.Null {
 		eventPayload, err := NewLessonCommentedPayload(&lessonComment.LessonID, &lessonComment.ID)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-		event, err := NewLessonEvent(eventPayload, &lessonComment.StudyID, &lessonComment.UserID)
+		event, err := NewLessonEvent(eventPayload, &lessonComment.StudyID, &lessonComment.UserID, true)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		if _, err := CreateEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
@@ -738,155 +720,11 @@ func UpdateLessonComment(
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("lesson comment updated"))
 	return lessonComment, nil
-}
-
-// ParseLessonCommentBodyForEvents - parse lesson comment body for events
-func ParseLessonCommentBodyForEvents(
-	db Queryer,
-	comment *LessonComment,
-) error {
-	mylog.Log.Debug("ParseLessonCommentBodyForEvents()")
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	userAssetRefs := comment.Body.AssetRefs()
-	if len(userAssetRefs) > 0 {
-		names := make([]string, len(userAssetRefs))
-		for i, ref := range userAssetRefs {
-			names[i] = ref.Name
-		}
-		userAssets, err := BatchGetUserAssetByName(
-			tx,
-			comment.StudyID.String,
-			names,
-		)
-		if err != nil {
-			return err
-		}
-		for _, a := range userAssets {
-			payload, err := NewUserAssetReferencedPayload(&a.ID, &comment.LessonID)
-			if err != nil {
-				return err
-			}
-			event, err := NewUserAssetEvent(payload, &comment.StudyID, &comment.UserID)
-			if err != nil {
-				return err
-			}
-			if _, err = CreateEvent(tx, event); err != nil {
-				return err
-			}
-		}
-	}
-	lessonNumberRefs, err := comment.Body.NumberRefs()
-	if err != nil {
-		return err
-	}
-	if len(lessonNumberRefs) > 0 {
-		numbers := make([]int32, len(lessonNumberRefs))
-		for i, ref := range lessonNumberRefs {
-			numbers[i] = ref.Number
-		}
-		lessons, err := BatchGetLessonByNumber(
-			tx,
-			comment.StudyID.String,
-			numbers,
-		)
-		if err != nil {
-			return err
-		}
-		for _, l := range lessons {
-			if l.ID.String != comment.LessonID.String {
-				payload, err := NewLessonReferencedPayload(&l.ID, &comment.LessonID)
-				if err != nil {
-					return err
-				}
-				event, err := NewLessonEvent(payload, &comment.StudyID, &comment.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	crossStudyRefs, err := comment.Body.CrossStudyRefs()
-	if err != nil {
-		return err
-	}
-	for _, ref := range crossStudyRefs {
-		l, err := GetLessonByOwnerStudyAndNumber(
-			tx,
-			ref.Owner,
-			ref.Name,
-			ref.Number,
-		)
-		if err != nil {
-			return err
-		}
-		if l.ID.String != comment.LessonID.String {
-			payload, err := NewLessonReferencedPayload(&l.ID, &comment.LessonID)
-			if err != nil {
-				return err
-			}
-			event, err := NewLessonEvent(payload, &comment.StudyID, &comment.UserID)
-			if err != nil {
-				return err
-			}
-			if _, err = CreateEvent(tx, event); err != nil {
-				return err
-			}
-		}
-	}
-	userRefs := comment.Body.AtRefs()
-	if len(userRefs) > 0 {
-		names := make([]string, len(userRefs))
-		for i, ref := range userRefs {
-			names[i] = ref.Name
-		}
-		users, err := BatchGetUserByLogin(
-			tx,
-			names,
-		)
-		if err != nil {
-			return err
-		}
-		for _, u := range users {
-			if u.ID.String != comment.UserID.String {
-				payload, err := NewLessonMentionedPayload(&comment.LessonID)
-				if err != nil {
-					return err
-				}
-				event, err := NewLessonEvent(payload, &comment.StudyID, &comment.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return err
-		}
-	}
-
-	return nil
 }

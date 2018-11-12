@@ -37,19 +37,24 @@ func (r *userResolver) Activity(
 		OrderBy *OrderArg
 	},
 ) (*userActivityConnectionResolver, error) {
+	resolver := userActivityConnectionResolver{}
+
 	filters := &data.EventFilterOptions{}
-	_, ok := myctx.UserFromContext(ctx)
-	if !ok {
+	ok, err := r.IsViewer(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
 		filters.IsPublic = util.NewBool(true)
 	}
 
 	userID, err := r.User.ID()
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 	eventOrder, err := ParseEventOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -60,12 +65,16 @@ func (r *userResolver) Activity(
 		eventOrder,
 	)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
-	eventTypes := []string{
-		mytype.CourseEvent.String(),
-		mytype.StudyEvent.String(),
+	eventTypes := []data.EventTypeFilter{
+		data.EventTypeFilter{
+			Type: mytype.CourseEvent.String(),
+		},
+		data.EventTypeFilter{
+			Type: mytype.StudyEvent.String(),
+		},
 	}
 	filters.Types = &eventTypes
 	events, err := r.Repos.Event().GetByUser(
@@ -75,7 +84,7 @@ func (r *userResolver) Activity(
 		filters,
 	)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	return NewUserActivityConnectionResolver(

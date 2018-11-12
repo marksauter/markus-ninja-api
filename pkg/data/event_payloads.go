@@ -17,6 +17,7 @@ const (
 	LessonCommented         = "commented"
 	LessonLabeled           = "labeled"
 	LessonMentioned         = "mentioned"
+	LessonPublished         = "published"
 	LessonReferenced        = "referenced"
 	LessonRemovedFromCourse = "removed_from_course"
 	LessonRenamed           = "renamed"
@@ -102,6 +103,15 @@ func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) 
 
 func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonMentioned}
+	if err := payload.LessonID.Set(lessonID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{Action: LessonPublished}
 	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}

@@ -57,6 +57,11 @@ func (r *nodeResolver) ToNotification() (*notificationResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToPublishedEvent() (*publishedEventResolver, bool) {
+	resolver, ok := r.node.(*publishedEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
 	resolver, ok := r.node.(*referencedEventResolver)
 	return resolver, ok

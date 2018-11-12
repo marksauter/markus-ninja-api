@@ -121,6 +121,25 @@ type UserRepo struct {
 	permit *Permitter
 }
 
+func (r *UserRepo) filterPermittable(
+	ctx context.Context,
+	accessLevel mytype.AccessLevel,
+	users []*data.User,
+) ([]*UserPermit, error) {
+	userPermits := make([]*UserPermit, 0, len(users))
+	for _, l := range users {
+		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
+		if err != nil {
+			if err != ErrAccessDenied {
+				return nil, err
+			}
+		} else {
+			userPermits = append(userPermits, &UserPermit{fieldPermFn, l})
+		}
+	}
+	return userPermits, nil
+}
+
 func (r *UserRepo) Open(p *Permitter) error {
 	if p == nil {
 		return errors.New("permitter must not be nil")
@@ -275,17 +294,7 @@ func (r *UserRepo) GetByEnrollee(
 	if err != nil {
 		return nil, err
 	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, users)
 }
 
 func (r *UserRepo) GetByAppleable(
@@ -305,17 +314,7 @@ func (r *UserRepo) GetByAppleable(
 	if err != nil {
 		return nil, err
 	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, users)
 }
 
 func (r *UserRepo) GetByEnrollable(
@@ -335,17 +334,7 @@ func (r *UserRepo) GetByEnrollable(
 	if err != nil {
 		return nil, err
 	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, users)
 }
 
 func (r *UserRepo) GetByLogin(
@@ -364,6 +353,24 @@ func (r *UserRepo) GetByLogin(
 		return nil, err
 	}
 	return &UserPermit{fieldPermFn, user}, nil
+}
+
+func (r *UserRepo) BatchGetByLogin(
+	ctx context.Context,
+	logins []string,
+) ([]*UserPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	users, err := data.BatchGetUserByLogin(db, logins)
+	if err != nil {
+		return nil, err
+	}
+	return r.filterPermittable(ctx, mytype.ReadAccess, users)
 }
 
 func (r *UserRepo) Delete(
@@ -399,17 +406,7 @@ func (r *UserRepo) Search(
 	if err != nil {
 		return nil, err
 	}
-	userPermits := make([]*UserPermit, len(users))
-	if len(users) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, users[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range users {
-			userPermits[i] = &UserPermit{fieldPermFn, l}
-		}
-	}
-	return userPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, users)
 }
 
 func (r *UserRepo) UpdateAccount(

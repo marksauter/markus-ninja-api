@@ -5,6 +5,7 @@ type Lesson implements
   Enrollable,
   Labelable,
   Node,
+  Publishable,
   Referenceable,
   Searchable,
   StudyNode,
@@ -119,7 +120,7 @@ type Lesson implements
   previousLesson: Lesson
 
   # Identifies when the lesson was last published.
-  publishedAt: Time!
+  publishedAt: Time
 
   # The study associated with this lesson.
   study: Study!
