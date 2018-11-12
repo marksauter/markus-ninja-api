@@ -12,6 +12,9 @@ enum LessonOrderField {
   # Order lessons by number.
   NUMBER
 
+  # Order lessons by publish time.
+  PUBLISHED_AT
+
   # Order lessons by update time.
   UPDATED_AT
 }

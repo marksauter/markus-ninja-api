@@ -22,6 +22,82 @@ type studyResolver struct {
 	Repos *repo.Repos
 }
 
+func (r *studyResolver) Activity(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*studyActivityConnectionResolver, error) {
+	resolver := studyActivityConnectionResolver{}
+
+	filters := &data.EventFilterOptions{}
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublic = util.NewBool(true)
+	}
+
+	studyID, err := r.Study.ID()
+	if err != nil {
+		return &resolver, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return &resolver, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	eventTypes := []data.EventTypeFilter{
+		data.EventTypeFilter{
+			ActionIs: &[]string{
+				mytype.CreatedAction.String(),
+			},
+			Type: mytype.CourseEvent.String(),
+		},
+		data.EventTypeFilter{
+			ActionIs: &[]string{
+				mytype.CreatedAction.String(),
+				mytype.PublishedAction.String(),
+			},
+			Type: mytype.LessonEvent.String(),
+		},
+	}
+	filters.Types = &eventTypes
+	events, err := r.Repos.Event().GetByStudy(
+		ctx,
+		studyID.String,
+		pageOptions,
+		filters,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	return NewStudyActivityConnectionResolver(
+		r.Repos,
+		events,
+		pageOptions,
+		studyID,
+		filters,
+	)
+}
+
 func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
 	t, err := r.Study.AdvancedAt()
 	if err != nil {

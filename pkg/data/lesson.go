@@ -266,8 +266,13 @@ func ExistsLesson(
 	db Queryer,
 	id string,
 ) (bool, error) {
-	mylog.Log.WithField("id", id).Info("ExistsLesson(id)")
-	return existsLesson(db, "existsLessonByID", existsLessonByIDSQL, id)
+	lesson, err := existsLesson(db, "existsLessonByID", existsLessonByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 const existsLessonByNumberSQL = `
@@ -284,17 +289,25 @@ func ExistsLessonByNumber(
 	studyID string,
 	number int32,
 ) (bool, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"number":   number,
-	}).Info("ExistsLessonByNumber(study_id, number)")
-	return existsLesson(
+	lesson, err := existsLesson(
 		db,
 		"existsLessonByNumber",
 		existsLessonByNumberSQL,
 		studyID,
 		number,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 const existsLessonByOwnerStudyAndNumberSQL = `
@@ -313,12 +326,7 @@ func ExistsLessonByOwnerStudyAndNumber(
 	studyName string,
 	number int32,
 ) (bool, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"owner":  ownerLogin,
-		"study":  studyName,
-		"number": number,
-	}).Info("ExistsLessonByOwnerStudyAndNumber(owner, study, number)")
-	return existsLesson(
+	lesson, err := existsLesson(
 		db,
 		"existsLessonByOwnerStudyAndNumber",
 		existsLessonByOwnerStudyAndNumberSQL,
@@ -326,6 +334,20 @@ func ExistsLessonByOwnerStudyAndNumber(
 		studyName,
 		number,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner":  ownerLogin,
+			"study":  studyName,
+			"number": number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner":  ownerLogin,
+			"study":  studyName,
+			"number": number,
+		}).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 func getLesson(
@@ -369,6 +391,7 @@ func getManyLesson(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -394,7 +417,7 @@ func getManyLesson(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get lessons")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
@@ -424,8 +447,13 @@ func GetLesson(
 	db Queryer,
 	id string,
 ) (*Lesson, error) {
-	mylog.Log.WithField("id", id).Info("GetLesson(id)")
-	return getLesson(db, "getLessonByID", getLessonByIDSQL, id)
+	lesson, err := getLesson(db, "getLessonByID", getLessonByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 const getLessonByOwnerStudyAndNumberSQL = `
@@ -455,8 +483,7 @@ func GetLessonByOwnerStudyAndNumber(
 	studyName string,
 	number int32,
 ) (*Lesson, error) {
-	mylog.Log.Info("GetLessonByOwnerStudyAndNumber()")
-	return getLesson(
+	lesson, err := getLesson(
 		db,
 		"getLessonByOwnerStudyAndNumber",
 		getLessonByOwnerStudyAndNumberSQL,
@@ -464,6 +491,20 @@ func GetLessonByOwnerStudyAndNumber(
 		studyName,
 		number,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner":  ownerLogin,
+			"study":  studyName,
+			"number": number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner":  ownerLogin,
+			"study":  studyName,
+			"number": number,
+		}).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 func GetLessonByEnrollee(
@@ -472,13 +513,13 @@ func GetLessonByEnrollee(
 	po *PageOptions,
 	filters *LessonFilterOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetLessonByEnrollee(enrollee_id)")
 	var rows []*Lesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -542,8 +583,7 @@ func GetLessonByEnrollee(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -560,6 +600,7 @@ func GetLessonByLabel(
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -592,6 +633,7 @@ func GetLessonByLabel(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -622,8 +664,7 @@ func GetLessonByLabel(
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -633,13 +674,13 @@ func GetLessonByUser(
 	po *PageOptions,
 	filters *LessonFilterOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetLessonByUser(user_id)")
 	var rows []*Lesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -674,6 +715,7 @@ func GetLessonByUser(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -692,6 +734,7 @@ func GetLessonByCourse(
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -726,6 +769,7 @@ func GetLessonByCourse(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -744,6 +788,7 @@ func GetLessonByStudy(
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -778,6 +823,7 @@ func GetLessonByStudy(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -805,17 +851,25 @@ func GetLessonByNumber(
 	studyID string,
 	number int32,
 ) (*Lesson, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"number":   number,
-	}).Info("GetLessonByNumber(studyID, number)")
-	return getLesson(
+	lesson, err := getLesson(
 		db,
 		"getLessonByNumber",
 		getLessonByNumberSQL,
 		studyID,
 		number,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 const getLessonByCourseNumberSQL = `
@@ -842,17 +896,25 @@ func GetLessonByCourseNumber(
 	courseID string,
 	courseNumber int32,
 ) (*Lesson, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"course_id":     courseID,
-		"course_number": courseNumber,
-	}).Info("GetLessonByCourseNumber(course_id, course_number)")
-	return getLesson(
+	lesson, err := getLesson(
 		db,
 		"getLessonByCourseNumber",
 		getLessonByCourseNumberSQL,
 		courseID,
 		courseNumber,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"course_id": courseID,
+			"number":    courseNumber,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"course_id": courseID,
+			"number":    courseNumber,
+		}).Info(util.Trace("lesson found"))
+	}
+	return lesson, err
 }
 
 const batchGetLessonByNumberSQL = `
@@ -879,12 +941,7 @@ func BatchGetLessonByNumber(
 	studyID string,
 	numbers []int32,
 ) ([]*Lesson, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"numbers":  numbers,
-	}).Info("BatchGetLessonByNumber(studyID, numbers)")
 	rows := make([]*Lesson, 0, len(numbers))
-
 	err := getManyLesson(
 		db,
 		"batchGetLessonByNumber",
@@ -898,6 +955,11 @@ func BatchGetLessonByNumber(
 		return nil, err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"study_id": studyID,
+		"numbers":  numbers,
+		"n":        len(rows),
+	}).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -905,7 +967,15 @@ func CreateLesson(
 	db Queryer,
 	row *Lesson,
 ) (*Lesson, error) {
-	mylog.Log.Info("CreateLesson()")
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
 
 	var columns, values []string
@@ -934,15 +1004,6 @@ func CreateLesson(
 	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserID))
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
 	}
 
 	sql := `
@@ -981,17 +1042,12 @@ func CreateLesson(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	e, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID)
+	event, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID, false)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	if _, err = CreateEvent(tx, e); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-
-	if err := ParseLessonBodyForEvents(tx, lesson); err != nil {
+	if _, err := CreateEvent(tx, event); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
@@ -1004,6 +1060,7 @@ func CreateLesson(
 		}
 	}
 
+	mylog.Log.WithField("id", lesson.ID.String).Info(util.Trace("lesson created"))
 	return lesson, nil
 }
 
@@ -1078,19 +1135,17 @@ func UpdateLesson(
 	db Queryer,
 	row *Lesson,
 ) (*Lesson, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateLesson(id)")
-
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Error("error starting transaction")
 		return nil, err
 	}
 	if newTx {
 		defer RollbackTransaction(tx)
 	}
 
-	if err := ParseLessonBodyForEvents(tx, row); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+	currentLesson, err := GetLesson(tx, row.ID.String)
+	if err != nil {
 		return nil, err
 	}
 
@@ -1128,7 +1183,9 @@ func UpdateLesson(
 			return nil, err
 		}
 		if commandTag.RowsAffected() != 1 {
-			return nil, ErrNotFound
+			err := ErrNotFound
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
 		}
 	}
 
@@ -1136,6 +1193,24 @@ func UpdateLesson(
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	if currentLesson.PublishedAt.Status == pgtype.Null &&
+		lesson.PublishedAt.Status != pgtype.Null {
+		eventPayload, err := NewLessonPublishedPayload(&lesson.ID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := CreateEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	if newTx {
@@ -1146,149 +1221,6 @@ func UpdateLesson(
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("lesson updated"))
 	return lesson, nil
-}
-
-func ParseLessonBodyForEvents(
-	db Queryer,
-	lesson *Lesson,
-) error {
-	mylog.Log.Debug("ParseLessonBodyForEvents()")
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	userAssetRefs := lesson.Body.AssetRefs()
-	if len(userAssetRefs) > 0 {
-		names := make([]string, len(userAssetRefs))
-		for i, ref := range userAssetRefs {
-			names[i] = ref.Name
-		}
-		userAssets, err := BatchGetUserAssetByName(
-			tx,
-			lesson.StudyID.String,
-			names,
-		)
-		if err != nil {
-			return err
-		}
-		for _, a := range userAssets {
-			payload, err := NewUserAssetReferencedPayload(&a.ID, &lesson.ID)
-			if err != nil {
-				return err
-			}
-			event, err := NewUserAssetEvent(payload, &lesson.StudyID, &lesson.UserID)
-			if err != nil {
-				return err
-			}
-			if _, err = CreateEvent(tx, event); err != nil {
-				return err
-			}
-		}
-	}
-	lessonNumberRefs, err := lesson.Body.NumberRefs()
-	if err != nil {
-		return err
-	}
-	if len(lessonNumberRefs) > 0 {
-		numbers := make([]int32, len(lessonNumberRefs))
-		for i, ref := range lessonNumberRefs {
-			numbers[i] = ref.Number
-		}
-		lessons, err := BatchGetLessonByNumber(
-			tx,
-			lesson.StudyID.String,
-			numbers,
-		)
-		if err != nil {
-			return err
-		}
-		for _, l := range lessons {
-			if l.ID.String != lesson.ID.String {
-				payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
-				if err != nil {
-					return err
-				}
-				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	crossStudyRefs, err := lesson.Body.CrossStudyRefs()
-	if err != nil {
-		return err
-	}
-	for _, ref := range crossStudyRefs {
-		l, err := GetLessonByOwnerStudyAndNumber(
-			tx,
-			ref.Owner,
-			ref.Name,
-			ref.Number,
-		)
-		if err != nil {
-			return err
-		}
-		if l.ID.String != lesson.ID.String {
-			payload, err := NewLessonReferencedPayload(&l.ID, &lesson.ID)
-			if err != nil {
-				return err
-			}
-			event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-			if err != nil {
-				return err
-			}
-			if _, err = CreateEvent(tx, event); err != nil {
-				return err
-			}
-		}
-	}
-	userRefs := lesson.Body.AtRefs()
-	if len(userRefs) > 0 {
-		names := make([]string, len(userRefs))
-		for i, ref := range userRefs {
-			names[i] = ref.Name
-		}
-		users, err := BatchGetUserByLogin(
-			tx,
-			names,
-		)
-		if err != nil {
-			return err
-		}
-		for _, u := range users {
-			if u.ID.String != lesson.UserID.String {
-				payload, err := NewLessonMentionedPayload(&lesson.ID)
-				if err != nil {
-					return err
-				}
-				event, err := NewLessonEvent(payload, &lesson.StudyID, &lesson.UserID)
-				if err != nil {
-					return err
-				}
-				if _, err = CreateEvent(tx, event); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return err
-		}
-	}
-
-	return nil
 }

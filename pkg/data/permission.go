@@ -330,10 +330,11 @@ func GetQueryPermission(
 		&p.Fields,
 	)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, ErrNotFound
+		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
-	} else if len(p.Fields.Elements) == 0 {
-		return nil, ErrNotFound
 	}
 
 	fields := make([]string, len(p.Fields.Elements))

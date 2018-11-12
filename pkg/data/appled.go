@@ -310,7 +310,7 @@ func CreateAppled(
 		if err != nil {
 			return nil, err
 		}
-		event, err = NewCourseEvent(eventPayload, &course.StudyID, &appled.UserID)
+		event, err = NewCourseEvent(eventPayload, &course.StudyID, &appled.UserID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +319,7 @@ func CreateAppled(
 		if err != nil {
 			return nil, err
 		}
-		event, err = NewStudyEvent(eventPayload, &appled.AppleableID, &appled.UserID)
+		event, err = NewStudyEvent(eventPayload, &appled.AppleableID, &appled.UserID, true)
 		if err != nil {
 			return nil, err
 		}

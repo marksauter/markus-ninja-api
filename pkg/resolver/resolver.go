@@ -157,6 +157,8 @@ func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, r
 		return nil, nil
 	case data.LessonMentioned:
 		return nil, nil
+	case data.LessonPublished:
+		return &publishedEventResolver{PublishableID: &payload.LessonID, Event: event, Repos: repos}, nil
 	case data.LessonReferenced:
 		return &referencedEventResolver{
 			Event:           event,
@@ -171,7 +173,7 @@ func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, r
 	case data.LessonUnlabeled:
 		return nil, nil
 	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return nil, nil
 	}
 }
 

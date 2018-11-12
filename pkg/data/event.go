@@ -30,9 +30,12 @@ type Event struct {
 	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID) (*Event, error) {
+func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID, public bool) (*Event, error) {
 	e := &Event{}
 	if err := e.Payload.Set(payload); err != nil {
+		return nil, err
+	}
+	if err := e.Public.Set(public); err != nil {
 		return nil, err
 	}
 	if err := e.StudyID.Set(studyID); err != nil {
@@ -48,27 +51,33 @@ func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID
 	return e, nil
 }
 
-func NewCourseEvent(payload *CourseEventPayload, studyID, userID *mytype.OID) (*Event, error) {
-	return newEvent(CourseEvent, payload, studyID, userID)
+func NewCourseEvent(payload *CourseEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(CourseEvent, payload, studyID, userID, public)
 }
 
-func NewLessonEvent(payload *LessonEventPayload, studyID, userID *mytype.OID) (*Event, error) {
-	return newEvent(LessonEvent, payload, studyID, userID)
+func NewLessonEvent(payload *LessonEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(LessonEvent, payload, studyID, userID, public)
 }
 
-func NewStudyEvent(payload *StudyEventPayload, studyID, userID *mytype.OID) (*Event, error) {
-	return newEvent(StudyEvent, payload, studyID, userID)
+func NewStudyEvent(payload *StudyEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(StudyEvent, payload, studyID, userID, public)
 }
 
-func NewUserAssetEvent(payload *UserAssetEventPayload, studyID, userID *mytype.OID) (*Event, error) {
-	return newEvent(UserAssetEvent, payload, studyID, userID)
+func NewUserAssetEvent(payload *UserAssetEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(UserAssetEvent, payload, studyID, userID, public)
+}
+
+type EventTypeFilter struct {
+	ActionIs    *[]string
+	ActionIsNot *[]string
+	Type        string
 }
 
 type EventFilterOptions struct {
 	ActionIs    *[]string
 	ActionIsNot *[]string
 	IsPublic    *bool
-	Types       *[]string
+	Types       *[]EventTypeFilter
 }
 
 func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
@@ -77,26 +86,6 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 	}
 
 	whereParts := make([]string, 0, 2)
-	if src.ActionIs != nil && len(*src.ActionIs) > 0 {
-		whereAction := make([]string, len(*src.ActionIs))
-		for i, a := range *src.ActionIs {
-			whereAction[i] = from + ".action = '" + a + "'"
-		}
-		whereParts = append(
-			whereParts,
-			"("+strings.Join(whereAction, " OR ")+")",
-		)
-	}
-	if src.ActionIsNot != nil && len(*src.ActionIsNot) > 0 {
-		whereAction := make([]string, len(*src.ActionIsNot))
-		for i, a := range *src.ActionIsNot {
-			whereAction[i] = from + ".action != '" + a + "'"
-		}
-		whereParts = append(
-			whereParts,
-			"("+strings.Join(whereAction, " AND ")+")",
-		)
-	}
 	if src.IsPublic != nil {
 		if *src.IsPublic {
 			whereParts = append(whereParts, from+".public = true")
@@ -107,7 +96,20 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 	if src.Types != nil && len(*src.Types) > 0 {
 		whereType := make([]string, len(*src.Types))
 		for i, t := range *src.Types {
-			whereType[i] = from + ".type = '" + t + "'"
+			whereType[i] = from + `.type = ` + args.Append(t.Type)
+			if t.ActionIs != nil && len(*t.ActionIs) > 0 {
+				whereAction := make([]string, len(*t.ActionIs))
+				for i, a := range *t.ActionIs {
+					whereAction[i] = from + `.payload->>'action' = ` + args.Append(a)
+				}
+				whereType[i] += " AND (" + strings.Join(whereAction, " OR ") + ")"
+			} else if t.ActionIsNot != nil && len(*t.ActionIsNot) > 0 {
+				whereAction := make([]string, len(*t.ActionIsNot))
+				for i, a := range *t.ActionIsNot {
+					whereAction[i] = from + `.payload->>'action' != ` + args.Append(a)
+				}
+				whereType[i] += " AND " + strings.Join(whereAction, " AND ")
+			}
 		}
 		whereParts = append(
 			whereParts,
@@ -125,10 +127,60 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 	}
 }
 
+type LessonEventFilterOptions struct {
+	ActionIs    *[]string
+	ActionIsNot *[]string
+	IsPublic    *bool
+}
+
+func (src *LessonEventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	whereParts := make([]string, 0, 3)
+	if src.ActionIs != nil && len(*src.ActionIs) > 0 {
+		whereAction := make([]string, len(*src.ActionIs))
+		for i, a := range *src.ActionIs {
+			whereAction[i] = from + `.action = ` + args.Append(a)
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereAction, " OR ")+")",
+		)
+	}
+	if src.ActionIsNot != nil && len(*src.ActionIsNot) > 0 {
+		whereAction := make([]string, len(*src.ActionIsNot))
+		for i, a := range *src.ActionIsNot {
+			whereAction[i] = from + `.action != ` + args.Append(a)
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereAction, " AND ")+")",
+		)
+	}
+	if src.IsPublic != nil {
+		if *src.IsPublic {
+			whereParts = append(whereParts, from+".public = true")
+		} else {
+			whereParts = append(whereParts, from+".public = false")
+		}
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		Where: where,
+	}
+}
+
 func CountEventByLesson(
 	db Queryer,
 	lessonID string,
-	filters *EventFilterOptions,
+	filters *LessonEventFilterOptions,
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
@@ -262,9 +314,10 @@ func getEvent(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get event")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -280,7 +333,7 @@ func getManyEvent(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get events")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -300,7 +353,7 @@ func getManyEvent(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get events")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
@@ -324,8 +377,13 @@ func GetEvent(
 	db Queryer,
 	id string,
 ) (*Event, error) {
-	mylog.Log.WithField("id", id).Info("GetEvent(id)")
-	return getEvent(db, "getEvent", getEventSQL, id)
+	event, err := getEvent(db, "getEvent", getEventSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("event found"))
+	}
+	return event, err
 }
 
 func GetEventByStudy(
@@ -341,6 +399,7 @@ func GetEventByStudy(
 		if limit > 0 {
 			rows = make([]*Event, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -365,9 +424,11 @@ func GetEventByStudy(
 	psName := preparedName("getEventsByStudy", sql)
 
 	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("events found"))
 	return rows, nil
 }
 
@@ -375,15 +436,15 @@ func GetEventByLesson(
 	db Queryer,
 	lessonID string,
 	po *PageOptions,
-	filters *EventFilterOptions,
+	filters *LessonEventFilterOptions,
 ) ([]*Event, error) {
-	mylog.Log.WithField("lesson_id", lessonID).Info("GetEventByLesson(lesson_id)")
 	var rows []*Event
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Event, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -408,9 +469,11 @@ func GetEventByLesson(
 	psName := preparedName("getEventByLessons", sql)
 
 	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("events found"))
 	return rows, nil
 }
 
@@ -427,6 +490,7 @@ func GetEventByUser(
 		if limit > 0 {
 			rows = make([]*Event, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -451,9 +515,11 @@ func GetEventByUser(
 	psName := preparedName("getEventsByUser", sql)
 
 	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("events found"))
 	return rows, nil
 }
 
@@ -470,6 +536,7 @@ func GetReceivedEventByUser(
 		if limit > 0 {
 			rows = make([]*Event, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -494,9 +561,11 @@ func GetReceivedEventByUser(
 	psName := preparedName("getReceivedEventsByUser", sql)
 
 	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("events found"))
 	return rows, nil
 }
 
@@ -513,6 +582,7 @@ func GetEventByUserAsset(
 		if limit > 0 {
 			rows = make([]*Event, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -537,9 +607,11 @@ func GetEventByUserAsset(
 	psName := preparedName("getEventByUserAssets", sql)
 
 	if err := getManyEvent(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("events found"))
 	return rows, nil
 }
 
@@ -547,7 +619,6 @@ func CreateEvent(
 	db Queryer,
 	row *Event,
 ) (*Event, error) {
-	mylog.Log.Info("CreateEvent()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -580,7 +651,7 @@ func CreateEvent(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -596,25 +667,27 @@ func CreateEvent(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create event")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
-				mylog.Log.Errorf("error code %v", pgErr.Code)
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	event, err := GetEvent(tx, row.ID.String)
 	if err != nil {
 		if err == ErrNotFound {
-			mylog.Log.Info("event not created")
+			mylog.Log.Info(util.Trace("event not created"))
 			return nil, nil
 		}
 		return nil, err
@@ -627,11 +700,12 @@ func CreateEvent(
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("event created"))
 	return event, nil
 }
 
@@ -644,7 +718,6 @@ func DeleteEvent(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteEvent(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEvent",
@@ -652,11 +725,15 @@ func DeleteEvent(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("event deleted"))
 	return nil
 }

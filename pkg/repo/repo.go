@@ -47,7 +47,7 @@ var ErrFieldAccessDenied = errors.New("field access denied")
 
 type FieldPermissionFunc = func(field string) bool
 
-var AdminPermissionFunc = func(field string) bool { return true }
+var AdminPermissionFunc FieldPermissionFunc = func(field string) bool { return true }
 
 type Repo interface {
 	Open(*Permitter) error
@@ -252,6 +252,20 @@ func (r *Repos) GetEnrollable(
 		return r.User().Get(ctx, enrollableID.String)
 	default:
 		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableID.Type)
+	}
+}
+
+func (r *Repos) GetPublishable(
+	ctx context.Context,
+	nodeID *mytype.OID,
+) (NodePermit, error) {
+	switch nodeID.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeID.String)
+	case "LessonComment":
+		return r.LessonComment().Get(ctx, nodeID.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for publishable id", nodeID.Type)
 	}
 }
 
@@ -583,4 +597,188 @@ func (r *Repos) ReplaceMarkdownLinksWithRefs(
 	markdown = UserLinkRegexp.ReplaceAllStringFunc(markdown, userLinkToRef)
 
 	return markdown, nil, updated
+}
+
+func (r *Repos) ParseLessonBodyForEvents(
+	ctx context.Context,
+	body *mytype.Markdown,
+	lessonID,
+	studyID,
+	userID *mytype.OID,
+) error {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	userAssetRefs := body.AssetRefs()
+	if len(userAssetRefs) > 0 {
+		names := make([]string, len(userAssetRefs))
+		for i, ref := range userAssetRefs {
+			names[i] = ref.Name
+		}
+		userAssets, err := r.UserAsset().BatchGetByName(
+			ctx,
+			studyID.String,
+			names,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		for _, a := range userAssets {
+			aID, err := a.ID()
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			payload, err := data.NewUserAssetReferencedPayload(aID, lessonID)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			event, err := data.NewUserAssetEvent(payload, studyID, userID, true)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if _, err = r.Event().Create(ctx, event); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+		}
+	}
+	lessonNumberRefs, err := body.NumberRefs()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	if len(lessonNumberRefs) > 0 {
+		numbers := make([]int32, len(lessonNumberRefs))
+		for i, ref := range lessonNumberRefs {
+			numbers[i] = ref.Number
+		}
+		lessons, err := r.Lesson().BatchGetByNumber(
+			ctx,
+			studyID.String,
+			numbers,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		for _, l := range lessons {
+			lID, err := l.ID()
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if lID.String != lessonID.String {
+				payload, err := data.NewLessonReferencedPayload(lID, lessonID)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				event, err := data.NewLessonEvent(payload, studyID, userID, true)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				if _, err = r.Event().Create(ctx, event); err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+			}
+		}
+	}
+	crossStudyRefs, err := body.CrossStudyRefs()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	for _, ref := range crossStudyRefs {
+		l, err := r.Lesson().GetByOwnerStudyAndNumber(
+			ctx,
+			ref.Owner,
+			ref.Name,
+			ref.Number,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		lID, err := l.ID()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if lID.String != lessonID.String {
+			payload, err := data.NewLessonReferencedPayload(lID, lessonID)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			event, err := data.NewLessonEvent(payload, studyID, userID, true)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if _, err = r.Event().Create(ctx, event); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+		}
+	}
+	userRefs := body.AtRefs()
+	if len(userRefs) > 0 {
+		names := make([]string, len(userRefs))
+		for i, ref := range userRefs {
+			names[i] = ref.Name
+		}
+		users, err := r.User().BatchGetByLogin(
+			ctx,
+			names,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		for _, u := range users {
+			uID, err := u.ID()
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if uID.String != userID.String {
+				payload, err := data.NewLessonMentionedPayload(lessonID)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				event, err := data.NewLessonEvent(payload, studyID, userID, true)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				if _, err = r.Event().Create(ctx, event); err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+			}
+		}
+	}
+
+	if newTx {
+		err = data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+	}
+
+	return nil
 }

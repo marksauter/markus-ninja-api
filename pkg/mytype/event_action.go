@@ -20,6 +20,7 @@ const (
 	LabeledAction
 	UnlabeledAction
 	MentionedAction
+	PublishedAction
 	ReferencedAction
 	RenamedAction
 )
@@ -44,6 +45,8 @@ func (f EventActionValue) String() string {
 		return "unlabeled"
 	case MentionedAction:
 		return "mentioned"
+	case PublishedAction:
+		return "published"
 	case ReferencedAction:
 		return "referenced"
 	case RenamedAction:
@@ -111,6 +114,11 @@ func ParseEventAction(s string) (EventAction, error) {
 		return EventAction{
 			Status: pgtype.Present,
 			V:      MentionedAction,
+		}, nil
+	case "published":
+		return EventAction{
+			Status: pgtype.Present,
+			V:      PublishedAction,
 		}, nil
 	case "referenced":
 		return EventAction{

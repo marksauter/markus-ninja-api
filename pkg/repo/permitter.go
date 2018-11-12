@@ -58,7 +58,12 @@ func (r *Permitter) Check(
 		err := errors.New("node is nil")
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return f, err
+	} else if !structs.IsStruct(node) {
+		err := errors.New("node is not a struct")
+		mylog.Log.WithField("node", node).WithError(err).Error(util.Trace(""))
+		return f, err
 	}
+
 	nt, err := mytype.ParseNodeType(structs.Name(node))
 	if err != nil {
 		return f, err
