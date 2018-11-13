@@ -1,0 +1,22 @@
+# Represents a labeled event on a given subject.
+type LabeledEvent implements 
+  LessonTimelineEvent,
+  Node
+{
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The label removed.
+  label: Label!
+
+  # The object labeled.
+  labelable: Labelable!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}

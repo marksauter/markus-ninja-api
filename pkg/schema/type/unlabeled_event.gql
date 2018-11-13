@@ -1,0 +1,22 @@
+# Represents a unlabeled event on a given subject.
+type UnlabeledEvent implements 
+  LessonTimelineEvent,
+  Node
+{
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The label removed.
+  label: Label!
+
+  # The object unlabeled.
+  labelable: Labelable!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}

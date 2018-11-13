@@ -80,6 +80,18 @@ type LessonEventPayload struct {
 	SourceID  mytype.OID    `json:"source_id,omitempty"`
 }
 
+func NewLessonAddedToCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{Action: LessonAddedToCourse}
+	if err := payload.CourseID.Set(courseID); err != nil {
+		return nil, err
+	}
+	if err := payload.LessonID.Set(lessonID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
 func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonCommented}
 	if err := payload.CommentID.Set(commentID); err != nil {
@@ -110,6 +122,18 @@ func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error
 	return payload, nil
 }
 
+func NewLessonLabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{Action: LessonLabeled}
+	if err := payload.LabelID.Set(labelID); err != nil {
+		return nil, err
+	}
+	if err := payload.LessonID.Set(lessonID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
 func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonPublished}
 	if err := payload.LessonID.Set(lessonID); err != nil {
@@ -125,6 +149,45 @@ func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPay
 		return nil, err
 	}
 	if err := payload.SourceID.Set(sourceID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewLessonRemovedFromCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{Action: LessonRemovedFromCourse}
+	if err := payload.CourseID.Set(courseID); err != nil {
+		return nil, err
+	}
+	if err := payload.LessonID.Set(lessonID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewLessonRenamedPayload(lessonID *mytype.OID, from, to string) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{
+		Action: LessonRenamed,
+		Rename: RenamePayload{
+			From: from,
+			To:   to,
+		},
+	}
+	if err := payload.LessonID.Set(lessonID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewLessonUnlabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
+	payload := &LessonEventPayload{Action: LessonUnlabeled}
+	if err := payload.LabelID.Set(labelID); err != nil {
+		return nil, err
+	}
+	if err := payload.LessonID.Set(lessonID); err != nil {
 		return nil, err
 	}
 

@@ -109,7 +109,7 @@ func eventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *
 	case data.StudyEvent:
 		return studyEventPermitToResolver(event, repos)
 	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return nil, nil
 	}
 	return nil, nil
 }
@@ -126,14 +126,20 @@ func courseEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (in
 	switch payload.Action {
 	case data.CourseAppled:
 		return &appledEventResolver{AppleableID: &payload.CourseID, Event: event, Repos: repos}, nil
+	case data.CourseCreated:
+		return &createdEventResolver{CreateableID: &payload.CourseID, Event: event, Repos: repos}, nil
 	case data.CourseUnappled:
 		return &unappledEventResolver{AppleableID: &payload.CourseID, Event: event, Repos: repos}, nil
 	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return nil, nil
 	}
 }
 
-func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+func lessonEventPermitToResolver(
+	ctx context.Context,
+	event *repo.EventPermit,
+	repos *repo.Repos,
+) (interface{}, error) {
 	payload := &data.LessonEventPayload{}
 	eventPayload, err := event.Payload()
 	if err != nil {
@@ -144,21 +150,45 @@ func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, r
 	}
 	switch payload.Action {
 	case data.LessonAddedToCourse:
-		return nil, nil
+		return &addedToCourseEventResolver{
+			CourseID: &payload.CourseID,
+			Event:    event,
+			LessonID: &payload.LessonID,
+			Repos:    repos,
+		}, nil
 	case data.LessonCreated:
-		return &createdEventResolver{CreateableID: &payload.LessonID, Event: event, Repos: repos}, nil
+		return &createdEventResolver{
+			CreateableID: &payload.LessonID,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	case data.LessonCommented:
-		lessonComment, err := repos.LessonComment().Get(ctx, payload.CommentID.String)
+		lessonComment, err := repos.LessonComment().Get(
+			ctx,
+			payload.CommentID.String,
+		)
 		if err != nil {
 			return nil, err
 		}
-		return &lessonCommentResolver{LessonComment: lessonComment, Repos: repos}, nil
+		return &lessonCommentResolver{
+			LessonComment: lessonComment,
+			Repos:         repos,
+		}, nil
 	case data.LessonLabeled:
-		return nil, nil
+		return &labeledEventResolver{
+			LabelID:     &payload.LabelID,
+			LabelableID: &payload.LessonID,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	case data.LessonMentioned:
 		return nil, nil
 	case data.LessonPublished:
-		return &publishedEventResolver{PublishableID: &payload.LessonID, Event: event, Repos: repos}, nil
+		return &publishedEventResolver{
+			PublishableID: &payload.LessonID,
+			Event:         event,
+			Repos:         repos,
+		}, nil
 	case data.LessonReferenced:
 		return &referencedEventResolver{
 			Event:           event,
@@ -167,17 +197,35 @@ func lessonEventPermitToResolver(ctx context.Context, event *repo.EventPermit, r
 			SourceID:        &payload.SourceID,
 		}, nil
 	case data.LessonRemovedFromCourse:
-		return nil, nil
+		return &removedFromCourseEventResolver{
+			CourseID: &payload.CourseID,
+			Event:    event,
+			LessonID: &payload.LessonID,
+			Repos:    repos,
+		}, nil
 	case data.LessonRenamed:
-		return nil, nil
+		return &renamedEventResolver{
+			RenameableID: &payload.LessonID,
+			Rename:       &payload.Rename,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	case data.LessonUnlabeled:
-		return nil, nil
+		return &unlabeledEventResolver{
+			LabelID:     &payload.LabelID,
+			LabelableID: &payload.LessonID,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	default:
 		return nil, nil
 	}
 }
 
-func studyEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+func studyEventPermitToResolver(
+	event *repo.EventPermit,
+	repos *repo.Repos,
+) (interface{}, error) {
 	payload := &data.StudyEventPayload{}
 	eventPayload, err := event.Payload()
 	if err != nil {
@@ -194,7 +242,7 @@ func studyEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (int
 	case data.StudyUnappled:
 		return &unappledEventResolver{AppleableID: &payload.StudyID, Event: event, Repos: repos}, nil
 	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return nil, nil
 	}
 }
 
@@ -220,8 +268,13 @@ func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit
 			SourceID:        &payload.SourceID,
 		}, nil
 	case data.UserAssetRenamed:
-		return nil, nil
+		return &renamedEventResolver{
+			RenameableID: &payload.AssetID,
+			Rename:       &payload.Rename,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	default:
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return nil, nil
 	}
 }

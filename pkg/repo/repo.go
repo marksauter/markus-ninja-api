@@ -283,6 +283,20 @@ func (r *Repos) GetReferenceable(
 	}
 }
 
+func (r *Repos) GetRenameable(
+	ctx context.Context,
+	nodeID *mytype.OID,
+) (NodePermit, error) {
+	switch nodeID.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeID.String)
+	case "UserAsset":
+		return r.UserAsset().Get(ctx, nodeID.String)
+	default:
+		return nil, fmt.Errorf("invalid type '%s' for renameable id", nodeID.Type)
+	}
+}
+
 func (r *Repos) GetLabelable(
 	ctx context.Context,
 	labelableID *mytype.OID,

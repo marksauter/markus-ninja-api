@@ -303,8 +303,13 @@ func GetCourse(
 	db Queryer,
 	id string,
 ) (*Course, error) {
-	mylog.Log.WithField("id", id).Info("GetCourse(id)")
-	return getCourse(db, "getCourseByID", getCourseByIDSQL, id)
+	course, err := getCourse(db, "getCourseByID", getCourseByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("course found"))
+	}
+	return course, err
 }
 
 func GetCourseByApplee(

@@ -1213,6 +1213,27 @@ func UpdateLesson(
 		}
 	}
 
+	if currentLesson.Title.String != lesson.Title.String {
+		eventPayload, err := NewLessonRenamedPayload(
+			&lesson.ID,
+			currentLesson.Title.String,
+			lesson.Title.String,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := CreateEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {

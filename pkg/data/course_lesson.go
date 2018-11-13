@@ -190,7 +190,6 @@ func CreateCourseLesson(
 	db Queryer,
 	row CourseLesson,
 ) (*CourseLesson, error) {
-	mylog.Log.Info("CreateCourseLesson()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -204,15 +203,6 @@ func CreateCourseLesson(
 		values = append(values, args.Append(&row.LessonID))
 	}
 
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
 	sql := `
 		INSERT INTO course_lesson(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
@@ -220,39 +210,32 @@ func CreateCourseLesson(
 
 	psName := preparedName("createCourseLesson", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
+	_, err := prepareExec(db, psName, sql, args...)
 	if err != nil && err != pgx.ErrNoRows {
-		mylog.Log.WithError(err).Error("failed to create course_lesson")
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.Debug(pgErr.Code)
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	courseLesson, err := GetCourseLesson(
-		tx,
-		row.LessonID.String,
-	)
+	courseLesson, err := GetCourseLesson(db, row.LessonID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
+	mylog.Log.Info(util.Trace("course lesson created"))
 	return courseLesson, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type CoursePermit struct {
@@ -267,14 +268,17 @@ func (r *CourseRepo) Get(
 	id string,
 ) (*CoursePermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	course, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, course)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &CoursePermit{fieldPermFn, course}, nil

@@ -30,29 +30,82 @@ func (r *RootResolver) AddCourseLesson(
 	ctx context.Context,
 	args struct{ Input AddCourseLessonInput },
 ) (*addCourseLessonPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err := errors.New("viewer not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	courseLesson := &data.CourseLesson{}
 	if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("invalid value for courseId")
 	}
 	if err := courseLesson.LessonID.Set(args.Input.LessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("invalid value for lessonId")
 	}
 
-	lesson, err := r.Repos.Lesson().Get(ctx, args.Input.LessonID)
+	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("lesson not found")
 	}
 	isPublished, err := lesson.IsPublished()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
 	if !isPublished {
-		return nil, errors.New("lesson not published")
+		err := errors.New("lesson not published")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	studyID, err := lesson.StudyID()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
 	}
 
 	_, err = r.Repos.CourseLesson().Connect(ctx, courseLesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	eventPayload, err := data.NewLessonAddedToCoursePayload(
+		&courseLesson.LessonID,
+		&courseLesson.CourseID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	return &addCourseLessonPayloadResolver{
@@ -145,6 +198,19 @@ func (r *RootResolver) AddLabel(
 	ctx context.Context,
 	args struct{ Input AddLabelInput },
 ) (*addLabelPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	labeled := &data.Labeled{}
 	if err := labeled.LabelID.Set(args.Input.LabelID); err != nil {
 		return nil, errors.New("invalid labeled label_id")
@@ -153,9 +219,47 @@ func (r *RootResolver) AddLabel(
 		return nil, errors.New("invalid labeled labelable_id")
 	}
 
-	_, err := r.Repos.Labeled().Connect(ctx, labeled)
+	_, err = r.Repos.Labeled().Connect(ctx, labeled)
 	if err != nil {
 		return nil, err
+	}
+
+	if labeled.LabelableID.Type == mytype.LessonNodeType.String() {
+		lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LabelableID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, errors.New("lesson not found")
+		}
+		studyID, err := lesson.StudyID()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
+
+		eventPayload, err := data.NewLessonLabeledPayload(
+			&labeled.LabelableID,
+			&labeled.LabelID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &addLabelPayloadResolver{
@@ -1203,17 +1307,71 @@ func (r *RootResolver) RemoveCourseLesson(
 	ctx context.Context,
 	args struct{ Input RemoveCourseLessonInput },
 ) (*removeCourseLessonPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err := errors.New("viewer not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	courseLesson := &data.CourseLesson{}
 	if err := courseLesson.CourseID.Set(args.Input.CourseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("invalid value for courseId")
 	}
 	if err := courseLesson.LessonID.Set(args.Input.LessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("invalid value for lessonId")
 	}
 
-	err := r.Repos.CourseLesson().Disconnect(ctx, courseLesson)
-	if err != nil {
+	if err = r.Repos.CourseLesson().Disconnect(ctx, courseLesson); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("lesson not found")
+	}
+	studyID, err := lesson.StudyID()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	eventPayload, err := data.NewLessonRemovedFromCoursePayload(
+		&courseLesson.LessonID,
+		&courseLesson.CourseID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	return &removeCourseLessonPayloadResolver{
@@ -1232,6 +1390,19 @@ func (r *RootResolver) RemoveLabel(
 	ctx context.Context,
 	args struct{ Input RemoveLabelInput },
 ) (*removeLabelPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	labeled := &data.Labeled{}
 	if err := labeled.LabelID.Set(args.Input.LabelID); err != nil {
 		return nil, errors.New("invalid labeled label_id")
@@ -1240,9 +1411,46 @@ func (r *RootResolver) RemoveLabel(
 		return nil, errors.New("invalid labeled labelable_id")
 	}
 
-	err := r.Repos.Labeled().Disconnect(ctx, labeled)
-	if err != nil {
+	if err := r.Repos.Labeled().Disconnect(ctx, labeled); err != nil {
 		return nil, err
+	}
+
+	if labeled.LabelableID.Type == mytype.LessonNodeType.String() {
+		lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LabelableID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, errors.New("lesson not found")
+		}
+		studyID, err := lesson.StudyID()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
+
+		eventPayload, err := data.NewLessonUnlabeledPayload(
+			&labeled.LabelableID,
+			&labeled.LabelID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &removeLabelPayloadResolver{
