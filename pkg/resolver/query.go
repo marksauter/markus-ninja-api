@@ -29,7 +29,7 @@ func (r *RootResolver) Asset(
 	if err != nil {
 		return nil, err
 	}
-	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+	return &userAssetResolver{UserAsset: userAsset, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Node(
@@ -44,7 +44,7 @@ func (r *RootResolver) Node(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (r *RootResolver) Nodes(ctx context.Context, args struct {
 		if err != nil {
 			return nil, err
 		}
-		resolver, err := nodePermitToResolver(permit, r.Repos)
+		resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 		if err != nil {
 			return nil, err
 		}
@@ -210,10 +210,11 @@ func (r *RootResolver) Search(
 	}
 
 	return NewSearchableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
 		args.Query,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -228,7 +229,7 @@ func (r *RootResolver) Study(
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Topic(
@@ -242,7 +243,7 @@ func (r *RootResolver) Topic(
 	if err != nil {
 		return nil, err
 	}
-	return &topicResolver{Topic: topic, Repos: r.Repos}, nil
+	return &topicResolver{Topic: topic, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) User(ctx context.Context, args struct {
@@ -255,7 +256,7 @@ func (r *RootResolver) User(ctx context.Context, args struct {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
@@ -270,5 +271,5 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

@@ -5,12 +5,14 @@ import (
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type unappledEventResolver struct {
 	AppleableID *mytype.OID
+	Conf        *myconf.Config
 	Event       *repo.EventPermit
 	Repos       *repo.Repos
 }
@@ -20,7 +22,7 @@ func (r *unappledEventResolver) Appleable(ctx context.Context) (*appleableResolv
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -50,5 +52,5 @@ func (r *unappledEventResolver) User(ctx context.Context) (*userResolver, error)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

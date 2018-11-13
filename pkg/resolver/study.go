@@ -7,6 +7,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -15,11 +16,10 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type Study = studyResolver
-
 type studyResolver struct {
-	Study *repo.StudyPermit
+	Conf  *myconf.Config
 	Repos *repo.Repos
+	Study *repo.StudyPermit
 }
 
 func (r *studyResolver) Activity(
@@ -90,11 +90,12 @@ func (r *studyResolver) Activity(
 	}
 
 	return NewStudyActivityConnectionResolver(
-		r.Repos,
 		events,
 		pageOptions,
 		studyID,
 		filters,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -150,11 +151,12 @@ func (r *studyResolver) AppleGivers(
 		return &resolver, err
 	}
 	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
-		r.Repos,
 		users,
 		pageOptions,
 		studyID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -179,7 +181,11 @@ func (r *studyResolver) Asset(
 	if err != nil {
 		return nil, err
 	}
-	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+	return &userAssetResolver{
+		Conf:      r.Conf,
+		Repos:     r.Repos,
+		UserAsset: userAsset,
+	}, nil
 }
 
 func (r *studyResolver) Assets(
@@ -230,11 +236,12 @@ func (r *studyResolver) Assets(
 		return &resolver, err
 	}
 	userAssetConnectionResolver, err := NewUserAssetConnectionResolver(
-		r.Repos,
 		userAssets,
 		pageOptions,
 		studyID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -259,7 +266,11 @@ func (r *studyResolver) Course(
 	if err != nil {
 		return nil, err
 	}
-	return &courseResolver{Course: course, Repos: r.Repos}, nil
+	return &courseResolver{
+		Conf:   r.Conf,
+		Course: course,
+		Repos:  r.Repos,
+	}, nil
 }
 
 func (r *studyResolver) Courses(
@@ -309,20 +320,13 @@ func (r *studyResolver) Courses(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return &resolver, err
 	}
-	count, err := r.Repos.Course().CountByStudy(
-		ctx,
-		studyID.String,
-		args.FilterBy,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	}
 	courseConnectionResolver, err := NewCourseConnectionResolver(
 		courses,
 		pageOptions,
-		count,
+		studyID,
+		args.FilterBy,
 		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -389,11 +393,12 @@ func (r *studyResolver) Enrollees(
 		return &resolver, err
 	}
 	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
-		r.Repos,
 		users,
 		pageOptions,
 		studyID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -455,7 +460,11 @@ func (r *studyResolver) Label(
 	if err != nil {
 		return nil, err
 	}
-	return &labelResolver{Label: label, Repos: r.Repos}, nil
+	return &labelResolver{
+		Conf:  r.Conf,
+		Label: label,
+		Repos: r.Repos,
+	}, nil
 }
 
 func (r *studyResolver) Labels(
@@ -495,21 +504,18 @@ func (r *studyResolver) Labels(
 		return &resolver, err
 	}
 
-	count, err := r.Repos.Label().CountByStudy(ctx, studyID.String, args.FilterBy)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	}
 	labels, err := r.Repos.Label().GetByStudy(ctx, studyID.String, pageOptions, args.FilterBy)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return &resolver, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
-		r.Repos,
 		labels,
 		pageOptions,
-		count,
+		studyID,
+		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -534,7 +540,11 @@ func (r *studyResolver) Lesson(
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{
+		Conf:   r.Conf,
+		Lesson: lesson,
+		Repos:  r.Repos,
+	}, nil
 }
 
 func (r *studyResolver) Lessons(
@@ -597,11 +607,12 @@ func (r *studyResolver) Lessons(
 		return &resolver, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
-		r.Repos,
 		lessons,
 		pageOptions,
 		studyID,
 		&filters,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -660,11 +671,12 @@ func (r *studyResolver) LessonComments(
 		return &resolver, err
 	}
 	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
-		r.Repos,
 		lessonComments,
 		pageOptions,
 		studyID,
 		&filters,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -704,7 +716,11 @@ func (r *studyResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{
+		Conf:  r.Conf,
+		Repos: r.Repos,
+		User:  user,
+	}, nil
 }
 
 func (r *studyResolver) ResourcePath(
@@ -767,11 +783,12 @@ func (r *studyResolver) Topics(
 		return &resolver, err
 	}
 	topicConnectionResolver, err := NewTopicConnectionResolver(
-		r.Repos,
 		topics,
 		pageOptions,
 		studyID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -793,7 +810,7 @@ func (r *studyResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

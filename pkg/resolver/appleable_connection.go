@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleableConnectionResolver(
-	repos *repo.Repos,
 	appleables []repo.NodePermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	search *string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
 	for i := range edges {
-		edge, err := NewAppleableEdgeResolver(repos, appleables[i])
+		edge, err := NewAppleableEdgeResolver(appleables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewAppleableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &appleableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		appleables: appleables,
 		pageInfo:   pageInfo,
@@ -43,6 +46,7 @@ func NewAppleableConnectionResolver(
 }
 
 type appleableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*appleableEdgeResolver
 	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
@@ -72,7 +76,7 @@ func (r *appleableConnectionResolver) Nodes() (*[]*appleableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		appleables := r.appleables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range appleables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

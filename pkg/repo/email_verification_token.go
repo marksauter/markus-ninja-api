@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -72,13 +73,15 @@ func (r *EVTPermit) VerifiedAt() (time.Time, error) {
 	return r.evt.VerifiedAt.Time, nil
 }
 
-func NewEVTRepo() *EVTRepo {
+func NewEVTRepo(conf *myconf.Config) *EVTRepo {
 	return &EVTRepo{
+		conf: conf,
 		load: loader.NewEVTLoader(),
 	}
 }
 
 type EVTRepo struct {
+	conf   *myconf.Config
 	load   *loader.EVTLoader
 	permit *Permitter
 }

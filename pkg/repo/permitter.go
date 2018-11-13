@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -17,7 +18,7 @@ import (
 
 const Guest = "guest"
 
-func NewPermitter(repos *Repos) *Permitter {
+func NewPermitter(repos *Repos, conf *myconf.Config) *Permitter {
 	return &Permitter{
 		load:  loader.NewQueryPermLoader(),
 		repos: repos,
@@ -25,6 +26,7 @@ func NewPermitter(repos *Repos) *Permitter {
 }
 
 type Permitter struct {
+	conf  *myconf.Config
 	load  *loader.QueryPermLoader
 	repos *Repos
 }

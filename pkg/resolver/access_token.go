@@ -4,12 +4,14 @@ import (
 	"time"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type accessTokenResolver struct {
 	AccessToken *myjwt.JWT
+	Conf        *myconf.Config
 	Repos       *repo.Repos
 }
 

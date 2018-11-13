@@ -8,6 +8,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
@@ -18,6 +19,7 @@ import (
 )
 
 type lessonResolver struct {
+	Conf   *myconf.Config
 	Lesson *repo.LessonPermit
 	Repos  *repo.Repos
 }
@@ -31,7 +33,7 @@ func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) Body() (string, error) {
@@ -101,11 +103,12 @@ func (r *lessonResolver) Comments(
 		return nil, err
 	}
 	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
-		r.Repos,
 		lessonComments,
 		pageOptions,
 		lessonID,
 		&filters,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -125,7 +128,7 @@ func (r *lessonResolver) Course(ctx context.Context) (*courseResolver, error) {
 		}
 		return nil, err
 	}
-	return &courseResolver{Course: course, Repos: r.Repos}, nil
+	return &courseResolver{Course: course, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) CourseNumber() (*int32, error) {
@@ -175,11 +178,12 @@ func (r *lessonResolver) Enrollees(
 		return nil, err
 	}
 	enrolleeConnectionResolver, err := NewEnrolleeConnectionResolver(
-		r.Repos,
 		users,
 		pageOptions,
 		lessonID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -273,15 +277,13 @@ func (r *lessonResolver) Labels(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonID.String, args.FilterBy)
-	if err != nil {
-		return nil, err
-	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
-		r.Repos,
 		labels,
 		pageOptions,
-		count,
+		lessonID,
+		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -318,7 +320,7 @@ func (r *lessonResolver) NextLesson(ctx context.Context) (*lessonResolver, error
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) PreviousLesson(ctx context.Context) (*lessonResolver, error) {
@@ -341,7 +343,7 @@ func (r *lessonResolver) PreviousLesson(ctx context.Context) (*lessonResolver, e
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) PublishedAt() (*graphql.Time, error) {
@@ -381,7 +383,7 @@ func (r *lessonResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonResolver) Timeline(
@@ -418,8 +420,13 @@ func (r *lessonResolver) Timeline(
 		mytype.CreatedAction.String(),
 		mytype.MentionedAction.String(),
 	}
-	filters := &data.LessonEventFilterOptions{
-		ActionIsNot: &actionIsNot,
+	filters := &data.EventFilterOptions{
+		Types: &[]data.EventTypeFilter{
+			data.EventTypeFilter{
+				ActionIsNot: &actionIsNot,
+				Type:        mytype.LessonEvent.String(),
+			},
+		},
 	}
 	events, err := r.Repos.Event().GetByLesson(
 		ctx,
@@ -431,19 +438,13 @@ func (r *lessonResolver) Timeline(
 		return nil, err
 	}
 
-	count, err := r.Repos.Event().CountByLesson(
-		ctx,
-		lessonID.String,
-		filters,
-	)
-	if err != nil {
-		return nil, err
-	}
 	resolver, err := NewLessonTimelineConnectionResolver(
 		events,
 		pageOptions,
-		count,
+		lessonID,
+		filters,
 		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -469,7 +470,7 @@ func (r *lessonResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 
@@ -554,5 +555,5 @@ func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*lessonCommentRe
 		}
 	}
 
-	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
+	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Conf: r.Conf, Repos: r.Repos}, nil
 }

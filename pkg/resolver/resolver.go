@@ -5,20 +5,24 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
-var clientURL = "http://localhost:3000"
-
 var InternalServerError = errors.New("something went wrong")
 
 type RootResolver struct {
+	Conf  *myconf.Config
 	Repos *repo.Repos
 	Svcs  *service.Services
 }
 
-func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, error) {
+func nodePermitToResolver(
+	p repo.NodePermit,
+	repos *repo.Repos,
+	conf *myconf.Config,
+) (interface{}, error) {
 	id, err := p.ID()
 	if err != nil {
 		return nil, err
@@ -29,92 +33,101 @@ func nodePermitToResolver(p repo.NodePermit, repos *repo.Repos) (interface{}, er
 		if !ok {
 			return nil, errors.New("cannot convert permit to course")
 		}
-		return &courseResolver{Course: course, Repos: repos}, nil
+		return &courseResolver{Course: course, Conf: conf, Repos: repos}, nil
 	case "Email":
 		email, ok := p.(*repo.EmailPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to email")
 		}
-		return &emailResolver{Email: email, Repos: repos}, nil
+		return &emailResolver{Email: email, Conf: conf, Repos: repos}, nil
 	case "Event":
 		event, ok := p.(*repo.EventPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to event")
 		}
-		return &eventResolver{Event: event, Repos: repos}, nil
+		return &eventResolver{Event: event, Conf: conf, Repos: repos}, nil
 	case "Label":
 		label, ok := p.(*repo.LabelPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to label")
 		}
-		return &labelResolver{Label: label, Repos: repos}, nil
+		return &labelResolver{Label: label, Conf: conf, Repos: repos}, nil
 	case "Lesson":
 		lesson, ok := p.(*repo.LessonPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to lesson")
 		}
-		return &lessonResolver{Lesson: lesson, Repos: repos}, nil
+		return &lessonResolver{Lesson: lesson, Conf: conf, Repos: repos}, nil
 	case "LessonComment":
 		lessonComment, ok := p.(*repo.LessonCommentPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to lessonComment")
 		}
-		return &lessonCommentResolver{LessonComment: lessonComment, Repos: repos}, nil
+		return &lessonCommentResolver{LessonComment: lessonComment, Conf: conf, Repos: repos}, nil
 	case "Notification":
 		notification, ok := p.(*repo.NotificationPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to notification")
 		}
-		return &notificationResolver{Notification: notification, Repos: repos}, nil
+		return &notificationResolver{Notification: notification, Conf: conf, Repos: repos}, nil
 	case "Study":
 		study, ok := p.(*repo.StudyPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to study")
 		}
-		return &studyResolver{Study: study, Repos: repos}, nil
+		return &studyResolver{Study: study, Conf: conf, Repos: repos}, nil
 	case "Topic":
 		topic, ok := p.(*repo.TopicPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to topic")
 		}
-		return &topicResolver{Topic: topic, Repos: repos}, nil
+		return &topicResolver{Topic: topic, Conf: conf, Repos: repos}, nil
 	case "User":
 		user, ok := p.(*repo.UserPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to user")
 		}
-		return &userResolver{User: user, Repos: repos}, nil
+		return &userResolver{User: user, Conf: conf, Repos: repos}, nil
 	case "UserAsset":
 		userAsset, ok := p.(*repo.UserAssetPermit)
 		if !ok {
 			return nil, errors.New("cannot convert permit to userAsset")
 		}
-		return &userAssetResolver{UserAsset: userAsset, Repos: repos}, nil
+		return &userAssetResolver{UserAsset: userAsset, Conf: conf, Repos: repos}, nil
 	}
 	return nil, nil
 }
 
-func eventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+func eventPermitToResolver(
+	ctx context.Context,
+	event *repo.EventPermit,
+	repos *repo.Repos,
+	conf *myconf.Config,
+) (interface{}, error) {
 	eventType, err := event.Type()
 	if err != nil {
 		return nil, err
 	}
 	switch eventType {
 	case data.CourseEvent:
-		return courseEventPermitToResolver(event, repos)
+		return courseEventPermitToResolver(event, repos, conf)
 	case data.LessonEvent:
-		return lessonEventPermitToResolver(ctx, event, repos)
+		return lessonEventPermitToResolver(ctx, event, repos, conf)
 	case data.UserAssetEvent:
-		return userAssetEventPermitToResolver(ctx, event, repos)
+		return userAssetEventPermitToResolver(ctx, event, repos, conf)
 	case data.StudyEvent:
-		return studyEventPermitToResolver(event, repos)
+		return studyEventPermitToResolver(event, repos, conf)
 	default:
 		return nil, nil
 	}
 	return nil, nil
 }
 
-func courseEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+func courseEventPermitToResolver(
+	event *repo.EventPermit,
+	repos *repo.Repos,
+	conf *myconf.Config,
+) (interface{}, error) {
 	payload := &data.CourseEventPayload{}
 	eventPayload, err := event.Payload()
 	if err != nil {
@@ -125,11 +138,26 @@ func courseEventPermitToResolver(event *repo.EventPermit, repos *repo.Repos) (in
 	}
 	switch payload.Action {
 	case data.CourseAppled:
-		return &appledEventResolver{AppleableID: &payload.CourseID, Event: event, Repos: repos}, nil
+		return &appledEventResolver{
+			AppleableID: &payload.CourseID,
+			Conf:        conf,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	case data.CourseCreated:
-		return &createdEventResolver{CreateableID: &payload.CourseID, Event: event, Repos: repos}, nil
+		return &createdEventResolver{
+			CreateableID: &payload.CourseID,
+			Conf:         conf,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	case data.CourseUnappled:
-		return &unappledEventResolver{AppleableID: &payload.CourseID, Event: event, Repos: repos}, nil
+		return &unappledEventResolver{
+			AppleableID: &payload.CourseID,
+			Conf:        conf,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	default:
 		return nil, nil
 	}
@@ -139,6 +167,7 @@ func lessonEventPermitToResolver(
 	ctx context.Context,
 	event *repo.EventPermit,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (interface{}, error) {
 	payload := &data.LessonEventPayload{}
 	eventPayload, err := event.Payload()
@@ -225,6 +254,7 @@ func lessonEventPermitToResolver(
 func studyEventPermitToResolver(
 	event *repo.EventPermit,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (interface{}, error) {
 	payload := &data.StudyEventPayload{}
 	eventPayload, err := event.Payload()
@@ -236,17 +266,37 @@ func studyEventPermitToResolver(
 	}
 	switch payload.Action {
 	case data.StudyCreated:
-		return &createdEventResolver{CreateableID: &payload.StudyID, Event: event, Repos: repos}, nil
+		return &createdEventResolver{
+			Conf:         conf,
+			CreateableID: &payload.StudyID,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	case data.StudyAppled:
-		return &appledEventResolver{AppleableID: &payload.StudyID, Event: event, Repos: repos}, nil
+		return &appledEventResolver{
+			AppleableID: &payload.StudyID,
+			Conf:        conf,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	case data.StudyUnappled:
-		return &unappledEventResolver{AppleableID: &payload.StudyID, Event: event, Repos: repos}, nil
+		return &unappledEventResolver{
+			AppleableID: &payload.StudyID,
+			Conf:        conf,
+			Event:       event,
+			Repos:       repos,
+		}, nil
 	default:
 		return nil, nil
 	}
 }
 
-func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit, repos *repo.Repos) (interface{}, error) {
+func userAssetEventPermitToResolver(
+	ctx context.Context,
+	event *repo.EventPermit,
+	repos *repo.Repos,
+	conf *myconf.Config,
+) (interface{}, error) {
 	payload := &data.UserAssetEventPayload{}
 	eventPayload, err := event.Payload()
 	if err != nil {
@@ -257,11 +307,17 @@ func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit
 	}
 	switch payload.Action {
 	case data.UserAssetCreated:
-		return &createdEventResolver{CreateableID: &payload.AssetID, Event: event, Repos: repos}, nil
+		return &createdEventResolver{
+			Conf:         conf,
+			CreateableID: &payload.AssetID,
+			Event:        event,
+			Repos:        repos,
+		}, nil
 	case data.UserAssetMentioned:
 		return nil, nil
 	case data.UserAssetReferenced:
 		return &referencedEventResolver{
+			Conf:            conf,
 			Event:           event,
 			ReferenceableID: &payload.AssetID,
 			Repos:           repos,
@@ -269,9 +325,10 @@ func userAssetEventPermitToResolver(ctx context.Context, event *repo.EventPermit
 		}, nil
 	case data.UserAssetRenamed:
 		return &renamedEventResolver{
+			Conf:         conf,
+			Event:        event,
 			RenameableID: &payload.AssetID,
 			Rename:       &payload.Rename,
-			Event:        event,
 			Repos:        repos,
 		}, nil
 	default:

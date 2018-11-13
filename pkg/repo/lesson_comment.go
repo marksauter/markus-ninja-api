@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -108,13 +109,15 @@ func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
 	return r.lessonComment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentRepo() *LessonCommentRepo {
+func NewLessonCommentRepo(conf *myconf.Config) *LessonCommentRepo {
 	return &LessonCommentRepo{
+		conf: conf,
 		load: loader.NewLessonCommentLoader(),
 	}
 }
 
 type LessonCommentRepo struct {
+	conf   *myconf.Config
 	load   *loader.LessonCommentLoader
 	permit *Permitter
 }

@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewUserActivityConnectionResolver(
-	repos *repo.Repos,
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	filters *data.EventFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*userActivityConnectionResolver, error) {
 	edges := make([]*userActivityEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewUserActivityEventEdgeResolver(events[i], repos)
+		edge, err := NewUserActivityEventEdgeResolver(events[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewUserActivityConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &userActivityConnectionResolver{
+		conf:     conf,
 		edges:    edges,
 		events:   events,
 		filters:  filters,
@@ -43,6 +46,7 @@ func NewUserActivityConnectionResolver(
 }
 
 type userActivityConnectionResolver struct {
+	conf     *myconf.Config
 	edges    []*userActivityEventEdgeResolver
 	events   []*repo.EventPermit
 	filters  *data.EventFilterOptions
@@ -65,7 +69,7 @@ func (r *userActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userAct
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
-			resolver, err := eventPermitToResolver(ctx, e, r.repos)
+			resolver, err := eventPermitToResolver(ctx, e, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

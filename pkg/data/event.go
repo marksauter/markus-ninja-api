@@ -74,10 +74,8 @@ type EventTypeFilter struct {
 }
 
 type EventFilterOptions struct {
-	ActionIs    *[]string
-	ActionIsNot *[]string
-	IsPublic    *bool
-	Types       *[]EventTypeFilter
+	IsPublic *bool
+	Types    *[]EventTypeFilter
 }
 
 func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
@@ -95,20 +93,35 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 	}
 	if src.Types != nil && len(*src.Types) > 0 {
 		whereType := make([]string, len(*src.Types))
+		var withType bool
 		for i, t := range *src.Types {
-			whereType[i] = from + `.type = ` + args.Append(t.Type)
+			withType = false
+			if t.Type != mytype.LessonEvent.String() {
+				withType = true
+				whereType[i] = from + `.type = ` + args.Append(t.Type)
+			}
 			if t.ActionIs != nil && len(*t.ActionIs) > 0 {
 				whereAction := make([]string, len(*t.ActionIs))
 				for i, a := range *t.ActionIs {
 					whereAction[i] = from + `.payload->>'action' = ` + args.Append(a)
 				}
-				whereType[i] += " AND (" + strings.Join(whereAction, " OR ") + ")"
+				whereActions := strings.Join(whereAction, " OR ")
+				if withType {
+					whereType[i] += " AND (" + whereActions + ")"
+				} else {
+					whereType[i] += whereActions
+				}
 			} else if t.ActionIsNot != nil && len(*t.ActionIsNot) > 0 {
 				whereAction := make([]string, len(*t.ActionIsNot))
 				for i, a := range *t.ActionIsNot {
 					whereAction[i] = from + `.payload->>'action' != ` + args.Append(a)
 				}
-				whereType[i] += " AND " + strings.Join(whereAction, " AND ")
+				whereActions := strings.Join(whereAction, " AND ")
+				if withType {
+					whereType[i] += " AND (" + whereActions + ")"
+				} else {
+					whereType[i] += whereActions
+				}
 			}
 		}
 		whereParts = append(
@@ -127,60 +140,10 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 	}
 }
 
-type LessonEventFilterOptions struct {
-	ActionIs    *[]string
-	ActionIsNot *[]string
-	IsPublic    *bool
-}
-
-func (src *LessonEventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
-	if src == nil {
-		return nil
-	}
-
-	whereParts := make([]string, 0, 3)
-	if src.ActionIs != nil && len(*src.ActionIs) > 0 {
-		whereAction := make([]string, len(*src.ActionIs))
-		for i, a := range *src.ActionIs {
-			whereAction[i] = from + `.action = ` + args.Append(a)
-		}
-		whereParts = append(
-			whereParts,
-			"("+strings.Join(whereAction, " OR ")+")",
-		)
-	}
-	if src.ActionIsNot != nil && len(*src.ActionIsNot) > 0 {
-		whereAction := make([]string, len(*src.ActionIsNot))
-		for i, a := range *src.ActionIsNot {
-			whereAction[i] = from + `.action != ` + args.Append(a)
-		}
-		whereParts = append(
-			whereParts,
-			"("+strings.Join(whereAction, " AND ")+")",
-		)
-	}
-	if src.IsPublic != nil {
-		if *src.IsPublic {
-			whereParts = append(whereParts, from+".public = true")
-		} else {
-			whereParts = append(whereParts, from+".public = false")
-		}
-	}
-
-	where := ""
-	if len(whereParts) > 0 {
-		where = "(" + strings.Join(whereParts, " AND ") + ")"
-	}
-
-	return &SQLParts{
-		Where: where,
-	}
-}
-
 func CountEventByLesson(
 	db Queryer,
 	lessonID string,
-	filters *LessonEventFilterOptions,
+	filters *EventFilterOptions,
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
@@ -436,7 +399,7 @@ func GetEventByLesson(
 	db Queryer,
 	lessonID string,
 	po *PageOptions,
-	filters *LessonEventFilterOptions,
+	filters *EventFilterOptions,
 ) ([]*Event, error) {
 	var rows []*Event
 	if po != nil && po.Limit() > 0 {

@@ -3,12 +3,12 @@ package repo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -48,18 +48,6 @@ func (r *AssetPermit) ContentType() (string, error) {
 		return "", err
 	}
 	return assetType + "/" + assetSubtype, nil
-}
-
-func (r *AssetPermit) Href() (string, error) {
-	key, err := r.Key()
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(
-		"http://localhost:5000/user/assets/%s/%s",
-		r.asset.UserID.Short,
-		key,
-	), nil
 }
 
 func (r *AssetPermit) ID() (int64, error) {
@@ -113,13 +101,15 @@ func (r *AssetPermit) UserID() (*mytype.OID, error) {
 	return &r.asset.UserID, nil
 }
 
-func NewAssetRepo() *AssetRepo {
+func NewAssetRepo(conf *myconf.Config) *AssetRepo {
 	return &AssetRepo{
+		conf: conf,
 		load: loader.NewAssetLoader(),
 	}
 }
 
 type AssetRepo struct {
+	conf   *myconf.Config
 	load   *loader.AssetLoader
 	permit *Permitter
 }

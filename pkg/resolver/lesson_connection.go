@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonConnectionResolver(
-	repos *repo.Repos,
 	lessons []*repo.LessonPermit,
 	pageOptions *data.PageOptions,
 	nodeID *mytype.OID,
 	filters *data.LessonFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*lessonConnectionResolver, error) {
 	edges := make([]*lessonEdgeResolver, len(lessons))
 	for i := range edges {
-		edge, err := NewLessonEdgeResolver(lessons[i], repos)
+		edge, err := NewLessonEdgeResolver(lessons[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewLessonConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &lessonConnectionResolver{
+		conf:     conf,
 		edges:    edges,
 		filters:  filters,
 		lessons:  lessons,
@@ -43,6 +46,7 @@ func NewLessonConnectionResolver(
 }
 
 type lessonConnectionResolver struct {
+	conf     *myconf.Config
 	edges    []*lessonEdgeResolver
 	filters  *data.LessonFilterOptions
 	lessons  []*repo.LessonPermit
@@ -65,7 +69,7 @@ func (r *lessonConnectionResolver) Nodes() *[]*lessonResolver {
 	if n > 0 && !r.pageInfo.isEmpty {
 		lessons := r.lessons[r.pageInfo.start : r.pageInfo.end+1]
 		for _, l := range lessons {
-			nodes = append(nodes, &lessonResolver{Lesson: l, Repos: r.repos})
+			nodes = append(nodes, &lessonResolver{Lesson: l, Conf: r.conf, Repos: r.repos})
 		}
 	}
 	return &nodes

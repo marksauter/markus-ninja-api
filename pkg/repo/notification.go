@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -100,13 +101,15 @@ func (r *NotificationPermit) UserID() (*mytype.OID, error) {
 	return &r.notification.UserID, nil
 }
 
-func NewNotificationRepo() *NotificationRepo {
+func NewNotificationRepo(conf *myconf.Config) *NotificationRepo {
 	return &NotificationRepo{
+		conf: conf,
 		load: loader.NewNotificationLoader(),
 	}
 }
 
 type NotificationRepo struct {
+	conf   *myconf.Config
 	load   *loader.NotificationLoader
 	permit *Permitter
 }

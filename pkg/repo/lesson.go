@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -134,13 +135,15 @@ func (r *LessonPermit) UserID() (*mytype.OID, error) {
 	return &r.lesson.UserID, nil
 }
 
-func NewLessonRepo() *LessonRepo {
+func NewLessonRepo(conf *myconf.Config) *LessonRepo {
 	return &LessonRepo{
+		conf: conf,
 		load: loader.NewLessonLoader(),
 	}
 }
 
 type LessonRepo struct {
+	conf   *myconf.Config
 	load   *loader.LessonLoader
 	permit *Permitter
 }

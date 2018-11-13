@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -102,13 +103,15 @@ func (r *StudyPermit) UserID() (*mytype.OID, error) {
 	return &r.study.UserID, nil
 }
 
-func NewStudyRepo() *StudyRepo {
+func NewStudyRepo(conf *myconf.Config) *StudyRepo {
 	return &StudyRepo{
+		conf: conf,
 		load: loader.NewStudyLoader(),
 	}
 }
 
 type StudyRepo struct {
+	conf   *myconf.Config
 	load   *loader.StudyLoader
 	permit *Permitter
 }

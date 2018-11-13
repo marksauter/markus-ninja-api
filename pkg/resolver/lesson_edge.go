@@ -2,12 +2,14 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonEdgeResolver(
 	node *repo.LessonPermit,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*lessonEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
@@ -15,6 +17,7 @@ func NewLessonEdgeResolver(
 	}
 	cursor := data.EncodeCursor(id.String)
 	return &lessonEdgeResolver{
+		conf:   conf,
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
@@ -22,6 +25,7 @@ func NewLessonEdgeResolver(
 }
 
 type lessonEdgeResolver struct {
+	conf   *myconf.Config
 	cursor string
 	node   *repo.LessonPermit
 	repos  *repo.Repos
@@ -32,5 +36,5 @@ func (r *lessonEdgeResolver) Cursor() string {
 }
 
 func (r *lessonEdgeResolver) Node() *lessonResolver {
-	return &lessonResolver{Lesson: r.node, Repos: r.repos}
+	return &lessonResolver{Lesson: r.node, Conf: r.conf, Repos: r.repos}
 }

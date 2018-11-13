@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -72,13 +73,15 @@ func (r *PRTPermit) EndedAt() (time.Time, error) {
 	return r.prt.EndedAt.Time, nil
 }
 
-func NewPRTRepo() *PRTRepo {
+func NewPRTRepo(conf *myconf.Config) *PRTRepo {
 	return &PRTRepo{
+		conf: conf,
 		load: loader.NewPRTLoader(),
 	}
 }
 
 type PRTRepo struct {
+	conf   *myconf.Config
 	load   *loader.PRTLoader
 	permit *Permitter
 }

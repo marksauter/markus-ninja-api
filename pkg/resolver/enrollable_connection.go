@@ -5,19 +5,21 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEnrollableConnectionResolver(
-	repos *repo.Repos,
 	enrollables []repo.NodePermit, pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	search *string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*enrollableConnectionResolver, error) {
 	edges := make([]*enrollableEdgeResolver, len(enrollables))
 	for i := range edges {
-		edge, err := NewEnrollableEdgeResolver(repos, enrollables[i])
+		edge, err := NewEnrollableEdgeResolver(enrollables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -31,6 +33,7 @@ func NewEnrollableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &enrollableConnectionResolver{
+		conf:        conf,
 		edges:       edges,
 		enrollables: enrollables,
 		pageInfo:    pageInfo,
@@ -42,6 +45,7 @@ func NewEnrollableConnectionResolver(
 }
 
 type enrollableConnectionResolver struct {
+	conf        *myconf.Config
 	edges       []*enrollableEdgeResolver
 	enrollables []repo.NodePermit
 	pageInfo    *pageInfoResolver
@@ -71,7 +75,7 @@ func (r *enrollableConnectionResolver) Nodes() (*[]*enrollableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		enrollables := r.enrollables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range enrollables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

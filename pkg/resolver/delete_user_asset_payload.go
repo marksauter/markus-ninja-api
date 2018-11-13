@@ -4,16 +4,16 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteUserAssetPayload = deleteUserAssetPayloadResolver
-
 type deleteUserAssetPayloadResolver struct {
-	UserAssetID *mytype.OID
-	StudyID     *mytype.OID
+	Conf        *myconf.Config
 	Repos       *repo.Repos
+	StudyID     *mytype.OID
+	UserAssetID *mytype.OID
 }
 
 func (r *deleteUserAssetPayloadResolver) DeletedUserAssetID() graphql.ID {
@@ -26,5 +26,5 @@ func (r *deleteUserAssetPayloadResolver) Study(ctx context.Context) (*studyResol
 		return nil, err
 	}
 
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }

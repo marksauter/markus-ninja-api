@@ -1223,7 +1223,8 @@ func UpdateLesson(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-		event, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID, true)
+		isPublic := currentLesson.PublishedAt.Status != pgtype.Null
+		event, err := NewLessonEvent(eventPayload, &lesson.StudyID, &lesson.UserID, isPublic)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err

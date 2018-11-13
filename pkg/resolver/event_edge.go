@@ -2,12 +2,14 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEventEdgeResolver(
 	node *repo.EventPermit,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*eventEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
@@ -15,6 +17,7 @@ func NewEventEdgeResolver(
 	}
 	cursor := data.EncodeCursor(id.String)
 	return &eventEdgeResolver{
+		conf:   conf,
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
@@ -22,6 +25,7 @@ func NewEventEdgeResolver(
 }
 
 type eventEdgeResolver struct {
+	conf   *myconf.Config
 	cursor string
 	node   *repo.EventPermit
 	repos  *repo.Repos
@@ -32,5 +36,5 @@ func (r *eventEdgeResolver) Cursor() string {
 }
 
 func (r *eventEdgeResolver) Node() *eventResolver {
-	return &eventResolver{Event: r.node, Repos: r.repos}
+	return &eventResolver{Event: r.node, Conf: r.conf, Repos: r.repos}
 }

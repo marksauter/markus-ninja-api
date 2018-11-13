@@ -3,18 +3,18 @@ package resolver
 import (
 	"context"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type AddLessonCommentPayload = addLessonCommentPayloadResolver
-
 type addLessonCommentPayloadResolver struct {
+	Conf          *myconf.Config
 	LessonComment *repo.LessonCommentPermit
 	Repos         *repo.Repos
 }
 
 func (r *addLessonCommentPayloadResolver) CommentEdge() (*lessonCommentEdgeResolver, error) {
-	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos)
+	return NewLessonCommentEdgeResolver(r.LessonComment, r.Repos, r.Conf)
 }
 
 func (r *addLessonCommentPayloadResolver) Lesson(
@@ -29,5 +29,5 @@ func (r *addLessonCommentPayloadResolver) Lesson(
 		return nil, err
 	}
 
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }

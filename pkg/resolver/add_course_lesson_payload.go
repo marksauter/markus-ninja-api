@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
@@ -10,6 +11,7 @@ import (
 )
 
 type addCourseLessonPayloadResolver struct {
+	Conf     *myconf.Config
 	CourseID *mytype.OID
 	LessonID *mytype.OID
 	Repos    *repo.Repos
@@ -24,7 +26,7 @@ func (r *addCourseLessonPayloadResolver) Course(
 		return nil, err
 	}
 
-	return &courseResolver{Course: course, Repos: r.Repos}, nil
+	return &courseResolver{Course: course, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *addCourseLessonPayloadResolver) LessonEdge(
@@ -35,5 +37,5 @@ func (r *addCourseLessonPayloadResolver) LessonEdge(
 		return nil, err
 	}
 
-	return NewLessonEdgeResolver(lesson, r.Repos)
+	return NewLessonEdgeResolver(lesson, r.Repos, r.Conf)
 }

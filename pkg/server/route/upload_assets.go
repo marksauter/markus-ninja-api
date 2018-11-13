@@ -2,6 +2,7 @@ package route
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -35,6 +37,7 @@ var UploadAssetsCors = cors.New(cors.Options{
 })
 
 type UploadAssetsHandler struct {
+	Conf       *myconf.Config
 	Repos      *repo.Repos
 	StorageSvc *service.StorageService
 }
@@ -215,13 +218,11 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	href, err := assetPermit.Href()
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get asset href")
-		response := myhttp.AccessDeniedErrorResponse()
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
+	href := fmt.Sprintf(
+		h.Conf.APIURL+"/user/assets/%s/%s",
+		viewer.ID.Short,
+		uploadResponse.Key,
+	)
 
 	assetResponse := Asset{
 		ContentType: contentType,

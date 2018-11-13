@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -110,13 +111,15 @@ func (r *UserPermit) Verified() (bool, error) {
 	return r.user.Verified.Bool, nil
 }
 
-func NewUserRepo() *UserRepo {
+func NewUserRepo(conf *myconf.Config) *UserRepo {
 	return &UserRepo{
+		conf: conf,
 		load: loader.NewUserLoader(),
 	}
 }
 
 type UserRepo struct {
+	conf   *myconf.Config
 	load   *loader.UserLoader
 	permit *Permitter
 }

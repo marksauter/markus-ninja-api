@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -27,6 +28,7 @@ var PreviewCors = cors.New(cors.Options{
 })
 
 type PreviewHandler struct {
+	Conf  *myconf.Config
 	Repos *repo.Repos
 }
 
@@ -69,8 +71,6 @@ func (h PreviewHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	return
 }
 
-const clientURL = "http://localhost:3000"
-
 func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (string, error) {
 	markdown := mytype.Markdown{}
 	if err := markdown.Set(text); err != nil {
@@ -101,7 +101,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			return s
 		}
 		href := fmt.Sprintf(
-			"http://localhost:5000/user/assets/%s/%s",
+			h.Conf.APIURL+"/user/assets/%s/%s",
 			userID.Short,
 			key,
 		)
@@ -148,7 +148,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			return s
 		}
 		return util.ReplaceWithPadding(s, fmt.Sprintf("[#%[4]d](%[1]s/%[2]s/%[3]s/lesson/%[4]d)",
-			clientURL,
+			h.Conf.ClientURL,
 			userLogin,
 			studyName,
 			n,
@@ -176,7 +176,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			return s
 		}
 		return util.ReplaceWithPadding(s, fmt.Sprintf("[%[2]s/%[3]s#%[4]d](%[1]s/%[2]s/%[3]s/lesson/%[4]d)",
-			clientURL,
+			h.Conf.ClientURL,
 			owner,
 			name,
 			n,
@@ -198,7 +198,7 @@ func (h PreviewHandler) textToHTML(ctx context.Context, text, studyID string) (s
 			return s
 		}
 		return util.ReplaceWithPadding(s, fmt.Sprintf("[@%[2]s](%[1]s/%[2]s)",
-			clientURL,
+			h.Conf.ClientURL,
 			name,
 		))
 	}

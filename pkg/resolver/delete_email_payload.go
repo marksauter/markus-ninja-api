@@ -4,13 +4,13 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteEmailPayload = deleteEmailPayloadResolver
-
 type deleteEmailPayloadResolver struct {
+	Conf    *myconf.Config
 	EmailID *mytype.OID
 	UserID  *mytype.OID
 	Repos   *repo.Repos
@@ -26,5 +26,5 @@ func (r *deleteEmailPayloadResolver) User(ctx context.Context) (*userResolver, e
 		return nil, err
 	}
 
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

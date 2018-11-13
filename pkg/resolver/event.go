@@ -4,12 +4,12 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Event = eventResolver
-
 type eventResolver struct {
+	Conf  *myconf.Config
 	Event *repo.EventPermit
 	Repos *repo.Repos
 }
@@ -33,7 +33,7 @@ func (r *eventResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -45,5 +45,5 @@ func (r *eventResolver) User(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

@@ -3,13 +3,13 @@ package repo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -44,18 +44,6 @@ func (r *UserAssetPermit) Description() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.userAsset.Description.String, nil
-}
-
-func (r *UserAssetPermit) Href() (string, error) {
-	key, err := r.Key()
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(
-		"http://localhost:5000/user/assets/%s/%s",
-		r.userAsset.UserID.Short,
-		key,
-	), nil
 }
 
 func (r *UserAssetPermit) ID() (*mytype.OID, error) {
@@ -139,13 +127,15 @@ func (r *UserAssetPermit) UserID() (*mytype.OID, error) {
 	return &r.userAsset.UserID, nil
 }
 
-func NewUserAssetRepo() *UserAssetRepo {
+func NewUserAssetRepo(conf *myconf.Config) *UserAssetRepo {
 	return &UserAssetRepo{
+		conf: conf,
 		load: loader.NewUserAssetLoader(),
 	}
 }
 
 type UserAssetRepo struct {
+	conf   *myconf.Config
 	load   *loader.UserAssetLoader
 	permit *Permitter
 }

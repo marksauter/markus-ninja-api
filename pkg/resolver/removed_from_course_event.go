@@ -4,13 +4,15 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type removedFromCourseEventResolver struct {
-	Event    *repo.EventPermit
+	Conf     *myconf.Config
 	CourseID *mytype.OID
+	Event    *repo.EventPermit
 	LessonID *mytype.OID
 	Repos    *repo.Repos
 }
@@ -20,7 +22,7 @@ func (r *removedFromCourseEventResolver) Course(ctx context.Context) (*courseRes
 	if err != nil {
 		return nil, err
 	}
-	return &courseResolver{Course: course, Repos: r.Repos}, nil
+	return &courseResolver{Course: course, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *removedFromCourseEventResolver) CreatedAt() (graphql.Time, error) {
@@ -38,7 +40,7 @@ func (r *removedFromCourseEventResolver) Lesson(ctx context.Context) (*lessonRes
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *removedFromCourseEventResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -50,7 +52,7 @@ func (r *removedFromCourseEventResolver) Study(ctx context.Context) (*studyResol
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *removedFromCourseEventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -62,5 +64,5 @@ func (r *removedFromCourseEventResolver) User(ctx context.Context) (*userResolve
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

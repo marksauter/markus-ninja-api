@@ -7,6 +7,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
@@ -14,9 +15,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type Course = courseResolver
-
 type courseResolver struct {
+	Conf   *myconf.Config
 	Course *repo.CoursePermit
 	Repos  *repo.Repos
 }
@@ -77,11 +77,12 @@ func (r *courseResolver) AppleGivers(
 		return nil, err
 	}
 	appleGiverConnectionResolver, err := NewAppleGiverConnectionResolver(
-		r.Repos,
 		users,
 		pageOptions,
 		courseID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -129,7 +130,7 @@ func (r *courseResolver) Lesson(
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *courseResolver) Lessons(
@@ -192,11 +193,12 @@ func (r *courseResolver) Lessons(
 		return &resolver, err
 	}
 	lessonConnectionResolver, err := NewLessonConnectionResolver(
-		r.Repos,
 		lessons,
 		pageOptions,
 		courseID,
 		&filters,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -222,7 +224,7 @@ func (r *courseResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *courseResolver) ResourcePath(
@@ -262,7 +264,7 @@ func (r *courseResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *courseResolver) Topics(
@@ -306,11 +308,12 @@ func (r *courseResolver) Topics(
 		return nil, err
 	}
 	topicConnectionResolver, err := NewTopicConnectionResolver(
-		r.Repos,
 		topics,
 		pageOptions,
 		courseID,
 		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -331,7 +334,7 @@ func (r *courseResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

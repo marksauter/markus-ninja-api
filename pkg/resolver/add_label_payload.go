@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type AddLabelPayload = addLabelPayloadResolver
-
 type addLabelPayloadResolver struct {
+	Conf        *myconf.Config
 	LabelID     *mytype.OID
 	LabelableID *mytype.OID
 	Repos       *repo.Repos
@@ -23,7 +23,7 @@ func (r *addLabelPayloadResolver) LabelEdge(
 	if err != nil {
 		return nil, err
 	}
-	return NewLabelEdgeResolver(labelPermit, r.Repos)
+	return NewLabelEdgeResolver(labelPermit, r.Repos, r.Conf)
 }
 
 func (r *addLabelPayloadResolver) Labelable(
@@ -33,7 +33,7 @@ func (r *addLabelPayloadResolver) Labelable(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}

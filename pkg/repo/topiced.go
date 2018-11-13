@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -61,13 +62,15 @@ func (r *TopicedPermit) TopicableID() (*mytype.OID, error) {
 	return &r.topiced.TopicableID, nil
 }
 
-func NewTopicedRepo() *TopicedRepo {
+func NewTopicedRepo(conf *myconf.Config) *TopicedRepo {
 	return &TopicedRepo{
+		conf: conf,
 		load: loader.NewTopicedLoader(),
 	}
 }
 
 type TopicedRepo struct {
+	conf   *myconf.Config
 	load   *loader.TopicedLoader
 	permit *Permitter
 }

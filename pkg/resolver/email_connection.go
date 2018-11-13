@@ -4,20 +4,22 @@ import (
 	"context"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEmailConnectionResolver(
-	repos *repo.Repos,
 	emails []*repo.EmailPermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	filters *data.EmailFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*emailConnectionResolver, error) {
 	edges := make([]*emailEdgeResolver, len(emails))
 	for i := range edges {
-		edge, err := NewEmailEdgeResolver(emails[i], repos)
+		edge, err := NewEmailEdgeResolver(emails[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -31,6 +33,7 @@ func NewEmailConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &emailConnectionResolver{
+		conf:     conf,
 		edges:    edges,
 		userID:   userID,
 		emails:   emails,
@@ -42,6 +45,7 @@ func NewEmailConnectionResolver(
 }
 
 type emailConnectionResolver struct {
+	conf     *myconf.Config
 	edges    []*emailEdgeResolver
 	emails   []*repo.EmailPermit
 	userID   *mytype.OID
@@ -64,7 +68,7 @@ func (r *emailConnectionResolver) Nodes() *[]*emailResolver {
 	if n > 0 && !r.pageInfo.isEmpty {
 		emails := r.emails[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range emails {
-			nodes = append(nodes, &emailResolver{Email: e, Repos: r.repos})
+			nodes = append(nodes, &emailResolver{Email: e, Conf: r.conf, Repos: r.repos})
 		}
 	}
 	return &nodes

@@ -5,11 +5,13 @@ import (
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type unlabeledEventResolver struct {
+	Conf        *myconf.Config
 	Event       *repo.EventPermit
 	LabelID     *mytype.OID
 	LabelableID *mytype.OID
@@ -31,7 +33,7 @@ func (r *unlabeledEventResolver) Label(ctx context.Context) (*labelResolver, err
 	if err != nil {
 		return nil, err
 	}
-	return &labelResolver{Label: unlabel, Repos: r.Repos}, nil
+	return &labelResolver{Label: unlabel, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *unlabeledEventResolver) Labelable(ctx context.Context) (*labelableResolver, error) {
@@ -39,7 +41,7 @@ func (r *unlabeledEventResolver) Labelable(ctx context.Context) (*labelableResol
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func (r *unlabeledEventResolver) Study(ctx context.Context) (*studyResolver, err
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *unlabeledEventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -71,5 +73,5 @@ func (r *unlabeledEventResolver) User(ctx context.Context) (*userResolver, error
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
