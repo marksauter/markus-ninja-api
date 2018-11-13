@@ -665,7 +665,7 @@ func CreateEvent(
 
 	psName := preparedName("createEvent", sql)
 
-	_, err = prepareExec(tx, psName, sql, args...)
+	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
@@ -684,16 +684,19 @@ func CreateEvent(
 		return nil, err
 	}
 
+	if commandTag.RowsAffected() != 1 {
+		mylog.Log.Info(util.Trace("event not created"))
+		return nil, nil
+	}
+
 	event, err := GetEvent(tx, row.ID.String)
 	if err != nil {
-		if err == ErrNotFound {
-			mylog.Log.Info(util.Trace("event not created"))
-			return nil, nil
-		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if err := CreateNotificationsFromEvent(tx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 

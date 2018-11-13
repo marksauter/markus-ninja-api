@@ -172,6 +172,10 @@ func (r *LessonRepo) Open(p *Permitter) error {
 	return nil
 }
 
+func (r *LessonRepo) Clear(id string) {
+	r.load.Clear(id)
+}
+
 func (r *LessonRepo) Close() {
 	r.load.ClearAll()
 }
@@ -337,6 +341,29 @@ func (r *LessonRepo) Get(
 		return nil, err
 	}
 	lesson, err := r.load.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
+	if err != nil {
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+// Same as Get(), but doesn't use the dataloader
+func (r *LessonRepo) Pull(
+	ctx context.Context,
+	id string,
+) (*LessonPermit, error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
+	if err := r.CheckConnection(); err != nil {
+		return nil, err
+	}
+	lesson, err := data.GetLesson(db, id)
 	if err != nil {
 		return nil, err
 	}

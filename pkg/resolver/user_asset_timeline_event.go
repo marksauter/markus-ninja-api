@@ -15,3 +15,8 @@ func (r *userAssetTimelineEventResolver) ToReferencedEvent() (*referencedEventRe
 	resolver, ok := r.userAssetTimelineEvent.(*referencedEventResolver)
 	return resolver, ok
 }
+
+func (r *userAssetTimelineEventResolver) ToRenamedEvent() (*renamedEventResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*renamedEventResolver)
+	return resolver, ok
+}

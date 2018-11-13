@@ -12,6 +12,11 @@ type nodeResolver struct {
 	node
 }
 
+func (r *nodeResolver) ToAddedToCourseEvent() (*addedToCourseEventResolver, bool) {
+	resolver, ok := r.node.(*addedToCourseEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToAppledEvent() (*appledEventResolver, bool) {
 	resolver, ok := r.node.(*appledEventResolver)
 	return resolver, ok
@@ -42,6 +47,11 @@ func (r *nodeResolver) ToLabel() (*labelResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToLabeledEvent() (*labeledEventResolver, bool) {
+	resolver, ok := r.node.(*labeledEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.node.(*lessonResolver)
 	return resolver, ok
@@ -67,6 +77,16 @@ func (r *nodeResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToRemovedFromCourseEvent() (*removedFromCourseEventResolver, bool) {
+	resolver, ok := r.node.(*removedFromCourseEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToRenamedEvent() (*renamedEventResolver, bool) {
+	resolver, ok := r.node.(*renamedEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
 	resolver, ok := r.node.(*studyResolver)
 	return resolver, ok
@@ -79,6 +99,11 @@ func (r *nodeResolver) ToTopic() (*topicResolver, bool) {
 
 func (r *nodeResolver) ToUnappledEvent() (*unappledEventResolver, bool) {
 	resolver, ok := r.node.(*unappledEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToUnlabeledEvent() (*unlabeledEventResolver, bool) {
+	resolver, ok := r.node.(*unlabeledEventResolver)
 	return resolver, ok
 }
 

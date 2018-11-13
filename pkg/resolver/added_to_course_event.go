@@ -1,0 +1,66 @@
+package resolver
+
+import (
+	"context"
+
+	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
+)
+
+type addedToCourseEventResolver struct {
+	Event    *repo.EventPermit
+	CourseID *mytype.OID
+	LessonID *mytype.OID
+	Repos    *repo.Repos
+}
+
+func (r *addedToCourseEventResolver) Course(ctx context.Context) (*courseResolver, error) {
+	course, err := r.Repos.Course().Get(ctx, r.CourseID.String)
+	if err != nil {
+		return nil, err
+	}
+	return &courseResolver{Course: course, Repos: r.Repos}, nil
+}
+
+func (r *addedToCourseEventResolver) CreatedAt() (graphql.Time, error) {
+	t, err := r.Event.CreatedAt()
+	return graphql.Time{t}, err
+}
+
+func (r *addedToCourseEventResolver) ID() (graphql.ID, error) {
+	id, err := r.Event.ID()
+	return graphql.ID(id.String), err
+}
+
+func (r *addedToCourseEventResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
+	lesson, err := r.Repos.Lesson().Get(ctx, r.LessonID.String)
+	if err != nil {
+		return nil, err
+	}
+	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+}
+
+func (r *addedToCourseEventResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyID, err := r.Event.StudyID()
+	if err != nil {
+		return nil, err
+	}
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
+	if err != nil {
+		return nil, err
+	}
+	return &studyResolver{Study: study, Repos: r.Repos}, nil
+}
+
+func (r *addedToCourseEventResolver) User(ctx context.Context) (*userResolver, error) {
+	userID, err := r.Event.UserID()
+	if err != nil {
+		return nil, err
+	}
+	user, err := r.Repos.User().Get(ctx, userID.String)
+	if err != nil {
+		return nil, err
+	}
+	return &userResolver{User: user, Repos: r.Repos}, nil
+}

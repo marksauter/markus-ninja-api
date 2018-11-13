@@ -3,8 +3,10 @@ package resolver
 import (
 	"context"
 
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type addCourseLessonPayloadResolver struct {
@@ -18,6 +20,7 @@ func (r *addCourseLessonPayloadResolver) Course(
 ) (*courseResolver, error) {
 	course, err := r.Repos.Course().Get(ctx, r.CourseID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 

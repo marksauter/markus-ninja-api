@@ -1,0 +1,22 @@
+# Represents a removed from course event on a given subject.
+type RemovedFromCourseEvent implements 
+  LessonTimelineEvent,
+  Node
+{
+  # The course from which the lesson was removed.
+  course: Course!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The lesson which was removed.
+  lesson: Lesson!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}
