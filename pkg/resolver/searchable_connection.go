@@ -5,19 +5,21 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewSearchableConnectionResolver(
-	repos *repo.Repos,
 	searchables []repo.NodePermit,
 	pageOptions *data.PageOptions,
 	query string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*searchableConnectionResolver, error) {
 	edges := make([]*searchableEdgeResolver, len(searchables))
 	for i := range edges {
-		edge, err := NewSearchableEdgeResolver(repos, searchables[i])
+		edge, err := NewSearchableEdgeResolver(searchables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -31,6 +33,7 @@ func NewSearchableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &searchableConnectionResolver{
+		conf:        conf,
 		edges:       edges,
 		searchables: searchables,
 		pageInfo:    pageInfo,
@@ -41,6 +44,7 @@ func NewSearchableConnectionResolver(
 }
 
 type searchableConnectionResolver struct {
+	conf        *myconf.Config
 	edges       []*searchableEdgeResolver
 	searchables []repo.NodePermit
 	pageInfo    *pageInfoResolver
@@ -84,7 +88,7 @@ func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		searchables := r.searchables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range searchables {
-			resolver, err := nodePermitToResolver(s, r.repos)
+			resolver, err := nodePermitToResolver(s, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

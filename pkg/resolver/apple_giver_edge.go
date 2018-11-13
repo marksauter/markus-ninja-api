@@ -2,22 +2,31 @@ package resolver
 
 import (
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleGiverEdgeResolver(
-	cursor string,
 	node *repo.UserPermit,
 	repos *repo.Repos,
-) *appleGiverEdgeResolver {
+	conf *myconf.Config,
+) (*appleGiverEdgeResolver, error) {
+	id, err := node.ID()
+	if err != nil {
+		return nil, err
+	}
+	cursor := data.EncodeCursor(id.String)
 	return &appleGiverEdgeResolver{
+		conf:   conf,
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
-	}
+	}, nil
 }
 
 type appleGiverEdgeResolver struct {
+	conf   *myconf.Config
 	cursor string
 	node   *repo.UserPermit
 	repos  *repo.Repos
@@ -32,5 +41,5 @@ func (r *appleGiverEdgeResolver) Cursor() string {
 }
 
 func (r *appleGiverEdgeResolver) Node() *userResolver {
-	return &userResolver{User: r.node, Repos: r.repos}
+	return &userResolver{User: r.node, Conf: r.conf, Repos: r.repos}
 }

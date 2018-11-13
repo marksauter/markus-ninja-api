@@ -3,19 +3,21 @@ package resolver
 import (
 	"context"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type createUserAssetPayloadResolver struct {
-	UserAsset *repo.UserAssetPermit
-	StudyID   *mytype.OID
-	UserID    *mytype.OID
+	Conf      *myconf.Config
 	Repos     *repo.Repos
+	StudyID   *mytype.OID
+	UserAsset *repo.UserAssetPermit
+	UserID    *mytype.OID
 }
 
 func (r *createUserAssetPayloadResolver) UserAssetEdge() (*userAssetEdgeResolver, error) {
-	return NewUserAssetEdgeResolver(r.UserAsset, r.Repos)
+	return NewUserAssetEdgeResolver(r.UserAsset, r.Repos, r.Conf)
 }
 
 func (r *createUserAssetPayloadResolver) Owner(ctx context.Context) (*userResolver, error) {
@@ -24,7 +26,7 @@ func (r *createUserAssetPayloadResolver) Owner(ctx context.Context) (*userResolv
 		return nil, err
 	}
 
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *createUserAssetPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -33,5 +35,5 @@ func (r *createUserAssetPayloadResolver) Study(ctx context.Context) (*studyResol
 		return nil, err
 	}
 
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }

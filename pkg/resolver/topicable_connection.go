@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewTopicableConnectionResolver(
-	repos *repo.Repos,
 	topicables []repo.NodePermit,
 	pageOptions *data.PageOptions,
 	topicID *mytype.OID,
 	search *string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*topicableConnectionResolver, error) {
 	edges := make([]*topicableEdgeResolver, len(topicables))
 	for i := range edges {
-		edge, err := NewTopicableEdgeResolver(repos, topicables[i])
+		edge, err := NewTopicableEdgeResolver(topicables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewTopicableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &topicableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		topicables: topicables,
 		pageInfo:   pageInfo,
@@ -43,6 +46,7 @@ func NewTopicableConnectionResolver(
 }
 
 type topicableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*topicableEdgeResolver
 	topicables []repo.NodePermit
 	pageInfo   *pageInfoResolver
@@ -72,7 +76,7 @@ func (r *topicableConnectionResolver) Nodes() (*[]*topicableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		topicables := r.topicables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range topicables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

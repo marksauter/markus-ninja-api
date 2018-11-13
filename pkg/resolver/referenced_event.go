@@ -5,11 +5,13 @@ import (
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type referencedEventResolver struct {
+	Conf            *myconf.Config
 	Event           *repo.EventPermit
 	ReferenceableID *mytype.OID
 	Repos           *repo.Repos
@@ -49,7 +51,7 @@ func (r *referencedEventResolver) Referenceable(ctx context.Context) (*reference
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func (r *referencedEventResolver) Source(ctx context.Context) (*lessonResolver, 
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: source, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: source, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *referencedEventResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -77,7 +79,7 @@ func (r *referencedEventResolver) Study(ctx context.Context) (*studyResolver, er
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *referencedEventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -89,5 +91,5 @@ func (r *referencedEventResolver) User(ctx context.Context) (*userResolver, erro
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

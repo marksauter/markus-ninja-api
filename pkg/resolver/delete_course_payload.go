@@ -4,13 +4,13 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteCoursePayload = deleteCoursePayloadResolver
-
 type deleteCoursePayloadResolver struct {
+	Conf     *myconf.Config
 	CourseID *mytype.OID
 	StudyID  *mytype.OID
 	Repos    *repo.Repos
@@ -30,5 +30,5 @@ func (r *deleteCoursePayloadResolver) Study(
 		return nil, err
 	}
 
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }

@@ -109,6 +109,7 @@ func (r *RootResolver) AddCourseLesson(
 	}
 
 	return &addCourseLessonPayloadResolver{
+		Conf:     r.Conf,
 		CourseID: &courseLesson.CourseID,
 		LessonID: &courseLesson.LessonID,
 		Repos:    r.Repos,
@@ -165,6 +166,7 @@ func (r *RootResolver) AddEmail(
 	}
 
 	resolver := &addEmailPayloadResolver{
+		Conf:  r.Conf,
 		Email: emailPermit,
 		EVT:   evtPermit,
 		Repos: r.Repos,
@@ -230,6 +232,11 @@ func (r *RootResolver) AddLabel(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, errors.New("lesson not found")
 		}
+		isPublished, err := lesson.IsPublished()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
 		studyID, err := lesson.StudyID()
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -244,7 +251,8 @@ func (r *RootResolver) AddLabel(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		isPublic := isPublished
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, isPublic)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
@@ -263,6 +271,7 @@ func (r *RootResolver) AddLabel(
 	}
 
 	return &addLabelPayloadResolver{
+		Conf:        r.Conf,
 		LabelID:     &labeled.LabelID,
 		LabelableID: &labeled.LabelableID,
 		Repos:       r.Repos,
@@ -320,6 +329,7 @@ func (r *RootResolver) AddLessonComment(
 	}
 
 	return &addLessonCommentPayloadResolver{
+		Conf:          r.Conf,
 		LessonComment: lessonCommentPermit,
 		Repos:         r.Repos,
 	}, nil
@@ -360,6 +370,7 @@ func (r *RootResolver) CreateCourse(
 	}
 
 	return &createCoursePayloadResolver{
+		Conf:    r.Conf,
 		Course:  coursePermit,
 		StudyID: &course.StudyID,
 		Repos:   r.Repos,
@@ -396,6 +407,7 @@ func (r *RootResolver) CreateLabel(
 	}
 
 	return &createLabelPayloadResolver{
+		Conf:    r.Conf,
 		Label:   labelPermit,
 		StudyID: &label.StudyID,
 		Repos:   r.Repos,
@@ -449,6 +461,7 @@ func (r *RootResolver) CreateLesson(
 	}
 
 	return &createLessonPayloadResolver{
+		Conf:    r.Conf,
 		Lesson:  lessonPermit,
 		StudyID: &lesson.StudyID,
 		Repos:   r.Repos,
@@ -489,6 +502,7 @@ func (r *RootResolver) CreateStudy(
 	study = studyPermit.Get()
 
 	return &createStudyPayloadResolver{
+		Conf:   r.Conf,
 		Study:  studyPermit,
 		UserID: &study.UserID,
 		Repos:  r.Repos,
@@ -521,7 +535,11 @@ func (r *RootResolver) CreateUser(
 		return nil, err
 	}
 
-	return &userResolver{User: userPermit, Repos: r.Repos}, nil
+	return &userResolver{
+		Conf:  r.Conf,
+		Repos: r.Repos,
+		User:  userPermit,
+	}, nil
 }
 
 type CreateUserAssetInput struct {
@@ -568,10 +586,11 @@ func (r *RootResolver) CreateUserAsset(
 	}
 
 	return &createUserAssetPayloadResolver{
-		UserAsset: userAssetPermit,
-		StudyID:   &userAsset.StudyID,
-		UserID:    &userAsset.UserID,
+		Conf:      r.Conf,
 		Repos:     r.Repos,
+		StudyID:   &userAsset.StudyID,
+		UserAsset: userAssetPermit,
+		UserID:    &userAsset.UserID,
 	}, nil
 }
 
@@ -646,6 +665,7 @@ func (r *RootResolver) DeleteEmail(
 	}
 
 	resolver := &deleteEmailPayloadResolver{
+		Conf:    r.Conf,
 		EmailID: &email.ID,
 		UserID:  &email.UserID,
 		Repos:   r.Repos,
@@ -680,9 +700,10 @@ func (r *RootResolver) DeleteLabel(
 	}
 
 	return &deleteLabelPayloadResolver{
+		Conf:    r.Conf,
 		LabelID: &label.ID,
-		StudyID: &label.StudyID,
 		Repos:   r.Repos,
+		StudyID: &label.StudyID,
 	}, nil
 }
 
@@ -705,9 +726,10 @@ func (r *RootResolver) DeleteLesson(
 	}
 
 	return &deleteLessonPayloadResolver{
+		Conf:     r.Conf,
 		LessonID: &lesson.ID,
-		StudyID:  &lesson.StudyID,
 		Repos:    r.Repos,
+		StudyID:  &lesson.StudyID,
 	}, nil
 }
 
@@ -745,6 +767,7 @@ func (r *RootResolver) DeleteLessonComment(
 	}
 
 	return &deleteLessonCommentPayloadResolver{
+		Conf:            r.Conf,
 		LessonCommentID: &lessonComment.ID,
 		LessonID:        &lessonComment.LessonID,
 		Repos:           r.Repos,
@@ -785,9 +808,10 @@ func (r *RootResolver) DeleteCourse(
 	}
 
 	return &deleteCoursePayloadResolver{
+		Conf:     r.Conf,
 		CourseID: &course.ID,
-		StudyID:  &course.StudyID,
 		Repos:    r.Repos,
+		StudyID:  &course.StudyID,
 	}, nil
 }
 
@@ -825,9 +849,10 @@ func (r *RootResolver) DeleteStudy(
 	}
 
 	return &deleteStudyPayloadResolver{
+		Conf:    r.Conf,
 		OwnerID: &study.UserID,
-		StudyID: &study.ID,
 		Repos:   r.Repos,
+		StudyID: &study.ID,
 	}, nil
 }
 
@@ -865,9 +890,10 @@ func (r *RootResolver) DeleteUserAsset(
 	}
 
 	return &deleteUserAssetPayloadResolver{
-		UserAssetID: &userAsset.ID,
-		StudyID:     &userAsset.StudyID,
+		Conf:        r.Conf,
 		Repos:       r.Repos,
+		StudyID:     &userAsset.StudyID,
+		UserAssetID: &userAsset.ID,
 	}, nil
 }
 
@@ -954,7 +980,7 @@ func (r *RootResolver) GiveApple(
 		}
 	}
 
-	resolver, err := nodePermitToResolver(appleablePermit, r.Repos)
+	resolver, err := nodePermitToResolver(appleablePermit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,6 +1032,7 @@ func (r *RootResolver) LoginUser(
 
 	return &loginUserPayloadResolver{
 		AccessToken: jwt,
+		Conf:        r.Conf,
 		Viewer:      user,
 		Repos:       r.Repos,
 	}, nil
@@ -1123,6 +1150,7 @@ func (r *RootResolver) MoveCourseLesson(
 	}
 
 	return &moveCourseLessonPayloadResolver{
+		Conf:     r.Conf,
 		CourseID: &courseLesson.CourseID,
 		LessonID: &courseLesson.LessonID,
 		Repos:    r.Repos,
@@ -1217,7 +1245,11 @@ func (r *RootResolver) PublishLessonDraft(
 		}
 	}
 
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+	return &lessonResolver{
+		Lesson: lessonPermit,
+		Conf:   r.Conf,
+		Repos:  r.Repos,
+	}, nil
 }
 
 type PublishLessonCommentDraftInput struct {
@@ -1295,7 +1327,11 @@ func (r *RootResolver) PublishLessonCommentDraft(
 		return nil, err
 	}
 
-	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
+	return &lessonCommentResolver{
+		Conf:          r.Conf,
+		LessonComment: lessonCommentPermit,
+		Repos:         r.Repos,
+	}, nil
 }
 
 type RemoveCourseLessonInput struct {
@@ -1375,6 +1411,7 @@ func (r *RootResolver) RemoveCourseLesson(
 	}
 
 	return &removeCourseLessonPayloadResolver{
+		Conf:     r.Conf,
 		CourseID: &courseLesson.CourseID,
 		LessonID: &courseLesson.LessonID,
 		Repos:    r.Repos,
@@ -1421,6 +1458,11 @@ func (r *RootResolver) RemoveLabel(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, errors.New("lesson not found")
 		}
+		isPublished, err := lesson.IsPublished()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
 		studyID, err := lesson.StudyID()
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -1435,7 +1477,8 @@ func (r *RootResolver) RemoveLabel(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		isPublic := isPublished
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, isPublic)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
@@ -1454,6 +1497,7 @@ func (r *RootResolver) RemoveLabel(
 	}
 
 	return &removeLabelPayloadResolver{
+		Conf:        r.Conf,
 		LabelID:     &labeled.LabelID,
 		LabelableID: &labeled.LabelableID,
 		Repos:       r.Repos,
@@ -1592,7 +1636,11 @@ func (r *RootResolver) RequestPasswordReset(
 		return nil, err
 	}
 
-	resolver := &prtResolver{PRT: prtPermit, Repos: r.Repos}
+	resolver := &prtResolver{
+		Conf:  r.Conf,
+		PRT:   prtPermit,
+		Repos: r.Repos,
+	}
 
 	sendMailInput := &service.SendPasswordResetInput{
 		To:        args.Input.Email,
@@ -1662,7 +1710,11 @@ func (r *RootResolver) ResetLessonDraft(
 		return nil, err
 	}
 
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+	return &lessonResolver{
+		Conf:   r.Conf,
+		Lesson: lessonPermit,
+		Repos:  r.Repos,
+	}, nil
 }
 
 type ResetLessonCommentDraftInput struct {
@@ -1717,7 +1769,11 @@ func (r *RootResolver) ResetLessonCommentDraft(
 		return nil, err
 	}
 
-	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Repos: r.Repos}, nil
+	return &lessonCommentResolver{
+		Conf:          r.Conf,
+		LessonComment: lessonCommentPermit,
+		Repos:         r.Repos,
+	}, nil
 }
 
 type ResetPasswordInput struct {
@@ -1839,7 +1895,7 @@ func (r *RootResolver) TakeApple(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -1958,7 +2014,11 @@ func (r *RootResolver) UpdateEmail(
 		}
 	}
 
-	return &emailResolver{Email: emailPermit, Repos: r.Repos}, nil
+	return &emailResolver{
+		Conf:  r.Conf,
+		Email: emailPermit,
+		Repos: r.Repos,
+	}, nil
 }
 
 type UpdateEnrollmentInput struct {
@@ -2013,7 +2073,7 @@ func (r *RootResolver) UpdateEnrollment(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -2062,7 +2122,11 @@ func (r *RootResolver) UpdateLabel(
 	if err != nil {
 		return nil, err
 	}
-	return &labelResolver{Label: labelPermit, Repos: r.Repos}, nil
+	return &labelResolver{
+		Conf:  r.Conf,
+		Label: labelPermit,
+		Repos: r.Repos,
+	}, nil
 }
 
 type UpdateLessonInput struct {
@@ -2098,7 +2162,11 @@ func (r *RootResolver) UpdateLesson(
 		return nil, err
 	}
 
-	return &lessonResolver{Lesson: lessonPermit, Repos: r.Repos}, nil
+	return &lessonResolver{
+		Conf:   r.Conf,
+		Lesson: lessonPermit,
+		Repos:  r.Repos,
+	}, nil
 }
 
 type UpdateLessonCommentInput struct {
@@ -2128,6 +2196,7 @@ func (r *RootResolver) UpdateLessonComment(
 	}
 
 	return &lessonCommentResolver{
+		Conf:          r.Conf,
 		LessonComment: lessonCommentPermit,
 		Repos:         r.Repos,
 	}, nil
@@ -2163,7 +2232,11 @@ func (r *RootResolver) UpdateCourse(
 	if err != nil {
 		return nil, err
 	}
-	return &courseResolver{Course: coursePermit, Repos: r.Repos}, nil
+	return &courseResolver{
+		Conf:   r.Conf,
+		Course: coursePermit,
+		Repos:  r.Repos,
+	}, nil
 }
 
 type UpdateStudyInput struct {
@@ -2196,7 +2269,11 @@ func (r *RootResolver) UpdateStudy(
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: studyPermit, Repos: r.Repos}, nil
+	return &studyResolver{
+		Conf:  r.Conf,
+		Study: studyPermit,
+		Repos: r.Repos,
+	}, nil
 }
 
 type UpdateTopicInput struct {
@@ -2220,7 +2297,11 @@ func (r *RootResolver) UpdateTopic(
 	if err != nil {
 		return nil, err
 	}
-	return &topicResolver{Topic: topicPermit, Repos: r.Repos}, nil
+	return &topicResolver{
+		Conf:  r.Conf,
+		Topic: topicPermit,
+		Repos: r.Repos,
+	}, nil
 }
 
 type UpdateTopicsInput struct {
@@ -2246,8 +2327,9 @@ func (r *RootResolver) UpdateTopics(
 		return nil, err
 	}
 	resolver := &updateTopicsPayloadResolver{
-		TopicableID: topicableID,
+		Conf:        r.Conf,
 		Repos:       r.Repos,
+		TopicableID: topicableID,
 	}
 	newTopics := make(map[string]struct{})
 	oldTopics := make(map[string]struct{})
@@ -2375,7 +2457,11 @@ func (r *RootResolver) UpdateUserAsset(
 	if err != nil {
 		return nil, err
 	}
-	return &userAssetResolver{UserAsset: userAssetPermit, Repos: r.Repos}, nil
+	return &userAssetResolver{
+		Conf:      r.Conf,
+		Repos:     r.Repos,
+		UserAsset: userAssetPermit,
+	}, nil
 }
 
 type UpdateViewerAccountInput struct {
@@ -2421,7 +2507,11 @@ func (r *RootResolver) UpdateViewerAccount(
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: userPermit, Repos: r.Repos}, nil
+	return &userResolver{
+		Conf:  r.Conf,
+		Repos: r.Repos,
+		User:  userPermit,
+	}, nil
 }
 
 type UpdateViewerProfileInput struct {
@@ -2470,5 +2560,9 @@ func (r *RootResolver) UpdateViewerProfile(
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: userPermit, Repos: r.Repos}, nil
+	return &userResolver{
+		Conf:  r.Conf,
+		User:  userPermit,
+		Repos: r.Repos,
+	}, nil
 }

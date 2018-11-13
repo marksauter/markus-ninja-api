@@ -4,25 +4,25 @@ import (
 	"context"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEnrolleeConnectionResolver(
-	repos *repo.Repos,
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
 	enrollableID *mytype.OID,
 	filters *data.UserFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*enrolleeConnectionResolver, error) {
 	edges := make([]*enrolleeEdgeResolver, len(users))
 	for i := range edges {
-		id, err := users[i].ID()
+		edge, err := NewEnrolleeEdgeResolver(users[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id.String)
-		edge := NewEnrolleeEdgeResolver(cursor, users[i], repos)
 		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
@@ -33,6 +33,7 @@ func NewEnrolleeConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &enrolleeConnectionResolver{
+		conf:         conf,
 		edges:        edges,
 		enrollableID: enrollableID,
 		filters:      filters,
@@ -44,6 +45,7 @@ func NewEnrolleeConnectionResolver(
 }
 
 type enrolleeConnectionResolver struct {
+	conf         *myconf.Config
 	edges        []*enrolleeEdgeResolver
 	enrollableID *mytype.OID
 	filters      *data.UserFilterOptions
@@ -66,7 +68,7 @@ func (r *enrolleeConnectionResolver) Nodes() *[]*userResolver {
 	if n > 0 && !r.pageInfo.isEmpty {
 		users := r.users[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range users {
-			nodes = append(nodes, &userResolver{User: s, Repos: r.repos})
+			nodes = append(nodes, &userResolver{User: s, Conf: r.conf, Repos: r.repos})
 		}
 	}
 	return &nodes

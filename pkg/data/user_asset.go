@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -819,62 +818,4 @@ func UpdateUserAsset(
 
 	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("user asset updated"))
 	return userAsset, nil
-}
-
-func ReplaceMarkdownUserAssetRefsWithLinks(
-	db Queryer,
-	markdown mytype.Markdown,
-	studyID string,
-) (*mytype.Markdown, error, bool) {
-	updated := false
-	userAssetRefToLink := func(s string) string {
-		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
-			return s
-		}
-		name := result[1]
-		userAsset, err := GetUserAssetByName(
-			db,
-			studyID,
-			name,
-		)
-		if err != nil {
-			if err == ErrNotFound {
-				return s
-			} else {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return s
-			}
-		}
-		study, err := GetStudy(db, studyID)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return s
-		}
-		user, err := GetUser(db, study.UserID.String)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return s
-		}
-		updated = true
-		href := fmt.Sprintf(
-			"http://localhost:5000/user/assets/%s/%s",
-			userAsset.UserID.Short,
-			userAsset.Key.String,
-		)
-		link := fmt.Sprintf(
-			"http://localhost:3000/%s/%s/asset/%s",
-			user.Login.String,
-			study.Name.String,
-			userAsset.Name.String,
-		)
-		return util.ReplaceWithPadding(s, fmt.Sprintf("[![%s](%s)](%s)", name, href, link))
-	}
-	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err, false
-	}
-
-	return &markdown, nil, updated
 }

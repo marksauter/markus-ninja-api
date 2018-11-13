@@ -3,18 +3,20 @@ package resolver
 import (
 	"context"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type createLessonPayloadResolver struct {
+	Conf    *myconf.Config
 	Lesson  *repo.LessonPermit
 	StudyID *mytype.OID
 	Repos   *repo.Repos
 }
 
 func (r *createLessonPayloadResolver) LessonEdge() (*lessonEdgeResolver, error) {
-	return NewLessonEdgeResolver(r.Lesson, r.Repos)
+	return NewLessonEdgeResolver(r.Lesson, r.Repos, r.Conf)
 }
 
 func (r *createLessonPayloadResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -23,5 +25,5 @@ func (r *createLessonPayloadResolver) Study(ctx context.Context) (*studyResolver
 		return nil, err
 	}
 
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }

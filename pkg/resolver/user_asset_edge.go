@@ -2,12 +2,14 @@ package resolver
 
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewUserAssetEdgeResolver(
 	node *repo.UserAssetPermit,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*userAssetEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
@@ -15,6 +17,7 @@ func NewUserAssetEdgeResolver(
 	}
 	cursor := data.EncodeCursor(id.String)
 	return &userAssetEdgeResolver{
+		conf:   conf,
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
@@ -22,6 +25,7 @@ func NewUserAssetEdgeResolver(
 }
 
 type userAssetEdgeResolver struct {
+	conf   *myconf.Config
 	cursor string
 	node   *repo.UserAssetPermit
 	repos  *repo.Repos
@@ -32,5 +36,5 @@ func (r *userAssetEdgeResolver) Cursor() string {
 }
 
 func (r *userAssetEdgeResolver) Node() *userAssetResolver {
-	return &userAssetResolver{UserAsset: r.node, Repos: r.repos}
+	return &userAssetResolver{UserAsset: r.node, Conf: r.conf, Repos: r.repos}
 }

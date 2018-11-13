@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewStudyActivityConnectionResolver(
-	repos *repo.Repos,
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	studyID *mytype.OID,
 	filters *data.EventFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*studyActivityConnectionResolver, error) {
 	edges := make([]*studyActivityEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewStudyActivityEventEdgeResolver(events[i], repos)
+		edge, err := NewStudyActivityEventEdgeResolver(events[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewStudyActivityConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &studyActivityConnectionResolver{
+		conf:     conf,
 		edges:    edges,
 		events:   events,
 		filters:  filters,
@@ -43,6 +46,7 @@ func NewStudyActivityConnectionResolver(
 }
 
 type studyActivityConnectionResolver struct {
+	conf     *myconf.Config
 	edges    []*studyActivityEventEdgeResolver
 	events   []*repo.EventPermit
 	filters  *data.EventFilterOptions
@@ -65,7 +69,7 @@ func (r *studyActivityConnectionResolver) Nodes(ctx context.Context) (*[]*studyA
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
-			resolver, err := eventPermitToResolver(ctx, e, r.repos)
+			resolver, err := eventPermitToResolver(ctx, e, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

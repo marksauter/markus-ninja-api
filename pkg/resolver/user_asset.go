@@ -6,17 +6,17 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type UserAsset = userAssetResolver
-
 type userAssetResolver struct {
-	UserAsset *repo.UserAssetPermit
+	Conf      *myconf.Config
 	Repos     *repo.Repos
+	UserAsset *repo.UserAssetPermit
 }
 
 func (r *userAssetResolver) CreatedAt() (graphql.Time, error) {
@@ -40,10 +40,19 @@ func (r *userAssetResolver) DescriptionHTML() (mygql.HTML, error) {
 
 func (r *userAssetResolver) Href() (mygql.URI, error) {
 	var uri mygql.URI
-	href, err := r.UserAsset.Href()
+	key, err := r.UserAsset.Key()
 	if err != nil {
 		return uri, err
 	}
+	userID, err := r.UserAsset.UserID()
+	if err != nil {
+		return uri, err
+	}
+	href := fmt.Sprintf(
+		r.Conf.APIURL+"/user/assets/%s/%s",
+		userID.Short,
+		key,
+	)
 	uri = mygql.URI(href)
 	return uri, nil
 }
@@ -70,7 +79,7 @@ func (r *userAssetResolver) Owner(ctx context.Context) (*userResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *userAssetResolver) PublishedAt() (*graphql.Time, error) {
@@ -118,7 +127,7 @@ func (r *userAssetResolver) Study(ctx context.Context) (*studyResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *userAssetResolver) Subtype() (string, error) {
@@ -159,7 +168,12 @@ func (r *userAssetResolver) Timeline(
 		mytype.CreatedAction.String(),
 	}
 	filters := &data.EventFilterOptions{
-		ActionIsNot: &actionIsNot,
+		Types: &[]data.EventTypeFilter{
+			data.EventTypeFilter{
+				ActionIsNot: &actionIsNot,
+				Type:        mytype.UserAssetEvent.String(),
+			},
+		},
 	}
 	events, err := r.Repos.Event().GetByUserAsset(
 		ctx,
@@ -172,11 +186,12 @@ func (r *userAssetResolver) Timeline(
 	}
 
 	resolver, err := NewUserAssetTimelineConnectionResolver(
-		r.Repos,
 		events,
 		pageOptions,
 		id,
 		filters,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -201,7 +216,7 @@ func (r *userAssetResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

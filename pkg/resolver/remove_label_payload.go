@@ -5,13 +5,13 @@ import (
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type RemoveLabelPayload = removeLabelPayloadResolver
-
 type removeLabelPayloadResolver struct {
+	Conf        *myconf.Config
 	LabelID     *mytype.OID
 	LabelableID *mytype.OID
 	Repos       *repo.Repos
@@ -24,7 +24,7 @@ func (r *removeLabelPayloadResolver) Labelable(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}

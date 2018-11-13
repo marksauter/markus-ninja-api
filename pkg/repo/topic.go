@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -65,13 +66,15 @@ func (r *TopicPermit) UpdatedAt() (time.Time, error) {
 	return r.topic.UpdatedAt.Time, nil
 }
 
-func NewTopicRepo() *TopicRepo {
+func NewTopicRepo(conf *myconf.Config) *TopicRepo {
 	return &TopicRepo{
+		conf: conf,
 		load: loader.NewTopicLoader(),
 	}
 }
 
 type TopicRepo struct {
+	conf   *myconf.Config
 	load   *loader.TopicLoader
 	permit *Permitter
 }

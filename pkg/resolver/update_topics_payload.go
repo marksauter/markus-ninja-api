@@ -4,14 +4,16 @@ import (
 	"context"
 	"errors"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type updateTopicsPayloadResolver struct {
+	Conf         *myconf.Config
 	InvalidNames []string
-	TopicableID  *mytype.OID
 	Repos        *repo.Repos
+	TopicableID  *mytype.OID
 }
 
 func (r *updateTopicsPayloadResolver) InvalidTopicNames() *[]string {
@@ -32,7 +34,7 @@ func (r *updateTopicsPayloadResolver) Topicable(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(t, r.Repos)
+	resolver, err := nodePermitToResolver(t, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}

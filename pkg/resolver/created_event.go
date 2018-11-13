@@ -5,11 +5,13 @@ import (
 	"errors"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type createdEventResolver struct {
+	Conf         *myconf.Config
 	CreateableID *mytype.OID
 	Event        *repo.EventPermit
 	Repos        *repo.Repos
@@ -20,7 +22,7 @@ func (r *createdEventResolver) Createable(ctx context.Context) (*createableResol
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +52,7 @@ func (r *createdEventResolver) Study(ctx context.Context) (*studyResolver, error
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *createdEventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -62,5 +64,5 @@ func (r *createdEventResolver) User(ctx context.Context) (*userResolver, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

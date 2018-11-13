@@ -4,13 +4,13 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteLessonCommentPayload = deleteLessonCommentPayloadResolver
-
 type deleteLessonCommentPayloadResolver struct {
+	Conf            *myconf.Config
 	LessonCommentID *mytype.OID
 	LessonID        *mytype.OID
 	Repos           *repo.Repos
@@ -26,5 +26,5 @@ func (r *deleteLessonCommentPayloadResolver) Lesson(ctx context.Context) (*lesso
 		return nil, err
 	}
 
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }

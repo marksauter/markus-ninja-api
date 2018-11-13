@@ -7,16 +7,16 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Topic = topicResolver
-
 type topicResolver struct {
-	Topic *repo.TopicPermit
+	Conf  *myconf.Config
 	Repos *repo.Repos
+	Topic *repo.TopicPermit
 }
 
 func (r *topicResolver) CreatedAt() (graphql.Time, error) {
@@ -116,11 +116,12 @@ func (r *topicResolver) Topicables(
 	}
 
 	return NewTopicableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
 		id,
 		args.Search,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -135,7 +136,7 @@ func (r *topicResolver) URL() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s/%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

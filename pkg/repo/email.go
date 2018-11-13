@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -90,13 +91,15 @@ func (r *EmailPermit) VerifiedAt() (*time.Time, error) {
 	return &r.email.VerifiedAt.Time, nil
 }
 
-func NewEmailRepo() *EmailRepo {
+func NewEmailRepo(conf *myconf.Config) *EmailRepo {
 	return &EmailRepo{
+		conf: conf,
 		load: loader.NewEmailLoader(),
 	}
 }
 
 type EmailRepo struct {
+	conf   *myconf.Config
 	load   *loader.EmailLoader
 	permit *Permitter
 }

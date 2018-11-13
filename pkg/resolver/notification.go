@@ -4,12 +4,12 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Notification = notificationResolver
-
 type notificationResolver struct {
+	Conf         *myconf.Config
 	Notification *repo.NotificationPermit
 	Repos        *repo.Repos
 }
@@ -42,7 +42,7 @@ func (r *notificationResolver) Subject(ctx context.Context) (*lessonResolver, er
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: subject, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: subject, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {
@@ -54,7 +54,7 @@ func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *notificationResolver) UpdatedAt() (graphql.Time, error) {
@@ -71,5 +71,5 @@ func (r *notificationResolver) User(ctx context.Context) (*userResolver, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

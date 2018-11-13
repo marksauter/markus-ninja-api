@@ -2,12 +2,12 @@ package resolver
 
 import (
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type PRT = prtResolver
-
 type prtResolver struct {
+	Conf  *myconf.Config
 	PRT   *repo.PRTPermit
 	Repos *repo.Repos
 }

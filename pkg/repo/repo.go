@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -55,33 +56,35 @@ type Repo interface {
 }
 
 type Repos struct {
+	conf   *myconf.Config
 	db     data.Queryer
 	lookup map[key]Repo
 }
 
-func NewRepos(db data.Queryer) *Repos {
+func NewRepos(db data.Queryer, conf *myconf.Config) *Repos {
 	return &Repos{
-		db: db,
+		conf: conf,
+		db:   db,
 		lookup: map[key]Repo{
-			appledRepoKey:        NewAppledRepo(),
-			assetRepoKey:         NewAssetRepo(),
-			courseRepoKey:        NewCourseRepo(),
-			courseLessonRepoKey:  NewCourseLessonRepo(),
-			emailRepoKey:         NewEmailRepo(),
-			enrolledRepoKey:      NewEnrolledRepo(),
-			evtRepoKey:           NewEVTRepo(),
-			labelRepoKey:         NewLabelRepo(),
-			labeledRepoKey:       NewLabeledRepo(),
-			lessonRepoKey:        NewLessonRepo(),
-			lessonCommentRepoKey: NewLessonCommentRepo(),
-			notificationRepoKey:  NewNotificationRepo(),
-			prtRepoKey:           NewPRTRepo(),
-			eventRepoKey:         NewEventRepo(),
-			studyRepoKey:         NewStudyRepo(),
-			topicRepoKey:         NewTopicRepo(),
-			topicedRepoKey:       NewTopicedRepo(),
-			userRepoKey:          NewUserRepo(),
-			userAssetRepoKey:     NewUserAssetRepo(),
+			appledRepoKey:        NewAppledRepo(conf),
+			assetRepoKey:         NewAssetRepo(conf),
+			courseRepoKey:        NewCourseRepo(conf),
+			courseLessonRepoKey:  NewCourseLessonRepo(conf),
+			emailRepoKey:         NewEmailRepo(conf),
+			enrolledRepoKey:      NewEnrolledRepo(conf),
+			evtRepoKey:           NewEVTRepo(conf),
+			labelRepoKey:         NewLabelRepo(conf),
+			labeledRepoKey:       NewLabeledRepo(conf),
+			lessonRepoKey:        NewLessonRepo(conf),
+			lessonCommentRepoKey: NewLessonCommentRepo(conf),
+			notificationRepoKey:  NewNotificationRepo(conf),
+			prtRepoKey:           NewPRTRepo(conf),
+			eventRepoKey:         NewEventRepo(conf),
+			studyRepoKey:         NewStudyRepo(conf),
+			topicRepoKey:         NewTopicRepo(conf),
+			topicedRepoKey:       NewTopicedRepo(conf),
+			userRepoKey:          NewUserRepo(conf),
+			userAssetRepoKey:     NewUserAssetRepo(conf),
 		},
 	}
 }
@@ -198,7 +201,7 @@ func (r *Repos) UserAsset() *UserAssetRepo {
 
 func (r *Repos) Use(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		permitter := NewPermitter(r)
+		permitter := NewPermitter(r, r.conf)
 		defer permitter.ClearCache()
 		r.OpenAll(permitter)
 		defer r.CloseAll()
@@ -394,12 +397,12 @@ func (r *Repos) ReplaceMarkdownUserAssetRefsWithLinks(
 
 		updated = true
 		href := fmt.Sprintf(
-			"http://localhost:5000/user/assets/%s/%s",
+			r.conf.APIURL+"/user/assets/%s/%s",
 			userAsset.UserID.Short,
 			userAsset.Key.String,
 		)
 		link := fmt.Sprintf(
-			"http://localhost:3000/%s/%s/asset/%s",
+			r.conf.ClientURL+"/%s/%s/asset/%s",
 			user.Login.String,
 			study.Name.String,
 			userAsset.Name.String,
@@ -455,12 +458,12 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 
 		updated = true
 		src := fmt.Sprintf(
-			"http://localhost:5000/user/assets/%s/%s",
+			r.conf.APIURL+"/user/assets/%s/%s",
 			userAsset.UserID.Short,
 			userAsset.Key.String,
 		)
 		href := fmt.Sprintf(
-			"http://localhost:3000/%s/%s/asset/%s",
+			r.conf.ClientURL+"/%s/%s/asset/%s",
 			user.Login.String,
 			study.Name.String,
 			userAsset.Name.String,
@@ -489,7 +492,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 
 		updated = true
 		href := fmt.Sprintf(
-			"http://localhost:3000/%s/%s/lesson/%d",
+			r.conf.ClientURL+"/%s/%s/lesson/%d",
 			user.Login.String,
 			study.Name.String,
 			n,
@@ -521,7 +524,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		updated = true
 		link := fmt.Sprintf("%s/%s#%d", owner, name, n)
 		href := fmt.Sprintf(
-			"http://localhost:3000/%s/%s/lesson/%d",
+			r.conf.ClientURL+"/%s/%s/lesson/%d",
 			owner,
 			name,
 			n,
@@ -545,7 +548,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		}
 
 		updated = true
-		href := fmt.Sprintf("http://localhost:3000/%s", user.Login.String)
+		href := fmt.Sprintf(r.conf.ClientURL+"/%s", user.Login.String)
 		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---USER_LINK--->[@%s](%s)", name, href))
 	}
 	body = mytype.AtRefRegexp.ReplaceAllStringFunc(body, userRefToLink)

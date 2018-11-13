@@ -5,20 +5,22 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewUserAssetConnectionResolver(
-	repos *repo.Repos,
 	userAssets []*repo.UserAssetPermit,
 	pageOptions *data.PageOptions,
 	nodeID *mytype.OID,
 	filters *data.UserAssetFilterOptions,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*userAssetConnectionResolver, error) {
 	edges := make([]*userAssetEdgeResolver, len(userAssets))
 	for i := range edges {
-		edge, err := NewUserAssetEdgeResolver(userAssets[i], repos)
+		edge, err := NewUserAssetEdgeResolver(userAssets[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,6 +34,7 @@ func NewUserAssetConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &userAssetConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		filters:    filters,
 		pageInfo:   pageInfo,
@@ -43,6 +46,7 @@ func NewUserAssetConnectionResolver(
 }
 
 type userAssetConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*userAssetEdgeResolver
 	filters    *data.UserAssetFilterOptions
 	pageInfo   *pageInfoResolver
@@ -65,7 +69,7 @@ func (r *userAssetConnectionResolver) Nodes() *[]*userAssetResolver {
 	if n > 0 && !r.pageInfo.isEmpty {
 		userAssets := r.userAssets[r.pageInfo.start : r.pageInfo.end+1]
 		for _, l := range userAssets {
-			nodes = append(nodes, &userAssetResolver{UserAsset: l, Repos: r.repos})
+			nodes = append(nodes, &userAssetResolver{UserAsset: l, Conf: r.conf, Repos: r.repos})
 		}
 	}
 	return &nodes

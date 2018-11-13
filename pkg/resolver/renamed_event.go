@@ -6,11 +6,13 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type renamedEventResolver struct {
+	Conf         *myconf.Config
 	Event        *repo.EventPermit
 	RenameableID *mytype.OID
 	Rename       *data.RenamePayload
@@ -32,7 +34,7 @@ func (r *renamedEventResolver) Renameable(ctx context.Context) (*renameableResol
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +62,7 @@ func (r *renamedEventResolver) Study(ctx context.Context) (*studyResolver, error
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *renamedEventResolver) User(ctx context.Context) (*userResolver, error) {
@@ -72,5 +74,5 @@ func (r *renamedEventResolver) User(ctx context.Context) (*userResolver, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

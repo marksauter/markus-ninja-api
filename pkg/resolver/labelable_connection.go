@@ -5,19 +5,21 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLabelableConnectionResolver(
-	repos *repo.Repos,
 	labelables []repo.NodePermit, pageOptions *data.PageOptions,
 	labelID *mytype.OID,
 	search *string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*labelableConnectionResolver, error) {
 	edges := make([]*labelableEdgeResolver, len(labelables))
 	for i := range edges {
-		edge, err := NewLabelableEdgeResolver(repos, labelables[i])
+		edge, err := NewLabelableEdgeResolver(labelables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -31,6 +33,7 @@ func NewLabelableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &labelableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		labelables: labelables,
 		labelID:    labelID,
@@ -42,6 +45,7 @@ func NewLabelableConnectionResolver(
 }
 
 type labelableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*labelableEdgeResolver
 	labelables []repo.NodePermit
 	labelID    *mytype.OID
@@ -79,7 +83,7 @@ func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		labelables := r.labelables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range labelables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -80,13 +81,15 @@ func (r *EventPermit) UserID() (*mytype.OID, error) {
 	return &r.event.UserID, nil
 }
 
-func NewEventRepo() *EventRepo {
+func NewEventRepo(conf *myconf.Config) *EventRepo {
 	return &EventRepo{
+		conf: conf,
 		load: loader.NewEventLoader(),
 	}
 }
 
 type EventRepo struct {
+	conf   *myconf.Config
 	load   *loader.EventLoader
 	permit *Permitter
 }
@@ -116,7 +119,7 @@ func (r *EventRepo) CheckConnection() error {
 func (r *EventRepo) CountByLesson(
 	ctx context.Context,
 	lessonID string,
-	filters *data.LessonEventFilterOptions,
+	filters *data.EventFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -227,7 +230,7 @@ func (r *EventRepo) GetByLesson(
 	ctx context.Context,
 	lessonID string,
 	po *data.PageOptions,
-	filters *data.LessonEventFilterOptions,
+	filters *data.EventFilterOptions,
 ) ([]*EventPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		return nil, err

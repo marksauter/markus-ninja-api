@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -60,13 +61,15 @@ func (r *CourseLessonPermit) Number() (n int32, err error) {
 	return
 }
 
-func NewCourseLessonRepo() *CourseLessonRepo {
+func NewCourseLessonRepo(conf *myconf.Config) *CourseLessonRepo {
 	return &CourseLessonRepo{
+		conf: conf,
 		load: loader.NewCourseLessonLoader(),
 	}
 }
 
 type CourseLessonRepo struct {
+	conf   *myconf.Config
 	load   *loader.CourseLessonLoader
 	permit *Permitter
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -86,13 +87,15 @@ func (r *LabelPermit) UpdatedAt() (time.Time, error) {
 	return r.label.UpdatedAt.Time, nil
 }
 
-func NewLabelRepo() *LabelRepo {
+func NewLabelRepo(conf *myconf.Config) *LabelRepo {
 	return &LabelRepo{
+		conf: conf,
 		load: loader.NewLabelLoader(),
 	}
 }
 
 type LabelRepo struct {
+	conf   *myconf.Config
 	load   *loader.LabelLoader
 	permit *Permitter
 }

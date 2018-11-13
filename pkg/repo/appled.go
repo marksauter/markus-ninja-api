@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -61,13 +62,15 @@ func (r *AppledPermit) UserID() (*mytype.OID, error) {
 	return &r.appled.UserID, nil
 }
 
-func NewAppledRepo() *AppledRepo {
+func NewAppledRepo(conf *myconf.Config) *AppledRepo {
 	return &AppledRepo{
+		conf: conf,
 		load: loader.NewAppledLoader(),
 	}
 }
 
 type AppledRepo struct {
+	conf   *myconf.Config
 	load   *loader.AppledLoader
 	permit *Permitter
 }

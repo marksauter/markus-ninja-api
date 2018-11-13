@@ -7,12 +7,14 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type lessonCommentResolver struct {
+	Conf          *myconf.Config
 	LessonComment *repo.LessonCommentPermit
 	Repos         *repo.Repos
 }
@@ -26,7 +28,7 @@ func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, erro
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) Body() (string, error) {
@@ -111,15 +113,13 @@ func (r *lessonCommentResolver) Labels(
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentID.String, args.FilterBy)
-	if err != nil {
-		return nil, err
-	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
-		r.Repos,
 		labels,
 		pageOptions,
-		count,
+		lessonCommentID,
+		args.FilterBy,
+		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, er
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
@@ -185,7 +185,7 @@ func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, erro
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
@@ -201,7 +201,7 @@ func (r *lessonCommentResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

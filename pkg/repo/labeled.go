@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
@@ -61,13 +62,15 @@ func (r *LabeledPermit) LabelableID() (*mytype.OID, error) {
 	return &r.labeled.LabelableID, nil
 }
 
-func NewLabeledRepo() *LabeledRepo {
+func NewLabeledRepo(conf *myconf.Config) *LabeledRepo {
 	return &LabeledRepo{
+		conf: conf,
 		load: loader.NewLabeledLoader(),
 	}
 }
 
 type LabeledRepo struct {
+	conf   *myconf.Config
 	load   *loader.LabeledLoader
 	permit *Permitter
 }

@@ -6,13 +6,13 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Label = labelResolver
-
 type labelResolver struct {
+	Conf  *myconf.Config
 	Label *repo.LabelPermit
 	Repos *repo.Repos
 }
@@ -109,11 +109,12 @@ func (r *labelResolver) Labelables(
 	}
 
 	return NewLabelableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
 		id,
 		args.Search,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -150,7 +151,7 @@ func (r *labelResolver) Study(
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *labelResolver) UpdatedAt() (graphql.Time, error) {
@@ -164,7 +165,7 @@ func (r *labelResolver) URL(ctx context.Context) (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 
