@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type Topiced struct {
@@ -83,9 +84,10 @@ func getTopiced(
 		&row.Type,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get topiced")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -101,7 +103,7 @@ func getManyTopiced(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get topiceds")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -119,7 +121,7 @@ func getManyTopiced(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get topiceds")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -141,8 +143,13 @@ func GetTopiced(
 	db Queryer,
 	id int32,
 ) (*Topiced, error) {
-	mylog.Log.WithField("id", id).Info("GetTopiced(id)")
-	return getTopiced(db, "getTopiced", getTopicedSQL, id)
+	topiced, err := getTopiced(db, "getTopiced", getTopicedSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("topiced found"))
+	}
+	return topiced, err
 }
 
 const getTopicedByTopicableAndTopicSQL = `
@@ -161,14 +168,25 @@ func GetTopicedByTopicableAndTopic(
 	topicableID,
 	topicID string,
 ) (*Topiced, error) {
-	mylog.Log.Info("GetTopicedByTopicableAndTopic()")
-	return getTopiced(
+	topiced, err := getTopiced(
 		db,
 		"getTopicedByTopicableAndTopic",
 		getTopicedByTopicableAndTopicSQL,
 		topicableID,
 		topicID,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"topicable_id": topicableID,
+			"topic_id":     topicID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"topicable_id": topicableID,
+			"topic_id":     topicID,
+		}).Info(util.Trace("topiced found"))
+	}
+	return topiced, err
 }
 
 func GetTopicedByTopic(
@@ -176,13 +194,13 @@ func GetTopicedByTopic(
 	topicID string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topic_id", topicID).Info("GetTopicedByTopic(topic_id)")
 	var rows []*Topiced
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Topiced, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -205,9 +223,11 @@ func GetTopicedByTopic(
 	psName := preparedName("getTopicedsByTopic", sql)
 
 	if err := getManyTopiced(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("topiceds found"))
 	return rows, nil
 }
 
@@ -216,13 +236,13 @@ func GetTopicedByTopicable(
 	topicableID string,
 	po *PageOptions,
 ) ([]*Topiced, error) {
-	mylog.Log.WithField("topicable_id", topicableID).Info("GetTopicedByTopicable(topicable_id)")
 	var rows []*Topiced
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Topiced, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -245,9 +265,11 @@ func GetTopicedByTopicable(
 	psName := preparedName("getTopicedsByTopicable", sql)
 
 	if err := getManyTopiced(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("topiceds found"))
 	return rows, nil
 }
 
@@ -255,7 +277,6 @@ func CreateTopiced(
 	db Queryer,
 	row Topiced,
 ) (*Topiced, error) {
-	mylog.Log.Info("CreateTopiced()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -273,7 +294,7 @@ func CreateTopiced(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -293,13 +314,17 @@ func CreateTopiced(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -309,17 +334,19 @@ func CreateTopiced(
 		row.TopicID.String,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("topiced created"))
 	return topiced, nil
 }
 
@@ -332,7 +359,6 @@ func DeleteTopiced(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteTopiced(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteTopiced",
@@ -340,12 +366,16 @@ func DeleteTopiced(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
 	return nil
 }
 
@@ -356,23 +386,33 @@ const deleteTopicedByTopicableAndTopicSQL = `
 
 func DeleteTopicedByTopicableAndTopic(
 	db Queryer,
-	topicable_id,
-	topic_id string,
+	topicableID,
+	topicID string,
 ) error {
 	mylog.Log.Info("DeleteTopicedByTopicableAndTopic()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteTopicedFromTopicable",
 		deleteTopicedByTopicableAndTopicSQL,
-		topicable_id,
-		topic_id,
+		topicableID,
+		topicID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithFields(logrus.Fields{
+			"topicable_id": topicableID,
+			"topic_id":     topicID,
+		}).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"topicable_id": topicableID,
+		"topic_id":     topicID,
+	}).Info(util.Trace("topiced deleted"))
 	return nil
 }

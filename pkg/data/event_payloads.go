@@ -233,12 +233,36 @@ type UserAssetEventPayload struct {
 	SourceID mytype.OID    `json:"source_id,omitempty"`
 }
 
+func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, error) {
+	payload := &UserAssetEventPayload{Action: UserAssetCreated}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
 func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEventPayload, error) {
 	payload := &UserAssetEventPayload{Action: UserAssetReferenced}
 	if err := payload.AssetID.Set(assetID); err != nil {
 		return nil, err
 	}
 	if err := payload.SourceID.Set(sourceID); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewUserAssetRenamedPayload(assetID *mytype.OID, from, to string) (*UserAssetEventPayload, error) {
+	payload := &UserAssetEventPayload{
+		Action: UserAssetRenamed,
+		Rename: RenamePayload{
+			From: from,
+			To:   to,
+		},
+	}
+	if err := payload.AssetID.Set(assetID); err != nil {
 		return nil, err
 	}
 

@@ -799,39 +799,37 @@ func UpdateStudy(
 		defer RollbackTransaction(tx)
 	}
 
-	if len(sets) > 0 {
-		sql := `
-			UPDATE study
-			SET ` + strings.Join(sets, ",") + `
-			WHERE id = ` + args.Append(row.ID.String) + `
-		`
+	sql := `
+		UPDATE study
+		SET ` + strings.Join(sets, ",") + `
+		WHERE id = ` + args.Append(row.ID.String) + `
+	`
 
-		psName := preparedName("updateStudy", sql)
+	psName := preparedName("updateStudy", sql)
 
-		commandTag, err := prepareExec(tx, psName, sql, args...)
-		if err != nil {
-			mylog.Log.WithError(err).Error("failed to update study")
-			if pgErr, ok := err.(pgx.PgError); ok {
-				switch PSQLError(pgErr.Code) {
-				case NotNullViolation:
-					mylog.Log.WithError(err).Error(util.Trace(""))
-					return nil, RequiredFieldError(pgErr.ColumnName)
-				case UniqueViolation:
-					mylog.Log.WithError(err).Error(util.Trace(""))
-					return nil, DuplicateFieldError(pgErr.ConstraintName)
-				default:
-					mylog.Log.WithError(err).Error(util.Trace(""))
-					return nil, err
-				}
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error("failed to update study")
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(pgErr.ConstraintName)
+			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, err
 			}
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
 		}
-		if commandTag.RowsAffected() != 1 {
-			err := ErrNotFound
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	study, err := GetStudy(tx, row.ID.String)

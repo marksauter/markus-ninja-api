@@ -82,17 +82,6 @@ func (r *userAssetResolver) Owner(ctx context.Context) (*userResolver, error) {
 	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
-func (r *userAssetResolver) PublishedAt() (*graphql.Time, error) {
-	t, err := r.UserAsset.PublishedAt()
-	if err != nil {
-		return nil, err
-	}
-	if t != nil {
-		return &graphql.Time{*t}, nil
-	}
-	return nil, nil
-}
-
 func (r *userAssetResolver) ResourcePath(
 	ctx context.Context,
 ) (mygql.URI, error) {

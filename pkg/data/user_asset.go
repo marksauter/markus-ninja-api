@@ -19,7 +19,6 @@ type UserAsset struct {
 	Key          pgtype.Text        `db:"key" permit:"read"`
 	Name         mytype.Filename    `db:"name" permit:"create/read/update"`
 	OriginalName pgtype.Text        `db:"original_name" permit:"read"`
-	PublishedAt  pgtype.Timestamptz `db:"published_at" permit:"read"`
 	Size         pgtype.Int8        `db:"size" permit:"read"`
 	StudyID      mytype.OID         `db:"study_id" permit:"create/read"`
 	Subtype      pgtype.Text        `db:"subtype" permit:"read"`
@@ -174,7 +173,6 @@ func getUserAsset(
 		&row.Key,
 		&row.Name,
 		&row.OriginalName,
-		&row.PublishedAt,
 		&row.Size,
 		&row.StudyID,
 		&row.Subtype,
@@ -216,7 +214,6 @@ func getManyUserAsset(
 			&row.Key,
 			&row.Name,
 			&row.OriginalName,
-			&row.PublishedAt,
 			&row.Size,
 			&row.StudyID,
 			&row.Subtype,
@@ -244,7 +241,6 @@ const getUserAssetByIDSQL = `
 		key,
 		name,
 		original_name,
-		published_at,
 		size,
 		study_id,
 		subtype,
@@ -277,7 +273,6 @@ const batchGetUserAssetSQL = `
 		key,
 		name,
 		original_name,
-		published_at,
 		size,
 		study_id,
 		subtype,
@@ -319,7 +314,6 @@ const getUserAssetByNameSQL = `
 		key,
 		name,
 		original_name,
-		published_at,
 		size,
 		study_id,
 		subtype,
@@ -335,7 +329,6 @@ func GetUserAssetByName(
 	studyID,
 	name string,
 ) (*UserAsset, error) {
-	mylog.Log.WithField("name", name).Info("GetUserAssetByName(name)")
 	userAsset, err := getUserAsset(
 		db,
 		"getUserAssetByName",
@@ -366,7 +359,6 @@ const batchGetUserAssetByNameSQL = `
 		key,
 		name,
 		original_name,
-		published_at,
 		size,
 		study_id,
 		subtype,
@@ -414,7 +406,6 @@ const getUserAssetByUserStudyAndNameSQL = `
 		ua.key,
 		ua.name,
 		ua.original_name,
-		ua.published_at,
 		ua.size,
 		ua.study_id,
 		ua.subtype,
@@ -433,9 +424,6 @@ func GetUserAssetByUserStudyAndName(
 	study,
 	name string,
 ) (*UserAsset, error) {
-	mylog.Log.WithField(
-		"name", name,
-	).Info("GetUserAssetByUserStudyAndName(name)")
 	userAsset, err := getUserAsset(
 		db,
 		"getUserAssetByUserStudyAndName",
@@ -466,9 +454,6 @@ func GetUserAssetByStudy(
 	po *PageOptions,
 	filters *UserAssetFilterOptions,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithField(
-		"study_id", studyID.String,
-	).Info("GetUserAssetByStudy(studyID)")
 	var rows []*UserAsset
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -493,7 +478,6 @@ func GetUserAssetByStudy(
 		"key",
 		"name",
 		"original_name",
-		"published_at",
 		"size",
 		"study_id",
 		"subtype",
@@ -521,9 +505,6 @@ func GetUserAssetByUser(
 	po *PageOptions,
 	filters *UserAssetFilterOptions,
 ) ([]*UserAsset, error) {
-	mylog.Log.WithField(
-		"user_id", userID.String,
-	).Info("GetUserAssetByUser(userID)")
 	var rows []*UserAsset
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -548,7 +529,6 @@ func GetUserAssetByUser(
 		"key",
 		"name",
 		"original_name",
-		"published_at",
 		"size",
 		"study_id",
 		"subtype",
@@ -574,9 +554,7 @@ func CreateUserAsset(
 	db Queryer,
 	row *UserAsset,
 ) (*UserAsset, error) {
-	mylog.Log.Info("CreateUserAsset()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 10))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("UserAsset")
@@ -599,10 +577,6 @@ func CreateUserAsset(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, userAssetDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
-	}
-	if row.PublishedAt.Status != pgtype.Undefined {
-		columns = append(columns, "published_at")
-		values = append(values, args.Append(&row.PublishedAt))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
@@ -649,6 +623,21 @@ func CreateUserAsset(
 
 	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	eventPayload, err := NewUserAssetCreatedPayload(&userAsset.ID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := NewUserAssetEvent(eventPayload, &userAsset.StudyID, &userAsset.UserID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := CreateEvent(tx, event); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
@@ -716,7 +705,6 @@ func SearchUserAsset(
 		"key",
 		"name",
 		"original_name",
-		"published_at",
 		"size",
 		"study_id",
 		"subtype",
@@ -742,7 +730,20 @@ func UpdateUserAsset(
 	db Queryer,
 	row *UserAsset,
 ) (*UserAsset, error) {
-	mylog.Log.Info("UpdateUserAsset()")
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error("error starting transaction")
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	currentUserAsset, err := GetUserAsset(tx, row.ID.String)
+	if err != nil {
+		return nil, err
+	}
+
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
@@ -755,57 +756,63 @@ func UpdateUserAsset(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, userAssetDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
-	if row.PublishedAt.Status != pgtype.Undefined {
-		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
-	}
 
-	if len(sets) == 0 {
-		mylog.Log.Info(util.Trace("no updates"))
-		return GetUserAsset(db, row.ID.String)
-	}
+	if len(sets) > 0 {
+		sql := `
+			UPDATE user_asset
+			SET ` + strings.Join(sets, ",") + `
+			WHERE id = ` + args.Append(row.ID.String) + `
+		`
 
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
+		psName := preparedName("updateUserAsset", sql)
 
-	sql := `
-		UPDATE user_asset
-		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.ID.String) + `
-	`
-
-	psName := preparedName("updateUserAsset", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update user_asset")
-		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
+		commandTag, err := prepareExec(tx, psName, sql, args...)
+		if err != nil {
+			mylog.Log.WithError(err).Error("failed to update user_asset")
+			if pgErr, ok := err.(pgx.PgError); ok {
+				switch PSQLError(pgErr.Code) {
+				case NotNullViolation:
+					return nil, RequiredFieldError(pgErr.ColumnName)
+				case UniqueViolation:
+					return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				default:
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return nil, err
+				}
 			}
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
 		}
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		if commandTag.RowsAffected() != 1 {
+			return nil, ErrNotFound
+		}
 	}
 
 	userAsset, err := GetUserAsset(tx, row.ID.String)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	if currentUserAsset.Name.String != userAsset.Name.String {
+		eventPayload, err := NewUserAssetRenamedPayload(
+			&userAsset.ID,
+			currentUserAsset.Name.String,
+			userAsset.Name.String,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := NewUserAssetEvent(eventPayload, &userAsset.StudyID, &userAsset.UserID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := CreateEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	if newTx {

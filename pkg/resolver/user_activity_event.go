@@ -11,13 +11,18 @@ type userActivityEventResolver struct {
 	userActivityEvent
 }
 
+func (r *userActivityEventResolver) ToAppledEvent() (*appledEventResolver, bool) {
+	resolver, ok := r.userActivityEvent.(*appledEventResolver)
+	return resolver, ok
+}
+
 func (r *userActivityEventResolver) ToCreatedEvent() (*createdEventResolver, bool) {
 	resolver, ok := r.userActivityEvent.(*createdEventResolver)
 	return resolver, ok
 }
 
-func (r *userActivityEventResolver) ToAppledEvent() (*appledEventResolver, bool) {
-	resolver, ok := r.userActivityEvent.(*appledEventResolver)
+func (r *userActivityEventResolver) ToPublishedEvent() (*publishedEventResolver, bool) {
+	resolver, ok := r.userActivityEvent.(*publishedEventResolver)
 	return resolver, ok
 }
 

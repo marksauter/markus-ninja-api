@@ -1,7 +1,8 @@
 # Represents a renamed event on a given subject.
 type RenamedEvent implements 
   LessonTimelineEvent,
-  Node
+  Node,
+  UserAssetTimelineEvent
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!

@@ -17,7 +17,7 @@ type ErrNotFound struct {
 }
 
 func (e *ErrNotFound) Error() string {
-	return fmt.Sprintf("%s not found", e.Name)
+	return fmt.Sprintf("'%s' not found in context", e.Name)
 }
 
 func NewQueryerContext(ctx context.Context, v data.Queryer) context.Context {
