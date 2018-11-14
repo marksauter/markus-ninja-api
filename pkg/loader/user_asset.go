@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewUserAssetLoader() *UserAssetLoader {
@@ -124,11 +125,14 @@ func (r *UserAssetLoader) Get(
 ) (*data.UserAsset, error) {
 	userAssetData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	compositeKey := newCompositeKey(userAsset.StudyID.String, userAsset.Name.String)
@@ -145,11 +149,14 @@ func (r *UserAssetLoader) GetByName(
 	compositeKey := newCompositeKey(studyID, name)
 	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
@@ -166,11 +173,14 @@ func (r *UserAssetLoader) GetByUserStudyAndName(
 	compositeKey := newCompositeKey(userLogin, studyName, name)
 	userAssetData, err := r.batchGetByUserStudyAndName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
@@ -190,6 +200,7 @@ func (r *UserAssetLoader) GetMany(
 	}
 	userAssetData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	userAssets := make([]*data.UserAsset, len(userAssetData))
@@ -197,7 +208,9 @@ func (r *UserAssetLoader) GetMany(
 		var ok bool
 		userAssets[i], ok = d.(*data.UserAsset)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 
@@ -215,6 +228,7 @@ func (r *UserAssetLoader) GetManyByName(
 	}
 	userAssetData, errs := r.batchGetByName.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	userAssets := make([]*data.UserAsset, len(userAssetData))
@@ -222,7 +236,9 @@ func (r *UserAssetLoader) GetManyByName(
 		var ok bool
 		userAssets[i], ok = d.(*data.UserAsset)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

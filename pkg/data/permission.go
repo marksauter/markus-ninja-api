@@ -45,10 +45,10 @@ func CountPermissionByType(
 	db Queryer,
 	nodeType interface{},
 ) (int32, error) {
-	mylog.Log.Info("CountPermissionByType()")
 	var n int32
 	mType, err := mytype.ParseNodeType(structs.Name(nodeType))
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return n, err
 	}
 	err = prepareQueryRow(
@@ -73,10 +73,9 @@ func CreatePermissionSuite(
 	db Queryer,
 	model interface{},
 ) error {
-	mylog.Log.Info("CreatePermissionSuite()")
-
 	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -114,7 +113,7 @@ func CreatePermissionSuite(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	if newTx {
@@ -122,6 +121,7 @@ func CreatePermissionSuite(
 	}
 
 	if err := DeletePermissionSuite(db, model); err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -134,25 +134,29 @@ func CreatePermissionSuite(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			default:
+				mylog.Log.WithError(err).Debug(util.Trace(""))
 				return err
 			case UniqueViolation:
 				mylog.Log.Warn("permissions already created")
 				return nil
 			}
 		}
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Debug(util.Trace(""))
 			return err
 		}
 	}
 
-	mylog.Log.Infof("created %v permissions for type %s", copyCount, mType)
-
+	mylog.Log.WithFields(logrus.Fields{
+		"n":    copyCount,
+		"type": mType,
+	}).Info(util.Trace("created permissions"))
 	return nil
 }
 
@@ -162,7 +166,6 @@ func ConnectRolePermissions(
 	fields,
 	roles []string,
 ) error {
-	mylog.Log.Info("ConnectRolePermissions()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	andFieldsSQL := ""
@@ -204,7 +207,7 @@ func ConnectRolePermissions(
 		"operation": o,
 		"fields":    fields,
 		"roles":     roles,
-	}).Info("granted permissions to roles")
+	}).Info(util.Trace("granted permissions to roles"))
 	return nil
 }
 
@@ -219,11 +222,9 @@ func DeletePermissionSuite(
 ) error {
 	mType, err := mytype.ParseNodeType(structs.Name(model))
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	mylog.Log.WithField(
-		"node_type", mType,
-	).Info("Perm.DeletePermissionSuite(node_type)")
 	_, err = prepareExec(
 		db,
 		"deletePermissionSuite",
@@ -231,8 +232,11 @@ func DeletePermissionSuite(
 		mType,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("type", mType).Info(util.Trace("permission suite deleted"))
 	return nil
 }
 
@@ -254,12 +258,11 @@ func GetByRole(
 	db Queryer,
 	role string,
 ) ([]Permission, error) {
-	mylog.Log.Info("GetByRole()")
 	permissions := make([]Permission, 0)
 
 	rows, err := db.Query(getPermissionByRoleSQL, role)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer rows.Close()
@@ -275,18 +278,18 @@ func GetByRole(
 			&p.UpdatedAt,
 		)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during scan")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		permissions = append(permissions, *p)
 	}
 
 	if err = rows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("error during rows processing")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	mylog.Log.Debug("permissions found")
+	mylog.Log.WithField("n", len(permissions)).Info(util.Trace("permissions found"))
 	return permissions, nil
 }
 
@@ -362,10 +365,14 @@ func UpdatePermission(
 ) error {
 	_, err := db.Exec(updatePermissionSQL, a, id)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error during execution")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"id":       id,
+		"audience": a,
+	}).Info(util.Trace("permission updated"))
 	return nil
 }
 
@@ -384,7 +391,6 @@ func UpdatePermissionAudience(
 	a mytype.Audience,
 	fields []string,
 ) error {
-	mylog.Log.Info("UpdatePermissionAudience()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
 	andFieldsSQL := ""
@@ -414,7 +420,7 @@ func UpdatePermissionAudience(
 		"operation": o.String(),
 		"audience":  a.String(),
 		"fields":    fields,
-	}).Info("updated operation audience")
+	}).Info(util.Trace("updated operation audience"))
 	return nil
 }
 
@@ -435,9 +441,10 @@ func getPermission(
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get permission")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -453,6 +460,7 @@ func getManyPermission(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -472,7 +480,7 @@ func getManyPermission(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get permissions")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 

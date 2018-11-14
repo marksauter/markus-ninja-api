@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewTopicedLoader() *TopicedLoader {
@@ -100,11 +101,14 @@ func (r *TopicedLoader) Get(
 	key := strconv.Itoa(int(id))
 	topicedData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topiced, ok := topicedData.(*data.Topiced)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	compositeKey := newCompositeKey(topiced.TopicableID.String, topiced.TopicID.String)
@@ -121,11 +125,14 @@ func (r *TopicedLoader) GetByTopicableAndTopic(
 	compositeKey := newCompositeKey(topicableID, userID)
 	topicedData, err := r.batchGetByTopicableAndTopic.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topiced, ok := topicedData.(*data.Topiced)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	key := strconv.Itoa(int(topiced.ID.Int))

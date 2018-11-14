@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -100,9 +101,10 @@ func getNotification(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get notification")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -118,6 +120,7 @@ func getManyNotification(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -141,7 +144,7 @@ func getManyNotification(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get notifications")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -169,8 +172,13 @@ func GetNotification(
 	db Queryer,
 	id string,
 ) (*Notification, error) {
-	mylog.Log.WithField("id", id).Info("GetNotification(id)")
-	return getNotification(db, "getNotificationByID", getNotificationByIDSQL, id)
+	notification, err := getNotification(db, "getNotificationByID", getNotificationByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("notification found"))
+	}
+	return notification, err
 }
 
 func GetNotificationByStudy(
@@ -185,6 +193,7 @@ func GetNotificationByStudy(
 		if limit > 0 {
 			rows = make([]*Notification, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -213,9 +222,11 @@ func GetNotificationByStudy(
 	psName := preparedName("getNotificationsByStudy", sql)
 
 	if err := getManyNotification(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("notifications found"))
 	return rows, nil
 }
 
@@ -231,6 +242,7 @@ func GetNotificationByUser(
 		if limit > 0 {
 			rows = make([]*Notification, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -259,9 +271,11 @@ func GetNotificationByUser(
 	psName := preparedName("getNotificationsByUser", sql)
 
 	if err := getManyNotification(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("notifications found"))
 	return rows, nil
 }
 
@@ -270,13 +284,10 @@ func BatchCreateNotification(
 	src *Notification,
 	enrolleds []*Enrolled,
 ) error {
-	mylog.Log.Info("BatchCreateNotification()")
-
 	notifications := make([][]interface{}, len(enrolleds))
 	for i, enrolled := range enrolleds {
 		id, _ := mytype.NewOID("Notification")
 		src.ID.Set(id)
-		mylog.Log.Debug(enrolled.ReasonName.String)
 		notifications[i] = []interface{}{
 			src.ID.String,
 			enrolled.ReasonName.String,
@@ -289,7 +300,7 @@ func BatchCreateNotification(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if newTx {
@@ -305,25 +316,26 @@ func BatchCreateNotification(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			case UniqueViolation:
 				mylog.Log.Warn("notifications already created")
 				return nil
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 	}
 
-	mylog.Log.WithField("n", copyCount).Info("created notifications")
-
+	mylog.Log.WithField("n", copyCount).Info("notifications created")
 	return nil
 }
 
@@ -331,9 +343,7 @@ func CreateNotification(
 	db Queryer,
 	row *Notification,
 ) (*Notification, error) {
-	mylog.Log.Info("CreateNotification()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Notification")
@@ -364,7 +374,7 @@ func CreateNotification(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -381,33 +391,38 @@ func CreateNotification(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create notification")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	notification, err := GetNotification(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("notification created"))
 	return notification, nil
 }
 
@@ -415,16 +430,15 @@ func CreateNotificationsFromEvent(
 	db Queryer,
 	event *Event,
 ) error {
-	mylog.Log.Info("CreateNotificationsFromEvent()")
-
 	row := &Notification{}
 	if err := row.StudyID.Set(&event.StudyID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if newTx {
@@ -436,12 +450,15 @@ func CreateNotificationsFromEvent(
 	case mytype.LessonEvent:
 		payload := &LessonEventPayload{}
 		if err := event.Payload.AssignTo(payload); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 		if err := row.Subject.Set(LessonNotification); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 		if err := row.SubjectID.Set(&payload.LessonID); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 
@@ -449,17 +466,21 @@ func CreateNotificationsFromEvent(
 		case LessonCommented:
 			enrolleds, err = GetEnrolledByEnrollable(tx, payload.LessonID.String, nil, nil)
 			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		case LessonMentioned:
 			if err := row.ReasonName.Set(MentionReason); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 			if err := row.UserID.Set(&event.UserID); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 
 			_, err := CreateNotification(tx, row)
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		default:
 			mylog.Log.Debugf(
@@ -484,13 +505,14 @@ func CreateNotificationsFromEvent(
 	}
 
 	if err := BatchCreateNotification(tx, row, notifiedEnrolleds); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 	}
@@ -507,7 +529,6 @@ func DeleteNotification(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteNotification(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteNotification",
@@ -515,12 +536,16 @@ func DeleteNotification(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("notification deleted"))
 	return nil
 }
 
@@ -534,7 +559,6 @@ func DeleteNotificationByStudy(
 	userID,
 	studyID string,
 ) error {
-	mylog.Log.WithField("study_id", studyID).Info("DeleteNotificationByStudy(study_id)")
 	_, err := prepareExec(
 		db,
 		"deleteNotificationByStudy",
@@ -543,9 +567,14 @@ func DeleteNotificationByStudy(
 		studyID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"user_id":  userID,
+		"study_id": studyID,
+	}).Info(util.Trace("notifications deleted"))
 	return nil
 }
 
@@ -558,7 +587,6 @@ func DeleteNotificationByUser(
 	db Queryer,
 	userID string,
 ) error {
-	mylog.Log.WithField("user_id", userID).Info("DeleteNotificationByUser(user_id)")
 	_, err := prepareExec(
 		db,
 		"deleteNotificationByUser",
@@ -566,8 +594,10 @@ func DeleteNotificationByUser(
 		userID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
+	mylog.Log.WithField("user_id", userID).Info(util.Trace("notifications deleted"))
 	return nil
 }

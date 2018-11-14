@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Asset struct {
@@ -72,9 +73,10 @@ func getAsset(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get user_asset")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -99,8 +101,13 @@ func GetAsset(
 	db Queryer,
 	id int64,
 ) (*Asset, error) {
-	mylog.Log.WithField("id", id).Info("GetAsset(id)")
-	return getAsset(db, "getAssetByID", getAssetByIDSQL, id)
+	asset, err := getAsset(db, "getAssetByID", getAssetByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("asset found"))
+	}
+	return asset, err
 }
 
 const getAssetByKeySQL = `
@@ -121,15 +128,19 @@ func GetAssetByKey(
 	db Queryer,
 	key string,
 ) (*Asset, error) {
-	mylog.Log.WithField("key", key).Info("GetAssetByKey(key)")
-	return getAsset(db, "getAssetByKey", getAssetByKeySQL, key)
+	asset, err := getAsset(db, "getAssetByKey", getAssetByKeySQL, key)
+	if err != nil {
+		mylog.Log.WithField("key", key).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("key", key).Info(util.Trace("asset found"))
+	}
+	return asset, err
 }
 
 func CreateAsset(
 	db Queryer,
 	row *Asset,
 ) (*Asset, error) {
-	mylog.Log.Info("CreateAsset()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 10))
 
 	var columns, values []string
@@ -161,7 +172,7 @@ func CreateAsset(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -178,33 +189,38 @@ func CreateAsset(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	asset, err := GetAssetByKey(tx, row.Key.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("asset created"))
 	return asset, nil
 }
 
@@ -217,14 +233,17 @@ func DeleteAsset(
 	db Queryer,
 	id int64,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteAsset(id)")
 	commandTag, err := prepareExec(db, "deleteAsset", deleteAssetSQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("asset deleted"))
 	return nil
 }

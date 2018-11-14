@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewAssetLoader() *AssetLoader {
@@ -99,11 +100,14 @@ func (r *AssetLoader) Get(
 	key := strconv.Itoa(int(id))
 	assetData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	asset, ok := assetData.(*data.Asset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return asset, nil
@@ -115,11 +119,14 @@ func (r *AssetLoader) GetByKey(
 ) (*data.Asset, error) {
 	assetData, err := r.batchGetByKey.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	asset, ok := assetData.(*data.Asset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return asset, nil
@@ -135,6 +142,7 @@ func (r *AssetLoader) GetMany(
 	}
 	assetData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	assets := make([]*data.Asset, len(assetData))
@@ -142,7 +150,9 @@ func (r *AssetLoader) GetMany(
 		var ok bool
 		assets[i], ok = d.(*data.Asset)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

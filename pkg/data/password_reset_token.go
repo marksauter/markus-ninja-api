@@ -42,11 +42,10 @@ func getPRT(
 		&row.Token,
 	)
 	if err == pgx.ErrNoRows {
-		err := ErrNotFound
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 

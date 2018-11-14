@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewQueryPermLoader() *QueryPermLoader {
@@ -79,11 +80,14 @@ func (l *QueryPermLoader) Get(
 	compositeKey := newCompositeKey(keyParts...)
 	permData, err := l.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	perm, ok := permData.(*data.QueryPermission)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return perm, nil
@@ -99,6 +103,7 @@ func (l *QueryPermLoader) GetMany(
 	}
 	permData, errs := l.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("erros", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	perms := make([]*data.QueryPermission, len(permData))
@@ -106,7 +111,9 @@ func (l *QueryPermLoader) GetMany(
 		var ok bool
 		perms[i], ok = d.(*data.QueryPermission)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type Labeled struct {
@@ -83,9 +84,10 @@ func getLabeled(
 		&row.Type,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get labeled")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -101,7 +103,7 @@ func getManyLabeled(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get labeleds")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -119,7 +121,7 @@ func getManyLabeled(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get labeleds")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -141,8 +143,13 @@ func GetLabeled(
 	db Queryer,
 	id int32,
 ) (*Labeled, error) {
-	mylog.Log.WithField("id", id).Info("GetLabeled(id)")
-	return getLabeled(db, "getLabeled", getLabeledSQL, id)
+	labeled, err := getLabeled(db, "getLabeled", getLabeledSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("labeled found"))
+	}
+	return labeled, err
 }
 
 const getLabeledByLabelableAndLabelSQL = `
@@ -161,14 +168,25 @@ func GetLabeledByLabelableAndLabel(
 	labelableID,
 	labelID string,
 ) (*Labeled, error) {
-	mylog.Log.Info("GetLabeledByLabelableAndLabel()")
-	return getLabeled(
+	labeled, err := getLabeled(
 		db,
 		"getLabeledByLabelableAndLabel",
 		getLabeledByLabelableAndLabelSQL,
 		labelableID,
 		labelID,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"labelable_id": labelableID,
+			"label_id":     labelID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"labelable_id": labelableID,
+			"label_id":     labelID,
+		}).Info(util.Trace("labeled found"))
+	}
+	return labeled, err
 }
 
 func GetLabeledByLabel(
@@ -183,6 +201,7 @@ func GetLabeledByLabel(
 		if limit > 0 {
 			rows = make([]*Labeled, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -205,9 +224,11 @@ func GetLabeledByLabel(
 	psName := preparedName("getLabeledsByLabel", sql)
 
 	if err := getManyLabeled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("labeleds found"))
 	return rows, nil
 }
 
@@ -223,6 +244,7 @@ func GetLabeledByLabelable(
 		if limit > 0 {
 			rows = make([]*Labeled, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -245,9 +267,11 @@ func GetLabeledByLabelable(
 	psName := preparedName("getLabeledsByLabelable", sql)
 
 	if err := getManyLabeled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("labeleds found"))
 	return rows, nil
 }
 
@@ -255,9 +279,6 @@ func CreateLabeled(
 	db Queryer,
 	row Labeled,
 ) (*Labeled, error) {
-	mylog.Log.WithField(
-		"labelable", row.LabelableID.Type,
-	).Info("CreateLabeled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -275,7 +296,7 @@ func CreateLabeled(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -291,17 +312,20 @@ func CreateLabeled(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil && err != pgx.ErrNoRows {
-		mylog.Log.WithError(err).Error("failed to create labeled")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -311,17 +335,19 @@ func CreateLabeled(
 		row.LabelID.String,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("labeled created"))
 	return labeled, nil
 }
 
@@ -334,7 +360,6 @@ func DeleteLabeled(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.Info("DeleteLabeled()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteLabeled",
@@ -342,12 +367,16 @@ func DeleteLabeled(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("labeled deleted"))
 	return nil
 }
 
@@ -358,23 +387,32 @@ const deleteLabeledByLabelableAndLabelSQL = `
 
 func DeleteLabeledByLabelableAndLabel(
 	db Queryer,
-	labelable_id,
-	label_id string,
+	labelableID,
+	labelID string,
 ) error {
-	mylog.Log.Info("DeleteLabeledByLabelableAndLabel()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteLabeledByLabelableAndLabel",
 		deleteLabeledByLabelableAndLabelSQL,
-		labelable_id,
-		label_id,
+		labelableID,
+		labelID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithFields(logrus.Fields{
+			"labelable_id": labelableID,
+			"label_id":     labelID,
+		}).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"labelable_id": labelableID,
+		"label_id":     labelID,
+	}).Info(util.Trace("labeled deleted"))
 	return nil
 }

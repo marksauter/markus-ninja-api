@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ses"
 	"github.com/aws/aws-sdk-go/service/ses/sesiface"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,11 +88,11 @@ func (s *MailService) SendEmailVerificationMail(
 	}
 
 	_, err := s.svc.SendEmail(sendEmailInput)
-
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		}
@@ -99,8 +100,7 @@ func (s *MailService) SendEmailVerificationMail(
 
 	mylog.Log.WithFields(logrus.Fields{
 		"to": input.To,
-	}).Info("sent email verification email")
-
+	}).Info(util.Trace("sent email verification email"))
 	return nil
 }
 
@@ -157,6 +157,7 @@ func (s *MailService) SendPasswordResetMail(
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		}
@@ -164,7 +165,6 @@ func (s *MailService) SendPasswordResetMail(
 
 	mylog.Log.WithFields(logrus.Fields{
 		"to": input.To,
-	}).Info("sent password reset email")
-
+	}).Info(util.Trace("sent password reset email"))
 	return nil
 }

@@ -9,8 +9,11 @@ import (
 	"strings"
 
 	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
@@ -19,15 +22,24 @@ var GraphQLCors = cors.New(cors.Options{
 	AllowedHeaders:   []string{"Authorization", "Content-Type"},
 	AllowedMethods:   []string{http.MethodOptions, http.MethodPost, http.MethodGet},
 	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
-	Debug:            true,
+	// Debug:            true,
 })
 
 type GraphQLHandler struct {
-	Schema *graphql.Schema
+	Conf   *myconf.Config
 	Repos  *repo.Repos
+	Schema *graphql.Schema
 }
 
 func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil || h.Schema == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodPost && req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
