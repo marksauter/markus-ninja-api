@@ -492,7 +492,6 @@ func GetReceivedEventByUser(
 	po *PageOptions,
 	filters *EventFilterOptions,
 ) ([]*Event, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetReceivedEventByUser(user_id)")
 	var rows []*Event
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()

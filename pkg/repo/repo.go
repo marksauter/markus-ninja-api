@@ -89,9 +89,12 @@ func NewRepos(db data.Queryer, conf *myconf.Config) *Repos {
 	}
 }
 
+var ErrNilPermitter = errors.New("permitter is nil")
+
 func (r *Repos) OpenAll(p *Permitter) error {
 	for _, repo := range r.lookup {
 		if err := repo.Open(p); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 	}
@@ -224,7 +227,9 @@ func (r *Repos) GetAppleable(
 	case "Study":
 		return r.Study().Get(ctx, appleableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for appleable id", appleableID.Type)
+		err := fmt.Errorf("invalid type '%s' for appleable id", appleableID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -238,7 +243,9 @@ func (r *Repos) GetCreateable(
 	case "Study":
 		return r.Study().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for createable id", nodeID.Type)
+		err := fmt.Errorf("invalid type '%s' for createable id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -254,7 +261,9 @@ func (r *Repos) GetEnrollable(
 	case "User":
 		return r.User().Get(ctx, enrollableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for enrollable id", enrollableID.Type)
+		err := fmt.Errorf("invalid type '%s' for enrollable id", enrollableID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -268,7 +277,9 @@ func (r *Repos) GetPublishable(
 	case "LessonComment":
 		return r.LessonComment().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for publishable id", nodeID.Type)
+		err := fmt.Errorf("invalid type '%s' for publishable id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -282,7 +293,9 @@ func (r *Repos) GetReferenceable(
 	case "UserAsset":
 		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for referenceable id", nodeID.Type)
+		err := fmt.Errorf("invalid type '%s' for referenceable id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -296,7 +309,9 @@ func (r *Repos) GetRenameable(
 	case "UserAsset":
 		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for renameable id", nodeID.Type)
+		err := fmt.Errorf("invalid type '%s' for renameable id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -310,7 +325,9 @@ func (r *Repos) GetLabelable(
 	case "LessonComment":
 		return r.LessonComment().Get(ctx, labelableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for labelable id", labelableID.Type)
+		err := fmt.Errorf("invalid type '%s' for labelable id", labelableID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -340,7 +357,9 @@ func (r *Repos) GetNode(
 	case "UserAsset":
 		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for node id", nodeID.Type)
+		err := fmt.Errorf("invalid type '%s' for node id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 }
 
@@ -354,68 +373,10 @@ func (r *Repos) GetTopicable(
 	case "Study":
 		return r.Study().Get(ctx, topicableID.String)
 	default:
-		return nil, fmt.Errorf("invalid type '%s' for topicable id", topicableID.Type)
-	}
-}
-
-func (r *Repos) ReplaceMarkdownUserAssetRefsWithLinks(
-	ctx context.Context,
-	markdown mytype.Markdown,
-	studyID string,
-) (*mytype.Markdown, error, bool) {
-	updated := false
-	userAssetRefToLink := func(s string) string {
-		result := mytype.AssetRefRegexp.FindStringSubmatch(s)
-		if len(result) == 0 {
-			return s
-		}
-		name := result[1]
-		userAssetPermit, err := r.UserAsset().GetByName(
-			ctx,
-			studyID,
-			name,
-		)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return s
-		}
-		userAsset := userAssetPermit.Get()
-
-		studyPermit, err := r.Study().Get(ctx, studyID)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return s
-		}
-		study := studyPermit.Get()
-
-		userPermit, err := r.User().Get(ctx, study.UserID.String)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return s
-		}
-		user := userPermit.Get()
-
-		updated = true
-		href := fmt.Sprintf(
-			r.conf.APIURL+"/user/assets/%s/%s",
-			userAsset.UserID.Short,
-			userAsset.Key.String,
-		)
-		link := fmt.Sprintf(
-			r.conf.ClientURL+"/%s/%s/asset/%s",
-			user.Login.String,
-			study.Name.String,
-			userAsset.Name.String,
-		)
-		return util.ReplaceWithPadding(s, fmt.Sprintf("[![%s](%s)](%s)", name, href, link))
-	}
-	err := markdown.Set(mytype.AssetRefRegexp.ReplaceAllStringFunc(markdown.String, userAssetRefToLink))
-	if err != nil {
+		err := fmt.Errorf("invalid type '%s' for topicable id", topicableID.Type)
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err, false
+		return nil, err
 	}
-
-	return &markdown, nil, updated
 }
 
 func (r *Repos) ReplaceMarkdownRefsWithLinks(
@@ -484,6 +445,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		}
 		exists, err := r.Lesson().ExistsByNumber(ctx, studyID, int32(n))
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return s
 		}
 		if !exists {
@@ -515,6 +477,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		}
 		exists, err := r.Lesson().ExistsByOwnerStudyAndNumber(ctx, owner, name, int32(n))
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return s
 		}
 		if !exists {
@@ -541,6 +504,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		name := result[1]
 		exists, err := r.User().ExistsByLogin(ctx, name)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return s
 		}
 		if !exists {

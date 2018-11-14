@@ -13,6 +13,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type AppledPermit struct {
@@ -34,30 +35,37 @@ func (r *AppledPermit) Get() *data.Appled {
 
 func (r *AppledPermit) AppleableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("appleable_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.appled.AppleableID, nil
 }
 
 func (r *AppledPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.appled.CreatedAt.Time, nil
 }
 
-func (r *AppledPermit) ID() (n int32, err error) {
+func (r *AppledPermit) ID() (int32, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		err = ErrAccessDenied
-		return
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int32
+		return n, err
 	}
-	n = r.appled.ID.Int
-	return
+	return r.appled.ID.Int, nil
 }
 
 func (r *AppledPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.appled.UserID, nil
 }
@@ -77,7 +85,9 @@ type AppledRepo struct {
 
 func (r *AppledRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -89,8 +99,9 @@ func (r *AppledRepo) Close() {
 
 func (r *AppledRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("appled connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -104,7 +115,9 @@ func (r *AppledRepo) CountByAppleable(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountAppledByAppleable(db, appleableID)
 }
@@ -116,7 +129,9 @@ func (r *AppledRepo) CountByUser(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountAppledByUser(db, userID)
 }
@@ -126,21 +141,27 @@ func (r *AppledRepo) Connect(
 	appled *data.Appled,
 ) (*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, appled); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	appled, err := data.CreateAppled(db, *appled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &AppledPermit{fieldPermFn, appled}, nil
@@ -151,6 +172,7 @@ func (r *AppledRepo) Get(
 	a *data.Appled,
 ) (*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	var appled *data.Appled
@@ -158,21 +180,26 @@ func (r *AppledRepo) Get(
 	if a.ID.Status != pgtype.Undefined {
 		appled, err = r.load.Get(ctx, a.ID.Int)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	} else if a.AppleableID.Status != pgtype.Undefined &&
 		a.UserID.Status != pgtype.Undefined {
 		appled, err = r.load.GetByAppleableAndUser(ctx, a.AppleableID.String, a.UserID.String)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	} else {
-		return nil, errors.New(
+		err := errors.New(
 			"must include either appled `id` or `appleable_id` and `user_id` to get an appled",
 		)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &AppledPermit{fieldPermFn, appled}, nil
@@ -184,20 +211,25 @@ func (r *AppledRepo) GetByAppleable(
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	appleds, err := data.GetAppledByAppleable(db, appleableID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appleds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range appleds {
@@ -213,20 +245,25 @@ func (r *AppledRepo) GetByUser(
 	po *data.PageOptions,
 ) ([]*AppledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	appleds, err := data.GetAppledByUser(db, userID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	appledPermits := make([]*AppledPermit, len(appleds))
 	if len(appleds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, appleds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range appleds {
@@ -241,13 +278,17 @@ func (r *AppledRepo) Disconnect(
 	a *data.Appled,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, a); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if a.ID.Status != pgtype.Undefined {
@@ -256,9 +297,11 @@ func (r *AppledRepo) Disconnect(
 		a.UserID.Status != pgtype.Undefined {
 		return data.DeleteAppledByAppleableAndUser(db, a.AppleableID.String, a.UserID.String)
 	}
-	return errors.New(
+	err := errors.New(
 		"must include either appled `id` or `appleable_id` and `user_id` to delete a appled",
 	)
+	mylog.Log.WithError(err).Error(util.Trace(""))
+	return err
 }
 
 func (r *AppledRepo) ViewerCanApple(
@@ -269,6 +312,7 @@ func (r *AppledRepo) ViewerCanApple(
 		if err == ErrAccessDenied {
 			return false, nil
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
 	return true, nil

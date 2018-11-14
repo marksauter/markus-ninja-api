@@ -165,7 +165,7 @@ func existsUser(
 	var exists bool
 	err := prepareQueryRow(db, name, sql, args...).Scan(&exists)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to check if user exists")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
 
@@ -184,8 +184,13 @@ func ExistsUser(
 	db Queryer,
 	id string,
 ) (bool, error) {
-	mylog.Log.WithField("id", id).Info("ExistsUser(id)")
-	return existsUser(db, "existsUserByID", existsUserByIDSQL, id)
+	exists, err := existsUser(db, "existsUserByID", existsUserByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("user found"))
+	}
+	return exists, nil
 }
 
 const existsUserByLoginSQL = `
@@ -200,13 +205,18 @@ func ExistsUserByLogin(
 	db Queryer,
 	login string,
 ) (bool, error) {
-	mylog.Log.WithField("login", login).Info("ExistsUserByLogin(login)")
-	return existsUser(
+	exists, err := existsUser(
 		db,
 		"existsUserByLogin",
 		existsUserByLoginSQL,
 		login,
 	)
+	if err != nil {
+		mylog.Log.WithField("login", login).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("login", login).Info(util.Trace("user found"))
+	}
+	return exists, nil
 }
 
 func getUser(
@@ -229,9 +239,10 @@ func getUser(
 		&row.Verified,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -247,6 +258,7 @@ func getManyUser(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -269,7 +281,7 @@ func getManyUser(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
@@ -294,10 +306,15 @@ const getUserByIDSQL = `
 
 func GetUser(
 	db Queryer,
-	id string) (*User, error,
-) {
-	mylog.Log.WithField("id", id).Info("GetUser(id)")
-	return getUser(db, "getUserByID", getUserByIDSQL, id)
+	id string,
+) (*User, error) {
+	user, err := getUser(db, "getUserByID", getUserByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("user found"))
+	}
+	return user, err
 }
 
 const batchGetUserSQL = `
@@ -320,7 +337,6 @@ func BatchGetUser(
 	db Queryer,
 	ids []string,
 ) ([]*User, error) {
-	mylog.Log.WithField("ids", ids).Info("BatchGetUser(ids) User")
 	rows := make([]*User, 0, len(ids))
 
 	err := getManyUser(
@@ -335,6 +351,7 @@ func BatchGetUser(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -358,8 +375,13 @@ func GetUserByLogin(
 	db Queryer,
 	login string,
 ) (*User, error) {
-	mylog.Log.WithField("login", login).Info("GetUserByLogin(login)")
-	return getUser(db, "getUserByLogin", getUserByLoginSQL, login)
+	user, err := getUser(db, "getUserByLogin", getUserByLoginSQL, login)
+	if err != nil {
+		mylog.Log.WithField("login", login).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("login", login).Info(util.Trace("user found"))
+	}
+	return user, err
 }
 
 const batchGetUserByLoginSQL = `
@@ -382,7 +404,6 @@ func BatchGetUserByLogin(
 	db Queryer,
 	logins []string,
 ) ([]*User, error) {
-	mylog.Log.WithField("logins", logins).Info("BatchGetUserByLogin(logins) User")
 	rows := make([]*User, 0, len(logins))
 
 	err := getManyUser(
@@ -397,6 +418,7 @@ func BatchGetUserByLogin(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -406,16 +428,13 @@ func GetUserByAppleable(
 	po *PageOptions,
 	filters *UserFilterOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField(
-		"appleabled_id",
-		appleableID,
-	).Info("GetUserByAppleable(appleabled_id)")
 	var rows []*User
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*User, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -473,6 +492,7 @@ func GetUserByAppleable(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -482,16 +502,13 @@ func GetUserByEnrollee(
 	po *PageOptions,
 	filters *UserFilterOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField(
-		"enrollee_id",
-		enrolleeID,
-	).Info("GetUserByEnrollee(enrollee_id)")
 	var rows []*User
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*User, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -549,6 +566,7 @@ func GetUserByEnrollee(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -558,15 +576,13 @@ func GetUserByEnrollable(
 	po *PageOptions,
 	filters *UserFilterOptions,
 ) ([]*User, error) {
-	mylog.Log.WithField(
-		"enrollable_id", enrollableID,
-	).Info("GetUserByEnrollable(enrollable_id)")
 	var rows []*User
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*User, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -624,6 +640,7 @@ func GetUserByEnrollable(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -643,9 +660,10 @@ func getUserCredentials(
 		&row.Verified,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -668,8 +686,13 @@ func GetUserCredentials(
 	db Queryer,
 	id string,
 ) (*User, error) {
-	mylog.Log.WithField("id", id).Info("GetUserCredentials(id)")
-	return getUserCredentials(db, "getUserCredentials", getUserCredentialsSQL, id)
+	user, err := getUserCredentials(db, "getUserCredentials", getUserCredentialsSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("user found"))
+	}
+	return user, err
 }
 
 const getUserCredentialsByLoginSQL = `  
@@ -688,8 +711,13 @@ func GetUserCredentialsByLogin(
 	db Queryer,
 	login string,
 ) (*User, error) {
-	mylog.Log.WithField("login", login).Info("GetUserCredentialsByLogin(login)")
-	return getUserCredentials(db, "getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
+	user, err := getUserCredentials(db, "getUserCredentialsByLogin", getUserCredentialsByLoginSQL, login)
+	if err != nil {
+		mylog.Log.WithField("login", login).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("login", login).Info(util.Trace("user found"))
+	}
+	return user, err
 }
 
 const getUserCredentialsByEmailSQL = `
@@ -710,22 +738,24 @@ func GetUserCredentialsByEmail(
 	db Queryer,
 	email string,
 ) (*User, error) {
-	mylog.Log.WithField(
-		"email", email,
-	).Info("GetUserCredentialsByEmail(email)")
-	return getUserCredentials(
+	user, err := getUserCredentials(
 		db,
 		"getUserCredentialsByEmail",
 		getUserCredentialsByEmailSQL,
 		email,
 	)
+	if err != nil {
+		mylog.Log.WithField("email", email).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("email", email).Info(util.Trace("user found"))
+	}
+	return user, err
 }
 
 func CreateUser(
 	db Queryer,
 	row *User) (*User, error,
 ) {
-	mylog.Log.Info("CreateUser()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
 	var columns, values []string
@@ -805,6 +835,7 @@ func CreateUser(
 		}
 	}
 
+	mylog.Log.Info(util.Trace("user created"))
 	return user, nil
 }
 
@@ -817,15 +848,18 @@ func DeleteUser(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteUser(id)")
 	commandTag, err := prepareExec(db, "deleteUser", deleteUserSQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
 	return nil
 }
 
@@ -840,6 +874,7 @@ func SearchUser(
 		if limit > 0 {
 			rows = make([]*User, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -869,6 +904,7 @@ func SearchUser(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("users found"))
 	return rows, nil
 }
 
@@ -876,8 +912,6 @@ func UpdateUserAccount(
 	db Queryer,
 	row *User,
 ) (*User, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateUserAccount()")
-
 	sets := make([]string, 0, 2)
 	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
@@ -889,6 +923,7 @@ func UpdateUserAccount(
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetUser(db, row.ID.String)
 	}
 
@@ -926,7 +961,9 @@ func UpdateUserAccount(
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	user, err := GetUser(tx, row.ID.String)
@@ -943,6 +980,7 @@ func UpdateUserAccount(
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("user account updated"))
 	return user, nil
 }
 
@@ -950,8 +988,6 @@ func UpdateUserProfile(
 	db Queryer,
 	row *User,
 ) (*User, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateUserProfile()")
-
 	sets := make([]string, 0, 3)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
@@ -966,6 +1002,7 @@ func UpdateUserProfile(
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetUser(db, row.ID.String)
 	}
 
@@ -1003,7 +1040,9 @@ func UpdateUserProfile(
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	user, err := GetUser(tx, row.ID.String)
@@ -1020,5 +1059,6 @@ func UpdateUserProfile(
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("user profile updated"))
 	return user, nil
 }

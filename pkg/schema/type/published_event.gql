@@ -1,7 +1,8 @@
 # Represents a published event on a given subject.
 type PublishedEvent implements 
   Node,
-  StudyActivityEvent
+  StudyActivityEvent,
+  UserActivityEvent
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!

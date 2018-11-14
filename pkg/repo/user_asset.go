@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -72,16 +71,6 @@ func (r *UserAssetPermit) OriginalName() (string, error) {
 		return "", ErrAccessDenied
 	}
 	return r.userAsset.OriginalName.String, nil
-}
-
-func (r *UserAssetPermit) PublishedAt() (*time.Time, error) {
-	if ok := r.checkFieldPermission("verified_at"); !ok {
-		return nil, ErrAccessDenied
-	}
-	if r.userAsset.PublishedAt.Status == pgtype.Null {
-		return nil, nil
-	}
-	return &r.userAsset.PublishedAt.Time, nil
 }
 
 func (r *UserAssetPermit) Size() (int64, error) {

@@ -792,6 +792,21 @@ func CreateCourse(
 		return nil, err
 	}
 
+	eventPayload, err := NewCourseCreatedPayload(&course.ID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := NewCourseEvent(eventPayload, &course.StudyID, &course.UserID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := CreateEvent(tx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
