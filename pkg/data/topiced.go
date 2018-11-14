@@ -375,7 +375,7 @@ func DeleteTopiced(
 		return err
 	}
 
-	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
+	mylog.Log.WithField("id", id).Info(util.Trace("topiced deleted"))
 	return nil
 }
 
@@ -389,7 +389,6 @@ func DeleteTopicedByTopicableAndTopic(
 	topicableID,
 	topicID string,
 ) error {
-	mylog.Log.Info("DeleteTopicedByTopicableAndTopic()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteTopicedFromTopicable",

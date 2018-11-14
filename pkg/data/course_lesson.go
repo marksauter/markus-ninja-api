@@ -59,9 +59,10 @@ func getCourseLesson(
 		&row.Number,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get course_lesson")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -77,7 +78,7 @@ func getManyCourseLesson(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get course_lessons")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -94,7 +95,7 @@ func getManyCourseLesson(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get course_lessons")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -115,8 +116,13 @@ func GetCourseLesson(
 	db Queryer,
 	lessonID string,
 ) (*CourseLesson, error) {
-	mylog.Log.WithField("lesson_id", lessonID).Info("GetCourseLesson(lesson_id)")
-	return getCourseLesson(db, "getCourseLesson", getCourseLessonSQL, lessonID)
+	courseLesson, err := getCourseLesson(db, "getCourseLesson", getCourseLessonSQL, lessonID)
+	if err != nil {
+		mylog.Log.WithField("lesson_id", lessonID).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("lesson_id", lessonID).Info(util.Trace("course lesson found"))
+	}
+	return courseLesson, err
 }
 
 const getCourseLessonByCourseAndNumberSQL = `
@@ -134,17 +140,25 @@ func GetCourseLessonByCourseAndNumber(
 	courseID string,
 	number int32,
 ) (*CourseLesson, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"course_id": courseID,
-		"number":    number,
-	}).Info("GetCourseLessonByCourseAndNumber(course_id, number)")
-	return getCourseLesson(
+	courseLesson, err := getCourseLesson(
 		db,
 		"getCourseLessonByCourseAndNumber",
 		getCourseLessonByCourseAndNumberSQL,
 		courseID,
 		number,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"course_id": courseID,
+			"number":    number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"course_id": courseID,
+			"number":    number,
+		}).Info(util.Trace("course lesson found"))
+	}
+	return courseLesson, err
 }
 
 func GetCourseLessonByCourse(
@@ -152,13 +166,13 @@ func GetCourseLessonByCourse(
 	courseID string,
 	po *PageOptions,
 ) ([]*CourseLesson, error) {
-	mylog.Log.WithField("course_id", courseID).Info("GetCourseLessonByCourse(course_id)")
 	var rows []*CourseLesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*CourseLesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -180,9 +194,11 @@ func GetCourseLessonByCourse(
 	psName := preparedName("getCourseLessonsByCourseID", sql)
 
 	if err := getManyCourseLesson(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("course lessons found"))
 	return rows, nil
 }
 
@@ -248,7 +264,6 @@ func DeleteCourseLesson(
 	db Queryer,
 	lessonID string,
 ) error {
-	mylog.Log.WithField("lesson_id", lessonID).Info("DeleteCourseLesson(lesson_id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteCourseLesson",
@@ -256,12 +271,16 @@ func DeleteCourseLesson(
 		lessonID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("lesson_id", lessonID).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("lesson_id", lessonID).Info(util.Trace("course lesson deleted"))
 	return nil
 }
 
@@ -297,13 +316,12 @@ func MoveCourseLesson(
 	lessonID,
 	afterLessonID string,
 ) (*CourseLesson, error) {
-	mylog.Log.Info("MoveCourseLesson()")
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancelFunc()
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -312,6 +330,7 @@ func MoveCourseLesson(
 
 	lesson, err := GetCourseLesson(tx, lessonID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -321,6 +340,7 @@ func MoveCourseLesson(
 
 	afterLesson, err := GetCourseLesson(tx, afterLessonID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -335,35 +355,35 @@ func MoveCourseLesson(
 		}
 		_, err = prepare(tx, "shiftCourseLessonRangeToTheRight", shiftCourseLessonRangeToTheRightSQL)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to prepare shiftCourseLessonRangeToTheRight")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		batch.Queue("shiftCourseLessonRangeToTheRight", []interface{}{courseID, newPosition, oldPosition}, nil, nil)
 	} else {
 		_, err = prepare(tx, "shiftCourseLessonRangeToTheLeft", shiftCourseLessonRangeToTheLeftSQL)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to prepare shiftCourseLessonRangeToTheLeft")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		batch.Queue("shiftCourseLessonRangeToTheLeft", []interface{}{courseID, oldPosition, newPosition}, nil, nil)
 	}
 	_, err = prepare(tx, "updateCourseLessonNumber", updateCourseLessonNumberSQL)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to prepare updateCourseLessonNumber")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	batch.Queue("updateCourseLessonNumber", []interface{}{newPosition, lesson.LessonID.String}, nil, nil)
 
 	if err := batch.Send(ctx, nil); err != nil {
 		if e := batch.Close(); e != nil {
-			mylog.Log.WithError(e).Error("failed to send/close move course lesson batch")
+			mylog.Log.WithError(e).Error(util.Trace(""))
 		}
-		mylog.Log.WithError(err).Error("failed to send move course lesson batch")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if err := batch.Close(); err != nil {
-		mylog.Log.WithError(err).Error("failed to close move course lesson batch")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -372,16 +392,18 @@ func MoveCourseLesson(
 		lessonID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("course lesson moved"))
 	return courseLesson, nil
 }

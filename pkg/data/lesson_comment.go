@@ -184,9 +184,10 @@ func getLessonComment(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get lesson_comment")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -202,6 +203,7 @@ func getManyLessonComment(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -224,7 +226,7 @@ func getManyLessonComment(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get lesson_comments")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -252,8 +254,13 @@ func GetLessonComment(
 	db Queryer,
 	id string,
 ) (*LessonComment, error) {
-	mylog.Log.WithField("id", id).Info("GetLessonComment(id)")
-	return getLessonComment(db, "getLessonCommentByID", getLessonCommentByIDSQL, id)
+	lessonComment, err := getLessonComment(db, "getLessonCommentByID", getLessonCommentByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("lesson comment found"))
+	}
+	return lessonComment, err
 }
 
 const batchGetLessonCommentByIDSQL = `
@@ -277,7 +284,6 @@ func BatchGetLessonComment(
 	db Queryer,
 	ids []string,
 ) ([]*LessonComment, error) {
-	mylog.Log.WithField("ids", ids).Info("BatchGetLessonComment(ids)")
 	rows := make([]*LessonComment, 0, len(ids))
 
 	err := getManyLessonComment(
@@ -288,9 +294,11 @@ func BatchGetLessonComment(
 		ids,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lesson comments found"))
 	return rows, nil
 }
 
@@ -316,17 +324,25 @@ func GetUserNewLessonComment(
 	userID,
 	lessonID string,
 ) (*LessonComment, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"user_id":   userID,
-		"lesson_id": lessonID,
-	}).Info("GetLessonComment(user_id, lesson_id)")
-	return getLessonComment(
+	lessonComment, err := getLessonComment(
 		db,
 		"getUserNewLessonComment",
 		getUserNewLessonCommentSQL,
 		userID,
 		lessonID,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"user_id":   userID,
+			"lesson_id": lessonID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"user_id":   userID,
+			"lesson_id": lessonID,
+		}).Info(util.Trace("lesson comment found"))
+	}
+	return lessonComment, err
 }
 
 func GetLessonCommentByLabel(
@@ -335,13 +351,13 @@ func GetLessonCommentByLabel(
 	po *PageOptions,
 	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
-	mylog.Log.WithField("label_id", labelID).Info("GetLessonCommentByLabel(label_id)")
 	var rows []*LessonComment
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*LessonComment, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -371,6 +387,7 @@ func GetLessonCommentByLabel(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -392,12 +409,11 @@ func GetLessonCommentByLabel(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get users")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lesson comments found"))
 	return rows, nil
 }
 
@@ -408,15 +424,13 @@ func GetLessonCommentByLesson(
 	po *PageOptions,
 	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
-	mylog.Log.WithField(
-		"lesson_id", lessonID,
-	).Info("GetLessonCommentByLesson(lesson_id)")
 	var rows []*LessonComment
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*LessonComment, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -444,9 +458,11 @@ func GetLessonCommentByLesson(
 	psName := preparedName("getLessonCommentsByLesson", sql)
 
 	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lesson comments found"))
 	return rows, nil
 }
 
@@ -457,15 +473,13 @@ func GetLessonCommentByStudy(
 	po *PageOptions,
 	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
-	mylog.Log.WithField(
-		"study_id", studyID,
-	).Info("GetLessonCommentByStudy(study_id)")
 	var rows []*LessonComment
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*LessonComment, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -493,9 +507,11 @@ func GetLessonCommentByStudy(
 	psName := preparedName("getLessonCommentsByStudy", sql)
 
 	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lesson comments found"))
 	return rows, nil
 }
 
@@ -506,15 +522,13 @@ func GetLessonCommentByUser(
 	po *PageOptions,
 	filters *LessonCommentFilterOptions,
 ) ([]*LessonComment, error) {
-	mylog.Log.WithField(
-		"user_id", userID,
-	).Info("GetLessonCommentByUser(user_id)")
 	var rows []*LessonComment
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*LessonComment, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -542,9 +556,11 @@ func GetLessonCommentByUser(
 	psName := preparedName("getLessonCommentsByUser", sql)
 
 	if err := getManyLessonComment(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lesson comments found"))
 	return rows, nil
 }
 
@@ -554,7 +570,6 @@ func CreateLessonComment(
 	row *LessonComment,
 ) (*LessonComment, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("LessonComment")
@@ -588,12 +603,13 @@ func CreateLessonComment(
 
 	_, err := prepareExec(db, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create lesson_comment")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
 				mylog.Log.WithError(err).Error(util.Trace(""))
@@ -624,7 +640,6 @@ func DeleteLessonComment(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteLessonComment(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteLessonComment",
@@ -632,12 +647,16 @@ func DeleteLessonComment(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("lesson comment deleted"))
 	return nil
 }
 
@@ -648,7 +667,7 @@ func UpdateLessonComment(
 ) (*LessonComment, error) {
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -673,24 +692,27 @@ func UpdateLessonComment(
 		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
 	}
 
-	if len(sets) > 0 {
-		sql := `
-			UPDATE lesson_comment
-			SET ` + strings.Join(sets, ",") + `
-			WHERE id = ` + args.Append(row.ID.String)
+	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetLessonComment(db, row.ID.String)
+	}
 
-		psName := preparedName("updateLessonComment", sql)
+	sql := `
+		UPDATE lesson_comment
+		SET ` + strings.Join(sets, ",") + `
+		WHERE id = ` + args.Append(row.ID.String)
 
-		commandTag, err := prepareExec(tx, psName, sql, args...)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
-		if commandTag.RowsAffected() != 1 {
-			err := ErrNotFound
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
+	psName := preparedName("updateLessonComment", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	lessonComment, err := GetLessonComment(tx, row.ID.String)

@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -33,6 +34,14 @@ type PreviewHandler struct {
 }
 
 func (h PreviewHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

@@ -2,6 +2,7 @@ package route
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -18,6 +19,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
@@ -43,6 +45,14 @@ type UploadAssetsHandler struct {
 }
 
 func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil || h.StorageSvc == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

@@ -247,7 +247,7 @@ func existsLesson(
 	var exists bool
 	err := prepareQueryRow(db, name, sql, args...).Scan(&exists)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to check if lesson exists")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return false, err
 	}
 
@@ -373,9 +373,10 @@ func getLesson(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -391,7 +392,7 @@ func getManyLesson(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -417,7 +418,7 @@ func getManyLesson(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -593,7 +594,6 @@ func GetLessonByLabel(
 	po *PageOptions,
 	filters *LessonFilterOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField("label_id", labelID).Info("GetLessonByLabel(label_id)")
 	var rows []*Lesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -725,9 +725,6 @@ func GetLessonByCourse(
 	po *PageOptions,
 	filters *LessonFilterOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField(
-		"course_id", courseID,
-	).Info("GetLessonByCourse(course_id)")
 	var rows []*Lesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -779,9 +776,6 @@ func GetLessonByStudy(
 	po *PageOptions,
 	filters *LessonFilterOptions,
 ) ([]*Lesson, error) {
-	mylog.Log.WithField(
-		"study_id", studyID,
-	).Info("GetLessonByStudy(study_id)")
 	var rows []*Lesson
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
@@ -967,17 +961,7 @@ func CreateLesson(
 	db Queryer,
 	row *Lesson,
 ) (*Lesson, error) {
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
 	args := pgx.QueryArgs(make([]interface{}, 0, 8))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Lesson")
@@ -1006,6 +990,15 @@ func CreateLesson(
 		values = append(values, args.Append(&row.UserID))
 	}
 
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
 	sql := `
 		INSERT INTO lesson(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
@@ -1015,12 +1008,13 @@ func CreateLesson(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create lesson")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
 				mylog.Log.WithError(err).Error(util.Trace(""))
@@ -1073,15 +1067,18 @@ func DeleteLesson(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteLesson(id)")
 	commandTag, err := prepareExec(db, "deleteLesson", deleteLessonSQl, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("lesson deleted"))
 	return nil
 }
 
@@ -1096,6 +1093,7 @@ func SearchLesson(
 		if limit > 0 {
 			rows = make([]*Lesson, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -1128,6 +1126,7 @@ func SearchLesson(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("lessons found"))
 	return rows, nil
 }
 
@@ -1137,7 +1136,7 @@ func UpdateLesson(
 ) (*Lesson, error) {
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -1168,25 +1167,28 @@ func UpdateLesson(
 		sets = append(sets, `title_tokens`+"="+args.Append(titleTokens))
 	}
 
-	if len(sets) > 0 {
-		sql := `
-			UPDATE lesson
-			SET ` + strings.Join(sets, ",") + `
-			WHERE id = ` + args.Append(row.ID.String) + `
-		`
+	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetLesson(db, row.ID.String)
+	}
 
-		psName := preparedName("updateLesson", sql)
+	sql := `
+		UPDATE lesson
+		SET ` + strings.Join(sets, ",") + `
+		WHERE id = ` + args.Append(row.ID.String) + `
+	`
 
-		commandTag, err := prepareExec(tx, psName, sql, args...)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
-		if commandTag.RowsAffected() != 1 {
-			err := ErrNotFound
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
+	psName := preparedName("updateLesson", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	lesson, err := GetLesson(tx, row.ID.String)

@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewLabelLoader() *LabelLoader {
@@ -93,11 +94,14 @@ func (r *LabelLoader) Get(
 ) (*data.Label, error) {
 	labelData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	label, ok := labelData.(*data.Label)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return label, nil
@@ -111,11 +115,14 @@ func (r *LabelLoader) GetByName(
 	compositeKey := newCompositeKey(studyID, name)
 	labelData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	label, ok := labelData.(*data.Label)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(label.ID.String), label)
@@ -131,6 +138,7 @@ func (r *LabelLoader) GetMany(ids *[]string) ([]*data.Label, []error) {
 	}
 	labelData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	labels := make([]*data.Label, len(labelData))
@@ -138,7 +146,9 @@ func (r *LabelLoader) GetMany(ids *[]string) ([]*data.Label, []error) {
 		var ok bool
 		labels[i], ok = d.(*data.Label)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

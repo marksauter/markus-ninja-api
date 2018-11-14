@@ -2,13 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewUserLoader() *UserLoader {
@@ -158,7 +158,9 @@ func (r *UserLoader) Exists(
 	}
 	exists, ok := userData.(bool)
 	if !ok {
-		return false, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 
 	return exists, nil
@@ -174,7 +176,9 @@ func (r *UserLoader) ExistsByLogin(
 	}
 	exists, ok := userData.(bool)
 	if !ok {
-		return false, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 
 	return exists, nil
@@ -186,11 +190,14 @@ func (r *UserLoader) Get(
 ) (*data.User, error) {
 	userData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	user, ok := userData.(*data.User)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGetByLogin.Prime(ctx, dataloader.StringKey(user.Login.String), user)
@@ -202,14 +209,16 @@ func (r *UserLoader) GetByLogin(
 	ctx context.Context,
 	id string,
 ) (*data.User, error) {
-	mylog.Log.Debug("UserLoader.GetByLogin()")
 	userData, err := r.batchGetByLogin.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	user, ok := userData.(*data.User)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(user.ID.String), user)
@@ -227,6 +236,7 @@ func (r *UserLoader) GetMany(
 	}
 	userData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	users := make([]*data.User, len(userData))
@@ -234,7 +244,9 @@ func (r *UserLoader) GetMany(
 		var ok bool
 		users[i], ok = d.(*data.User)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

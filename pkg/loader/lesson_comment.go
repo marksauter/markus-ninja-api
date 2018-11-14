@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewLessonCommentLoader() *LessonCommentLoader {
@@ -62,11 +63,14 @@ func (r *LessonCommentLoader) Get(
 ) (*data.LessonComment, error) {
 	lessonCommentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lessonComment, ok := lessonCommentData.(*data.LessonComment)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return lessonComment, nil
@@ -82,6 +86,7 @@ func (r *LessonCommentLoader) GetMany(
 	}
 	lessonCommentData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	lessonComments := make([]*data.LessonComment, len(lessonCommentData))
@@ -89,7 +94,9 @@ func (r *LessonCommentLoader) GetMany(
 		var ok bool
 		lessonComments[i], ok = d.(*data.LessonComment)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

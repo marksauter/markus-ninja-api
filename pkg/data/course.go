@@ -234,9 +234,10 @@ func getCourse(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get course")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -252,6 +253,7 @@ func getManyCourse(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -275,7 +277,7 @@ func getManyCourse(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -312,6 +314,118 @@ func GetCourse(
 	return course, err
 }
 
+const getCourseByNameSQL = `
+	SELECT
+		advanced_at,
+		completed_at,
+		created_at,
+		description,
+		id,
+		name,
+		number,
+		status,
+		study_id,
+		updated_at,
+		user_id
+	FROM course
+	WHERE study_id = $1 AND lower(name) = lower($2)
+`
+
+func GetCourseByName(
+	db Queryer,
+	studyID,
+	name string,
+) (*Course, error) {
+	course, err := getCourse(db, "getCourseByName", getCourseByNameSQL, studyID, name)
+	if err != nil {
+		mylog.Log.WithField("name", name).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("name", name).Info(util.Trace("course found"))
+	}
+	return course, err
+}
+
+const getCourseByNumberSQL = `
+	SELECT
+		advanced_at,
+		completed_at,
+		created_at,
+		description,
+		id,
+		name,
+		number,
+		status,
+		study_id,
+		updated_at,
+		user_id
+	FROM course
+	WHERE study_id = $1 AND number = $2
+`
+
+func GetCourseByNumber(
+	db Queryer,
+	studyID string,
+	number int32,
+) (*Course, error) {
+	course, err := getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyID, number)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).Info(util.Trace("course found"))
+	}
+	return course, err
+}
+
+const getCourseByStudyAndNameSQL = `
+	SELECT
+		c.advanced_at,
+		c.completed_at,
+		c.created_at,
+		c.description,
+		c.id,
+		c.name,
+		c.number,
+		c.status,
+		c.study_id,
+		c.updated_at,
+		c.user_id
+	FROM course c
+	JOIN study s ON lower(s.name) = lower($1)
+	WHERE c.study_id = s.id AND lower(c.name) = lower($2)  
+`
+
+func GetCourseByStudyAndName(
+	db Queryer,
+	study,
+	name string,
+) (*Course, error) {
+	course, err := getCourse(
+		db,
+		"getCourseByStudyAndName",
+		getCourseByStudyAndNameSQL,
+		study,
+		name,
+	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study": study,
+			"name":  name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study": study,
+			"name":  name,
+		}).Info(util.Trace("course found"))
+	}
+	return course, err
+}
+
 func GetCourseByApplee(
 	db Queryer,
 	appleeID string,
@@ -325,6 +439,7 @@ func GetCourseByApplee(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -355,6 +470,7 @@ func GetCourseByApplee(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -379,10 +495,11 @@ func GetCourseByApplee(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
 }
 
@@ -399,6 +516,7 @@ func GetCourseByEnrollee(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -429,6 +547,7 @@ func GetCourseByEnrollee(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -453,10 +572,11 @@ func GetCourseByEnrollee(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
 }
 
@@ -473,6 +593,7 @@ func GetCourseByTopic(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -503,6 +624,7 @@ func GetCourseByTopic(
 
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	defer dbRows.Close()
@@ -527,10 +649,11 @@ func GetCourseByTopic(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
 }
 
@@ -547,6 +670,7 @@ func GetCourseByStudy(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -575,9 +699,11 @@ func GetCourseByStudy(
 	psName := preparedName("getCoursesByStudyID", sql)
 
 	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
 }
 
@@ -594,6 +720,7 @@ func GetCourseByUser(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -622,105 +749,18 @@ func GetCourseByUser(
 	psName := preparedName("getCoursesByUserID", sql)
 
 	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
-}
-
-const getCourseByNameSQL = `
-	SELECT
-		advanced_at,
-		completed_at,
-		created_at,
-		description,
-		id,
-		name,
-		number,
-		status,
-		study_id,
-		updated_at,
-		user_id
-	FROM course
-	WHERE study_id = $1 AND lower(name) = lower($2)
-`
-
-func GetCourseByName(
-	db Queryer,
-	studyID,
-	name string,
-) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"name":     name,
-	}).Info("GetCourseByName(study_id, name)")
-	return getCourse(db, "getCourseByName", getCourseByNameSQL, studyID, name)
-}
-
-const getCourseByNumberSQL = `
-	SELECT
-		advanced_at,
-		completed_at,
-		created_at,
-		description,
-		id,
-		name,
-		number,
-		status,
-		study_id,
-		updated_at,
-		user_id
-	FROM course
-	WHERE study_id = $1 AND number = $2
-`
-
-func GetCourseByNumber(
-	db Queryer,
-	studyID string,
-	number int32,
-) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyID,
-		"number":   number,
-	}).Info("GetCourseByNumber(study_id, number)")
-	return getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyID, number)
-}
-
-const getCourseByStudyAndNameSQL = `
-	SELECT
-		c.advanced_at,
-		c.completed_at,
-		c.created_at,
-		c.description,
-		c.id,
-		c.name,
-		c.number,
-		c.status,
-		c.study_id,
-		c.updated_at,
-		c.user_id
-	FROM course c
-	JOIN study s ON lower(s.name) = lower($1)
-	WHERE c.study_id = s.id AND lower(c.name) = lower($2)  
-`
-
-func GetCourseByStudyAndName(
-	db Queryer,
-	study,
-	name string,
-) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study": study,
-		"name":  name,
-	}).Info("GetCourseByStudyAndName(study, name)")
-	return getCourse(db, "getCourseByStudyAndName", getCourseByStudyAndNameSQL, study, name)
 }
 
 func CreateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
-	mylog.Log.Info("CreateCourse()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
 	var columns, values []string
@@ -757,7 +797,7 @@ func CreateCourse(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -773,22 +813,26 @@ func CreateCourse(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create course")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -810,11 +854,12 @@ func CreateCourse(
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("course created"))
 	return course, nil
 }
 
@@ -827,15 +872,18 @@ func DeleteCourse(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteCourse(id)")
 	commandTag, err := prepareExec(db, "deleteCourse", deleteCourseSQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("course deleted"))
 	return nil
 }
 
@@ -850,6 +898,7 @@ func SearchCourse(
 		if limit > 0 {
 			rows = make([]*Course, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -876,9 +925,11 @@ func SearchCourse(
 	psName := preparedName("searchCourseIndex", sql)
 
 	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
 	return rows, nil
 }
 
@@ -886,7 +937,6 @@ func UpdateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateCourse(id)")
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -909,7 +959,7 @@ func UpdateCourse(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -926,35 +976,42 @@ func UpdateCourse(
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update course")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("course updated"))
 	return course, nil
 }

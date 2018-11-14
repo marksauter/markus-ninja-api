@@ -7,6 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type AuthServiceConfig struct {
@@ -35,6 +37,7 @@ func (s *AuthService) SignJWT(p *myjwt.Payload) (*myjwt.JWT, error) {
 
 	result, err := s.svc.Encrypt(params)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -61,6 +64,7 @@ func (s *AuthService) ValidateJWT(t *myjwt.JWT) (*myjwt.Payload, error) {
 
 	result, err := s.svc.Decrypt(params)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		panic(err)
 	}
 

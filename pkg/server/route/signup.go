@@ -1,14 +1,18 @@
 package route
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
@@ -20,10 +24,19 @@ var SignupCors = cors.New(cors.Options{
 
 type SignupHandler struct {
 	AuthSvc *service.AuthService
+	Conf    *myconf.Config
 	Db      data.Queryer
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.AuthSvc == nil || h.Conf == nil || h.Db == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")

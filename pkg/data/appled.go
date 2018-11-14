@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type Appled struct {
@@ -77,9 +78,10 @@ func getAppled(
 		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get appled")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -95,7 +97,7 @@ func getManyAppled(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get appleds")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -113,7 +115,7 @@ func getManyAppled(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get appleds")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 
@@ -132,8 +134,13 @@ const getAppledSQL = `
 `
 
 func GetAppled(db Queryer, id int32) (*Appled, error) {
-	mylog.Log.WithField("id", id).Info("GetAppled(id)")
-	return getAppled(db, "getAppled", getAppledSQL, id)
+	appled, err := getAppled(db, "getAppled", getAppledSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("appled found"))
+	}
+	return appled, err
 }
 
 const getAppledByAppleableAndUserSQL = `
@@ -147,15 +154,30 @@ const getAppledByAppleableAndUserSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func GetAppledByAppleableAndUser(db Queryer, appleableID, userID string) (*Appled, error) {
-	mylog.Log.Info("GetAppledByAppleableAndUser()")
-	return getAppled(
+func GetAppledByAppleableAndUser(
+	db Queryer,
+	appleableID,
+	userID string,
+) (*Appled, error) {
+	appled, err := getAppled(
 		db,
 		"getAppledByAppleableAndUser",
 		getAppledByAppleableAndUserSQL,
 		appleableID,
 		userID,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"appleable_id": appleableID,
+			"user_id":      userID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"appleable_id": appleableID,
+			"user_id":      userID,
+		}).Info(util.Trace("appled found"))
+	}
+	return appled, err
 }
 
 func GetAppledByUser(
@@ -163,13 +185,13 @@ func GetAppledByUser(
 	userID string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("user_id", userID).Info("GetAppledByUser(user_id)")
 	var rows []*Appled
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Appled, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -192,9 +214,11 @@ func GetAppledByUser(
 	psName := preparedName("getAppledsByUser", sql)
 
 	if err := getManyAppled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("appleds found"))
 	return rows, nil
 }
 
@@ -203,13 +227,13 @@ func GetAppledByAppleable(
 	appleableID string,
 	po *PageOptions,
 ) ([]*Appled, error) {
-	mylog.Log.WithField("appleable_id", appleableID).Info("GetAppledByAppleable(appleable_id)")
 	var rows []*Appled
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Appled, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -232,9 +256,11 @@ func GetAppledByAppleable(
 	psName := preparedName("getAppledsByAppleable", sql)
 
 	if err := getManyAppled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("appleds found"))
 	return rows, nil
 }
 
@@ -242,7 +268,6 @@ func CreateAppled(
 	db Queryer,
 	row Appled,
 ) (*Appled, error) {
-	mylog.Log.Info("CreateAppled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
 	var columns, values []string
@@ -276,17 +301,20 @@ func CreateAppled(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil && err != pgx.ErrNoRows {
-		mylog.Log.WithError(err).Error("failed to create appled")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -296,6 +324,7 @@ func CreateAppled(
 		row.UserID.String,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -304,38 +333,45 @@ func CreateAppled(
 	case mytype.AppleTypeCourse:
 		eventPayload, err := NewCourseAppledPayload(&appled.AppleableID)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		course, err := GetCourse(tx, appled.AppleableID.String)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		event, err = NewCourseEvent(eventPayload, &course.StudyID, &appled.UserID, true)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	case mytype.AppleTypeStudy:
 		eventPayload, err := NewStudyAppledPayload(&appled.AppleableID)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		event, err = NewStudyEvent(eventPayload, &appled.AppleableID, &appled.UserID, true)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 	if _, err := CreateEvent(tx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("appled created"))
 	return appled, nil
 }
 
@@ -353,12 +389,16 @@ func DeleteAppled(db Queryer, id int32) error {
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("appled deleted"))
 	return nil
 }
 
@@ -367,21 +407,35 @@ const deleteAppledByAppleableAndUserSQL = `
 	WHERE appleable_id = $1 AND user_id = $2
 `
 
-func DeleteAppledByAppleableAndUser(db Queryer, appleable_id, user_id string) error {
+func DeleteAppledByAppleableAndUser(
+	db Queryer,
+	appleableID,
+	userID string,
+) error {
 	mylog.Log.Info("DeleteAppledByAppleableAndUser()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteAppledByAppleableAndUser",
 		deleteAppledByAppleableAndUserSQL,
-		appleable_id,
-		user_id,
+		appleableID,
+		userID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithFields(logrus.Fields{
+			"appleableID": appleableID,
+			"user_id":     userID,
+		}).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"appleable_id": appleableID,
+		"user_id":      userID,
+	}).Info(util.Trace("appled deleted"))
 	return nil
 }

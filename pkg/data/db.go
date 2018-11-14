@@ -20,10 +20,16 @@ func Initialize(db Queryer) error {
 	mylog.Log.Info("Initializing database...")
 	sql, err := ioutil.ReadFile("data/init_database.sql")
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	_, err = db.Exec(string(sql))
-	return err
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+
+	return nil
 }
 
 type Queryer interface {
@@ -50,7 +56,11 @@ type preparer interface {
 func BeginTransaction(db Queryer) (Queryer, error, bool) {
 	if transactor, ok := db.(transactor); ok {
 		tx, err := transactor.Begin()
-		return tx, err, true
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err, false
+		}
+		return tx, nil, true
 	}
 	return db, nil, false
 }
@@ -73,6 +83,7 @@ func prepare(db Queryer, name, sql string) (*pgx.PreparedStatement, error) {
 	if preparer, ok := db.(preparer); ok {
 		ps, err := preparer.Prepare(name, sql)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		return ps, nil
@@ -118,7 +129,7 @@ func prepareExec(db Queryer, name, sql string, args ...interface{}) (pgx.Command
 func preparedName(baseName, sql string) string {
 	h := fnv.New32a()
 	if _, err := io.WriteString(h, sql); err != nil {
-		// hash.Hash.Write never returns an error so this can't happen
+		// hash.Hash.Write never returns an error so this shouldn't happen
 		panic("failed writing to hash")
 	}
 
@@ -140,7 +151,9 @@ func ParseOrderDirection(s string) (OrderDirection, error) {
 		return DESC, nil
 	default:
 		var o OrderDirection
-		return o, fmt.Errorf("invalid OrderDirection: %q", s)
+		err := fmt.Errorf("invalid OrderDirection: %q", s)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return o, err
 	}
 }
 
@@ -175,10 +188,14 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 		Order: o,
 	}
 	if first == nil && last == nil {
-		return nil, fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+		err := fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	} else if first != nil {
 		if last != nil {
-			return nil, fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+			err := fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
 		}
 		pageOptions.First = *first
 	} else {
@@ -187,6 +204,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 	if after != nil {
 		a, err := NewCursor(after)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		pageOptions.After = a
@@ -194,6 +212,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 	if before != nil {
 		b, err := NewCursor(before)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		pageOptions.Before = b

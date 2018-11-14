@@ -24,6 +24,10 @@ type Label struct {
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
+func labelDelimeter(r rune) bool {
+	return r == '_' || r == ' '
+}
+
 type LabelFilterOptions struct {
 	IsDefault *bool
 	Search    *string
@@ -150,9 +154,10 @@ func getLabel(
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -168,6 +173,7 @@ func getManyLabel(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -188,7 +194,7 @@ func getManyLabel(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get labels")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -213,8 +219,47 @@ func GetLabel(
 	db Queryer,
 	id string,
 ) (*Label, error) {
-	mylog.Log.WithField("id", id).Info("GetLabel(id)")
-	return getLabel(db, "getLabelByID", getLabelByIDSQL, id)
+	label, err := getLabel(db, "getLabelByID", getLabelByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("label found"))
+	}
+	return label, err
+}
+
+const getLabelByNameSQL = `
+	SELECT
+		color,
+		created_at,
+		description,
+		id,
+		is_default,
+		name,
+		study_id,
+		updated_at
+	FROM label
+	WHERE study_id = $1 AND lower(name) = lower($2)
+`
+
+func GetLabelByName(
+	db Queryer,
+	studyID,
+	name string,
+) (*Label, error) {
+	label, err := getLabel(db, "getLabelByName", getLabelByNameSQL, studyID, name)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"name":     name,
+			"study_id": studyID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"name":     name,
+			"study_id": studyID,
+		}).Info(util.Trace("label found"))
+	}
+	return label, err
 }
 
 func GetLabelByLabelable(
@@ -223,15 +268,13 @@ func GetLabelByLabelable(
 	po *PageOptions,
 	filters *LabelFilterOptions,
 ) ([]*Label, error) {
-	mylog.Log.WithField(
-		"labelable_id", labelableID,
-	).Info("GetLabelByLabelable(labelable_id)")
 	var rows []*Label
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Label, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -285,6 +328,7 @@ func GetLabelByLabelable(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("labels found"))
 	return rows, nil
 }
 
@@ -294,13 +338,13 @@ func GetLabelByStudy(
 	po *PageOptions,
 	filters *LabelFilterOptions,
 ) ([]*Label, error) {
-	mylog.Log.WithField("study_id", studyID).Info("GetLabelByStudy(study_id)")
 	var rows []*Label
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Label, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -330,41 +374,15 @@ func GetLabelByStudy(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("labels found"))
 	return rows, nil
-}
-
-const getLabelByNameSQL = `
-	SELECT
-		color,
-		created_at,
-		description,
-		id,
-		is_default,
-		name,
-		study_id,
-		updated_at
-	FROM label
-	WHERE study_id = $1 AND lower(name) = lower($2)
-`
-
-func GetLabelByName(
-	db Queryer,
-	studyID,
-	name string,
-) (*Label, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"name": name,
-	}).Info("GetLabelByName(name)")
-	return getLabel(db, "getLabelByName", getLabelByNameSQL, studyID, name)
 }
 
 func CreateLabel(
 	db Queryer,
 	row *Label,
 ) (*Label, error) {
-	mylog.Log.Info("CreateLabel()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Label")
@@ -415,12 +433,13 @@ func CreateLabel(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create label")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
 				mylog.Log.WithError(err).Error(util.Trace(""))
@@ -445,6 +464,7 @@ func CreateLabel(
 		}
 	}
 
+	mylog.Log.Info(util.Trace("label created"))
 	return label, nil
 }
 
@@ -457,15 +477,18 @@ func DeleteLabel(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteLabel(id)")
 	commandTag, err := prepareExec(db, "deleteLabel", deleteLabelSQl, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("label deleted"))
 	return nil
 }
 
@@ -480,6 +503,7 @@ func SearchLabel(
 		if limit > 0 {
 			rows = make([]*Label, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -507,6 +531,7 @@ func SearchLabel(
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("labels found"))
 	return rows, nil
 }
 
@@ -514,7 +539,6 @@ func UpdateLabel(
 	db Queryer,
 	row *Label,
 ) (*Label, error) {
-	mylog.Log.WithField("id", row.ID.String).Info("UpdateLabel(id)")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 3))
 
@@ -526,6 +550,7 @@ func UpdateLabel(
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetLabel(db, row.ID.String)
 	}
 
@@ -552,7 +577,9 @@ func UpdateLabel(
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	label, err := GetLabel(tx, row.ID.String)
@@ -569,9 +596,6 @@ func UpdateLabel(
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("label updated"))
 	return label, nil
-}
-
-func labelDelimeter(r rune) bool {
-	return r == '_' || r == ' '
 }

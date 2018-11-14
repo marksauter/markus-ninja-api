@@ -66,18 +66,18 @@ func main() {
 
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 
-	graphQLHandler := route.GraphQLHandler{Schema: schema, Repos: repos}
-	graphQLSchemaHandler := route.GraphQLSchemaHandler{Schema: schema}
+	graphQLHandler := route.GraphQLHandler{Conf: conf, Schema: schema, Repos: repos}
+	graphQLSchemaHandler := route.GraphQLSchemaHandler{Conf: conf, Schema: schema}
 	graphiQLHandler := route.GraphiQLHandler{}
-	confirmVerificationHandler := route.ConfirmVerificationHandler{db}
+	confirmVerificationHandler := route.ConfirmVerificationHandler{Conf: conf, Db: db}
 	indexHandler := route.IndexHandler{}
-	previewHandler := route.PreviewHandler{Repos: repos}
-	tokenHandler := route.TokenHandler{svcs.Auth, db}
+	previewHandler := route.PreviewHandler{Conf: conf, Repos: repos}
+	tokenHandler := route.TokenHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	removeTokenHandler := route.RemoveTokenHandler{}
-	signupHandler := route.SignupHandler{svcs.Auth, db}
+	signupHandler := route.SignupHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	uploadHandler := route.UploadHandler{}
 	uploadAssetsHandler := route.UploadAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
-	userAssetsHandler := route.UserAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
+	userAssetsHandler := route.UserAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
 
 	graphql := middleware.CommonMiddleware.Append(
 		route.GraphQLCors.Handler,

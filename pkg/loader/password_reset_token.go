@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewPRTLoader() *PRTLoader {
@@ -66,11 +67,14 @@ func (r *PRTLoader) Get(
 	compositeKey := newCompositeKey(emailID, token)
 	prtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	prt, ok := prtData.(*data.PRT)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return prt, nil

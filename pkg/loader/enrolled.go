@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewEnrolledLoader() *EnrolledLoader {
@@ -100,11 +101,14 @@ func (r *EnrolledLoader) Get(
 	key := strconv.Itoa(int(id))
 	enrolledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	enrolled, ok := enrolledData.(*data.Enrolled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	compositeKey := newCompositeKey(enrolled.EnrollableID.String, enrolled.UserID.String)
@@ -121,11 +125,14 @@ func (r *EnrolledLoader) GetByEnrollableAndUser(
 	compositeKey := newCompositeKey(enrollableID, userID)
 	enrolledData, err := r.batchGetByEnrollableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	enrolled, ok := enrolledData.(*data.Enrolled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	key := strconv.Itoa(int(enrolled.ID.Int))
@@ -144,6 +151,7 @@ func (r *EnrolledLoader) GetMany(
 	}
 	enrolledData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	enrolleds := make([]*data.Enrolled, len(enrolledData))
@@ -151,7 +159,9 @@ func (r *EnrolledLoader) GetMany(
 		var ok bool
 		enrolleds[i], ok = d.(*data.Enrolled)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

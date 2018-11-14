@@ -95,9 +95,10 @@ func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email,
 		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get email")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -113,6 +114,7 @@ func getManyEmail(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -131,7 +133,7 @@ func getManyEmail(
 		*rows = append(*rows, &row)
 	}
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get emails")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -152,8 +154,13 @@ const getEmailByIDSQL = `
 `
 
 func GetEmail(db Queryer, id string) (*Email, error) {
-	mylog.Log.WithField("id", id).Info("GetEmail(id)")
-	return getEmail(db, "getEmailByID", getEmailByIDSQL, id)
+	email, err := getEmail(db, "getEmailByID", getEmailByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("email found"))
+	}
+	return email, err
 }
 
 const getEmailByValueSQL = `
@@ -169,16 +176,19 @@ const getEmailByValueSQL = `
 	WHERE lower(value) = lower($1)
 `
 
-func GetEmailByValue(db Queryer, email string) (*Email, error) {
-	mylog.Log.WithField(
-		"email", email,
-	).Info("GetEmailByValue(email)")
-	return getEmail(
+func GetEmailByValue(db Queryer, value string) (*Email, error) {
+	email, err := getEmail(
 		db,
 		"getEmailByValue",
 		getEmailByValueSQL,
-		email,
+		value,
 	)
+	if err != nil {
+		mylog.Log.WithField("value", value).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("value", value).Info(util.Trace("email found"))
+	}
+	return email, err
 }
 
 func GetEmailByUser(
@@ -187,15 +197,13 @@ func GetEmailByUser(
 	po *PageOptions,
 	filters *EmailFilterOptions,
 ) ([]*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userID,
-	).Info("GetEmailByUser(userID)")
 	var rows []*Email
 	if po != nil && po.Limit() > 0 {
 		limit := po.Limit()
 		if limit > 0 {
 			rows = make([]*Email, 0, limit)
 		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
 			return rows, nil
 		}
 	}
@@ -220,17 +228,16 @@ func GetEmailByUser(
 	psName := preparedName("getEmailByUser", sql)
 
 	if err := getManyEmail(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("emails found"))
 	return rows, nil
 }
 
 func CreateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("CreateEmail()")
-
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Email")
@@ -253,7 +260,7 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -270,33 +277,37 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("email created"))
 	return email, nil
 }
 
@@ -306,8 +317,6 @@ const deleteEmailSQL = `
 `
 
 func DeleteEmail(db Queryer, id string) error {
-	mylog.Log.WithField("id", id).Info("DeleteEmail(id)")
-
 	commandTag, err := prepareExec(
 		db,
 		"deleteEmail",
@@ -315,19 +324,20 @@ func DeleteEmail(db Queryer, id string) error {
 		id,
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to delete email")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("email deleted"))
 	return nil
 }
 
 func UpdateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("UpdateEmail()")
-
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
@@ -339,12 +349,13 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	}
 
 	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetEmail(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -361,24 +372,29 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("email updated"))
 	return email, nil
 }

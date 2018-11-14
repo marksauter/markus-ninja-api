@@ -1,7 +1,9 @@
 package data
 
 import (
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 const (
@@ -41,6 +43,7 @@ type CourseEventPayload struct {
 func NewCourseCreatedPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseCreated}
 	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -50,6 +53,7 @@ func NewCourseCreatedPayload(courseID *mytype.OID) (*CourseEventPayload, error) 
 func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseAppled}
 	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -59,6 +63,7 @@ func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 func NewCourseUnappledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseUnappled}
 	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -83,9 +88,11 @@ type LessonEventPayload struct {
 func NewLessonAddedToCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonAddedToCourse}
 	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -95,9 +102,11 @@ func NewLessonAddedToCoursePayload(lessonID, courseID *mytype.OID) (*LessonEvent
 func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonCommented}
 	if err := payload.CommentID.Set(commentID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -107,6 +116,7 @@ func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPay
 func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonCreated}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -116,6 +126,7 @@ func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) 
 func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonMentioned}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -125,9 +136,11 @@ func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error
 func NewLessonLabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonLabeled}
 	if err := payload.LabelID.Set(labelID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -137,6 +150,7 @@ func NewLessonLabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload
 func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonPublished}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -146,9 +160,11 @@ func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error
 func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonReferenced}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.SourceID.Set(sourceID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -158,9 +174,11 @@ func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPay
 func NewLessonRemovedFromCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonRemovedFromCourse}
 	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -176,6 +194,7 @@ func NewLessonRenamedPayload(lessonID *mytype.OID, from, to string) (*LessonEven
 		},
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -185,9 +204,11 @@ func NewLessonRenamedPayload(lessonID *mytype.OID, from, to string) (*LessonEven
 func NewLessonUnlabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
 	payload := &LessonEventPayload{Action: LessonUnlabeled}
 	if err := payload.LabelID.Set(labelID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.LessonID.Set(lessonID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -202,6 +223,7 @@ type StudyEventPayload struct {
 func NewStudyCreatedPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyCreated}
 	if err := payload.StudyID.Set(studyID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -211,6 +233,7 @@ func NewStudyCreatedPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 func NewStudyAppledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyAppled}
 	if err := payload.StudyID.Set(studyID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -220,6 +243,7 @@ func NewStudyAppledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 func NewStudyUnappledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 	payload := &StudyEventPayload{Action: StudyUnappled}
 	if err := payload.StudyID.Set(studyID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -236,6 +260,7 @@ type UserAssetEventPayload struct {
 func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, error) {
 	payload := &UserAssetEventPayload{Action: UserAssetCreated}
 	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -245,9 +270,11 @@ func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, er
 func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEventPayload, error) {
 	payload := &UserAssetEventPayload{Action: UserAssetReferenced}
 	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if err := payload.SourceID.Set(sourceID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -263,6 +290,7 @@ func NewUserAssetRenamedPayload(assetID *mytype.OID, from, to string) (*UserAsse
 		},
 	}
 	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 

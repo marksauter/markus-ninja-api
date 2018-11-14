@@ -165,7 +165,7 @@ func existsUser(
 	var exists bool
 	err := prepareQueryRow(db, name, sql, args...).Scan(&exists)
 	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return false, err
 	}
 
@@ -258,7 +258,7 @@ func getManyUser(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -281,7 +281,7 @@ func getManyUser(
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 
@@ -754,10 +754,9 @@ func GetUserCredentialsByEmail(
 
 func CreateUser(
 	db Queryer,
-	row *User) (*User, error,
-) {
+	row *User,
+) (*User, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("User")
@@ -799,8 +798,10 @@ func CreateUser(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
 				mylog.Log.WithError(err).Error(util.Trace(""))
@@ -859,7 +860,7 @@ func DeleteUser(
 		return err
 	}
 
-	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
+	mylog.Log.WithField("id", id).Info(util.Trace("user deleted"))
 	return nil
 }
 

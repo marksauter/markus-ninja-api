@@ -200,6 +200,7 @@ func getManyUserAsset(
 ) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return err
 	}
 	defer dbRows.Close()
@@ -732,7 +733,7 @@ func UpdateUserAsset(
 ) (*UserAsset, error) {
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -758,34 +759,40 @@ func UpdateUserAsset(
 	}
 
 	if len(sets) > 0 {
-		sql := `
-			UPDATE user_asset
-			SET ` + strings.Join(sets, ",") + `
-			WHERE id = ` + args.Append(row.ID.String) + `
-		`
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetUserAsset(db, row.ID.String)
+	}
 
-		psName := preparedName("updateUserAsset", sql)
+	sql := `
+		UPDATE user_asset
+		SET ` + strings.Join(sets, ",") + `
+		WHERE id = ` + args.Append(row.ID.String) + `
+	`
 
-		commandTag, err := prepareExec(tx, psName, sql, args...)
-		if err != nil {
-			mylog.Log.WithError(err).Error("failed to update user_asset")
-			if pgErr, ok := err.(pgx.PgError); ok {
-				switch PSQLError(pgErr.Code) {
-				case NotNullViolation:
-					return nil, RequiredFieldError(pgErr.ColumnName)
-				case UniqueViolation:
-					return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-				default:
-					mylog.Log.WithError(err).Error(util.Trace(""))
-					return nil, err
-				}
+	psName := preparedName("updateUserAsset", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		if pgErr, ok := err.(pgx.PgError); ok {
+			switch PSQLError(pgErr.Code) {
+			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, RequiredFieldError(pgErr.ColumnName)
+			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, err
 			}
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
 		}
-		if commandTag.RowsAffected() != 1 {
-			return nil, ErrNotFound
-		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	userAsset, err := GetUserAsset(tx, row.ID.String)

@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewNotificationLoader() *NotificationLoader {
@@ -62,11 +63,14 @@ func (r *NotificationLoader) Get(
 ) (*data.Notification, error) {
 	notificationData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	notification, ok := notificationData.(*data.Notification)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return notification, nil
@@ -82,6 +86,7 @@ func (r *NotificationLoader) GetMany(
 	}
 	notificationData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	notifications := make([]*data.Notification, len(notificationData))
@@ -89,7 +94,9 @@ func (r *NotificationLoader) GetMany(
 		var ok bool
 		notifications[i], ok = d.(*data.Notification)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

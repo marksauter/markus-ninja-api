@@ -1,10 +1,13 @@
 package loader
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/graph-gophers/dataloader"
 )
+
+var ErrWrongType = errors.New("wrong type")
 
 type Loader interface {
 	Clear(string)

@@ -10,6 +10,8 @@ import (
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewCourseLessonLoader() *CourseLessonLoader {
@@ -104,11 +106,14 @@ func (r *CourseLessonLoader) Get(
 ) (*data.CourseLesson, error) {
 	courseLessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(lessonID))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	courseLesson, ok := courseLessonData.(*data.CourseLesson)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return courseLesson, nil
@@ -122,11 +127,14 @@ func (r *CourseLessonLoader) GetByCourseAndNumber(
 	compositeKey := newCompositeKey(courseID, fmt.Sprintf("%d", number))
 	courseLessonData, err := r.batchGetByCourseAndNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	courseLesson, ok := courseLessonData.(*data.CourseLesson)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(courseLesson.LessonID.String), courseLesson)

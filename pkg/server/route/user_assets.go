@@ -1,16 +1,19 @@
 package route
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	minio "github.com/minio/minio-go"
 	"github.com/rs/cors"
 )
@@ -25,11 +28,20 @@ var UserAssetsCors = cors.New(cors.Options{
 
 // UserAssetsHandler - handler for user assets route
 type UserAssetsHandler struct {
+	Conf       *myconf.Config
 	Repos      *repo.Repos
 	StorageSvc *service.StorageService
 }
 
 func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil || h.StorageSvc == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

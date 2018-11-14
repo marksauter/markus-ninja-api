@@ -1,15 +1,18 @@
 package route
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
@@ -20,10 +23,19 @@ var ConfirmVerificationCors = cors.New(cors.Options{
 })
 
 type ConfirmVerificationHandler struct {
-	Db data.Queryer
+	Conf *myconf.Config
+	Db   data.Queryer
 }
 
 func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Db == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)

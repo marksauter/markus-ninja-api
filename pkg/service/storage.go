@@ -19,8 +19,10 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	minio "github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
+	"github.com/sirupsen/logrus"
 )
 
 // StorageService - service used for storing assets
@@ -41,7 +43,7 @@ func NewStorageService() (*StorageService, error) {
 		myaws.AWSRegion,
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to new minio client")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	// svc.TraceOn(nil)
@@ -57,8 +59,6 @@ func (s *StorageService) Get(
 	userID *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
-	mylog.Log.WithField("key", key).Info("StorageService.Get()")
-
 	objectName := fmt.Sprintf(
 		"%s/%s/%s/%s",
 		key[:2],
@@ -75,6 +75,11 @@ func (s *StorageService) Get(
 		"/",
 	)
 
+	mylog.Log.WithFields(logrus.Fields{
+		"type":    contentType,
+		"user_id": userID.String,
+		"key":     key,
+	}).Info(util.Trace("object found"))
 	return s.svc.GetObject(
 		s.bucket,
 		objectPath,
@@ -90,8 +95,6 @@ func (s *StorageService) GetThumbnail(
 	userID *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
-	mylog.Log.WithField("key", key).Info("StorageService.GetThumbnail()")
-
 	sizeStr := strconv.FormatInt(int64(size), 10)
 	// Thumbnail objects are identified with a -'size' at the end of the key
 	thumbKey := key + "--" + sizeStr
@@ -118,6 +121,7 @@ func (s *StorageService) GetThumbnail(
 	if err != nil {
 		minioError := minio.ToErrorResponse(err)
 		if minioError.Code != "NoSuchKey" {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
@@ -125,12 +129,13 @@ func (s *StorageService) GetThumbnail(
 
 		asset, err := s.Get(contentType, userID, key)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
 		img, err := imaging.Decode(asset)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to decode image")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		thumb := imaging.Thumbnail(img, size, size, imaging.CatmullRom)
@@ -144,24 +149,25 @@ func (s *StorageService) GetThumbnail(
 		// ensure path is available
 		dir := filepath.Dir(thumbLocal)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			mylog.Log.WithError(err).WithField("path", dir).Error("failed to create tmp directory")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
 		err = imaging.Save(dst, thumbLocal)
 		if err != nil {
-			mylog.Log.WithError(err).WithField("thumbnail", thumbLocal).Error("failed to generate thumbnail")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
 		thumbFile, err := os.Open(thumbLocal)
 		if err != nil {
-			mylog.Log.WithError(err).WithField("thumbnail", thumbLocal).Error("failed to open file")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
 		thumbStat, err := thumbFile.Stat()
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
@@ -173,11 +179,17 @@ func (s *StorageService) GetThumbnail(
 			minio.PutObjectOptions{ContentType: contentType},
 		)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to put object")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"size":    size,
+		"type":    contentType,
+		"user_id": userID.String,
+		"key":     key,
+	}).Info(util.Trace("thumbnail found"))
 	return s.svc.GetObject(
 		s.bucket,
 		objectPath,
@@ -225,6 +237,7 @@ func (s *StorageService) Upload(
 	if err != nil {
 		minioError := minio.ToErrorResponse(err)
 		if minioError.Code != "NoSuchKey" {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		n, err := s.svc.PutObject(
@@ -235,12 +248,11 @@ func (s *StorageService) Upload(
 			minio.PutObjectOptions{ContentType: contentType},
 		)
 		if err != nil {
-			mylog.Log.WithError(err).Error("failed to put object")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 
-		mylog.Log.WithField("size", n).Info("Successfully uploaded file")
-
+		mylog.Log.WithField("size", n).Info(util.Trace("uploaded file"))
 		return &UploadResponse{
 			Key:         key,
 			IsNewObject: true,

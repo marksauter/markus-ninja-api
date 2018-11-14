@@ -9,6 +9,8 @@ import (
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewLessonLoader() *LessonLoader {
@@ -238,11 +240,14 @@ func (r *LessonLoader) Exists(
 ) (bool, error) {
 	lessonData, err := r.batchExists.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
 	exists, ok := lessonData.(bool)
 	if !ok {
-		return false, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 
 	return exists, nil
@@ -256,11 +261,14 @@ func (r *LessonLoader) ExistsByNumber(
 	compositeKey := newCompositeKey(studyID, fmt.Sprintf("%d", number))
 	lessonData, err := r.batchExistsByNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
 	exists, ok := lessonData.(bool)
 	if !ok {
-		return false, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 
 	return exists, nil
@@ -275,11 +283,14 @@ func (r *LessonLoader) ExistsLessonByOwnerStudyAndNumber(
 	compositeKey := newCompositeKey(ownerLogin, studyName, fmt.Sprintf("%d", number))
 	lessonData, err := r.batchExistsByOwnerStudyAndNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
 	exists, ok := lessonData.(bool)
 	if !ok {
-		return false, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 
 	return exists, nil
@@ -291,11 +302,14 @@ func (r *LessonLoader) Get(
 ) (*data.Lesson, error) {
 	lessonData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, ok := lessonData.(*data.Lesson)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	numberKey := fmt.Sprintf("%d", lesson.Number.Int)
@@ -313,11 +327,14 @@ func (r *LessonLoader) GetByNumber(
 	compositeKey := newCompositeKey(studyID, fmt.Sprintf("%d", number))
 	lessonData, err := r.batchGetByNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, ok := lessonData.(*data.Lesson)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(lesson.ID.String), lesson)
@@ -334,11 +351,14 @@ func (r *LessonLoader) GetLessonByOwnerStudyAndNumber(
 	compositeKey := newCompositeKey(ownerLogin, studyName, fmt.Sprintf("%d", number))
 	lessonData, err := r.batchGetByOwnerStudyAndNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, ok := lessonData.(*data.Lesson)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(lesson.ID.String), lesson)
@@ -359,6 +379,7 @@ func (r *LessonLoader) GetMany(
 	}
 	lessonData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	lessons := make([]*data.Lesson, len(lessonData))
@@ -366,7 +387,9 @@ func (r *LessonLoader) GetMany(
 		var ok bool
 		lessons[i], ok = d.(*data.Lesson)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

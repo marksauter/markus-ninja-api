@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewEmailLoader() *EmailLoader {
@@ -92,11 +93,14 @@ func (r *EmailLoader) Get(
 ) (*data.Email, error) {
 	emailData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	email, ok := emailData.(*data.Email)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGetByValue.Prime(ctx, dataloader.StringKey(email.Value.String), email)
@@ -110,11 +114,14 @@ func (r *EmailLoader) GetByValue(
 ) (*data.Email, error) {
 	emailData, err := r.batchGetByValue.Load(ctx, dataloader.StringKey(value))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	email, ok := emailData.(*data.Email)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGet.Prime(ctx, dataloader.StringKey(email.ID.String), email)
