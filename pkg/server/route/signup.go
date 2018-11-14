@@ -16,16 +16,25 @@ import (
 	"github.com/rs/cors"
 )
 
-var SignupCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type SignupHandler struct {
 	AuthSvc *service.AuthService
 	Conf    *myconf.Config
 	Db      data.Queryer
+}
+
+func (h SignupHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins: allowedOrigins,
+		// Debug: true,
+	})
 }
 
 func (h SignupHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

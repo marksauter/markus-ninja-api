@@ -12,15 +12,23 @@ import (
 	"github.com/rs/cors"
 )
 
-var GraphQLSchemaCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type GraphQLSchemaHandler struct {
 	Conf   *myconf.Config
 	Schema *graphql.Schema
+}
+
+func (h GraphQLSchemaHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodOptions, http.MethodGet},
+		AllowedOrigins: allowedOrigins,
+	})
 }
 
 func (h GraphQLSchemaHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

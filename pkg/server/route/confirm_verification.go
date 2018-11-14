@@ -16,15 +16,23 @@ import (
 	"github.com/rs/cors"
 )
 
-var ConfirmVerificationCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type ConfirmVerificationHandler struct {
 	Conf *myconf.Config
 	Db   data.Queryer
+}
+
+func (h ConfirmVerificationHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins: allowedOrigins,
+	})
 }
 
 func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

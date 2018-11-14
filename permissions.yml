@@ -27,10 +27,11 @@ permissions:
       - subtype
       - type
       - user_id 
-  # Owners can read the whole asset.
+  # Admins and owners can read the whole asset.
   - operation: Read Asset
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create assets. 
   - operation: Create Asset
@@ -186,10 +187,11 @@ permissions:
       - study_id
       - type
       - user_id
-  # Owners can read the whole event.
+  # Admins and owners can read the whole event.
   - operation: Read Event
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create events.
   - operation: Create Event
@@ -220,6 +222,7 @@ permissions:
   - operation: Read Label
     authenticated: true
     roles:
+      - admin
       - owner
   # Only owners can create/update/delete labels.
   - operation: Create Label
@@ -280,6 +283,7 @@ permissions:
   - operation: Read Lesson
     authenticated: true
     roles:
+      - admin
       - owner
   # Only owners can create/update/delete lessons.
   - operation: Create Lesson
@@ -319,10 +323,11 @@ permissions:
       - study_id
       - updated_at
       - user_id
-  # Owners can read the whole lesson comment.
+  # Admins and owners can read the whole lesson comment.
   - operation: Read LessonComment
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create lesson comments.
   - operation: Create LessonComment
@@ -533,6 +538,7 @@ permissions:
   - operation: Read UserAsset
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create user assets. 
   - operation: Create UserAsset
