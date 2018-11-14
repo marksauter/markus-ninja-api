@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -12,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type EVTPermit struct {
@@ -33,42 +33,55 @@ func (r *EVTPermit) Get() *data.EVT {
 
 func (r *EVTPermit) EmailID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("email_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.evt.EmailID, nil
 }
 
 func (r *EVTPermit) ExpiresAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("expires_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.evt.ExpiresAt.Time, nil
 }
 
 func (r *EVTPermit) IssuedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("issued_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.evt.IssuedAt.Time, nil
 }
 
 func (r *EVTPermit) Token() (string, error) {
 	if ok := r.checkFieldPermission("token"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
+
 	}
 	return r.evt.Token.String, nil
 }
 
 func (r *EVTPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.evt.UserID, nil
 }
 
 func (r *EVTPermit) VerifiedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("verified_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.evt.VerifiedAt.Time, nil
 }
@@ -88,7 +101,9 @@ type EVTRepo struct {
 
 func (r *EVTRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -100,8 +115,9 @@ func (r *EVTRepo) Close() {
 
 func (r *EVTRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("evt connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -117,17 +133,22 @@ func (r *EVTRepo) Create(
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, token); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	evt, err := data.CreateEVT(db, token)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, evt)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &EVTPermit{fieldPermFn, evt}, nil
@@ -139,14 +160,17 @@ func (r *EVTRepo) Get(
 	token string,
 ) (*EVTPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	evt, err := r.load.Get(ctx, emailID, token)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, evt)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &EVTPermit{fieldPermFn, evt}, nil

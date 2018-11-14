@@ -16,18 +16,26 @@ import (
 	"github.com/rs/cors"
 )
 
-var TokenCors = cors.New(cors.Options{
-	AllowCredentials: true,
-	AllowedHeaders:   []string{"Authorization"},
-	AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
-	Debug:            true,
-})
-
 type TokenHandler struct {
 	AuthSvc *service.AuthService
 	Conf    *myconf.Config
 	Db      data.Queryer
+}
+
+func (h TokenHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
+		AllowedOrigins:   allowedOrigins,
+		// Debug: true,
+	})
 }
 
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

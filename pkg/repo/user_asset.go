@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/fatih/structs"
@@ -12,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type UserAssetPermit struct {
@@ -33,85 +33,109 @@ func (r *UserAssetPermit) Get() *data.UserAsset {
 
 func (r *UserAssetPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.userAsset.CreatedAt.Time, nil
 }
 
 func (r *UserAssetPermit) Description() (string, error) {
 	if ok := r.checkFieldPermission("description"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.Description.String, nil
 }
 
 func (r *UserAssetPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.userAsset.ID, nil
 }
 
 func (r *UserAssetPermit) Key() (string, error) {
 	if ok := r.checkFieldPermission("key"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.Key.String, nil
 }
 
 func (r *UserAssetPermit) Name() (string, error) {
 	if ok := r.checkFieldPermission("name"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.Name.String, nil
 }
 
 func (r *UserAssetPermit) OriginalName() (string, error) {
 	if ok := r.checkFieldPermission("original_name"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.OriginalName.String, nil
 }
 
 func (r *UserAssetPermit) Size() (int64, error) {
 	if ok := r.checkFieldPermission("size"); !ok {
-		var i int64
-		return i, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int64
+		return n, err
 	}
 	return r.userAsset.Size.Int, nil
 }
 
 func (r *UserAssetPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.userAsset.StudyID, nil
 }
 
 func (r *UserAssetPermit) Subtype() (string, error) {
 	if ok := r.checkFieldPermission("subtype"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.Subtype.String, nil
 }
 
 func (r *UserAssetPermit) Type() (string, error) {
 	if ok := r.checkFieldPermission("type"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.userAsset.Type.String, nil
 }
 
 func (r *UserAssetPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.userAsset.UpdatedAt.Time, nil
 }
 
 func (r *UserAssetPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.userAsset.UserID, nil
 }
@@ -131,7 +155,9 @@ type UserAssetRepo struct {
 
 func (r *UserAssetRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -143,8 +169,9 @@ func (r *UserAssetRepo) Close() {
 
 func (r *UserAssetRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("user_asset connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -158,7 +185,9 @@ func (r *UserAssetRepo) CountBySearch(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountUserAssetBySearch(db, filters)
 }
@@ -171,7 +200,9 @@ func (r *UserAssetRepo) CountByStudy(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountUserAssetByStudy(db, studyID, filters)
 }
@@ -184,7 +215,9 @@ func (r *UserAssetRepo) CountByUser(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountUserAssetByUser(db, userID, filters)
 }
@@ -194,21 +227,27 @@ func (r *UserAssetRepo) Create(
 	a *data.UserAsset,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, a); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, err := data.CreateUserAsset(db, a)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
@@ -219,13 +258,17 @@ func (r *UserAssetRepo) Delete(
 	userAsset *data.UserAsset,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, userAsset); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	return data.DeleteUserAsset(db, userAsset.ID.String)
@@ -236,14 +279,17 @@ func (r *UserAssetRepo) Get(
 	id string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
@@ -255,14 +301,17 @@ func (r *UserAssetRepo) GetByName(
 	name string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, err := r.load.GetByName(ctx, studyID, name)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
@@ -274,12 +323,14 @@ func (r *UserAssetRepo) BatchGetByName(
 	names []string,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAssets, errs := r.load.GetManyByName(ctx, studyID, names)
 	if errs != nil {
 		for _, err := range errs {
 			if err != data.ErrNotFound {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
@@ -288,6 +339,7 @@ func (r *UserAssetRepo) BatchGetByName(
 	for i, userAsset := range userAssets {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		userAssetPermits[i] = &UserAssetPermit{fieldPermFn, userAsset}
@@ -302,14 +354,17 @@ func (r *UserAssetRepo) GetByUserStudyAndName(
 	name string,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, err := r.load.GetByUserStudyAndName(ctx, userLogin, studyName, name)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
@@ -322,20 +377,25 @@ func (r *UserAssetRepo) GetByStudy(
 	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	userAssets, err := data.GetUserAssetByStudy(db, studyID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range userAssets {
@@ -352,20 +412,25 @@ func (r *UserAssetRepo) GetByUser(
 	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	userAssets, err := data.GetUserAssetByUser(db, userID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range userAssets {
@@ -381,20 +446,25 @@ func (r *UserAssetRepo) Search(
 	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	userAssets, err := data.SearchUserAsset(db, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
 	if len(userAssets) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range userAssets {
@@ -409,21 +479,27 @@ func (r *UserAssetRepo) Update(
 	a *data.UserAsset,
 ) (*UserAssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, a); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, err := data.UpdateUserAsset(db, a)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil

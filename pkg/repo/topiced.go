@@ -13,6 +13,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type TopicedPermit struct {
@@ -34,30 +35,37 @@ func (r *TopicedPermit) Get() *data.Topiced {
 
 func (r *TopicedPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.topiced.CreatedAt.Time, nil
 }
 
-func (r *TopicedPermit) ID() (n int32, err error) {
+func (r *TopicedPermit) ID() (int32, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		err = ErrAccessDenied
-		return
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int32
+		return n, err
 	}
-	n = r.topiced.ID.Int
-	return
+	return r.topiced.ID.Int, nil
 }
 
 func (r *TopicedPermit) TopicID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("topic_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.topiced.TopicID, nil
 }
 
 func (r *TopicedPermit) TopicableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("topicable_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.topiced.TopicableID, nil
 }
@@ -77,7 +85,9 @@ type TopicedRepo struct {
 
 func (r *TopicedRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -89,8 +99,9 @@ func (r *TopicedRepo) Close() {
 
 func (r *TopicedRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("topiced connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -104,7 +115,9 @@ func (r *TopicedRepo) CountByTopic(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountTopicedByTopic(db, topicID)
 }
@@ -116,7 +129,9 @@ func (r *TopicedRepo) CountByTopicable(
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
 	return data.CountTopicedByTopicable(db, topicableID)
 }
@@ -126,21 +141,27 @@ func (r *TopicedRepo) Connect(
 	topiced *data.Topiced,
 ) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, topiced); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topiced, err := data.CreateTopiced(db, *topiced)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiced)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicedPermit{fieldPermFn, topiced}, nil
@@ -151,6 +172,7 @@ func (r *TopicedRepo) Get(
 	t *data.Topiced,
 ) (*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	var topiced *data.Topiced
@@ -158,6 +180,7 @@ func (r *TopicedRepo) Get(
 	if t.ID.Status != pgtype.Undefined {
 		topiced, err = r.load.Get(ctx, t.ID.Int)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	} else if t.TopicableID.Status != pgtype.Undefined &&
@@ -168,15 +191,19 @@ func (r *TopicedRepo) Get(
 			t.TopicID.String,
 		)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	} else {
-		return nil, errors.New(
+		err := errors.New(
 			"must include either topiced `id` or `topicable_id` and `topic_id` to get an topiced",
 		)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiced)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicedPermit{fieldPermFn, topiced}, nil
@@ -188,20 +215,25 @@ func (r *TopicedRepo) GetByTopic(
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	topiceds, err := data.GetTopicedByTopic(db, topicID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiceds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, t := range topiceds {
@@ -217,20 +249,25 @@ func (r *TopicedRepo) GetByTopicable(
 	po *data.PageOptions,
 ) ([]*TopicedPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	topiceds, err := data.GetTopicedByTopicable(db, topicableID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topicedPermits := make([]*TopicedPermit, len(topiceds))
 	if len(topiceds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topiceds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, t := range topiceds {
@@ -245,13 +282,17 @@ func (r *TopicedRepo) Disconnect(
 	topiced *data.Topiced,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, topiced); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if topiced.ID.Status != pgtype.Undefined {
@@ -260,7 +301,9 @@ func (r *TopicedRepo) Disconnect(
 		topiced.TopicID.Status != pgtype.Undefined {
 		return data.DeleteTopicedByTopicableAndTopic(db, topiced.TopicableID.String, topiced.TopicID.String)
 	}
-	return errors.New(
+	err := errors.New(
 		"must include either topiced `id` or `topicable_id` and `topic_id` to delete a topiced",
 	)
+	mylog.Log.WithError(err).Error(util.Trace(""))
+	return err
 }

@@ -21,16 +21,24 @@ import (
 	"github.com/rs/cors"
 )
 
-var PreviewCors = cors.New(cors.Options{
-	AllowCredentials: true,
-	AllowedHeaders:   []string{"Authorization", "Content-Type"},
-	AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type PreviewHandler struct {
 	Conf  *myconf.Config
 	Repos *repo.Repos
+}
+
+func (h PreviewHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins:   allowedOrigins,
+	})
 }
 
 func (h PreviewHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

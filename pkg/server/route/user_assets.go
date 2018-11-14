@@ -18,19 +18,27 @@ import (
 	"github.com/rs/cors"
 )
 
-// UserAssetsCors - cors options for user assets route
-var UserAssetsCors = cors.New(cors.Options{
-	AllowCredentials: true,
-	AllowedHeaders:   []string{"Content-Type"},
-	AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 // UserAssetsHandler - handler for user assets route
 type UserAssetsHandler struct {
 	Conf       *myconf.Config
 	Repos      *repo.Repos
 	StorageSvc *service.StorageService
+}
+
+func (h UserAssetsHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
+		AllowedOrigins:   allowedOrigins,
+		// Debug: true,
+	})
 }
 
 func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

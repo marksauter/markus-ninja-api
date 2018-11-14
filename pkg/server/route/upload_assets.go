@@ -31,17 +31,26 @@ type Sizer interface {
 	Size() int64
 }
 
-var UploadAssetsCors = cors.New(cors.Options{
-	AllowCredentials: true,
-	AllowedHeaders:   []string{"Authorization", "Content-Type"},
-	AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins:   []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type UploadAssetsHandler struct {
 	Conf       *myconf.Config
 	Repos      *repo.Repos
 	StorageSvc *service.StorageService
+}
+
+func (h UploadAssetsHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins:   allowedOrigins,
+		// Debug: true,
+	})
 }
 
 func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
