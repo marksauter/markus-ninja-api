@@ -17,7 +17,7 @@ type User struct {
 	CreatedAt        pgtype.Timestamptz `db:"created_at" permit:"read"`
 	EnrolledAt       pgtype.Timestamptz `db:"enrolled_at"`
 	ID               mytype.OID         `db:"id" permit:"read"`
-	Login            pgtype.Varchar     `db:"login" permit:"read/create/update"`
+	Login            mytype.Username    `db:"login" permit:"read/create/update"`
 	Name             pgtype.Text        `db:"name" permit:"read/update"`
 	Password         mytype.Password    `db:"password" permit:"create/update"`
 	PrimaryEmail     mytype.Email       `db:"primary_email" permit:"create"`
@@ -796,17 +796,8 @@ func CreateUser(
 	_, err = prepareExec(tx, psName, createUserSQL, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -947,16 +938,8 @@ func UpdateUserAccount(
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -1026,16 +1009,8 @@ func UpdateUserProfile(
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

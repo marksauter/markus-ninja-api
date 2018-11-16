@@ -314,14 +314,8 @@ func BatchCreateNotification(
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return err
-			case UniqueViolation:
-				mylog.Log.Warn("notifications already created")
-				return nil
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
@@ -392,17 +386,8 @@ func CreateNotification(
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

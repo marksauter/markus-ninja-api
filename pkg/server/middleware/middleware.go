@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/justinas/alice"
@@ -67,6 +68,13 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			if err != nil {
 				response := myhttp.UnauthorizedErrorResponse("user not found")
 				myhttp.WriteResponseTo(rw, response)
+				http.SetCookie(rw, &http.Cookie{
+					Name:     "access_token",
+					Value:    "",
+					Expires:  time.Unix(0, 0),
+					HttpOnly: true,
+					// Secure:   true,
+				})
 				return
 			}
 		}

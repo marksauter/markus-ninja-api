@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/badoux/checkmail"
-	graphql "github.com/marksauter/graphql-go"
 	"github.com/jackc/pgx/pgtype"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myerr"
@@ -521,17 +521,31 @@ func (r *RootResolver) CreateUser(
 ) (*userResolver, error) {
 	user := &data.User{}
 	if err := user.PrimaryEmail.Set(args.Input.Email); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user primary_email"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("Invalid email")
 	}
 	if err := user.Login.Set(args.Input.Login); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user login"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("Invalid login")
 	}
 	if err := user.Password.Set(args.Input.Password); err != nil {
-		return nil, myerr.UnexpectedError{"failed to set user password"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("Invalid password")
+	}
+
+	ok, err := user.Login.IsBlacklisted()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	} else if ok {
+		err := errors.New("Username unavailable")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	userPermit, err := r.Repos.User().Create(ctx, user)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -2501,6 +2515,15 @@ func (r *RootResolver) UpdateViewerAccount(
 		if err := user.Login.Set(args.Input.Login); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user login"}
 		}
+	}
+	ok, err := user.Login.IsBlacklisted()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if ok {
+		err := errors.New("username unavailable")
+		mylog.Log.WithError(err).Error(util.Trace("failed blacklist check"))
+		return nil, err
 	}
 
 	userPermit, err := r.Repos.User().UpdateAccount(ctx, user)

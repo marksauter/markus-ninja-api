@@ -358,17 +358,8 @@ func CreateTopic(
 	)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

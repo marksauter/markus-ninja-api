@@ -4,14 +4,22 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Username struct {
 	Status pgtype.Status
 	String string
+}
+
+type Blacklist struct {
+	Usernames []string `yaml:"usernames"`
 }
 
 var hyphenCheckRegex = regexp.MustCompile(`(^-|--|-$)`)
@@ -31,7 +39,38 @@ func checkUsername(username []byte) error {
 	if match := validUsernameRegex.Match(username); !match {
 		return InvalidUsernameCharacters
 	}
+
 	return nil
+}
+
+func getBlacklist() (*Blacklist, error) {
+	blacklist := &Blacklist{}
+
+	file, err := ioutil.ReadFile("blacklist.yml")
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	err = yaml.Unmarshal(file, blacklist)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return blacklist, nil
+}
+
+func (src *Username) IsBlacklisted() (bool, error) {
+	blacklist, err := getBlacklist()
+	if err != nil {
+		return false, err
+	}
+	for _, name := range blacklist.Usernames {
+		if src.String == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (dst *Username) Set(src interface{}) error {
