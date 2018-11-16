@@ -1,6 +1,11 @@
 package myerr
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var SomethingWentWrongError = errors.New("Something went wrong")
 
 type UnexpectedError struct {
 	Message string

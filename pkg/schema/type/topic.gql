@@ -35,6 +35,9 @@ type Topic implements
     # Ordering options for topicables returned from the connection.
     orderBy: TopicableOrder
 
+    # Query to search topicables by.
+    search: String
+
     # The types of topicable topicables to retrieve.
     type: TopicableType!
   ): TopicableConnection!
@@ -44,6 +47,9 @@ type Topic implements
 
   # The HTTP URL for this topic.
   url: URI!
+
+  # Can the viewer update this object?
+  viewerCanUpdate: Boolean!
 }
 
 # An edge type for Topic.

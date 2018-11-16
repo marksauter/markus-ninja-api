@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewStudyLoader() *StudyLoader {
@@ -124,11 +125,14 @@ func (r *StudyLoader) Get(
 ) (*data.Study, error) {
 	studyData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, ok := studyData.(*data.Study)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return study, nil
@@ -136,20 +140,23 @@ func (r *StudyLoader) Get(
 
 func (r *StudyLoader) GetByName(
 	ctx context.Context,
-	userId,
+	userID,
 	name string,
 ) (*data.Study, error) {
-	compositeKey := newCompositeKey(userId, name)
+	compositeKey := newCompositeKey(userID, name)
 	studyData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, ok := studyData.(*data.Study)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(study.Id.String), study)
+	r.batchGet.Prime(ctx, dataloader.StringKey(study.ID.String), study)
 
 	return study, nil
 }
@@ -162,14 +169,17 @@ func (r *StudyLoader) GetByUserAndName(
 	compositeKey := newCompositeKey(login, name)
 	studyData, err := r.batchGetByUserAndName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, ok := studyData.(*data.Study)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(study.Id.String), study)
+	r.batchGet.Prime(ctx, dataloader.StringKey(study.ID.String), study)
 
 	return study, nil
 }
@@ -184,6 +194,7 @@ func (r *StudyLoader) GetMany(
 	}
 	studyData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	studys := make([]*data.Study, len(studyData))
@@ -191,7 +202,9 @@ func (r *StudyLoader) GetMany(
 		var ok bool
 		studys[i], ok = d.(*data.Study)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

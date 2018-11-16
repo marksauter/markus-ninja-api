@@ -1,13 +1,13 @@
 package resolver
 
 import (
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type EVT = evtResolver
-
 type evtResolver struct {
+	Conf  *myconf.Config
 	EVT   *repo.EVTPermit
 	Repos *repo.Repos
 }

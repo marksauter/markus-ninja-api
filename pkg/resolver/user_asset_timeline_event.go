@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 )
 
 type userAssetTimelineEvent interface {
@@ -11,12 +11,12 @@ type userAssetTimelineEventResolver struct {
 	userAssetTimelineEvent
 }
 
-func (r *userAssetTimelineEventResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
-	resolver, ok := r.userAssetTimelineEvent.(*commentedEventResolver)
+func (r *userAssetTimelineEventResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*referencedEventResolver)
 	return resolver, ok
 }
 
-func (r *userAssetTimelineEventResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
-	resolver, ok := r.userAssetTimelineEvent.(*referencedEventResolver)
+func (r *userAssetTimelineEventResolver) ToRenamedEvent() (*renamedEventResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*renamedEventResolver)
 	return resolver, ok
 }

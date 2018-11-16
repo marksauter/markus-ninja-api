@@ -1,0 +1,10 @@
+# Entities that can be published.
+interface Publishable {
+  id: ID!
+
+  # Is this object published?
+  isPublished: Boolean!
+
+  # Identifies when the object was last published.
+  publishedAt: Time
+}

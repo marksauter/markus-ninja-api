@@ -3,28 +3,26 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type createdEventResolver struct {
-	Event *repo.EventPermit
-	Repos *repo.Repos
+	Conf         *myconf.Config
+	CreateableID *mytype.OID
+	Event        *repo.EventPermit
+	Repos        *repo.Repos
 }
 
 func (r *createdEventResolver) Createable(ctx context.Context) (*createableResolver, error) {
-	id, err := r.Event.TargetId()
+	permit, err := r.Repos.GetCreateable(ctx, r.CreateableID)
 	if err != nil {
 		return nil, err
 	}
-	permit, err := r.Repos.GetCreateable(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -45,49 +43,26 @@ func (r *createdEventResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
-func (r *createdEventResolver) ResourcePath(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	id, err := r.Event.TargetId()
+func (r *createdEventResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyID, err := r.Event.StudyID()
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	permit, err := r.Repos.GetEventTargetable(ctx, id)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return uri, err
-	}
-	urlable, ok := resolver.(uniformResourceLocatable)
-	if !ok {
-		return uri, errors.New("cannot convert resolver to uniform_resource_locatable")
-	}
-	return urlable.ResourcePath(ctx)
-}
-
-func (r *createdEventResolver) URL(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
-	if err != nil {
-		return uri, err
-	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
-	return uri, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *createdEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

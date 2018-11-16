@@ -1,20 +1,26 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewTopicableConnectionResolver(
+	topicables []repo.NodePermit,
+	pageOptions *data.PageOptions,
+	topicID *mytype.OID,
+	search *string,
 	repos *repo.Repos,
-	topicables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	conf *myconf.Config,
 ) (*topicableConnectionResolver, error) {
 	edges := make([]*topicableEdgeResolver, len(topicables))
 	for i := range edges {
-		edge, err := NewTopicableEdgeResolver(repos, topicables[i])
+		edge, err := NewTopicableEdgeResolver(topicables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -28,21 +34,32 @@ func NewTopicableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &topicableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		topicables: topicables,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		search:     search,
+		topicID:    topicID,
 	}
 	return resolver, nil
 }
 
 type topicableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*topicableEdgeResolver
 	topicables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	search     *string
+	topicID    *mytype.OID
+}
+
+func (r *topicableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
+	filters := &data.CourseFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Course().CountByTopic(ctx, r.topicID.String, filters)
 }
 
 func (r *topicableConnectionResolver) Edges() *[]*topicableEdgeResolver {
@@ -59,7 +76,7 @@ func (r *topicableConnectionResolver) Nodes() (*[]*topicableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		topicables := r.topicables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range topicables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}
@@ -77,6 +94,9 @@ func (r *topicableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *topicableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+func (r *topicableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	filters := &data.StudyFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Study().CountByTopic(ctx, r.topicID.String, filters)
 }

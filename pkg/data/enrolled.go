@@ -1,96 +1,114 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/sirupsen/logrus"
 )
 
 type Enrolled struct {
 	CreatedAt    pgtype.Timestamptz      `db:"created_at" permit:"read"`
-	Id           pgtype.Int4             `db:"id" permit:"read"`
-	EnrollableId mytype.OID              `db:"enrollable_id" permit:"read"`
+	ID           pgtype.Int4             `db:"id" permit:"read"`
+	EnrollableID mytype.OID              `db:"enrollable_id" permit:"read"`
 	ReasonName   pgtype.Varchar          `db:"reason_name" permit:"read"`
 	Status       mytype.EnrollmentStatus `db:"status" permit:"read/update"`
-	UserId       mytype.OID              `db:"user_id" permit:"read"`
+	Type         mytype.EnrollmentType   `db:"type" permit:"read"`
+	UserID       mytype.OID              `db:"user_id" permit:"read"`
 }
 
-type EnrolledFilterOption int
+type EnrolledFilterOptions struct {
+	Status *[]string
+	Types  *[]string
+}
 
-const (
-	EnrolledIsEnrolled EnrolledFilterOption = iota
-)
+func (src *EnrolledFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
 
-func (src EnrolledFilterOption) String() string {
-	switch src {
-	case EnrolledIsEnrolled:
-		return "status IS NOT 'UNENROLLED'"
-	default:
-		return ""
+	whereParts := make([]string, 0, 2)
+	if src.Status != nil && len(*src.Status) > 0 {
+		whereStatus := make([]string, len(*src.Status))
+		for i, s := range *src.Status {
+			whereStatus[i] = from + ".status = '" + s + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereStatus, " OR ")+")",
+		)
+	}
+	if src.Types != nil && len(*src.Types) > 0 {
+		whereType := make([]string, len(*src.Types))
+		for i, t := range *src.Types {
+			whereType[i] = from + ".type = '" + t + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereType, " OR ")+")",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		Where: where,
 	}
 }
-
-const countEnrolledByUserSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE user_id = $1
-`
 
 func CountEnrolledByUser(
 	db Queryer,
-	userId string,
-	opts ...EnrolledFilterOption,
-) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountEnrolledByUser()")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	userID string,
+	filters *EnrolledFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	sqlParts := append([]string{countEnrolledByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND enrolled.")
+	from := "enrolled"
 
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countEnrolledByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("enrolleds found"))
+	}
+	return n, err
 }
-
-const countEnrolledByEnrollableSQL = `
-	SELECT COUNT(*)
-	FROM enrolled
-	WHERE enrollable_id = $1
-`
 
 func CountEnrolledByEnrollable(
 	db Queryer,
-	enrollableId string,
-	opts ...EnrolledFilterOption,
-) (n int32, err error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("CountEnrolledByEnrollable()")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	enrollableID string,
+	filters *EnrolledFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
 	}
-	sqlParts := append([]string{countEnrolledByEnrollableSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND enrolled.")
+	from := "enrolled"
 
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("CountEnrolledByEnrollable", sql)
 
-	err = prepareQueryRow(db, psName, sql, enrollableId).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("enrolleds found"))
+	}
+	return n, err
 }
 
 func getEnrolled(
@@ -102,16 +120,18 @@ func getEnrolled(
 	var row Enrolled
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
-		&row.EnrollableId,
+		&row.ID,
+		&row.EnrollableID,
 		&row.ReasonName,
 		&row.Status,
-		&row.UserId,
+		&row.Type,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get enrolled")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -122,37 +142,36 @@ func getManyEnrolled(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Enrolled,
 	args ...interface{},
-) ([]*Enrolled, error) {
-	var rows []*Enrolled
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get enrolleds")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Enrolled
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
-			&row.EnrollableId,
+			&row.ID,
+			&row.EnrollableID,
 			&row.ReasonName,
 			&row.Status,
-			&row.UserId,
+			&row.Type,
+			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get enrolleds")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
 const getEnrolledSQL = `
@@ -162,6 +181,7 @@ const getEnrolledSQL = `
 		enrollable_id,
 		reason_name,
 		status,
+		type,
 		user_id
 	FROM enrolled
 	WHERE id = $1
@@ -171,8 +191,13 @@ func GetEnrolled(
 	db Queryer,
 	id int32,
 ) (*Enrolled, error) {
-	mylog.Log.WithField("id", id).Info("GetEnrolled(id)")
-	return getEnrolled(db, "getEnrolled", getEnrolledSQL, id)
+	enrolled, err := getEnrolled(db, "getEnrolled", getEnrolledSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("enrolled found"))
+	}
+	return enrolled, err
 }
 
 const getEnrolledByEnrollableAndUserSQL = `
@@ -182,6 +207,7 @@ const getEnrolledByEnrollableAndUserSQL = `
 		enrollable_id,
 		reason_name,
 		status,
+		type,
 		user_id
 	FROM enrolled
 	WHERE enrollable_id = $1 AND user_id = $2
@@ -189,38 +215,51 @@ const getEnrolledByEnrollableAndUserSQL = `
 
 func GetEnrolledByEnrollableAndUser(
 	db Queryer,
-	enrollableId,
-	userId string,
+	enrollableID,
+	userID string,
 ) (*Enrolled, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"enrollable_id": enrollableId,
-		"user_id":       userId,
-	}).Info("GetEnrolledByEnrollableAndUser(enrollable_id, user_id)")
-	return getEnrolled(
+	enrolled, err := getEnrolled(
 		db,
 		"getEnrolledByEnrollableAndUser",
 		getEnrolledByEnrollableAndUserSQL,
-		enrollableId,
-		userId,
+		enrollableID,
+		userID,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"enrollable_id": enrollableID,
+			"user_id":       userID,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"enrollable_id": enrollableID,
+			"user_id":       userID,
+		}).Info(util.Trace("enrolled found"))
+	}
+	return enrolled, err
 }
 
 func GetEnrolledByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
-	opts ...EnrolledFilterOption,
+	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetEnrolledByUser(user_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	var rows []*Enrolled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Enrolled, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
 	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := append(
-		[]string{`user_id = ` + args.Append(userId)},
-		ands...,
-	)
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -228,32 +267,44 @@ func GetEnrolledByUser(
 		"enrollable_id",
 		"reason_name",
 		"status",
+		"type",
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrolledsByUser", sql)
 
-	return getManyEnrolled(db, psName, sql, args...)
+	if err := getManyEnrolled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("enrolleds found"))
+	return rows, nil
 }
 
 func GetEnrolledByEnrollable(
 	db Queryer,
-	enrollableId string,
+	enrollableID string,
 	po *PageOptions,
-	opts ...EnrolledFilterOption,
+	filters *EnrolledFilterOptions,
 ) ([]*Enrolled, error) {
-	mylog.Log.WithField("enrollable_id", enrollableId).Info("GetEnrolledByEnrollable(enrollable_id)")
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	var rows []*Enrolled
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Enrolled, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
 	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := append(
-		[]string{`enrollable_id = ` + args.Append(enrollableId)},
-		ands...,
-	)
+	where := func(from string) string {
+		return from + `.enrollable_id = ` + args.Append(enrollableID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -261,65 +312,60 @@ func GetEnrolledByEnrollable(
 		"enrollable_id",
 		"reason_name",
 		"status",
+		"type",
 		"user_id",
 	}
 	from := "enrolled"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEnrolledsByEnrollable", sql)
 
-	return getManyEnrolled(db, psName, sql, args...)
+	if err := getManyEnrolled(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("enrolleds found"))
+	return rows, nil
 }
 
 func CreateEnrolled(
 	db Queryer,
 	row Enrolled,
 ) (*Enrolled, error) {
-	mylog.Log.Info("CreateEnrolled()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
 	var columns, values []string
 
-	if row.EnrollableId.Status != pgtype.Undefined {
+	if row.EnrollableID.Status != pgtype.Undefined {
 		columns = append(columns, "enrollable_id")
-		values = append(values, args.Append(&row.EnrollableId))
+		values = append(values, args.Append(&row.EnrollableID))
 	}
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.ReasonName))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	columns = append(columns, "type")
+	values = append(values, args.Append(row.EnrollableID.Type))
+	if row.Status.Status != pgtype.Undefined {
+		columns = append(columns, "status")
+		values = append(values, args.Append(&row.Status))
+	}
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
 		defer RollbackTransaction(tx)
 	}
 
-	var enrollable string
-	switch row.EnrollableId.Type {
-	case "Lesson":
-		enrollable = "lesson"
-	case "Study":
-		enrollable = "study"
-	case "User":
-		enrollable = "user"
-	default:
-		return nil, fmt.Errorf("invalid type '%s' for enrolled enrollable id", row.EnrollableId.Type)
-	}
-
-	table := strings.Join(
-		[]string{enrollable, "enrolled"},
-		"_",
-	)
 	sql := `
-		INSERT INTO ` + table + `(` + strings.Join(columns, ",") + `)
+		INSERT INTO enrolled(` + strings.Join(columns, ",") + `)
 		VALUES(` + strings.Join(values, ",") + `)
 	`
 
@@ -327,43 +373,42 @@ func CreateEnrolled(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil && err != pgx.ErrNoRows {
-		mylog.Log.WithError(err).Error("failed to create enrolled")
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.Debug(pgErr.Code)
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	enrolled, err := GetEnrolledByEnrollableAndUser(
 		tx,
-		row.EnrollableId.String,
-		row.UserId.String,
+		row.EnrollableID.String,
+		row.UserID.String,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
-	}
-
-	if row.Status.Status != pgtype.Undefined {
-		enrolled.Status.Set(&row.Status)
-		enrolled, err = UpdateEnrolled(tx, enrolled)
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("enrolled created"))
 	return enrolled, nil
 }
 
@@ -376,7 +421,6 @@ func DeleteEnrolled(
 	db Queryer,
 	id int32,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteEnrolled(id)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEnrolled",
@@ -384,12 +428,16 @@ func DeleteEnrolled(
 		id,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("enrolled deleted"))
 	return nil
 }
 
@@ -400,24 +448,33 @@ const deleteEnrolledByEnrollableAndUserSQL = `
 
 func DeleteEnrolledByEnrollableAndUser(
 	db Queryer,
-	enrollable_id,
-	user_id string,
+	enrollableID,
+	userID string,
 ) error {
-	mylog.Log.Info("DeleteEnrolledByEnrollableAndUser()")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEnrolledByEnrollableAndUser",
 		deleteEnrolledByEnrollableAndUserSQL,
-		enrollable_id,
-		user_id,
+		enrollableID,
+		userID,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithFields(logrus.Fields{
+			"enrollable_id": enrollableID,
+			"user_id":       userID,
+		}).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"enrollable_id": enrollableID,
+		"user_id":       userID,
+	}).Info(util.Trace("enrolled deleted"))
 	return nil
 }
 
@@ -425,7 +482,6 @@ func UpdateEnrolled(
 	db Queryer,
 	row *Enrolled,
 ) (*Enrolled, error) {
-	mylog.Log.Info("UpdateEnrolled()")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -434,17 +490,17 @@ func UpdateEnrolled(
 	}
 
 	if len(sets) == 0 {
-		mylog.Log.Info("===> no updates")
+		mylog.Log.Info(util.Trace("no updates"))
 		return GetEnrolledByEnrollableAndUser(
 			db,
-			row.EnrollableId.String,
-			row.UserId.String,
+			row.EnrollableID.String,
+			row.UserID.String,
 		)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -454,36 +510,44 @@ func UpdateEnrolled(
 	sql := `
 		UPDATE enrolled
 		SET ` + strings.Join(sets, ",") + `
-		WHERE enrollable_id = ` + args.Append(row.EnrollableId.String) + `
-			AND user_id = ` + args.Append(row.UserId.String) + `
+		WHERE enrollable_id = ` + args.Append(row.EnrollableID.String) + `
+			AND user_id = ` + args.Append(row.UserID.String) + `
 	`
 
 	psName := preparedName("updateEnrolled", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() < 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	enrolled, err := GetEnrolledByEnrollableAndUser(
 		tx,
-		row.EnrollableId.String,
-		row.UserId.String,
+		row.EnrollableID.String,
+		row.UserID.String,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"enrollable_id": row.EnrollableID.String,
+		"user_id":       row.UserID.String,
+	}).Info(util.Trace("enrolled updated"))
 	return enrolled, nil
 }

@@ -1,0 +1,4 @@
+# Events that can be a part of a study's activity.
+interface StudyActivityEvent {
+  id: ID!
+}

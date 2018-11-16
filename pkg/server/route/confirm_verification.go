@@ -1,29 +1,49 @@
 package route
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
-var ConfirmVerificationCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type ConfirmVerificationHandler struct {
-	Db data.Queryer
+	Conf *myconf.Config
+	Db   data.Queryer
+}
+
+func (h ConfirmVerificationHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins: allowedOrigins,
+	})
 }
 
 func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Db == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
@@ -43,14 +63,14 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	emailId, err := mytype.NewOIDFromShort("Email", routeVars["id"])
+	emailID, err := mytype.NewOIDFromShort("Email", routeVars["id"])
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
 	token := routeVars["token"]
-	evt, err := data.GetEVT(h.Db, emailId.String, token)
+	evt, err := data.GetEVT(h.Db, emailID.String, token)
 	if err == data.ErrNotFound {
 		rw.WriteHeader(http.StatusNotFound)
 		return
@@ -60,7 +80,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	if evt.UserId.String != user.Id.String {
+	if evt.UserID.String != user.ID.String {
 		mylog.Log.WithField(
 			"login", user.Login.String,
 		).Warn("user attempting to use another user's email verification token")
@@ -79,7 +99,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	err = data.GrantUserRoles(h.Db, evt.UserId.String, data.UserRole)
+	err = data.GrantUserRoles(h.Db, evt.UserID.String, data.UserRole)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
 		myhttp.WriteResponseTo(rw, response)
@@ -99,7 +119,7 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	email, err := data.GetEmail(h.Db, evt.EmailId.String)
+	email, err := data.GetEmail(h.Db, evt.EmailID.String)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
 		return

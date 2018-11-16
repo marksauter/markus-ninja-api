@@ -1,0 +1,8 @@
+# Ways in which to filter lists of emails.
+input EmailFilters {
+  # List emails that are verified.
+  isVerified: Boolean
+
+  # List emails that have a type in this list.
+  types: [EmailType!]
+}

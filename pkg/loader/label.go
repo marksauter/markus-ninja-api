@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewLabelLoader() *LabelLoader {
@@ -53,12 +54,13 @@ func NewLabelLoader() *LabelLoader {
 				for i, key := range keys {
 					go func(i int, key dataloader.Key) {
 						defer wg.Done()
+						ks := splitCompositeKey(key)
 						db, ok := myctx.QueryerFromContext(ctx)
 						if !ok {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						label, err := data.GetLabelByName(db, key.String())
+						label, err := data.GetLabelByName(db, ks[0], ks[1])
 						results[i] = &dataloader.Result{Data: label, Error: err}
 					}(i, key)
 				}
@@ -92,11 +94,14 @@ func (r *LabelLoader) Get(
 ) (*data.Label, error) {
 	labelData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	label, ok := labelData.(*data.Label)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return label, nil
@@ -104,16 +109,23 @@ func (r *LabelLoader) Get(
 
 func (r *LabelLoader) GetByName(
 	ctx context.Context,
+	studyID,
 	name string,
 ) (*data.Label, error) {
-	labelData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(name))()
+	compositeKey := newCompositeKey(studyID, name)
+	labelData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	label, ok := labelData.(*data.Label)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
+
+	r.batchGet.Prime(ctx, dataloader.StringKey(label.ID.String), label)
 
 	return label, nil
 }
@@ -126,6 +138,7 @@ func (r *LabelLoader) GetMany(ids *[]string) ([]*data.Label, []error) {
 	}
 	labelData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	labels := make([]*data.Label, len(labelData))
@@ -133,7 +146,9 @@ func (r *LabelLoader) GetMany(ids *[]string) ([]*data.Label, []error) {
 		var ok bool
 		labels[i], ok = d.(*data.Label)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

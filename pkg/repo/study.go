@@ -2,18 +2,17 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type StudyPermit struct {
@@ -35,7 +34,9 @@ func (r *StudyPermit) Get() *data.Study {
 
 func (r *StudyPermit) AdvancedAt() (*time.Time, error) {
 	if ok := r.checkFieldPermission("advanced_at"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if r.study.AdvancedAt.Status == pgtype.Null {
 		return nil, nil
@@ -49,14 +50,18 @@ func (r *StudyPermit) AppledAt() time.Time {
 
 func (r *StudyPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.study.CreatedAt.Time, nil
 }
 
 func (r *StudyPermit) Description() (string, error) {
 	if ok := r.checkFieldPermission("description"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.study.Description.String, nil
 }
@@ -67,21 +72,27 @@ func (r *StudyPermit) EnrolledAt() time.Time {
 
 func (r *StudyPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.study.Id, nil
+	return &r.study.ID, nil
 }
 
 func (r *StudyPermit) Name() (string, error) {
 	if ok := r.checkFieldPermission("name"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.study.Name.String, nil
 }
 
 func (r *StudyPermit) Private() (bool, error) {
 	if ok := r.checkFieldPermission("private"); !ok {
-		return false, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
 	}
 	return r.study.Private.Bool, nil
 }
@@ -92,32 +103,40 @@ func (r *StudyPermit) TopicedAt() time.Time {
 
 func (r *StudyPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.study.UpdatedAt.Time, nil
 }
 
-func (r *StudyPermit) UserId() (*mytype.OID, error) {
+func (r *StudyPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.study.UserId, nil
+	return &r.study.UserID, nil
 }
 
-func NewStudyRepo() *StudyRepo {
+func NewStudyRepo(conf *myconf.Config) *StudyRepo {
 	return &StudyRepo{
+		conf: conf,
 		load: loader.NewStudyLoader(),
 	}
 }
 
 type StudyRepo struct {
+	conf   *myconf.Config
 	load   *loader.StudyLoader
 	permit *Permitter
 }
 
 func (r *StudyRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -129,8 +148,9 @@ func (r *StudyRepo) Close() {
 
 func (r *StudyRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("study connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -139,75 +159,76 @@ func (r *StudyRepo) CheckConnection() error {
 
 func (r *StudyRepo) CountByApplee(
 	ctx context.Context,
-	appleeId string,
+	appleeID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountStudyByApplee(db, appleeId)
+	return data.CountStudyByApplee(db, appleeID, filters)
 }
 
 func (r *StudyRepo) CountByEnrollee(
 	ctx context.Context,
-	enrolleeId string,
+	enrolleeID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountStudyByEnrollee(db, enrolleeId)
+	return data.CountStudyByEnrollee(db, enrolleeID, filters)
 }
 
 func (r *StudyRepo) CountByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountStudyByTopic(db, topicId)
+	return data.CountStudyByTopic(db, topicID, filters)
 }
 
 func (r *StudyRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
-	query string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountStudyBySearch(db, within, query)
-}
-
-func (r *StudyRepo) CountByTopicSearch(
-	ctx context.Context,
-	query string,
-) (int32, error) {
-	var n int32
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
-	}
-	return data.CountStudyByTopicSearch(db, query)
+	return data.CountStudyBySearch(db, filters)
 }
 
 func (r *StudyRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
+	filters *data.StudyFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountStudyByUser(db, userId)
+	return data.CountStudyByUser(db, userID, filters)
 }
 
 func (r *StudyRepo) Create(
@@ -215,26 +236,27 @@ func (r *StudyRepo) Create(
 	s *data.Study,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	name := strings.TrimSpace(s.Name.String)
-	innerSpace := regexp.MustCompile(`\s+`)
-	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, err := data.CreateStudy(db, s)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
@@ -245,14 +267,17 @@ func (r *StudyRepo) Get(
 	id string,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
@@ -260,24 +285,30 @@ func (r *StudyRepo) Get(
 
 func (r *StudyRepo) GetByApplee(
 	ctx context.Context,
-	appleeId string,
+	appleeID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	studies, err := data.GetStudyByApplee(db, appleeId, po)
+	studies, err := data.GetStudyByApplee(db, appleeID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range studies {
@@ -289,24 +320,30 @@ func (r *StudyRepo) GetByApplee(
 
 func (r *StudyRepo) GetByEnrollee(
 	ctx context.Context,
-	enrolleeId string,
+	enrolleeID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	studies, err := data.GetStudyByEnrollee(db, enrolleeId, po)
+	studies, err := data.GetStudyByEnrollee(db, enrolleeID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range studies {
@@ -318,24 +355,30 @@ func (r *StudyRepo) GetByEnrollee(
 
 func (r *StudyRepo) GetByTopic(
 	ctx context.Context,
-	topicId string,
+	topicID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	studies, err := data.GetStudyByTopic(db, topicId, po)
+	studies, err := data.GetStudyByTopic(db, topicID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range studies {
@@ -347,24 +390,30 @@ func (r *StudyRepo) GetByTopic(
 
 func (r *StudyRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	studies, err := data.GetStudyByUser(db, userId, po)
+	studies, err := data.GetStudyByUser(db, userID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range studies {
@@ -376,18 +425,21 @@ func (r *StudyRepo) GetByUser(
 
 func (r *StudyRepo) GetByName(
 	ctx context.Context,
-	userId,
+	userID,
 	name string,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	study, err := r.load.GetByName(ctx, userId, name)
+	study, err := r.load.GetByName(ctx, userID, name)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
@@ -399,14 +451,17 @@ func (r *StudyRepo) GetByUserAndName(
 	name string,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, err := r.load.GetByUserAndName(ctx, owner, name)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil
@@ -417,39 +472,47 @@ func (r *StudyRepo) Delete(
 	study *data.Study,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, study); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	return data.DeleteStudy(db, study.Id.String)
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, study); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	return data.DeleteStudy(db, study.ID.String)
 }
 
 func (r *StudyRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
-	query string,
 	po *data.PageOptions,
+	filters *data.StudyFilterOptions,
 ) ([]*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	studies, err := data.SearchStudy(db, within, query, po)
+	studies, err := data.SearchStudy(db, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	studyPermits := make([]*StudyPermit, len(studies))
 	if len(studies) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, studies[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range studies {
@@ -464,21 +527,27 @@ func (r *StudyRepo) Update(
 	s *data.Study,
 ) (*StudyPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	study, err := data.UpdateStudy(db, s)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, study)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &StudyPermit{fieldPermFn, study}, nil

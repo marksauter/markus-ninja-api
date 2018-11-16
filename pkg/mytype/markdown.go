@@ -10,72 +10,109 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
+// Markdown -
 type Markdown struct {
 	Status pgtype.Status
 	String string
 }
 
-var atRef = regexp.MustCompile(`(?:^|\s)@(\w+)(?:\s|$)`)
+var AtRefRegexp = regexp.MustCompile(`(?:^|\s)@(\w+)(?:\s|$)`)
 
-func (src *Markdown) AtRefs() []string {
-	result := atRef.FindAllStringSubmatch(src.String, -1)
-	refs := make([]string, 0, len(result))
-	for _, r := range result {
-		if r[1] != "" {
-			// The group '(\w+)' match will be at position 1 in 'r'
-			refs = append(refs, r[1])
+// AtRef -
+type AtRef struct {
+	Name  string
+	Index []int
+}
+
+// AtRefs -
+func (src *Markdown) AtRefs() []*AtRef {
+	result := AtRefRegexp.FindAllStringSubmatchIndex(src.String, -1)
+	refs := make([]*AtRef, len(result))
+	for i, r := range result {
+		name := src.String[r[2]:r[3]]
+		if name != "" {
+			ref := &AtRef{
+				Name:  name,
+				Index: []int{r[0], r[1]},
+			}
+			refs[i] = ref
 		}
 	}
 	return refs
 }
 
-var assetRef = regexp.MustCompile(`(?:(?:^|\s|\[)\${2})([\w-.]+)(?:\]|\s|$)`)
+var AssetRefRegexp = regexp.MustCompile(`(?:(?:^|\s)\${2})([\w-.]+)(?:\s|$)`)
 
-func (src *Markdown) AssetRefs() []string {
-	result := assetRef.FindAllStringSubmatch(src.String, -1)
-	refs := make([]string, 0, len(result))
-	for _, r := range result {
-		if r[1] != "" {
-			// The group '(\w+)' match will be at position 1 in 'r'
-			refs = append(refs, r[1])
+// AssetRef -
+type AssetRef struct {
+	Name  string
+	Index []int
+}
+
+// AssetRefs -
+func (src *Markdown) AssetRefs() []*AssetRef {
+	result := AssetRefRegexp.FindAllStringSubmatchIndex(src.String, -1)
+	refs := make([]*AssetRef, len(result))
+	for i, r := range result {
+		name := src.String[r[2]:r[3]]
+		if name != "" {
+			ref := &AssetRef{
+				Name:  name,
+				Index: []int{r[0], r[1]},
+			}
+			refs[i] = ref
 		}
 	}
 	return refs
 }
 
-var numberRef = regexp.MustCompile(`(?:^|\s)#(\d+)(?:\s|$)`)
+var NumberRefRegexp = regexp.MustCompile(`(?:^|\s)#(\d+)(?:\s|$)`)
 
-func (src *Markdown) NumberRefs() ([]int32, error) {
-	result := numberRef.FindAllStringSubmatch(src.String, -1)
-	refs := make([]int32, 0, len(result))
-	for _, r := range result {
-		if r[1] != "" {
-			// The group '(\d)' match will be at position 1 in 'r'
-			n, err := strconv.ParseInt(r[1], 10, 32)
+// NumberRef -
+type NumberRef struct {
+	Number int32
+	Index  []int
+}
+
+// NumberRefs -
+func (src *Markdown) NumberRefs() ([]*NumberRef, error) {
+	result := NumberRefRegexp.FindAllStringSubmatchIndex(src.String, -1)
+	refs := make([]*NumberRef, len(result))
+	for i, r := range result {
+		number := src.String[r[2]:r[3]]
+		if number != "" {
+			n, err := strconv.ParseInt(number, 10, 32)
 			if err != nil {
 				return nil, err
 			}
-			refs = append(refs, int32(n))
+			ref := &NumberRef{
+				Number: int32(n),
+				Index:  []int{r[0], r[1]},
+			}
+			refs[i] = ref
 		}
 	}
 	return refs, nil
 }
 
+// CrossStudyRef -
 type CrossStudyRef struct {
 	Owner  string
 	Name   string
 	Number int32
+	Index  []int
 }
 
-var crossStudyRef = regexp.MustCompile(`(?:^|\s)(\w+)\/([\w-]+)#(\d+)(?:\s|$)`)
+var CrossStudyRefRegexp = regexp.MustCompile(`(?:^|\s)(\w+)\/([\w-]+)#(\d+)(?:\s|$)`)
 
+// CrossStudyRefs -
 func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
-	result := crossStudyRef.FindAllStringSubmatch(src.String, -1)
-	refs := make([]*CrossStudyRef, 0, len(result))
-	for _, r := range result {
-		owner := r[1]
-		name := r[2]
-		number, err := strconv.ParseInt(r[3], 10, 32)
+	result := CrossStudyRefRegexp.FindAllStringSubmatchIndex(src.String, -1)
+	refs := make([]*CrossStudyRef, len(result))
+	for i, r := range result {
+		owner := src.String[r[2]:r[3]]
+		name := src.String[r[4]:r[5]]
+		number, err := strconv.ParseInt(src.String[r[6]:r[7]], 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -83,20 +120,24 @@ func (src *Markdown) CrossStudyRefs() ([]*CrossStudyRef, error) {
 			Owner:  owner,
 			Name:   name,
 			Number: int32(number),
+			Index:  []int{r[0], r[1]},
 		}
-		refs = append(refs, ref)
+		refs[i] = ref
 	}
 	return refs, nil
 }
 
+// ToHTML -
 func (src *Markdown) ToHTML() string {
 	return string(util.MarkdownToHTML([]byte(src.String)))
 }
 
+// ToText -
 func (src *Markdown) ToText() string {
 	return util.MarkdownToText(src.String)
 }
 
+// Set -
 func (dst *Markdown) Set(src interface{}) error {
 	if src == nil {
 		*dst = Markdown{Status: pgtype.Null}
@@ -129,6 +170,7 @@ func (dst *Markdown) Set(src interface{}) error {
 	return nil
 }
 
+// Get -
 func (dst *Markdown) Get() interface{} {
 	switch dst.Status {
 	case pgtype.Present:
@@ -140,6 +182,7 @@ func (dst *Markdown) Get() interface{} {
 	}
 }
 
+// AssignTo -
 func (src *Markdown) AssignTo(dst interface{}) error {
 	switch src.Status {
 	case pgtype.Present:
@@ -163,6 +206,7 @@ func (src *Markdown) AssignTo(dst interface{}) error {
 	return fmt.Errorf("cannot decode %v into %T", src, dst)
 }
 
+// DecodeText -
 func (dst *Markdown) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	if src == nil {
 		*dst = Markdown{Status: pgtype.Null}
@@ -173,10 +217,12 @@ func (dst *Markdown) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	return nil
 }
 
+// DecodeBinary -
 func (dst *Markdown) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
 
+// EncodeText -
 func (src *Markdown) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {
 	case pgtype.Null:
@@ -188,11 +234,12 @@ func (src *Markdown) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error)
 	return append(buf, src.String...), nil
 }
 
+// EncodeBinary -
 func (src *Markdown) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	return src.EncodeText(ci, buf)
 }
 
-// Scan implements the database/sql Scanner interface.
+// Scan - implements the database/sql Scanner interface.
 func (dst *Markdown) Scan(src interface{}) error {
 	if src == nil {
 		*dst = Markdown{Status: pgtype.Null}
@@ -211,7 +258,7 @@ func (dst *Markdown) Scan(src interface{}) error {
 	return fmt.Errorf("cannot scan %T", src)
 }
 
-// Value implements the database/sql/driver Valuer interface.
+// Value - implements the database/sql/driver Valuer interface.
 func (src *Markdown) Value() (driver.Value, error) {
 	switch src.Status {
 	case pgtype.Present:

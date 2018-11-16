@@ -7,10 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type AuthServiceConfig struct {
-	KeyId string
+	KeyID string
 }
 
 func NewAuthService(svc kmsiface.KMSAPI, conf *AuthServiceConfig) *AuthService {
@@ -29,12 +31,13 @@ func (s *AuthService) SignJWT(p *myjwt.Payload) (*myjwt.JWT, error) {
 	jwt := myjwt.JWT{Payload: *p}
 
 	params := &kms.EncryptInput{
-		KeyId:     aws.String(s.conf.KeyId),
+		KeyId:     aws.String(s.conf.KeyID),
 		Plaintext: []byte(jwt.GetPlainText()),
 	}
 
 	result, err := s.svc.Encrypt(params)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
@@ -61,6 +64,7 @@ func (s *AuthService) ValidateJWT(t *myjwt.JWT) (*myjwt.Payload, error) {
 
 	result, err := s.svc.Decrypt(params)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		panic(err)
 	}
 

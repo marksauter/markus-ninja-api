@@ -7,16 +7,17 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type EVT struct {
-	EmailId    mytype.OID         `db:"email_id" permit:"create/read"`
+	EmailID    mytype.OID         `db:"email_id" permit:"create/read"`
 	ExpiresAt  pgtype.Timestamptz `db:"expires_at" permit:"read"`
 	IssuedAt   pgtype.Timestamptz `db:"issued_at" permit:"read"`
 	Token      pgtype.Varchar     `db:"token" permit:"read"`
-	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
@@ -28,23 +29,25 @@ func getEVT(
 ) (*EVT, error) {
 	var row EVT
 	err := prepareQueryRow(db, name, sql, args...).Scan(
-		&row.EmailId,
+		&row.EmailID,
 		&row.ExpiresAt,
 		&row.IssuedAt,
 		&row.Token,
-		&row.UserId,
+		&row.UserID,
 		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
 	return &row, nil
 }
 
-const getEVTByIdSQL = `
+const getEVTByIDSQL = `
 	SELECT
 		email_id,
 		expires_at,
@@ -58,29 +61,35 @@ const getEVTByIdSQL = `
 
 func GetEVT(
 	db Queryer,
-	emailId,
+	emailID,
 	token string,
 ) (*EVT, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"email_id": emailId,
-		"token":    token,
-	}).Info("EVT.Get(email_id, token)")
-	return getEVT(
+	evt, err := getEVT(
 		db,
-		"getEVTById",
-		getEVTByIdSQL,
-		emailId,
+		"getEVTByID",
+		getEVTByIDSQL,
+		emailID,
 		token,
 	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"email_id": emailID,
+			"token":    token,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"email_id": emailID,
+			"token":    token,
+		}).Info(util.Trace("evt found"))
+	}
+	return evt, err
 }
 
 func CreateEVT(
 	db Queryer,
 	row *EVT,
 ) (*EVT, error) {
-	mylog.Log.Info("EVT.Create()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 6))
-
 	var columns, values []string
 
 	token := xid.New()
@@ -88,18 +97,18 @@ func CreateEVT(
 	columns = append(columns, `token`)
 	values = append(values, args.Append(&row.Token))
 
-	if row.EmailId.Status != pgtype.Undefined {
+	if row.EmailID.Status != pgtype.Undefined {
 		columns = append(columns, `email_id`)
-		values = append(values, args.Append(&row.EmailId))
+		values = append(values, args.Append(&row.EmailID))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -116,93 +125,37 @@ func CreateEVT(
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
+	evt, err := GetEVT(tx, row.EmailID.String, row.Token.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
-	return evt, nil
-}
-
-func UpdateEVT(
-	db Queryer,
-	row *EVT,
-) (*EVT, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"email_id": row.EmailId.String,
-		"token":    row.Token.String,
-	}).Info("EVT.Update(email_id, token)")
-	sets := make([]string, 0, 2)
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-
-	if row.VerifiedAt.Status != pgtype.Undefined {
-		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
-	}
-
-	if len(sets) == 0 {
-		return GetEVT(db, row.EmailId.String, row.Token.String)
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	sql := `
-		UPDATE email_verification_token
-		SET ` + strings.Join(sets, ", ") + `
-		WHERE email_id = ` + args.Append(&row.EmailId) + `
-			AND token = ` + args.Append(&row.Token)
-
-	psName := preparedName("updateEVT", sql)
-
-	commandTag, err := prepareExec(tx, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
-	}
-
-	evt, err := GetEVT(tx, row.EmailId.String, row.Token.String)
-	if err != nil {
-		return nil, err
-	}
-
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
+	mylog.Log.Info(util.Trace("evt created"))
 	return evt, nil
 }
 
@@ -213,26 +166,97 @@ const deleteEVTSQL = `
 
 func DeleteEVT(
 	db Queryer,
-	emailId,
+	emailID,
 	token string,
 ) error {
-	mylog.Log.WithFields(logrus.Fields{
-		"email_id": emailId,
-		"token":    token,
-	}).Info("EVT.Delete(email_id, token)")
 	commandTag, err := prepareExec(
 		db,
 		"deleteEVT",
 		deleteEVTSQL,
-		emailId,
+		emailID,
 		token,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithFields(logrus.Fields{
+			"email_id": emailID,
+			"token":    token,
+		}).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithFields(logrus.Fields{
+		"email_id": emailID,
+		"token":    token,
+	}).Info(util.Trace("evt deleted"))
 	return nil
+}
+
+func UpdateEVT(
+	db Queryer,
+	row *EVT,
+) (*EVT, error) {
+	sets := make([]string, 0, 2)
+	args := pgx.QueryArgs(make([]interface{}, 0, 2))
+
+	if row.VerifiedAt.Status != pgtype.Undefined {
+		sets = append(sets, `verified_at`+"="+args.Append(&row.VerifiedAt))
+	}
+
+	if len(sets) == 0 {
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetEVT(db, row.EmailID.String, row.Token.String)
+	}
+
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	sql := `
+		UPDATE email_verification_token
+		SET ` + strings.Join(sets, ", ") + `
+		WHERE email_id = ` + args.Append(&row.EmailID) + `
+			AND token = ` + args.Append(&row.Token)
+
+	psName := preparedName("updateEVT", sql)
+
+	commandTag, err := prepareExec(tx, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	evt, err := GetEVT(tx, row.EmailID.String, row.Token.String)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	if newTx {
+		err = CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	mylog.Log.WithFields(logrus.Fields{
+		"email_id": row.EmailID.String,
+		"token":    row.Token.String,
+	}).Info(util.Trace("evt updated"))
+	return evt, nil
 }

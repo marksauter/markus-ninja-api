@@ -3,10 +3,11 @@ type Lesson implements
   Commentable,
   Createable,
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Labelable,
   Node,
+  Publishable,
+  Referenceable,
+  Renameable,
   Searchable,
   StudyNode,
   UniformResourceLocatable,
@@ -51,8 +52,8 @@ type Lesson implements
   # Identifies the lesson's number within its associated course, if any.
   courseNumber: Int
 
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
+  # The current draft of changes for the lesson body as Markdown.
+  draft: String!
 
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
@@ -61,6 +62,9 @@ type Lesson implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -80,6 +84,9 @@ type Lesson implements
   # Is this lesson part of a course?
   isCourseLesson: Boolean!
 
+  # Is this lesson published?
+  isPublished: Boolean!
+
   # Returns a list of labels for the current lesson.
   labels(
     # Returns the elements in the list that come after the specified global ID.
@@ -87,6 +94,9 @@ type Lesson implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -98,6 +108,9 @@ type Lesson implements
     orderBy: LabelOrder
   ): LabelConnection!
 
+  # Identifies when the lesson draft was last edited.
+  lastEditedAt: Time!
+
   # The next lesson within this lesson's course, if any.
   nextLesson: Lesson
 
@@ -107,8 +120,8 @@ type Lesson implements
   # The previous lesson within this lesson's course, if any.
   previousLesson: Lesson
 
-  # Identifies when the lesson was published at.
-  publishedAt: Time!
+  # Identifies when the lesson was last published.
+  publishedAt: Time
 
   # The study associated with this lesson.
   study: Study!
@@ -151,6 +164,9 @@ type Lesson implements
 
   # Did the viewer author this lesson.
   viewerDidAuthor: Boolean!
+
+  # The viewer's current working draft comment.
+  viewerNewComment: LessonComment!
 }
 
 # An edge type for Lesson.

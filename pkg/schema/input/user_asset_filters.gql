@@ -1,0 +1,5 @@
+# Ways in which to filter lists of user assets.
+input UserAssetFilters {
+  # Query to search user assets by.
+  search: String
+}

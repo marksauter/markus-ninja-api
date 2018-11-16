@@ -2,17 +2,16 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type TopicPermit struct {
@@ -34,53 +33,67 @@ func (r *TopicPermit) Get() *data.Topic {
 
 func (r *TopicPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.topic.CreatedAt.Time, nil
 }
 
 func (r *TopicPermit) Description() (string, error) {
 	if ok := r.checkFieldPermission("description"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.topic.Description.String, nil
 }
 
 func (r *TopicPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.topic.Id, nil
+	return &r.topic.ID, nil
 }
 
 func (r *TopicPermit) Name() (string, error) {
 	if ok := r.checkFieldPermission("name"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.topic.Name.String, nil
 }
 
 func (r *TopicPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.topic.UpdatedAt.Time, nil
 }
 
-func NewTopicRepo() *TopicRepo {
+func NewTopicRepo(conf *myconf.Config) *TopicRepo {
 	return &TopicRepo{
+		conf: conf,
 		load: loader.NewTopicLoader(),
 	}
 }
 
 type TopicRepo struct {
+	conf   *myconf.Config
 	load   *loader.TopicLoader
 	permit *Permitter
 }
 
 func (r *TopicRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -92,8 +105,9 @@ func (r *TopicRepo) Close() {
 
 func (r *TopicRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("topic connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -102,26 +116,31 @@ func (r *TopicRepo) CheckConnection() error {
 
 func (r *TopicRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID, query string,
+	filters *data.TopicFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountTopicBySearch(db, within, query)
+	return data.CountTopicBySearch(db, filters)
 }
 
 func (r *TopicRepo) CountByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
+	filters *data.TopicFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountTopicByTopicable(db, topicableId)
+	return data.CountTopicByTopicable(db, topicableID, filters)
 }
 
 func (r *TopicRepo) Create(
@@ -129,26 +148,27 @@ func (r *TopicRepo) Create(
 	s *data.Topic,
 ) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	name := strings.TrimSpace(s.Name.String)
-	innerSpace := regexp.MustCompile(`\s+`)
-	if err := s.Name.Set(innerSpace.ReplaceAllString(name, "-")); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.CreateAccess, s); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, err := data.CreateTopic(db, s)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
@@ -159,14 +179,17 @@ func (r *TopicRepo) Get(
 	id string,
 ) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
@@ -174,24 +197,30 @@ func (r *TopicRepo) Get(
 
 func (r *TopicRepo) GetByTopicable(
 	ctx context.Context,
-	topicableId string,
+	topicableID string,
 	po *data.PageOptions,
+	filters *data.TopicFilterOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	topics, err := data.GetTopicByTopicable(db, topicableId, po)
+	topics, err := data.GetTopicByTopicable(db, topicableID, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topics[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range topics {
@@ -206,14 +235,17 @@ func (r *TopicRepo) GetByName(
 	name string,
 ) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, err := r.load.GetByName(ctx, name)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil
@@ -221,24 +253,29 @@ func (r *TopicRepo) GetByName(
 
 func (r *TopicRepo) Search(
 	ctx context.Context,
-	query string,
 	po *data.PageOptions,
+	filters *data.TopicFilterOptions,
 ) ([]*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	topics, err := data.SearchTopic(db, query, po)
+	topics, err := data.SearchTopic(db, po, filters)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topicPermits := make([]*TopicPermit, len(topics))
 	if len(topics) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topics[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range topics {
@@ -253,21 +290,27 @@ func (r *TopicRepo) Update(
 	s *data.Topic,
 ) (*TopicPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, s); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, err := data.UpdateTopic(db, s)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, topic)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &TopicPermit{fieldPermFn, topic}, nil

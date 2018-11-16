@@ -5,18 +5,18 @@ import (
 	"errors"
 	"fmt"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Topic = topicResolver
-
 type topicResolver struct {
-	Topic *repo.TopicPermit
+	Conf  *myconf.Config
 	Repos *repo.Repos
+	Topic *repo.TopicPermit
 }
 
 func (r *topicResolver) CreatedAt() (graphql.Time, error) {
@@ -55,6 +55,7 @@ func (r *topicResolver) Topicables(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*topicableConnectionResolver, error) {
@@ -83,15 +84,14 @@ func (r *topicResolver) Topicables(
 		return nil, err
 	}
 
-	studyCount, err := r.Repos.Study().CountByTopic(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := []repo.NodePermit{}
 
 	switch topicableType {
 	case TopicableTypeCourse:
-		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions)
+		filters := &data.CourseFilterOptions{
+			Search: args.Search,
+		}
+		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +100,10 @@ func (r *topicResolver) Topicables(
 			permits[i] = l
 		}
 	case TopicableTypeStudy:
-		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: args.Search,
+		}
+		studies, err := r.Repos.Study().GetByTopic(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
@@ -113,10 +116,12 @@ func (r *topicResolver) Topicables(
 	}
 
 	return NewTopicableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
-		studyCount,
+		id,
+		args.Search,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -131,7 +136,7 @@ func (r *topicResolver) URL() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s/%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s/%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

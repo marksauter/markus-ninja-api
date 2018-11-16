@@ -141,22 +141,8 @@
           headers: {
             "Authorization": type + " " + credentials,
           },
-        }).then(function (response) {
-          return response.text();
-        }).then(function (responseBody) {
-          try {
-            return JSON.parse(responseBody);
-          } catch (error) {
-            return responseBody;
-          }
-        }).then((data) => {
-          if (data.error) {
-            this.setState({
-              error: data.error_description,
-            });
-            return;
-          }
-          window.sessionStorage.setItem("access_token", data.access_token);
+        }).then((response) => {
+          console.log(response)
           window.location.replace("/graphiql");
           return;
         });

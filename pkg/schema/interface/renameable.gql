@@ -1,0 +1,4 @@
+# Entities that can be renamed.
+interface Renameable {
+  id: ID!
+}

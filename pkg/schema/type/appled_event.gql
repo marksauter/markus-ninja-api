@@ -1,10 +1,9 @@
-# Represents an appled event on a given subject.
+# Represents a 'appled' event on a given appleable.
 type AppledEvent implements 
-  UniformResourceLocatable,
   UserActivityEvent,
   Node
 {
-  # The appleable assocated with this `appled` event.
+  # The appleable assocated with this 'appled' event.
   appleable: Appleable!
 
   # Identifies the date and time when the object was created.
@@ -12,11 +11,8 @@ type AppledEvent implements
 
   id: ID!
 
-  # The HTTP path to this resource.
-  resourcePath: URI!
-
-  # The HTTP URL to this resource.
-  url: URI!
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

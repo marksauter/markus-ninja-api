@@ -2,16 +2,16 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type AssetPermit struct {
@@ -33,7 +33,9 @@ func (r *AssetPermit) Get() *data.Asset {
 
 func (r *AssetPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.asset.CreatedAt.Time, nil
 }
@@ -41,92 +43,100 @@ func (r *AssetPermit) CreatedAt() (time.Time, error) {
 func (r *AssetPermit) ContentType() (string, error) {
 	assetType, err := r.Type()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
 	assetSubtype, err := r.Subtype()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
 	return assetType + "/" + assetSubtype, nil
 }
 
-func (r *AssetPermit) Href() (string, error) {
-	key, err := r.Key()
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(
-		"http://localhost:5000/user/assets/%s/%s",
-		r.asset.UserId.Short,
-		key,
-	), nil
-}
-
 func (r *AssetPermit) ID() (int64, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		var id int64
-		return id, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int64
+		return n, err
 	}
-	return r.asset.Id.Int, nil
+	return r.asset.ID.Int, nil
 }
 
 func (r *AssetPermit) Key() (string, error) {
 	if ok := r.checkFieldPermission("key"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.asset.Key.String, nil
 }
 
 func (r *AssetPermit) Name() (string, error) {
 	if ok := r.checkFieldPermission("name"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.asset.Name.String, nil
 }
 
 func (r *AssetPermit) Size() (int64, error) {
 	if ok := r.checkFieldPermission("size"); !ok {
-		var i int64
-		return i, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int64
+		return n, err
 	}
 	return r.asset.Size.Int, nil
 }
 
 func (r *AssetPermit) Subtype() (string, error) {
 	if ok := r.checkFieldPermission("subtype"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.asset.Subtype.String, nil
 }
 
 func (r *AssetPermit) Type() (string, error) {
 	if ok := r.checkFieldPermission("type"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.asset.Type.String, nil
 }
 
-func (r *AssetPermit) UserId() (*mytype.OID, error) {
+func (r *AssetPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.asset.UserId, nil
+	return &r.asset.UserID, nil
 }
 
-func NewAssetRepo() *AssetRepo {
+func NewAssetRepo(conf *myconf.Config) *AssetRepo {
 	return &AssetRepo{
+		conf: conf,
 		load: loader.NewAssetLoader(),
 	}
 }
 
 type AssetRepo struct {
+	conf   *myconf.Config
 	load   *loader.AssetLoader
 	permit *Permitter
 }
 
 func (r *AssetRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -138,8 +148,9 @@ func (r *AssetRepo) Close() {
 
 func (r *AssetRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("user_asset connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -151,21 +162,27 @@ func (r *AssetRepo) Create(
 	a *data.Asset,
 ) (*AssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, a); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	asset, err := data.CreateAsset(db, a)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, asset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &AssetPermit{fieldPermFn, asset}, nil
@@ -176,16 +193,20 @@ func (r *AssetRepo) Delete(
 	asset *data.Asset,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, asset); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	return data.DeleteAsset(db, asset.Id.Int)
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, asset); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	return data.DeleteAsset(db, asset.ID.Int)
 }
 
 func (r *AssetRepo) Get(
@@ -193,14 +214,17 @@ func (r *AssetRepo) Get(
 	id int64,
 ) (*AssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	asset, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, asset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &AssetPermit{fieldPermFn, asset}, nil
@@ -211,14 +235,17 @@ func (r *AssetRepo) GetByKey(
 	key string,
 ) (*AssetPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	asset, err := r.load.GetByKey(ctx, key)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, asset)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &AssetPermit{fieldPermFn, asset}, nil

@@ -1,0 +1,16 @@
+# Represents a 'unappled' event on a given appleable.
+type UnappledEvent implements 
+  UserActivityEvent,
+  Node
+{
+  # The appleable assocated with this 'unappled' event.
+  appleable: Appleable!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The user who performed the event.
+  user: User!
+}

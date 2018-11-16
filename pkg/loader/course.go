@@ -10,6 +10,8 @@ import (
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewCourseLoader() *CourseLoader {
@@ -162,11 +164,14 @@ func (r *CourseLoader) Get(
 ) (*data.Course, error) {
 	courseData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	course, ok := courseData.(*data.Course)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return course, nil
@@ -174,40 +179,46 @@ func (r *CourseLoader) Get(
 
 func (r *CourseLoader) GetByName(
 	ctx context.Context,
-	studyId,
+	studyID,
 	name string,
 ) (*data.Course, error) {
-	compositeKey := newCompositeKey(studyId, name)
+	compositeKey := newCompositeKey(studyID, name)
 	courseData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	course, ok := courseData.(*data.Course)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }
 
 func (r *CourseLoader) GetByNumber(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*data.Course, error) {
-	compositeKey := newCompositeKey(studyId, fmt.Sprintf("%d", number))
+	compositeKey := newCompositeKey(studyID, fmt.Sprintf("%d", number))
 	courseData, err := r.batchGetByNumber.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	course, ok := courseData.(*data.Course)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }
@@ -220,14 +231,17 @@ func (r *CourseLoader) GetByStudyAndName(
 	compositeKey := newCompositeKey(study, name)
 	courseData, err := r.batchGetByStudyAndName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	course, ok := courseData.(*data.Course)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(course.Id.String), course)
+	r.batchGet.Prime(ctx, dataloader.StringKey(course.ID.String), course)
 
 	return course, nil
 }
@@ -242,6 +256,7 @@ func (r *CourseLoader) GetMany(
 	}
 	courseData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	courses := make([]*data.Course, len(courseData))
@@ -249,7 +264,9 @@ func (r *CourseLoader) GetMany(
 		var ok bool
 		courses[i], ok = d.(*data.Course)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

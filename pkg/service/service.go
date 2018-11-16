@@ -3,6 +3,8 @@ package service
 import (
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Services struct {
@@ -13,7 +15,7 @@ type Services struct {
 
 func NewServices(conf *myconf.Config) (*Services, error) {
 	authConfig := &AuthServiceConfig{
-		KeyId: conf.AuthKeyId,
+		KeyID: conf.AuthKeyId,
 	}
 	mailConfig := &MailServiceConfig{
 		CharSet: conf.MailCharSet,
@@ -22,6 +24,7 @@ func NewServices(conf *myconf.Config) (*Services, error) {
 	}
 	storageSvc, err := NewStorageService()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &Services{

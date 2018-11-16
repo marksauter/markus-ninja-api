@@ -2,6 +2,8 @@
 type UserAsset implements 
   Deleteable,
   Node,
+  Referenceable,
+  Renameable,
   Searchable,
   StudyNode,
   UniformResourceLocatable,
@@ -9,6 +11,12 @@ type UserAsset implements
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!
+
+  # The description of the asset.
+  description: String!
+
+  # The description of the asset rendered to HTML.
+  descriptionHTML: HTML!
 
   # Source url for use with hyperlinks.
   href: URI!
@@ -23,9 +31,6 @@ type UserAsset implements
 
   # The owner of this asset.
   owner: User!
-
-  # Identifies the date and time when the object was published.
-  publishedAt: Time
 
   # The HTTP path for this asset.
   resourcePath: URI!

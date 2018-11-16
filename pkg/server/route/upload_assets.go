@@ -2,6 +2,8 @@ package route
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -11,11 +13,13 @@ import (
 	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
@@ -27,18 +31,37 @@ type Sizer interface {
 	Size() int64
 }
 
-var UploadAssetsCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Authorization", "Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type UploadAssetsHandler struct {
+	Conf       *myconf.Config
 	Repos      *repo.Repos
 	StorageSvc *service.StorageService
 }
 
+func (h UploadAssetsHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
+		AllowedOrigins:   allowedOrigins,
+		// Debug: true,
+	})
+}
+
 func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil || h.StorageSvc == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodPost {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
@@ -108,7 +131,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	save, err := strconv.ParseBool(saveStr)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to parse form `save`")
-		response := myhttp.InvalidRequestErrorResponse("invalid study_id")
+		response := myhttp.InvalidRequestErrorResponse("invalid save")
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
@@ -139,7 +162,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		myhttp.WriteResponseTo(rw, response)
 		return
 	}
-	uploadResponse, err := h.StorageSvc.Upload(&viewer.Id, file, contentType, fileSize)
+	uploadResponse, err := h.StorageSvc.Upload(&viewer.ID, file, contentType, fileSize)
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to upload file")
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -147,13 +170,14 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
+	filename := strings.Replace(multipartFileHeader.Filename, ` `, "_", -1)
 	var assetPermit *repo.AssetPermit
 	if uploadResponse.IsNewObject {
 		asset, err := data.NewAssetFromFile(
-			&viewer.Id,
+			&viewer.ID,
 			uploadResponse.Key,
 			file,
-			multipartFileHeader.Filename,
+			filename,
 			contentType,
 			fileSize,
 		)
@@ -181,10 +205,10 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		} else if err == data.ErrNotFound {
 			mylog.Log.Info("asset not found")
 			asset, err := data.NewAssetFromFile(
-				&viewer.Id,
+				&viewer.ID,
 				uploadResponse.Key,
 				file,
-				multipartFileHeader.Filename,
+				filename,
 				contentType,
 				fileSize,
 			)
@@ -205,7 +229,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		}
 	}
 
-	assetId, err := assetPermit.ID()
+	assetID, err := assetPermit.ID()
 	if err != nil {
 		mylog.Log.WithError(err).Error("failed to get asset id")
 		response := myhttp.AccessDeniedErrorResponse()
@@ -213,19 +237,17 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	href, err := assetPermit.Href()
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get asset href")
-		response := myhttp.AccessDeniedErrorResponse()
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
+	href := fmt.Sprintf(
+		h.Conf.APIURL+"/user/assets/%s/%s",
+		viewer.ID.Short,
+		uploadResponse.Key,
+	)
 
 	assetResponse := Asset{
 		ContentType: contentType,
 		Href:        href,
-		Id:          strconv.FormatInt(assetId, 10),
-		Name:        multipartFileHeader.Filename,
+		ID:          strconv.FormatInt(assetID, 10),
+		Name:        filename,
 		Size:        fileSize,
 	}
 
@@ -237,7 +259,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 type Asset struct {
 	ContentType string `json:"content_type,omitempty"`
 	Href        string `json:"href,omitempty"`
-	Id          string `json:"id,omitempty"`
+	ID          string `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Size        int64  `json:"size,omitempty"`
 }

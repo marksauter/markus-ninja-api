@@ -1,5 +1,8 @@
 # Input type for UpdateUserAsset.
 input UpdateUserAssetInput {
+  # The description of the user asset.
+  description: String
+
   # The name of the user asset.
   name: String
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/xid"
 )
 
@@ -20,13 +20,20 @@ func Initialize(db Queryer) error {
 	mylog.Log.Info("Initializing database...")
 	sql, err := ioutil.ReadFile("data/init_database.sql")
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	_, err = db.Exec(string(sql))
-	return err
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+
+	return nil
 }
 
 type Queryer interface {
+	BeginBatch() *pgx.Batch
 	CopyFrom(pgx.Identifier, []string, pgx.CopyFromSource) (int, error)
 	Exec(sql string, arguments ...interface{}) (pgx.CommandTag, error)
 	Query(sql string, args ...interface{}) (*pgx.Rows, error)
@@ -44,13 +51,16 @@ type committer interface {
 
 type preparer interface {
 	Prepare(name, sql string) (*pgx.PreparedStatement, error)
-	Deallocate(name string) error
 }
 
 func BeginTransaction(db Queryer) (Queryer, error, bool) {
 	if transactor, ok := db.(transactor); ok {
 		tx, err := transactor.Begin()
-		return tx, err, true
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err, false
+		}
+		return tx, nil, true
 	}
 	return db, nil, false
 }
@@ -69,37 +79,49 @@ func RollbackTransaction(db Queryer) error {
 	return nil
 }
 
-func prepareQuery(db Queryer, name, sql string, args ...interface{}) (*pgx.Rows, error) {
+func prepare(db Queryer, name, sql string) (*pgx.PreparedStatement, error) {
 	if preparer, ok := db.(preparer); ok {
-		if _, err := preparer.Prepare(name, sql); err != nil {
+		ps, err := preparer.Prepare(name, sql)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-		sql = name
+		return ps, nil
 	}
+	return nil, errors.New("db is not a preparer")
+}
+
+func prepareQuery(db Queryer, name, sql string, args ...interface{}) (*pgx.Rows, error) {
+	// if preparer, ok := db.(preparer); ok {
+	//   if _, err := preparer.Prepare(name, sql); err != nil {
+	//     return nil, err
+	//   }
+	//   sql = name
+	// }
 
 	return db.Query(sql, args...)
 }
 
 func prepareQueryRow(db Queryer, name, sql string, args ...interface{}) *pgx.Row {
-	if preparer, ok := db.(preparer); ok {
-		// QueryRow doesn't return an error, the error is encoded in the pgx.Row.
-		// Since that is private, Ignore the error from Prepare and run the query
-		// without the prepared statement. It should fail with the same error.
-		if _, err := preparer.Prepare(name, sql); err == nil {
-			sql = name
-		}
-	}
+	// if preparer, ok := db.(preparer); ok {
+	//   // QueryRow doesn't return an error, the error is encoded in the pgx.Row.
+	//   // Since that is private, Ignore the error from Prepare and run the query
+	//   // without the prepared statement. It should fail with the same error.
+	//   if _, err := preparer.Prepare(name, sql); err == nil {
+	//     sql = name
+	//   }
+	// }
 
 	return db.QueryRow(sql, args...)
 }
 
 func prepareExec(db Queryer, name, sql string, args ...interface{}) (pgx.CommandTag, error) {
-	if preparer, ok := db.(preparer); ok {
-		if _, err := preparer.Prepare(name, sql); err != nil {
-			return pgx.CommandTag(""), err
-		}
-		sql = name
-	}
+	// if preparer, ok := db.(preparer); ok {
+	//   if _, err := preparer.Prepare(name, sql); err != nil {
+	//     return pgx.CommandTag(""), err
+	//   }
+	//   sql = name
+	// }
 
 	return db.Exec(sql, args...)
 }
@@ -107,7 +129,7 @@ func prepareExec(db Queryer, name, sql string, args ...interface{}) (pgx.Command
 func preparedName(baseName, sql string) string {
 	h := fnv.New32a()
 	if _, err := io.WriteString(h, sql); err != nil {
-		// hash.Hash.Write never returns an error so this can't happen
+		// hash.Hash.Write never returns an error so this shouldn't happen
 		panic("failed writing to hash")
 	}
 
@@ -129,7 +151,9 @@ func ParseOrderDirection(s string) (OrderDirection, error) {
 		return DESC, nil
 	default:
 		var o OrderDirection
-		return o, fmt.Errorf("invalid OrderDirection: %q", s)
+		err := fmt.Errorf("invalid OrderDirection: %q", s)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return o, err
 	}
 }
 
@@ -164,10 +188,14 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 		Order: o,
 	}
 	if first == nil && last == nil {
-		return nil, fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+		err := fmt.Errorf("You must provide a `first` or `last` value to properly paginate.")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	} else if first != nil {
 		if last != nil {
-			return nil, fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+			err := fmt.Errorf("Passing both `first` and `last` values to paginate the connection is not supported.")
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
 		}
 		pageOptions.First = *first
 	} else {
@@ -176,6 +204,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 	if after != nil {
 		a, err := NewCursor(after)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		pageOptions.After = a
@@ -183,6 +212,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 	if before != nil {
 		b, err := NewCursor(before)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		pageOptions.Before = b
@@ -216,8 +246,8 @@ func (p *PageOptions) Limit() int32 {
 	return limit
 }
 
-func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
-	var joins []string
+func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) string {
+	joins := make([]string, 0, 2)
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
 			"JOIN %[1]s AS %[2]s2 ON %[2]s2.id = "+args.Append(p.After.Value()),
@@ -232,11 +262,11 @@ func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) []string {
 			as,
 		))
 	}
-	return joins
+	return strings.Join(joins, " ")
 }
 
-func (p *PageOptions) whereAnds(from string) []string {
-	var whereAnds []string
+func (p *PageOptions) where(from string) string {
+	where := make([]string, 0, 2)
 	field := p.Order.Field()
 	if field == "best_match" {
 		field = "created_at"
@@ -249,8 +279,8 @@ func (p *PageOptions) whereAnds(from string) []string {
 		case DESC:
 			relation = "<="
 		}
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %[3]s %[1]s2.%[2]s",
+		where = append(where, fmt.Sprintf(
+			"%[1]s.%[2]s %[3]s %[1]s2.%[2]s",
 			from,
 			field,
 			relation,
@@ -264,14 +294,19 @@ func (p *PageOptions) whereAnds(from string) []string {
 		case DESC:
 			relation = ">="
 		}
-		whereAnds = append(whereAnds, fmt.Sprintf(
-			"AND %[1]s.%[2]s %[3]s %[1]s3.%[2]s",
+		where = append(where, fmt.Sprintf(
+			"%[1]s.%[2]s %[3]s %[1]s3.%[2]s",
 			from,
 			field,
 			relation,
 		))
 	}
-	return whereAnds
+
+	if len(where) == 0 {
+		return ""
+	}
+
+	return "(" + strings.Join(where, " AND ") + ")"
 }
 
 func (p *PageOptions) orderBy(from string) string {
@@ -282,120 +317,123 @@ func (p *PageOptions) orderBy(from string) string {
 	return fmt.Sprintf("ORDER BY %s.%s %s", from, field, p.QueryDirection())
 }
 
-func SQL(
+type WhereFrom = func(string) string
+
+func SQL3(
 	selects []string,
 	from string,
-	where []string,
+	where WhereFrom,
+	filters FilterOptions,
 	args *pgx.QueryArgs,
 	po *PageOptions,
 ) string {
 	fromAlias := xid.New().String()
-	var joins, whereAnds []string
+	selectSQL := make([]string, len(selects))
+	for i, s := range selects {
+		selectSQL[i] = fromAlias + "." + s
+	}
+	fromSQL := []string{from + " AS " + fromAlias}
+	joinSQL := []string{}
+	whereSQL := []string{where(fromAlias)}
+
 	var limit, orderBy string
+
 	if po != nil {
-		joins = po.joins(from, fromAlias, args)
-		whereAnds = po.whereAnds(fromAlias)
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
 		limit = "LIMIT " + args.Append(po.Limit())
 		orderBy = po.orderBy(fromAlias)
 	}
-	selectsCopy := make([]string, len(selects))
-	for i, s := range selects {
-		selectsCopy[i] = fromAlias + "." + s
+
+	if filters != nil {
+		filterSQL := filters.SQL(fromAlias, args)
+		if filterSQL != nil {
+			fromSQL = append(fromSQL, filterSQL.From)
+			whereSQL = append(whereSQL, filterSQL.Where)
+		}
 	}
-	whereCopy := make([]string, len(where))
-	for i, w := range where {
-		whereCopy[i] = fromAlias + "." + w
-	}
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
 
 	sql := `
 		SELECT 
-		` + strings.Join(selectsCopy, ",") + `
-		FROM ` + from + ` AS ` + fromAlias + `
-		` + strings.Join(joins, " ") + `
-		WHERE ` + strings.Join(whereCopy, " AND ") + `
-		` + strings.Join(whereAnds, " ") + `
+		` + strings.Join(selectSQL, ",") + `
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		` + strings.Join(joinSQL, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
 		` + orderBy + `
 		` + limit
 
 	return ReorderQuery(po, sql)
 }
 
-func CountSearchSQL(
+func CountSQL(
 	from string,
-	within *mytype.OID,
-	query,
-	vector string,
+	where WhereFrom,
+	filters FilterOptions,
 	args *pgx.QueryArgs,
 ) string {
 	fromAlias := xid.New().String()
-	queryAlias := xid.New().String()
-	var andIn string
-	if within != nil {
-		andIn = fmt.Sprintf(
-			"AND %s.%s = %s",
-			fromAlias,
-			within.DBVarName(),
-			args.Append(within),
-		)
-	}
+	fromSQL := []string{from + " AS " + fromAlias}
+	whereSQL := []string{where(fromAlias)}
 
-	sql := `
-		SELECT count(` + fromAlias + `) 
-		FROM ` + from + ` AS ` + fromAlias + `,
-			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
-		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
-			ELSE ` + vector + ` @@ ` + queryAlias + ` END
-		` + andIn
-
-	return sql
-}
-
-func SearchSQL(
-	selects []string,
-	from string,
-	within *mytype.OID,
-	query,
-	vector string,
-	po *PageOptions,
-	args *pgx.QueryArgs,
-) string {
-	fromAlias := xid.New().String()
-	queryAlias := xid.New().String()
-	var joins, whereAnds []string
-	var limit, orderBy string
-	if po != nil {
-		joins = po.joins(from, fromAlias, args)
-		whereAnds = po.whereAnds(fromAlias)
-		limit = "LIMIT " + args.Append(po.Limit())
-		if po.Order.Field() == "best_match" && query != "*" {
-			orderBy = fmt.Sprintf("ORDER BY ts_rank(%s.%s, %s)", fromAlias, vector, queryAlias)
-		} else {
-			orderBy = po.orderBy(fromAlias)
+	if filters != nil {
+		filterSQL := filters.SQL(fromAlias, args)
+		if filterSQL != nil {
+			fromSQL = append(fromSQL, filterSQL.From)
+			whereSQL = append(whereSQL, filterSQL.Where)
 		}
 	}
-	if within != nil {
-		andIn := fmt.Sprintf(
-			"AND %s.%s = %s",
-			fromAlias,
-			within.DBVarName(),
-			args.Append(within),
-		)
-		whereAnds = append(whereAnds, andIn)
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
+
+	return `
+		SELECT count(` + fromAlias + `)
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ")
+}
+
+func SearchSQL2(
+	selects []string,
+	from string,
+	query string,
+	args *pgx.QueryArgs,
+	po *PageOptions,
+) string {
+	fromAlias := xid.New().String()
+	selectSQL := make([]string, len(selects))
+	for i, s := range selects {
+		selectSQL[i] = fromAlias + "." + s
+	}
+	fromSQL := []string{
+		from + " AS " + fromAlias,
+		"to_tsquery('simple', " + args.Append(query) + ") AS document_query",
+	}
+	joinSQL := []string{}
+	whereSQL := []string{
+		"CASE " + args.Append(query) + " WHEN '*' THEN TRUE ELSE " + fromAlias + ".document @@ document_query END",
 	}
 
-	for i, s := range selects {
-		selects[i] = fromAlias + "." + s
+	var limit, orderBy string
+
+	if po != nil {
+		joinSQL = append(joinSQL, po.joins(from, fromAlias, args))
+		whereSQL = append(whereSQL, po.where(fromAlias))
+		limit = "LIMIT " + args.Append(po.Limit())
+		orderBy = po.orderBy(fromAlias)
 	}
+
+	fromSQL = util.RemoveEmptyStrings(fromSQL)
+	whereSQL = util.RemoveEmptyStrings(whereSQL)
 
 	sql := `
 		SELECT 
-			` + strings.Join(selects, ",\n\t\t\t") + `
-		FROM ` + from + ` AS ` + fromAlias + `,
-			to_tsquery('simple',` + args.Append(query) + `) AS ` + queryAlias + `
-		` + strings.Join(joins, " ") + `
-		WHERE CASE ` + args.Append(query) + ` WHEN '*' THEN TRUE
-			ELSE ` + fromAlias + `.` + vector + ` @@ ` + queryAlias + ` END
-		` + strings.Join(whereAnds, " ") + `
+		` + strings.Join(selectSQL, ",") + `
+		FROM ` + strings.Join(fromSQL, ", ") + `
+		` + strings.Join(joinSQL, " ") + `
+		WHERE ` + strings.Join(whereSQL, " AND ") + `
 		` + orderBy + `
 		` + limit
 
@@ -417,4 +455,13 @@ func ReorderQuery(po *PageOptions, query string) string {
 		)
 	}
 	return query
+}
+
+type SQLParts struct {
+	From  string
+	Where string
+}
+
+type FilterOptions interface {
+	SQL(from string, args *pgx.QueryArgs) *SQLParts
 }

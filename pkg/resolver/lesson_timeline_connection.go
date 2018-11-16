@@ -1,21 +1,26 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLessonTimelineConnectionResolver(
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
+	lessonID *mytype.OID,
+	filters *data.EventFilterOptions,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*lessonTimelineConnectionResolver, error) {
 	edges := make([]*lessonTimelineEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewLessonTimelineEventEdgeResolver(events[i], repos)
+		edge, err := NewLessonTimelineEventEdgeResolver(events[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -29,21 +34,25 @@ func NewLessonTimelineConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &lessonTimelineConnectionResolver{
-		edges:      edges,
-		events:     events,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		conf:     conf,
+		edges:    edges,
+		events:   events,
+		filters:  filters,
+		lessonID: lessonID,
+		pageInfo: pageInfo,
+		repos:    repos,
 	}
 	return resolver, nil
 }
 
 type lessonTimelineConnectionResolver struct {
-	edges      []*lessonTimelineEventEdgeResolver
-	events     []*repo.EventPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	conf     *myconf.Config
+	edges    []*lessonTimelineEventEdgeResolver
+	events   []*repo.EventPermit
+	filters  *data.EventFilterOptions
+	lessonID *mytype.OID
+	pageInfo *pageInfoResolver
+	repos    *repo.Repos
 }
 
 func (r *lessonTimelineConnectionResolver) Edges() *[]*lessonTimelineEventEdgeResolver {
@@ -54,13 +63,13 @@ func (r *lessonTimelineConnectionResolver) Edges() *[]*lessonTimelineEventEdgeRe
 	return &[]*lessonTimelineEventEdgeResolver{}
 }
 
-func (r *lessonTimelineConnectionResolver) Nodes() (*[]*lessonTimelineEventResolver, error) {
+func (r *lessonTimelineConnectionResolver) Nodes(ctx context.Context) (*[]*lessonTimelineEventResolver, error) {
 	n := len(r.events)
 	nodes := make([]*lessonTimelineEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
-			resolver, err := eventPermitToResolver(e, r.repos)
+			resolver, err := eventPermitToResolver(ctx, e, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}
@@ -78,6 +87,6 @@ func (r *lessonTimelineConnectionResolver) PageInfo() (*pageInfoResolver, error)
 	return r.pageInfo, nil
 }
 
-func (r *lessonTimelineConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *lessonTimelineConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.Event().CountByLesson(ctx, r.lessonID.String, r.filters)
 }

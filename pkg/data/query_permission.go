@@ -5,7 +5,9 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type QueryPermission struct {
@@ -21,6 +23,7 @@ func GetPermissableFields(model interface{}) (PermissableFields, error) {
 	for _, field := range fields {
 		permissableField, err := NewPermissableField(field)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		permissableFields = append(permissableFields, permissableField)
@@ -60,6 +63,7 @@ func NewPermissableField(f *structs.Field) (*PermissableField, error) {
 		for _, p := range permissions {
 			al, err := mytype.ParseAccessLevel(p)
 			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 			accessLookup[al] = true

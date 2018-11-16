@@ -1,0 +1,5 @@
+# Input type for PublishLessonDraft.
+input PublishLessonDraftInput {
+  # ID of the lesson.
+  lessonId: ID!
+}

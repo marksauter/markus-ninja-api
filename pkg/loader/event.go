@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewEventLoader() *EventLoader {
@@ -40,41 +41,11 @@ func NewEventLoader() *EventLoader {
 				return results
 			},
 		),
-		batchGetBySourceActionTarget: createLoader(
-			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-				var (
-					n       = len(keys)
-					results = make([]*dataloader.Result, n)
-					wg      sync.WaitGroup
-				)
-
-				wg.Add(n)
-
-				for i, key := range keys {
-					go func(i int, key dataloader.Key) {
-						defer wg.Done()
-						ks := splitCompositeKey(key)
-						db, ok := myctx.QueryerFromContext(ctx)
-						if !ok {
-							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
-							return
-						}
-						event, err := data.GetEventBySourceActionTarget(db, ks[0], ks[1], ks[2])
-						results[i] = &dataloader.Result{Data: event, Error: err}
-					}(i, key)
-				}
-
-				wg.Wait()
-
-				return results
-			},
-		),
 	}
 }
 
 type EventLoader struct {
-	batchGet                     *dataloader.Loader
-	batchGetBySourceActionTarget *dataloader.Loader
+	batchGet *dataloader.Loader
 }
 
 func (r *EventLoader) Clear(id string) {
@@ -84,7 +55,6 @@ func (r *EventLoader) Clear(id string) {
 
 func (r *EventLoader) ClearAll() {
 	r.batchGet.ClearAll()
-	r.batchGetBySourceActionTarget.ClearAll()
 }
 
 func (r *EventLoader) Get(
@@ -93,40 +63,15 @@ func (r *EventLoader) Get(
 ) (*data.Event, error) {
 	eventData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	event, ok := eventData.(*data.Event)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
-	}
-
-	compositeKey := newCompositeKey(
-		event.SourceId.String,
-		event.Action.String,
-		event.TargetId.String,
-	)
-	r.batchGetBySourceActionTarget.Prime(ctx, compositeKey, event)
-
-	return event, nil
-}
-
-func (r *EventLoader) GetBySourceActionTarget(
-	ctx context.Context,
-	sourceId,
-	action,
-	targetId string,
-) (*data.Event, error) {
-	compositeKey := newCompositeKey(sourceId, action, targetId)
-	eventData, err := r.batchGetBySourceActionTarget.Load(ctx, compositeKey)()
-	if err != nil {
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	event, ok := eventData.(*data.Event)
-	if !ok {
-		return nil, fmt.Errorf("wrong type")
-	}
-
-	r.batchGet.Prime(ctx, dataloader.StringKey(event.Id.String), event)
 
 	return event, nil
 }
@@ -141,6 +86,7 @@ func (r *EventLoader) GetMany(
 	}
 	eventData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	events := make([]*data.Event, len(eventData))
@@ -148,7 +94,9 @@ func (r *EventLoader) GetMany(
 		var ok bool
 		events[i], ok = d.(*data.Event)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

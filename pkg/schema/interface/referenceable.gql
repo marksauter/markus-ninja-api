@@ -1,0 +1,4 @@
+# Entities that can be referenced.
+interface Referenceable {
+  id: ID!
+}

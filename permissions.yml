@@ -7,7 +7,12 @@ permissions:
   - operation: Disconnect Appled
     authenticated: true
     roles:
-      - user
+      - owner
+  # Owners can read the appled.
+  - operation: Read Appled
+    authenticated: true
+    roles:
+      - owner
 
 
 
@@ -22,10 +27,11 @@ permissions:
       - subtype
       - type
       - user_id 
-  # Owners can read the whole asset.
+  # Admins and owners can read the whole asset.
   - operation: Read Asset
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create assets. 
   - operation: Create Asset
@@ -70,15 +76,26 @@ permissions:
 
 
 
-  # Only authenticated users can connect/disconnect enrolled.
+  # Only owners can connect/disconnect course lessons.
   - operation: Connect CourseLesson 
     authenticated: true
     roles:
-      - user
+      - owner
   - operation: Disconnect CourseLesson
     authenticated: true
     roles:
-      - user
+      - owner
+  # Owners can read/update course lessons.
+  - operation: Read CourseLesson
+    authenticated: true
+    roles:
+      - owner
+  - operation: Update CourseLesson
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - number
 
 
 
@@ -118,11 +135,16 @@ permissions:
   - operation: Disconnect Enrolled
     authenticated: true
     roles:
-      - user
+      - owner
+  # Owners can read the enrolled.
+  - operation: Read Enrolled
+    authenticated: true
+    roles:
+      - owner
   - operation: Update Enrolled
     authenticated: true
     roles:
-      - user
+      - owner
     fields:
       - status
 
@@ -133,6 +155,18 @@ permissions:
     fields:
       - email_id
       - user_id
+  # Admins and owners can read the following fields for an email verification token.
+  - operation: Read EVT
+    authenticated: true
+    roles:
+      - admin
+      - owner
+    fields:
+      - email_id
+      - expires_at
+      - issued_at
+      - user_id
+      - verified_at
   # Only owners can update email verification tokens.
   - operation: Update EVT
     authenticated: true
@@ -140,33 +174,24 @@ permissions:
       - owner
     fields:
       - verified_at
-  # Admins can read the following fields for an email verification token.
-  - operation: Read EVT
-    authenticated: true
-    roles:
-      - admin
-    fields:
-      - email_id
-      - expires_at
-      - issued_at
-      - user_id
-      - verified_at
 
 
 
   # Everyone can read the following fields for an event.
   - operation: Read Event
     fields:
-      - action
       - created_at
       - id
-      - source_id
-      - target_id
+      - payload
+      - public
+      - study_id
+      - type
       - user_id
-  # Owners can read the whole event.
+  # Admins and owners can read the whole event.
   - operation: Read Event
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create events.
   - operation: Create Event
@@ -174,8 +199,10 @@ permissions:
     roles:
       - user
     fields:
-      - source_id
-      - target_id
+      - payload
+      - public
+      - study_id
+      - type
       - user_id
 
 
@@ -195,6 +222,7 @@ permissions:
   - operation: Read Label
     authenticated: true
     roles:
+      - admin
       - owner
   # Only owners can create/update/delete labels.
   - operation: Create Label
@@ -229,6 +257,11 @@ permissions:
     authenticated: true
     roles:
       - owner
+  # Owners can read the labeled.
+  - operation: Read Labeled
+    authenticated: true
+    roles:
+      - user
 
 
 
@@ -236,6 +269,8 @@ permissions:
   - operation: Read Lesson
     fields:
       - body
+      - course_id
+      - course_number
       - created_at
       - id
       - number
@@ -248,6 +283,7 @@ permissions:
   - operation: Read Lesson
     authenticated: true
     roles:
+      - admin
       - owner
   # Only owners can create/update/delete lessons.
   - operation: Create Lesson
@@ -265,6 +301,7 @@ permissions:
       - owner
     fields:
       - body
+      - draft
       - number
       - published_at
       - title
@@ -286,10 +323,11 @@ permissions:
       - study_id
       - updated_at
       - user_id
-  # Owners can read the whole lesson comment.
+  # Admins and owners can read the whole lesson comment.
   - operation: Read LessonComment
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create lesson comments.
   - operation: Create LessonComment
@@ -308,6 +346,7 @@ permissions:
       - owner
     fields:
       - body
+      - draft
       - published_at
   - operation: Delete LessonComment
     authenticated: true
@@ -334,22 +373,20 @@ permissions:
 
 
 
-  # Everyone can create password reset tokens.
-  - operation: Create PRT
-    fields:
-      - email_id
-      - expires_at
-      - issued_at
-      - request_ip
-      - user_id
-  # Only owners can update password reset tokens.
-  - operation: Update PRT
+  # Owners can read the following fields for a password reset token.
+  - operation: Read PRT
     authenticated: true
     roles:
       - owner
     fields:
+      - email_id
       - end_ip
       - ended_at
+      - expires_at
+      - issued_at
+      - request_ip
+      - token
+      - user_id
   # Admins can read the following fields for a password reset token.
   - operation: Read PRT
     authenticated: true
@@ -363,12 +400,25 @@ permissions:
       - issued_at
       - request_ip
       - user_id
+  # Everyone can create password reset tokens.
+  - operation: Create PRT
+    fields:
+      - email_id
+      - request_ip
+      - user_id
+  # Only owners can update password reset tokens.
+  - operation: Update PRT
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - end_ip
+      - ended_at
 
 
 
   # Everyone can read studies.
   - operation: Read Study
-
   # Only authenticated users can create studies.
   - operation: Create Study
     authenticated: true
@@ -422,6 +472,11 @@ permissions:
     authenticated: true
     roles:
       - owner
+  # Owners can read the topiced.
+  - operation: Read Topiced
+    authenticated: true
+    roles:
+      - user
 
 
 
@@ -468,6 +523,7 @@ permissions:
   - operation: Read UserAsset
     fields:
       - created_at
+      - description
       - id
       - key
       - name
@@ -482,19 +538,18 @@ permissions:
   - operation: Read UserAsset
     authenticated: true
     roles:
+      - admin
       - owner
   # Only authenticated users can create user assets. 
   - operation: Create UserAsset
     authenticated: true
     roles:
-      - user
+      - owner
     fields:
+      - asset_id
+      - description
       - name
-      - original_name
-      - size
       - study_id
-      - subtype
-      - type
       - user_id
   # Only owners can update/delete user assets. 
   - operation: Update UserAsset
@@ -502,6 +557,7 @@ permissions:
     roles:
       - owner
     fields:
+      - description
       - name
   - operation: Delete UserAsset
     authenticated: true

@@ -2,7 +2,6 @@
 type ReferencedEvent implements 
   LessonTimelineEvent,
   Node,
-  UniformResourceLocatable,
   UserAssetTimelineEvent
 {
   # Identifies the date and time when the object was created.
@@ -13,17 +12,14 @@ type ReferencedEvent implements
   # Is this reference from a different study? 
   isCrossStudy: Boolean!
 
-  # The HTTP path to this resource.
-  resourcePath: URI!
+  # The object referenced.
+  referenceable: Referenceable!
 
-  # The source of the event.
-  source: EventSourceable!
+  # The source lesson of the event.
+  source: Lesson!
 
-  # The target of the event.
-  target: EventTargetable!
-
-  # The HTTP URL to this resource.
-  url: URI!
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

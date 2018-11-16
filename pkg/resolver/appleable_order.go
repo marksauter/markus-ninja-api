@@ -85,6 +85,8 @@ func ParseAppleableOrder(t AppleableType, arg *OrderArg) (data.Order, error) {
 		}, nil
 	}
 	switch t {
+	case AppleableTypeCourse:
+		return ParseCourseOrder(arg)
 	case AppleableTypeStudy:
 		return ParseStudyOrder(arg)
 	default:

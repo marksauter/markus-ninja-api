@@ -1,8 +1,8 @@
 # Represents an created event on a given subject.
 type CreatedEvent implements 
-  NotificationEvent,
+  Node,
   UserActivityEvent,
-  Node
+  StudyActivityEvent
 {
   # The createable assocated with this `created` event.
   createable: Createable!
@@ -12,11 +12,8 @@ type CreatedEvent implements
 
   id: ID!
 
-  # The HTTP path to this resource.
-  resourcePath: URI!
-
-  # The HTTP URL to this resource.
-  url: URI!
+  # The study from which the event occurred.
+  study: Study!
 
   # The user who performed the event.
   user: User!

@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewUserAssetLoader() *UserAssetLoader {
@@ -124,32 +125,41 @@ func (r *UserAssetLoader) Get(
 ) (*data.UserAsset, error) {
 	userAssetData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
+
+	compositeKey := newCompositeKey(userAsset.StudyID.String, userAsset.Name.String)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }
 
 func (r *UserAssetLoader) GetByName(
 	ctx context.Context,
-	studyId,
+	studyID,
 	name string,
 ) (*data.UserAsset, error) {
-	compositeKey := newCompositeKey(studyId, name)
+	compositeKey := newCompositeKey(studyID, name)
 	userAssetData, err := r.batchGetByName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
+	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
 
 	return userAsset, nil
 }
@@ -163,28 +173,34 @@ func (r *UserAssetLoader) GetByUserStudyAndName(
 	compositeKey := newCompositeKey(userLogin, studyName, name)
 	userAssetData, err := r.batchGetByUserStudyAndName.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	userAsset, ok := userAssetData.(*data.UserAsset)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.Id.String), userAsset)
+	r.batchGet.Prime(ctx, dataloader.StringKey(userAsset.ID.String), userAsset)
+	compositeKey = newCompositeKey(userAsset.StudyID.String, userAsset.Name.String)
+	r.batchGetByName.Prime(ctx, compositeKey, userAsset)
 
 	return userAsset, nil
 }
 
 func (r *UserAssetLoader) GetMany(
 	ctx context.Context,
-	ids *[]string,
+	ids []string,
 ) ([]*data.UserAsset, []error) {
-	keys := make(dataloader.Keys, len(*ids))
-	for i, k := range *ids {
+	keys := make(dataloader.Keys, len(ids))
+	for i, k := range ids {
 		keys[i] = dataloader.StringKey(k)
 	}
 	userAssetData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	userAssets := make([]*data.UserAsset, len(userAssetData))
@@ -192,7 +208,37 @@ func (r *UserAssetLoader) GetMany(
 		var ok bool
 		userAssets[i], ok = d.(*data.UserAsset)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
+		}
+	}
+
+	return userAssets, nil
+}
+
+func (r *UserAssetLoader) GetManyByName(
+	ctx context.Context,
+	studyID string,
+	names []string,
+) ([]*data.UserAsset, []error) {
+	keys := make(dataloader.Keys, len(names))
+	for i, name := range names {
+		keys[i] = newCompositeKey(studyID, name)
+	}
+	userAssetData, errs := r.batchGetByName.LoadMany(ctx, keys)()
+	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
+		return nil, errs
+	}
+	userAssets := make([]*data.UserAsset, len(userAssetData))
+	for i, d := range userAssetData {
+		var ok bool
+		userAssets[i], ok = d.(*data.UserAsset)
+		if !ok {
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

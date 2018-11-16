@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewLabeledLoader() *LabeledLoader {
@@ -100,14 +101,17 @@ func (r *LabeledLoader) Get(
 	key := strconv.Itoa(int(id))
 	labeledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	labeled, ok := labeledData.(*data.Labeled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	compositeKey := newCompositeKey(labeled.LabelableId.String, labeled.LabelId.String)
+	compositeKey := newCompositeKey(labeled.LabelableID.String, labeled.LabelID.String)
 	r.batchGetByLabelableAndLabel.Prime(ctx, compositeKey, labeled)
 
 	return labeled, nil
@@ -115,20 +119,23 @@ func (r *LabeledLoader) Get(
 
 func (r *LabeledLoader) GetByLabelableAndLabel(
 	ctx context.Context,
-	labelableId,
-	userId string,
+	labelableID,
+	userID string,
 ) (*data.Labeled, error) {
-	compositeKey := newCompositeKey(labelableId, userId)
+	compositeKey := newCompositeKey(labelableID, userID)
 	labeledData, err := r.batchGetByLabelableAndLabel.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	labeled, ok := labeledData.(*data.Labeled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	key := strconv.Itoa(int(labeled.Id.Int))
+	key := strconv.Itoa(int(labeled.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), labeled)
 
 	return labeled, nil

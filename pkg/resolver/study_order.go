@@ -14,6 +14,7 @@ const (
 	StudyAppleCount
 	StudyAppledAt
 	StudyCreatedAt
+	StudyEnrolledAt
 	StudyLessonCount
 )
 
@@ -27,6 +28,8 @@ func ParseStudyOrderField(s string) (StudyOrderField, error) {
 		return StudyAppledAt, nil
 	case "CREATED_AT":
 		return StudyCreatedAt, nil
+	case "ENROLLED_AT":
+		return StudyEnrolledAt, nil
 	case "LESSON_COUNT":
 		return StudyLessonCount, nil
 	default:
@@ -45,6 +48,8 @@ func (f StudyOrderField) String() string {
 		return "appled_at"
 	case StudyCreatedAt:
 		return "created_at"
+	case StudyEnrolledAt:
+		return "enrolled_at"
 	case StudyLessonCount:
 		return "lesson_count"
 	default:

@@ -3,6 +3,7 @@ package mytype
 import (
 	"database/sql/driver"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -223,4 +224,33 @@ func (src *OID) Value() (driver.Value, error) {
 	default:
 		return nil, errUndefined
 	}
+}
+
+func (src *OID) MarshalJSON() ([]byte, error) {
+	switch src.Status {
+	case pgtype.Present:
+		return json.Marshal(src.String)
+	case pgtype.Null:
+		return []byte("null"), nil
+	case pgtype.Undefined:
+		return []byte("null"), nil
+	}
+
+	return nil, errBadStatus
+}
+
+func (dst *OID) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+
+	oid, err := ParseOID(s)
+	if err != nil {
+		return err
+	}
+	*dst = *oid
+
+	return nil
 }

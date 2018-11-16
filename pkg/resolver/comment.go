@@ -3,14 +3,14 @@ package resolver
 import (
 	"context"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 )
 
 type comment interface {
 	Author(ctx context.Context) (*userResolver, error)
 	Body() (string, error)
-	BodyHTML() (mygql.HTML, error)
+	BodyHTML(ctx context.Context) (mygql.HTML, error)
 	ID() (graphql.ID, error)
 	ViewerDidAuthor(ctx context.Context) (bool, error)
 }

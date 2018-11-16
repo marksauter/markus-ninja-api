@@ -3,28 +3,28 @@ package resolver
 import (
 	"context"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteEmailPayload = deleteEmailPayloadResolver
-
 type deleteEmailPayloadResolver struct {
-	EmailId *mytype.OID
-	UserId  *mytype.OID
+	Conf    *myconf.Config
+	EmailID *mytype.OID
+	UserID  *mytype.OID
 	Repos   *repo.Repos
 }
 
-func (r *deleteEmailPayloadResolver) DeletedEmailId() graphql.ID {
-	return graphql.ID(r.EmailId.String)
+func (r *deleteEmailPayloadResolver) DeletedEmailID() graphql.ID {
+	return graphql.ID(r.EmailID.String)
 }
 
 func (r *deleteEmailPayloadResolver) User(ctx context.Context) (*userResolver, error) {
-	user, err := r.Repos.User().Get(ctx, r.UserId.String)
+	user, err := r.Repos.User().Get(ctx, r.UserID.String)
 	if err != nil {
 		return nil, err
 	}
 
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

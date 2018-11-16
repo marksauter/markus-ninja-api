@@ -7,86 +7,98 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Id         mytype.OID         `db:"id" permit:"read"`
+	ID         mytype.OID         `db:"id" permit:"read"`
 	Type       mytype.EmailType   `db:"type" permit:"create/read/update"`
-	UserId     mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
 	Value      pgtype.Varchar     `db:"value" permit:"create/read"`
 	VerifiedAt pgtype.Timestamptz `db:"verified_at" permit:"read/update"`
 }
 
-type EmailFilterOption int
+type EmailFilterOptions struct {
+	IsVerified *bool
+	Types      *[]string
+}
 
-const (
-	EmailIsVerified EmailFilterOption = iota
-	FilterBackup
-	FilterExtra
-	FilterPrimary
-)
+func (src *EmailFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
 
-func (src EmailFilterOption) String() string {
-	switch src {
-	case EmailIsVerified:
-		return "verified_at IS NOT NULL"
-	case FilterBackup:
-		return "type = 'BACKUP'"
-	case FilterExtra:
-		return "type = 'EXTRA'"
-	case FilterPrimary:
-		return "type = 'PRIMARY'"
-	default:
-		return ""
+	whereParts := make([]string, 0, 2)
+	if src.IsVerified != nil {
+		if *src.IsVerified {
+			whereParts = append(whereParts, from+".verified_at IS NOT NULL")
+		} else {
+			whereParts = append(whereParts, from+".verified_at IS NULL")
+		}
+	}
+	if src.Types != nil && len(*src.Types) > 0 {
+		whereType := make([]string, len(*src.Types))
+		for i, t := range *src.Types {
+			whereType[i] = from + ".type = '" + t + "'"
+		}
+		whereParts = append(
+			whereParts,
+			"("+strings.Join(whereType, " OR ")+")",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		Where: where,
 	}
 }
 
-const countEmailByUserSQL = `
-	SELECT COUNT(*)
-	FROM email
-	WHERE user_id = $1
-`
-
 func CountEmailByUser(
 	db Queryer,
-	userId string,
-	opts ...EmailFilterOption,
-) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountEmailByUser(user_id) Email")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	userID string,
+	filters *EmailFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
 	}
-	sqlParts := append([]string{countEmailByUserSQL}, ands...)
-	sql := strings.Join(sqlParts, " AND email.")
+	from := "email"
 
-	psName := preparedName("countEmailByUser", sql)
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countLessonByUser", sql)
 
-	err = prepareQueryRow(db, psName, sql, userId).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("emails found"))
+	}
+	return n, err
 }
 
 func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email, error) {
 	var row Email
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
-		&row.Id,
+		&row.ID,
 		&row.Type,
-		&row.UserId,
+		&row.UserID,
 		&row.UpdatedAt,
 		&row.Value,
 		&row.VerifiedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get email")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -97,39 +109,38 @@ func getManyEmail(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Email,
 	args ...interface{},
-) ([]*Email, error) {
-	var rows []*Email
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Email
 		dbRows.Scan(
 			&row.CreatedAt,
-			&row.Id,
+			&row.ID,
 			&row.Type,
-			&row.UserId,
+			&row.UserID,
 			&row.UpdatedAt,
 			&row.Value,
 			&row.VerifiedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get emails")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
-const getEmailByIdSQL = `
+const getEmailByIDSQL = `
 	SELECT
 		created_at,
 		id,
@@ -143,58 +154,13 @@ const getEmailByIdSQL = `
 `
 
 func GetEmail(db Queryer, id string) (*Email, error) {
-	mylog.Log.WithField("id", id).Info("GetEmail(id)")
-	return getEmail(db, "getEmailById", getEmailByIdSQL, id)
-}
-
-const getEmailByUserBackupSQL = `
-	SELECT
-		created_at,
-		id,
-		type,
-		user_id,
-		updated_at,
-		value,
-		verified_at
-	FROM email
-	WHERE user_id = $1 AND type = BACKUP
-`
-
-func GetEmailByUserBackup(db Queryer, userId string) (*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userId,
-	).Info("GetEmailByUserBackup(user_id)")
-	return getEmail(
-		db,
-		"getEmailByUserBackup",
-		getEmailByUserBackupSQL,
-		userId,
-	)
-}
-
-const getEmailByUserPrimarySQL = `
-	SELECT
-		created_at,
-		id,
-		type,
-		user_id,
-		updated_at,
-		value,
-		verified_at
-	FROM email
-	WHERE user_id = $1 AND type = PRIMARY
-`
-
-func GetEmailByUserPrimary(db Queryer, userId string) (*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userId,
-	).Info("GetEmailByUserPrimary(user_id)")
-	return getEmail(
-		db,
-		"getEmailByUserPrimary",
-		getEmailByUserPrimarySQL,
-		userId,
-	)
+	email, err := getEmail(db, "getEmailByID", getEmailByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("email found"))
+	}
+	return email, err
 }
 
 const getEmailByValueSQL = `
@@ -210,37 +176,42 @@ const getEmailByValueSQL = `
 	WHERE lower(value) = lower($1)
 `
 
-func GetEmailByValue(db Queryer, email string) (*Email, error) {
-	mylog.Log.WithField(
-		"email", email,
-	).Info("GetEmailByValue(email)")
-	return getEmail(
+func GetEmailByValue(db Queryer, value string) (*Email, error) {
+	email, err := getEmail(
 		db,
 		"getEmailByValue",
 		getEmailByValueSQL,
-		email,
+		value,
 	)
+	if err != nil {
+		mylog.Log.WithField("value", value).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("value", value).Info(util.Trace("email found"))
+	}
+	return email, err
 }
 
 func GetEmailByUser(
 	db Queryer,
-	userId *mytype.OID,
+	userID string,
 	po *PageOptions,
-	opts ...EmailFilterOption,
+	filters *EmailFilterOptions,
 ) ([]*Email, error) {
-	mylog.Log.WithField(
-		"user_id", userId.String,
-	).Info("GetEmailByUser(userId)")
-
-	ands := make([]string, len(opts))
-	for i, o := range opts {
-		ands[i] = o.String()
+	var rows []*Email
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Email, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
 	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := append(
-		[]string{`user_id = ` + args.Append(userId)},
-		ands...,
-	)
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"created_at",
@@ -252,32 +223,35 @@ func GetEmailByUser(
 		"verified_at",
 	}
 	from := "email"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getEmailByUser", sql)
 
-	return getManyEmail(db, psName, sql, args...)
+	if err := getManyEmail(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("emails found"))
+	return rows, nil
 }
 
 func CreateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("CreateEmail()")
-
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Email")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, `id`)
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Type.Status != pgtype.Undefined {
 		columns = append(columns, `type`)
 		values = append(values, args.Append(&row.Type))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, `user_id`)
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 	if row.Value.Status != pgtype.Undefined {
 		columns = append(columns, `value`)
@@ -286,7 +260,7 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -303,33 +277,37 @@ func CreateEmail(db Queryer, row *Email) (*Email, error) {
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			mylog.Log.WithError(err).Error("error during scan")
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
-		mylog.Log.WithError(err).Error("error during query")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	email, err := GetEmail(tx, row.Id.String)
+	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("email created"))
 	return email, nil
 }
 
@@ -339,8 +317,6 @@ const deleteEmailSQL = `
 `
 
 func DeleteEmail(db Queryer, id string) error {
-	mylog.Log.WithField("id", id).Info("DeleteEmail(id)")
-
 	commandTag, err := prepareExec(
 		db,
 		"deleteEmail",
@@ -348,19 +324,20 @@ func DeleteEmail(db Queryer, id string) error {
 		id,
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to delete email")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("email deleted"))
 	return nil
 }
 
 func UpdateEmail(db Queryer, row *Email) (*Email, error) {
-	mylog.Log.Info("UpdateEmail()")
-
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 
@@ -372,12 +349,13 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	}
 
 	if len(sets) == 0 {
-		return GetEmail(db, row.Id.String)
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetEmail(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -387,31 +365,36 @@ func UpdateEmail(db Queryer, row *Email) (*Email, error) {
 	sql := `
 		UPDATE email
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateEmail", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	email, err := GetEmail(tx, row.Id.String)
+	email, err := GetEmail(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("email updated"))
 	return email, nil
 }
