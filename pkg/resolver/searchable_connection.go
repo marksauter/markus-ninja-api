@@ -5,20 +5,21 @@ import (
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewSearchableConnectionResolver(
-	repos *repo.Repos,
 	searchables []repo.NodePermit,
 	pageOptions *data.PageOptions,
 	query string,
-	within *mytype.OID,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*searchableConnectionResolver, error) {
 	edges := make([]*searchableEdgeResolver, len(searchables))
 	for i := range edges {
-		edge, err := NewSearchableEdgeResolver(repos, searchables[i])
+		edge, err := NewSearchableEdgeResolver(searchables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,27 +33,30 @@ func NewSearchableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &searchableConnectionResolver{
+		conf:        conf,
 		edges:       edges,
 		searchables: searchables,
 		pageInfo:    pageInfo,
 		repos:       repos,
 		query:       query,
-		within:      within,
 	}
 	return resolver, nil
 }
 
 type searchableConnectionResolver struct {
+	conf        *myconf.Config
 	edges       []*searchableEdgeResolver
 	searchables []repo.NodePermit
 	pageInfo    *pageInfoResolver
 	repos       *repo.Repos
 	query       string
-	within      *mytype.OID
 }
 
 func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
-	return r.repos.Course().CountBySearch(ctx, r.within, r.query)
+	filters := &data.CourseFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.Course().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
@@ -64,11 +68,18 @@ func (r *searchableConnectionResolver) Edges() *[]*searchableEdgeResolver {
 }
 
 func (r *searchableConnectionResolver) LabelCount(ctx context.Context) (int32, error) {
-	return r.repos.Label().CountBySearch(ctx, r.within, r.query)
+	filters := &data.LabelFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.Label().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
-	return r.repos.Lesson().CountBySearch(ctx, r.within, r.query)
+	filters := &data.LessonFilterOptions{
+		IsPublished: util.NewBool(true),
+		Search:      &r.query,
+	}
+	return r.repos.Lesson().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
@@ -77,7 +88,7 @@ func (r *searchableConnectionResolver) Nodes() (*[]*searchableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		searchables := r.searchables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range searchables {
-			resolver, err := nodePermitToResolver(s, r.repos)
+			resolver, err := nodePermitToResolver(s, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}
@@ -96,17 +107,29 @@ func (r *searchableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 }
 
 func (r *searchableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
-	return r.repos.Study().CountBySearch(ctx, r.within, r.query)
+	filters := &data.StudyFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.Study().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) TopicCount(ctx context.Context) (int32, error) {
-	return r.repos.Topic().CountBySearch(ctx, r.within, r.query)
+	filters := &data.TopicFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.Topic().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) UserCount(ctx context.Context) (int32, error) {
-	return r.repos.User().CountBySearch(ctx, r.query)
+	filters := &data.UserFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.User().CountBySearch(ctx, filters)
 }
 
 func (r *searchableConnectionResolver) UserAssetCount(ctx context.Context) (int32, error) {
-	return r.repos.UserAsset().CountBySearch(ctx, r.within, r.query)
+	filters := &data.UserAssetFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.UserAsset().CountBySearch(ctx, filters)
 }

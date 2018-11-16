@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/fatih/camelcase"
@@ -41,6 +44,8 @@ func MarkdownToHTML(input []byte) []byte {
 	unsafe := blackfriday.Run(input)
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-z-A-Z0-9]+$")).OnElements("code")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^((caption|leading)(\s+|$))*$`)).OnElements("p")
+	p.AllowAttrs("target").Matching(regexp.MustCompile(`^(_blank)$`)).OnElements("a")
 	return p.SanitizeBytes(unsafe)
 }
 
@@ -97,4 +102,49 @@ var rxHexColor = regexp.MustCompile(`^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
 
 func IsHexColor(str string) bool {
 	return rxHexColor.MatchString(str)
+}
+
+func ReplaceWithPadding(match, replace string) string {
+	paddingLeft := ""
+	paddingRight := ""
+	switch match[0] {
+	case ' ':
+		paddingLeft = " "
+	case '\n':
+		paddingLeft = "\n"
+	case '\t':
+		paddingLeft = "\t"
+	}
+	switch match[len(match)-1] {
+	case ' ':
+		paddingRight = " "
+	case '\n':
+		paddingRight = "\n"
+	case '\t':
+		paddingRight = "\t"
+	}
+	return paddingLeft + replace + paddingRight
+}
+
+func RemoveEmptyStrings(strs []string) []string {
+	noEmpties := make([]string, 0, len(strs))
+	for _, s := range strs {
+		if s != "" {
+			noEmpties = append(noEmpties, s)
+		}
+	}
+	return noEmpties
+}
+
+func Trace(message string) string {
+	pc := make([]uintptr, 15)
+	n := runtime.Callers(2, pc)
+	frames := runtime.CallersFrames(pc[:n])
+	frame, _ := frames.Next()
+	return fmt.Sprintf("%s:%d: %s", filepath.Base(frame.Function), frame.Line, message)
+}
+
+func NewBool(value bool) *bool {
+	b := value
+	return &b
 }

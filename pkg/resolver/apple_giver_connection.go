@@ -1,24 +1,28 @@
 package resolver
 
 import (
+	"context"
+
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleGiverConnectionResolver(
 	users []*repo.UserPermit,
 	pageOptions *data.PageOptions,
-	totalCount int32,
+	appleableID *mytype.OID,
+	filters *data.UserFilterOptions,
 	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*appleGiverConnectionResolver, error) {
 	edges := make([]*appleGiverEdgeResolver, len(users))
 	for i := range edges {
-		id, err := users[i].ID()
+		edge, err := NewAppleGiverEdgeResolver(users[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
-		cursor := data.EncodeCursor(id.String)
-		edge := NewAppleGiverEdgeResolver(cursor, users[i], repos)
 		edges[i] = edge
 	}
 	edgeResolvers := make([]EdgeResolver, len(edges))
@@ -29,21 +33,25 @@ func NewAppleGiverConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &appleGiverConnectionResolver{
-		edges:      edges,
-		users:      users,
-		pageInfo:   pageInfo,
-		repos:      repos,
-		totalCount: totalCount,
+		appleableID: appleableID,
+		conf:        conf,
+		edges:       edges,
+		filters:     filters,
+		pageInfo:    pageInfo,
+		repos:       repos,
+		users:       users,
 	}
 	return resolver, nil
 }
 
 type appleGiverConnectionResolver struct {
-	edges      []*appleGiverEdgeResolver
-	users      []*repo.UserPermit
-	pageInfo   *pageInfoResolver
-	repos      *repo.Repos
-	totalCount int32
+	appleableID *mytype.OID
+	conf        *myconf.Config
+	edges       []*appleGiverEdgeResolver
+	filters     *data.UserFilterOptions
+	pageInfo    *pageInfoResolver
+	repos       *repo.Repos
+	users       []*repo.UserPermit
 }
 
 func (r *appleGiverConnectionResolver) Edges() *[]*appleGiverEdgeResolver {
@@ -60,7 +68,7 @@ func (r *appleGiverConnectionResolver) Nodes() *[]*userResolver {
 	if n > 0 && !r.pageInfo.isEmpty {
 		users := r.users[r.pageInfo.start : r.pageInfo.end+1]
 		for _, s := range users {
-			nodes = append(nodes, &userResolver{User: s, Repos: r.repos})
+			nodes = append(nodes, &userResolver{User: s, Conf: r.conf, Repos: r.repos})
 		}
 	}
 	return &nodes
@@ -70,6 +78,6 @@ func (r *appleGiverConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *appleGiverConnectionResolver) TotalCount() int32 {
-	return r.totalCount
+func (r *appleGiverConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+	return r.repos.User().CountByAppleable(ctx, r.appleableID.String, r.filters)
 }

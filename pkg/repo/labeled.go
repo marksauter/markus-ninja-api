@@ -9,9 +9,11 @@ import (
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LabeledPermit struct {
@@ -33,48 +35,59 @@ func (r *LabeledPermit) Get() *data.Labeled {
 
 func (r *LabeledPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.labeled.CreatedAt.Time, nil
 }
 
-func (r *LabeledPermit) ID() (n int32, err error) {
+func (r *LabeledPermit) ID() (int32, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		err = ErrAccessDenied
-		return
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int32
+		return n, err
 	}
-	n = r.labeled.Id.Int
-	return
+	return r.labeled.ID.Int, nil
 }
 
-func (r *LabeledPermit) LabelId() (*mytype.OID, error) {
+func (r *LabeledPermit) LabelID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("label_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.labeled.LabelId, nil
+	return &r.labeled.LabelID, nil
 }
 
-func (r *LabeledPermit) LabelableId() (*mytype.OID, error) {
+func (r *LabeledPermit) LabelableID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("labelable_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.labeled.LabelableId, nil
+	return &r.labeled.LabelableID, nil
 }
 
-func NewLabeledRepo() *LabeledRepo {
+func NewLabeledRepo(conf *myconf.Config) *LabeledRepo {
 	return &LabeledRepo{
+		conf: conf,
 		load: loader.NewLabeledLoader(),
 	}
 }
 
 type LabeledRepo struct {
+	conf   *myconf.Config
 	load   *loader.LabeledLoader
 	permit *Permitter
 }
 
 func (r *LabeledRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
@@ -86,8 +99,9 @@ func (r *LabeledRepo) Close() {
 
 func (r *LabeledRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("labeled connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -96,26 +110,30 @@ func (r *LabeledRepo) CheckConnection() error {
 
 func (r *LabeledRepo) CountByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLabeledByLabel(db, labelId)
+	return data.CountLabeledByLabel(db, labelID)
 }
 
 func (r *LabeledRepo) CountByLabelable(
 	ctx context.Context,
-	labelableId string,
+	labelableID string,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLabeledByLabelable(db, labelableId)
+	return data.CountLabeledByLabelable(db, labelableID)
 }
 
 func (r *LabeledRepo) Connect(
@@ -123,42 +141,30 @@ func (r *LabeledRepo) Connect(
 	labeled *data.Labeled,
 ) (*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, labeled); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	labeled, err := data.CreateLabeled(db, *labeled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labeled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LabeledPermit{fieldPermFn, labeled}, nil
-}
-
-func (r *LabeledRepo) BatchConnect(
-	ctx context.Context,
-	labeled *data.Labeled,
-	labelableIds []*mytype.OID,
-) error {
-	if err := r.CheckConnection(); err != nil {
-		return err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.ConnectAccess, labeled); err != nil {
-		return err
-	}
-	return data.BatchCreateLabeled(db, labeled, labelableIds)
 }
 
 func (r *LabeledRepo) Get(
@@ -166,28 +172,34 @@ func (r *LabeledRepo) Get(
 	l *data.Labeled,
 ) (*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	var labeled *data.Labeled
 	var err error
-	if l.Id.Status != pgtype.Undefined {
-		labeled, err = r.load.Get(ctx, l.Id.Int)
+	if l.ID.Status != pgtype.Undefined {
+		labeled, err = r.load.Get(ctx, l.ID.Int)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-	} else if l.LabelableId.Status != pgtype.Undefined &&
-		l.LabelId.Status != pgtype.Undefined {
-		labeled, err = r.load.GetByLabelableAndLabel(ctx, l.LabelableId.String, l.LabelId.String)
+	} else if l.LabelableID.Status != pgtype.Undefined &&
+		l.LabelID.Status != pgtype.Undefined {
+		labeled, err = r.load.GetByLabelableAndLabel(ctx, l.LabelableID.String, l.LabelID.String)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	} else {
-		return nil, errors.New(
+		err := errors.New(
 			"must include either labeled `id` or `labelable_id` and `label_id` to get an labeled",
 		)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labeled)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LabeledPermit{fieldPermFn, labeled}, nil
@@ -195,24 +207,29 @@ func (r *LabeledRepo) Get(
 
 func (r *LabeledRepo) GetByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 	po *data.PageOptions,
 ) ([]*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	labeleds, err := data.GetLabeledByLabel(db, labelId, po)
+	labeleds, err := data.GetLabeledByLabel(db, labelID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labeleds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range labeleds {
@@ -224,24 +241,29 @@ func (r *LabeledRepo) GetByLabel(
 
 func (r *LabeledRepo) GetByLabelable(
 	ctx context.Context,
-	labelableId string,
+	labelableID string,
 	po *data.PageOptions,
 ) ([]*LabeledPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	labeleds, err := data.GetLabeledByLabelable(db, labelableId, po)
+	labeleds, err := data.GetLabeledByLabelable(db, labelableID, po)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	labeledPermits := make([]*LabeledPermit, len(labeleds))
 	if len(labeleds) > 0 {
 		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, labeleds[0])
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 		for i, l := range labeleds {
@@ -256,26 +278,32 @@ func (r *LabeledRepo) Disconnect(
 	l *data.Labeled,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, l); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	if l.Id.Status != pgtype.Undefined {
-		return data.DeleteLabeled(db, l.Id.Int)
-	} else if l.LabelableId.Status != pgtype.Undefined &&
-		l.LabelId.Status != pgtype.Undefined {
+	if _, err := r.permit.Check(ctx, mytype.DisconnectAccess, l); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	if l.ID.Status != pgtype.Undefined {
+		return data.DeleteLabeled(db, l.ID.Int)
+	} else if l.LabelableID.Status != pgtype.Undefined &&
+		l.LabelID.Status != pgtype.Undefined {
 		return data.DeleteLabeledByLabelableAndLabel(
 			db,
-			l.LabelableId.String,
-			l.LabelId.String,
+			l.LabelableID.String,
+			l.LabelID.String,
 		)
 	}
-	return errors.New(
+	err := errors.New(
 		"must include either labeled `id` or `labelable_id` and `label_id` to delete a labeled",
 	)
+	mylog.Log.WithError(err).Error(util.Trace(""))
+	return err
 }

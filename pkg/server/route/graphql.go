@@ -8,24 +8,45 @@ import (
 	"net/http"
 	"strings"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
-var GraphQLCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Authorization", "Content-Type"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodPost, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-})
-
 type GraphQLHandler struct {
-	Schema *graphql.Schema
+	Conf   *myconf.Config
 	Repos  *repo.Repos
+	Schema *graphql.Schema
+}
+
+func (h GraphQLHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodPost, http.MethodGet},
+		AllowedOrigins:   allowedOrigins,
+	})
 }
 
 func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.Conf == nil || h.Repos == nil || h.Schema == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	if req.Method != http.MethodPost && req.Method != http.MethodGet {
 		response := myhttp.MethodNotAllowedResponse(req.Method)
 		myhttp.WriteResponseTo(rw, response)
@@ -41,7 +62,7 @@ func (h GraphQLHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(params.Query) > 3000 {
+	if len(params.Query) > 5000 {
 		http.Error(rw, "Query too large.", http.StatusBadRequest)
 		return
 	}

@@ -3,32 +3,32 @@ package resolver
 import (
 	"context"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type DeleteStudyPayload = deleteStudyPayloadResolver
-
 type deleteStudyPayloadResolver struct {
-	OwnerId *mytype.OID
-	StudyId *mytype.OID
+	Conf    *myconf.Config
+	OwnerID *mytype.OID
 	Repos   *repo.Repos
+	StudyID *mytype.OID
 }
 
-func (r *deleteStudyPayloadResolver) DeletedStudyId(
+func (r *deleteStudyPayloadResolver) DeletedStudyID(
 	ctx context.Context,
 ) graphql.ID {
-	return graphql.ID(r.StudyId.String)
+	return graphql.ID(r.StudyID.String)
 }
 
 func (r *deleteStudyPayloadResolver) Owner(
 	ctx context.Context,
 ) (*userResolver, error) {
-	user, err := r.Repos.User().Get(ctx, r.OwnerId.String)
+	user, err := r.Repos.User().Get(ctx, r.OwnerID.String)
 	if err != nil {
 		return nil, err
 	}
 
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

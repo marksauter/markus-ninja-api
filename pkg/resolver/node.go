@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 )
 
 type node interface {
@@ -12,6 +12,11 @@ type nodeResolver struct {
 	node
 }
 
+func (r *nodeResolver) ToAddedToCourseEvent() (*addedToCourseEventResolver, bool) {
+	resolver, ok := r.node.(*addedToCourseEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToAppledEvent() (*appledEventResolver, bool) {
 	resolver, ok := r.node.(*appledEventResolver)
 	return resolver, ok
@@ -19,11 +24,6 @@ func (r *nodeResolver) ToAppledEvent() (*appledEventResolver, bool) {
 
 func (r *nodeResolver) ToCreatedEvent() (*createdEventResolver, bool) {
 	resolver, ok := r.node.(*createdEventResolver)
-	return resolver, ok
-}
-
-func (r *nodeResolver) ToCommentedEvent() (*commentedEventResolver, bool) {
-	resolver, ok := r.node.(*commentedEventResolver)
 	return resolver, ok
 }
 
@@ -47,6 +47,11 @@ func (r *nodeResolver) ToLabel() (*labelResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToLabeledEvent() (*labeledEventResolver, bool) {
+	resolver, ok := r.node.(*labeledEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.node.(*lessonResolver)
 	return resolver, ok
@@ -62,8 +67,23 @@ func (r *nodeResolver) ToNotification() (*notificationResolver, bool) {
 	return resolver, ok
 }
 
+func (r *nodeResolver) ToPublishedEvent() (*publishedEventResolver, bool) {
+	resolver, ok := r.node.(*publishedEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
 	resolver, ok := r.node.(*referencedEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToRemovedFromCourseEvent() (*removedFromCourseEventResolver, bool) {
+	resolver, ok := r.node.(*removedFromCourseEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToRenamedEvent() (*renamedEventResolver, bool) {
+	resolver, ok := r.node.(*renamedEventResolver)
 	return resolver, ok
 }
 
@@ -74,6 +94,16 @@ func (r *nodeResolver) ToStudy() (*studyResolver, bool) {
 
 func (r *nodeResolver) ToTopic() (*topicResolver, bool) {
 	resolver, ok := r.node.(*topicResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToUnappledEvent() (*unappledEventResolver, bool) {
+	resolver, ok := r.node.(*unappledEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToUnlabeledEvent() (*unlabeledEventResolver, bool) {
+	resolver, ok := r.node.(*unlabeledEventResolver)
 	return resolver, ok
 }
 

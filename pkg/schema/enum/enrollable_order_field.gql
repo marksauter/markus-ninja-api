@@ -1,20 +1,5 @@
 # Properties by which enrollable connections can be ordered.
 enum EnrollableOrderField {
-  # Order enrollables by advance time.
-  ADVANCED_AT
-
-  # Order enrollables by creation time.
-  CREATED_AT
-
   # Order enrollables by enroll time.
   ENROLLED_AT
-
-  # Order enrollables by name.
-  NAME
-
-  # Order enrollables by number.
-  NUMBER
-
-  # Order enrollables by update time.
-  UPDATED_AT
 }

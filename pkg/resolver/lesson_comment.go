@@ -5,30 +5,30 @@ import (
 	"errors"
 	"fmt"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type LessonComment = lessonCommentResolver
-
 type lessonCommentResolver struct {
+	Conf          *myconf.Config
 	LessonComment *repo.LessonCommentPermit
 	Repos         *repo.Repos
 }
 
 func (r *lessonCommentResolver) Author(ctx context.Context) (*userResolver, error) {
-	userId, err := r.LessonComment.UserId()
+	userID, err := r.LessonComment.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) Body() (string, error) {
@@ -39,7 +39,7 @@ func (r *lessonCommentResolver) Body() (string, error) {
 	return body.String, nil
 }
 
-func (r *lessonCommentResolver) BodyHTML() (mygql.HTML, error) {
+func (r *lessonCommentResolver) BodyHTML(ctx context.Context) (mygql.HTML, error) {
 	body, err := r.LessonComment.Body()
 	if err != nil {
 		return "", err
@@ -60,22 +60,31 @@ func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
+func (r *lessonCommentResolver) Draft() (string, error) {
+	return r.LessonComment.Draft()
+}
+
 func (r *lessonCommentResolver) ID() (graphql.ID, error) {
 	id, err := r.LessonComment.ID()
 	return graphql.ID(id.String), err
 }
 
+func (r *lessonCommentResolver) IsPublished() (bool, error) {
+	return r.LessonComment.IsPublished()
+}
+
 func (r *lessonCommentResolver) Labels(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.LabelFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
 ) (*labelConnectionResolver, error) {
-	lessonCommentId, err := r.LessonComment.ID()
+	lessonCommentID, err := r.LessonComment.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -97,21 +106,20 @@ func (r *lessonCommentResolver) Labels(
 
 	labels, err := r.Repos.Label().GetByLabelable(
 		ctx,
-		lessonCommentId.String,
+		lessonCommentID.String,
 		pageOptions,
+		args.FilterBy,
 	)
-	if err != nil {
-		return nil, err
-	}
-	count, err := r.Repos.Label().CountByLabelable(ctx, lessonCommentId.String)
 	if err != nil {
 		return nil, err
 	}
 	labelConnectionResolver, err := NewLabelConnectionResolver(
 		labels,
 		pageOptions,
-		count,
+		lessonCommentID,
+		args.FilterBy,
 		r.Repos,
+		r.Conf,
 	)
 	if err != nil {
 		return nil, err
@@ -119,16 +127,21 @@ func (r *lessonCommentResolver) Labels(
 	return labelConnectionResolver, nil
 }
 
+func (r *lessonCommentResolver) LastEditedAt() (graphql.Time, error) {
+	t, err := r.LessonComment.LastEditedAt()
+	return graphql.Time{t}, err
+}
+
 func (r *lessonCommentResolver) Lesson(ctx context.Context) (*lessonResolver, error) {
-	lessonId, err := r.LessonComment.LessonId()
+	lessonID, err := r.LessonComment.LessonID()
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().Get(ctx, lessonId.String)
+	lesson, err := r.Repos.Lesson().Get(ctx, lessonID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: lesson, Repos: r.Repos}, nil
+	return &lessonResolver{Lesson: lesson, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) PublishedAt() (*graphql.Time, error) {
@@ -164,15 +177,15 @@ func (r *lessonCommentResolver) ResourcePath(
 }
 
 func (r *lessonCommentResolver) Study(ctx context.Context) (*studyResolver, error) {
-	studyId, err := r.LessonComment.StudyId()
+	studyID, err := r.LessonComment.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *lessonCommentResolver) UpdatedAt() (graphql.Time, error) {
@@ -188,7 +201,7 @@ func (r *lessonCommentResolver) URL(
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 
@@ -207,10 +220,10 @@ func (r *lessonCommentResolver) ViewerDidAuthor(ctx context.Context) (bool, erro
 	if !ok {
 		return false, errors.New("viewer not found")
 	}
-	userId, err := r.LessonComment.UserId()
+	userID, err := r.LessonComment.UserID()
 	if err != nil {
 		return false, err
 	}
 
-	return viewer.Id.String == userId.String, nil
+	return viewer.ID.String == userID.String, nil
 }

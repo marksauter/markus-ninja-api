@@ -1,8 +1,6 @@
 # Represents a user.
 type User implements 
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   UniformResourceLocatable 
@@ -28,7 +26,7 @@ type User implements
     orderBy: EventOrder
   ): UserActivityConnection!
 
-  # A list of studies the user has appled.
+  # A list of appleables the user has appled.
   appled(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -42,8 +40,11 @@ type User implements
     # Returns the last n elements form the list.
     last: Int
 
-    # Ordering options for studies returned from the connection.
+    # Ordering options for appleables returned from the connection.
     orderBy: AppleableOrder
+
+    # Query to search appleds by.
+    search: String
 
     # The types of appleable items to retrieve.
     type: AppleableType!
@@ -56,6 +57,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for user assets returned from the connection.
+    filterBy: UserAssetFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -76,6 +80,27 @@ type User implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # A list of courses that the user owns.
+  courses(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for courses returned from the connection.
+    filterBy: CourseFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for courses returned from the connection.
+    orderBy: CourseOrder
+  ): CourseConnection!
+
   # The user's public profile email.
   email: Email
 
@@ -87,17 +112,14 @@ type User implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for emails returned from the connection.
+    filterBy: EmailFilters
+
     # Returns the first n elements form the list.
     first: Int
 
-    # If non-null, then filter emails by whether they have been verified.
-    isVerified: Boolean
-
     # Returns the last n elements form the list.
     last: Int
-
-    # If non-null, then filter emails by type.
-    type: [EmailType!]
   ): EmailConnection!
 
   # A list of enrollables the user is enrolled in.
@@ -117,12 +139,12 @@ type User implements
     # Ordering options for enrollables returned from the connection.
     orderBy: EnrollableOrder
 
+    # Query to search enrolleds by.
+    search: String
+
     # The types of enrollables to retrieve
     type: EnrollableType!
   ): EnrollableConnection!
-
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
 
   # A list of users who have enrolled in this enrollable.
   enrollees(
@@ -131,6 +153,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -147,6 +172,9 @@ type User implements
 
   id: ID!
 
+  # Whether or not the user has verified their account.
+  isVerified: Boolean!
+
   # Whether or not this user is a site administrator.
   isSiteAdmin: Boolean!
 
@@ -160,6 +188,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for lessons returned from the connection.
+    filterBy: LessonFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -198,6 +229,24 @@ type User implements
   # Identifies the date and time when the user's profile was last updated.
   profileUpdatedAt: Time!
 
+  # Returns a list of activity that the user has received.
+  receivedActivity(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for events returned from the connection.
+    orderBy: EventOrder
+  ): UserReceivedActivityConnection!
+
   # The HTTP path for this user.
   resourcePath: URI!
 
@@ -214,6 +263,9 @@ type User implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for studies returned from the connection.
+    filterBy: StudyFilters
 
     # Returns the first n elements form the list.
     first: Int

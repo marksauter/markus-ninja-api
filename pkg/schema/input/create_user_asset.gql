@@ -3,6 +3,9 @@ input CreateUserAssetInput {
   # The ID of the asset.
   assetId: ID!
 
+  # The description of the asset.
+  description: String
+
   # The name of the asset.
   name: String!
 

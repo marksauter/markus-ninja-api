@@ -1,0 +1,26 @@
+# Represents a renamed event on a given subject.
+type RenamedEvent implements 
+  LessonTimelineEvent,
+  Node,
+  UserAssetTimelineEvent
+{
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The object renamed.
+  renameable: Renameable!
+
+  # The name before the change.
+  renamedFrom: String!
+
+  # The name after the change.
+  renamedTo: String!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}

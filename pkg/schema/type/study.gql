@@ -3,13 +3,29 @@ type Study implements
   Appleable,
   Createable,
   Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   Topicable,
   UniformResourceLocatable
 {
+  # Returns a list of activity associated with the study.
+  activity(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for events returned from the connection.
+    orderBy: EventOrder
+  ): StudyActivityConnection!
+
   # Identifies when the study was advanced at.
   advancedAt: Time
 
@@ -44,6 +60,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for user assets returned from the connection.
+    filterBy: UserAssetFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -68,6 +87,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for courses returned from the connection.
+    filterBy: CourseFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -87,9 +109,6 @@ type Study implements
   # The description of the study rendered to HTML.
   descriptionHTML: HTML!
 
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
-
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
     # Returns the elements in the list that come after the specified global ID.
@@ -97,6 +116,9 @@ type Study implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for users returned from the connection.
+    filterBy: UserFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -116,6 +138,12 @@ type Study implements
   # Is this study private?
   isPrivate: Boolean!
 
+  # Returns a single label from the current study by name.
+  label(
+    # The name for the label to be returned.
+    name: String!  
+  ): Label
+
   # Returns a list of labels from the current study.
   labels(
     # Returns the elements in the list that come after the specified global ID.
@@ -124,14 +152,17 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
+
     # Returns the first n elements form the list.
     first: Int
 
     # Returns the last n elements form the list.
     last: Int
 
-    # If provided, search labels by name and description.
-    query: String
+    # Ordering options for labels returned from the connection.
+    orderBy: LabelOrder
   ): LabelConnection!
 
   # Returns a single lesson from the current study by number.
@@ -148,12 +179,11 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for lessons returned from the connection.
+    filterBy: LessonFilters
+
     # Returns the first n elements form the list.
     first: Int
-
-    # If non-null, filters lessons according to whether they are part of a
-    # course.
-    isCourseLesson: Boolean
 
     # Returns the last n elements form the list.
     last: Int
@@ -176,9 +206,6 @@ type Study implements
     last: Int
   ): LessonCommentConnection!
 
-  # How many lessons there are in this study.
-  lessonCount: Int!
-
   # The name of the study.
   name: String!
 
@@ -199,6 +226,9 @@ type Study implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for topics returned from the connection.
+    filterBy: TopicFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -217,6 +247,9 @@ type Study implements
 
   # Can the viewer admin this object?
   viewerCanAdmin: Boolean!
+
+  # Can the viewer apple this appleable.
+  viewerCanApple: Boolean!
 
   # Can the viewer enroll in this enrollable.
   viewerCanEnroll: Boolean!

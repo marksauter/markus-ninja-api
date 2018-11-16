@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -18,174 +17,173 @@ type Study struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	EnrolledAt  pgtype.Timestamptz `db:"enrolled_at"`
-	Id          mytype.OID         `db:"id" permit:"read"`
-	Name        mytype.URLSafeName `db:"name" permit:"create/read"`
+	ID          mytype.OID         `db:"id" permit:"read"`
+	Name        mytype.WordsName   `db:"name" permit:"create/read"`
 	Private     pgtype.Bool        `db:"private" permit:"create/read/update"`
 	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserId      mytype.OID         `db:"user_id" permit:"create/read"`
+	UserID      mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
-const countStudyByAppleeSQL = `
-	SELECT COUNT(*)
-	FROM study_appled
-	WHERE user_id = $1
-`
+func studyDelimeter(r rune) bool {
+	return r == '-' || r == '_'
+}
+
+type StudyFilterOptions struct {
+	Topics *[]string
+	Search *string
+}
+
+func (src *StudyFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 2)
+	if src.Topics != nil && len(*src.Topics) > 0 {
+		query := ToTsQuery(strings.Join(*src.Topics, " "))
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS topics_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".topics @@ topics_query END",
+		)
+	}
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountStudyByApplee(
 	db Queryer,
-	appleeId string,
-) (n int32, err error) {
-	mylog.Log.WithField("applee_id", appleeId).Info("CountStudyByApplee(applee_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByApplee",
-		countStudyByAppleeSQL,
-		appleeId,
-	).Scan(&n)
+	appleeID string,
+	filters *StudyFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
+	from := "appled_study"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByApplee", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
+	return n, err
 }
-
-const countStudyByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM study_enrolled
-	WHERE user_id = $1
-`
 
 func CountStudyByEnrollee(
 	db Queryer,
-	enrolleeId string,
-) (n int32, err error) {
-	mylog.Log.WithField("enrollee_id", enrolleeId).Info("CountStudyByEnrollee(enrollee_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByEnrollee",
-		countStudyByEnrolleeSQL,
-		enrolleeId,
-	).Scan(&n)
+	enrolleeID string,
+	filters *StudyFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "enrolled_study"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByEnrollee", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
+	return n, err
 }
-
-const countStudyByTopicSQL = `
-	SELECT COUNT(*)
-	FROM topiced_study
-	WHERE topic_id = $1
-`
 
 func CountStudyByTopic(
 	db Queryer,
-	topicId string,
-) (n int32, err error) {
-	mylog.Log.WithField(
-		"topic_id", topicId,
-	).Info("CountStudyByTopic(topic_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByTopic",
-		countStudyByTopicSQL,
-		topicId,
-	).Scan(&n)
+	topicID string,
+	filters *StudyFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
+	from := "topiced_study"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByTopic", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
+	return n, err
 }
-
-const countStudyByUserSQL = `
-	SELECT COUNT(*)
-	FROM study
-	WHERE user_id = $1
-`
 
 func CountStudyByUser(
 	db Queryer,
-	userId string,
-) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountStudyByUser(user_id)")
-	err = prepareQueryRow(
-		db,
-		"countStudyByUser",
-		countStudyByUserSQL,
-		userId,
-	).Scan(&n)
+	userID string,
+	filters *StudyFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
+	from := "study_search_index"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countStudyByUser", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
+	}
+	return n, err
 }
 
 func CountStudyBySearch(
 	db Queryer,
-	within *mytype.OID,
-	query string,
+	filters *StudyFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
-	var n int32
-	var args pgx.QueryArgs
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
 	from := "study_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
-			return n, fmt.Errorf(
-				"cannot search for studies within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(db, in.String)
-			if err != nil {
-				return n, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					nil,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
-	}
 
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
-
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countStudyBySearch", sql)
 
+	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
-	return n, err
-}
-
-func CountStudyByTopicSearch(
-	db Queryer,
-	query string,
-) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("CountStudyBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	if query == "" {
-		query = "*"
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("studies found"))
 	}
-	sql := `
-		SELECT COUNT(*)
-		FROM study_search_index
-		WHERE topics @@ to_tsquery('simple',` + query + `)
-	`
-	psName := preparedName("countStudyBySearch", sql)
-
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	return
+	return n, err
 }
 
 func getStudy(
@@ -199,16 +197,17 @@ func getStudy(
 		&row.AdvancedAt,
 		&row.CreatedAt,
 		&row.Description,
-		&row.Id,
+		&row.ID,
 		&row.Name,
 		&row.Private,
 		&row.UpdatedAt,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get study")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -219,14 +218,15 @@ func getManyStudy(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Study,
 	args ...interface{},
-) ([]*Study, error) {
-	var rows []*Study
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Study
@@ -234,26 +234,24 @@ func getManyStudy(
 			&row.AdvancedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Private,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
-const getStudyByIdSQL = `
+const getStudyByIDSQL = `
 	SELECT
 		advanced_at,
 		created_at,
@@ -263,7 +261,7 @@ const getStudyByIdSQL = `
 		private,
 		updated_at,
 		user_id
-	FROM study
+	FROM study_search_index
 	WHERE id = $1
 `
 
@@ -271,18 +269,36 @@ func GetStudy(
 	db Queryer,
 	id string,
 ) (*Study, error) {
-	mylog.Log.WithField("id", id).Info("GetStudy(id)")
-	return getStudy(db, "getStudyById", getStudyByIdSQL, id)
+	study, err := getStudy(db, "getStudyByID", getStudyByIDSQL, id)
+	if err != nil {
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 func GetStudyByApplee(
 	db Queryer,
-	userId string,
+	appleeID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetStudyByApplee(user_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`applee_id = ` + args.Append(userId)}
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -296,16 +312,16 @@ func GetStudyByApplee(
 		"user_id",
 	}
 	from := "appled_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByAppled", sql)
 
-	var rows []*Study
-
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Study
@@ -314,33 +330,45 @@ func GetStudyByApplee(
 			&row.AppledAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Private,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
 func GetStudyByEnrollee(
 	db Queryer,
-	userId string,
+	enrolleeID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetStudyByEnrollee(user_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userId)}
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -354,16 +382,16 @@ func GetStudyByEnrollee(
 		"user_id",
 	}
 	from := "enrolled_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByEnrollee", sql)
 
-	var rows []*Study
-
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Study
@@ -372,33 +400,45 @@ func GetStudyByEnrollee(
 			&row.CreatedAt,
 			&row.Description,
 			&row.EnrolledAt,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Private,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
 func GetStudyByTopic(
 	db Queryer,
-	topicId string,
+	topicID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("GetStudyByTopic(topic_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicId)}
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -412,16 +452,16 @@ func GetStudyByTopic(
 		"user_id",
 	}
 	from := "topiced_study"
-	sql := SQL(selects, from, where, &args, po)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("getStudiesByTopic", sql)
 
-	var rows []*Study
-
 	dbRows, err := prepareQuery(db, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Study
@@ -429,34 +469,46 @@ func GetStudyByTopic(
 			&row.AdvancedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Private,
 			&row.TopicedAt,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
 		rows = append(rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get studies")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
 	return rows, nil
 }
 
 func GetStudyByUser(
 	db Queryer,
-	userId string,
+	userID string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetStudyByUser(user_id)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
 
 	selects := []string{
 		"advanced_at",
@@ -468,12 +520,17 @@ func GetStudyByUser(
 		"updated_at",
 		"user_id",
 	}
-	from := "study"
-	sql := SQL(selects, from, where, &args, po)
+	from := "study_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
 
-	psName := preparedName("getStudiesByUserId", sql)
+	psName := preparedName("getStudiesByUserID", sql)
 
-	return getManyStudy(db, psName, sql, args...)
+	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 const getStudyByNameSQL = `
@@ -486,20 +543,22 @@ const getStudyByNameSQL = `
 		private,
 		updated_at,
 		user_id
-	FROM study
+	FROM study_search_index
 	WHERE user_id = $1 AND lower(name) = lower($2)
 `
 
 func GetStudyByName(
 	db Queryer,
-	userId,
+	userID,
 	name string,
 ) (*Study, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"user_id": userId,
-		"name":    name,
-	}).Info("GetStudyByName(user_id, name)")
-	return getStudy(db, "getStudyByName", getStudyByNameSQL, userId, name)
+	study, err := getStudy(db, "getStudyByName", getStudyByNameSQL, userID, name)
+	if err != nil {
+		mylog.Log.WithField("name", name).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("name", name).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 const getStudyByUserAndNameSQL = `
@@ -512,7 +571,7 @@ const getStudyByUserAndNameSQL = `
 		s.private,
 		s.updated_at,
 		s.user_id
-	FROM study s
+	FROM study_search_index s
 	JOIN account a ON lower(a.login) = lower($1)
 	WHERE s.user_id = a.id AND lower(s.name) = lower($2)  
 `
@@ -522,26 +581,32 @@ func GetStudyByUserAndName(
 	owner,
 	name string,
 ) (*Study, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"owner": owner,
-		"name":  name,
-	}).Info("GetStudyByUserAndName(owner, name)")
-	return getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	study, err := getStudy(db, "getStudyByUserAndName", getStudyByUserAndNameSQL, owner, name)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"name":  name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"owner": owner,
+			"name":  name,
+		}).Info(util.Trace("study found"))
+	}
+	return study, err
 }
 
 func CreateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
-	mylog.Log.Info("CreateStudy()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Study")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Description.Status != pgtype.Undefined {
 		columns = append(columns, "description")
@@ -559,14 +624,14 @@ func CreateStudy(
 		columns = append(columns, "private")
 		values = append(values, args.Append(&row.Private))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -582,42 +647,53 @@ func CreateStudy(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create study")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(pgErr.ConstraintName)
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
+	eventPayload, err := NewStudyCreatedPayload(&row.ID)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	_, err = CreateEvent(tx, e)
+	e, err := NewStudyEvent(eventPayload, &row.ID, &row.UserID, true)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err = CreateEvent(tx, e); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	study, err := GetStudy(tx, row.Id.String)
+	study, err := GetStudy(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("study created"))
 	return study, nil
 }
 
@@ -630,25 +706,40 @@ func DeleteStudy(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteStudy(id)")
 	commandTag, err := prepareExec(db, "deleteStudy", deleteStudySQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("study deleted"))
 	return nil
 }
 
 func SearchStudy(
 	db Queryer,
-	within *mytype.OID,
-	query string,
 	po *PageOptions,
+	filters *StudyFilterOptions,
 ) ([]*Study, error) {
-	mylog.Log.WithField("query", query).Info("SearchStudy(query)")
+	var rows []*Study
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Study, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
+
 	selects := []string{
 		"advanced_at",
 		"created_at",
@@ -660,72 +751,23 @@ func SearchStudy(
 		"user_id",
 	}
 	from := "study_search_index"
-	var args pgx.QueryArgs
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
-			return nil, fmt.Errorf(
-				"cannot search for studies within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(tx, in.String)
-			if err != nil {
-				return nil, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					po,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
-	}
-
-	sql := SearchSQL(selects, from, in, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchStudyIndex", sql)
 
-	studies, err := getManyStudy(tx, psName, sql, args...)
-	if err != nil {
+	if err := getManyStudy(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return studies, nil
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("studies found"))
+	return rows, nil
 }
 
 func UpdateStudy(
 	db Queryer,
 	row *Study,
 ) (*Study, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateStudy(id)")
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -743,12 +785,13 @@ func UpdateStudy(
 	}
 
 	if len(sets) == 0 {
-		return GetStudy(db, row.Id.String)
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetStudy(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -758,7 +801,7 @@ func UpdateStudy(
 	sql := `
 		UPDATE study
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateStudy", sql)
@@ -769,35 +812,39 @@ func UpdateStudy(
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, DuplicateFieldError(pgErr.ConstraintName)
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	study, err := GetStudy(tx, row.Id.String)
+	study, err := GetStudy(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("study updated"))
 	return study, nil
-}
-
-func studyDelimeter(r rune) bool {
-	return r == '-' || r == '_'
 }

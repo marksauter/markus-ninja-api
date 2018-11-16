@@ -7,7 +7,9 @@ import (
 )
 
 type Config struct {
-	AppName string
+	APIURL    string
+	AppName   string
+	ClientURL string
 
 	AuthKeyId string
 
@@ -35,7 +37,9 @@ func Load(name string) *Config {
 	}
 
 	return &Config{
-		AppName: config.Get("app.name").(string),
+		APIURL:    config.Get("app.api_url").(string),
+		AppName:   config.Get("app.name").(string),
+		ClientURL: config.Get("app.client_url").(string),
 
 		AuthKeyId: config.Get("auth.key_id").(string),
 

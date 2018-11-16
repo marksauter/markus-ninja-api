@@ -1,0 +1,8 @@
+# Ways in which to filter lists of studies.
+input StudyFilters {
+  # List studies where the list of topic names exists on the study.
+  topics: [String!]
+
+  # Query to search studies by.
+  search: String
+}

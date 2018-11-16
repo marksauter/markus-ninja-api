@@ -1,0 +1,17 @@
+# Ways in which to filter lists of lessons.
+input LessonFilters {
+  # List lessons that are part of a course.
+  isCourseLesson: Boolean
+
+  # List lessons that are published.
+  isPublished: Boolean
+
+  # List lessons where the list of label names exists on the lesson.
+  labels: [String!]
+
+  # List lessons that are not part of the course with this ID.
+  courseNotEqualTo: ID
+
+  # Query to search lessons by.
+  search: String
+}

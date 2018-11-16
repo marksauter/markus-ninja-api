@@ -3,6 +3,9 @@ enum CourseOrderField {
   # Order courses by advance time.
   ADVANCED_AT
 
+  # Order items by number of apples given.
+  APPLE_COUNT
+
   # Order courses by creation time.
   CREATED_AT
 

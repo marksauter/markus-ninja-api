@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
+	"time"
 
 	"github.com/gorilla/mux"
-	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/jackc/pgx"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mydb"
@@ -19,7 +21,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/server/route"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/xid"
 )
 
 func main() {
@@ -40,69 +42,81 @@ func main() {
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
+		mylog.Log.WithField("error", err).Fatal(util.Trace("unable to connect to database"))
 	}
 	defer db.Close()
 
 	svcs, err := service.NewServices(conf)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("unable to start services")
+		mylog.Log.WithField("error", err).Fatal(util.Trace("unable to start services"))
 	}
 
-	repos := repo.NewRepos(db)
+	repos := repo.NewRepos(db, conf)
 	schema := graphql.MustParseSchema(
 		schema.GetRootSchema(),
 		&resolver.RootResolver{
+			Conf:  conf,
 			Repos: repos,
 			Svcs:  svcs,
 		},
 	)
 
 	r := mux.NewRouter()
+	if branch == "development.local" || branch == "test" {
+		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
+	}
 
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 
-	graphQLHandler := route.GraphQLHandler{Schema: schema, Repos: repos}
-	graphQLSchemaHandler := route.GraphQLSchemaHandler{Schema: schema}
+	graphQLHandler := route.GraphQLHandler{Conf: conf, Schema: schema, Repos: repos}
+	graphQLSchemaHandler := route.GraphQLSchemaHandler{Conf: conf, Schema: schema}
 	graphiQLHandler := route.GraphiQLHandler{}
-	confirmVerificationHandler := route.ConfirmVerificationHandler{db}
+	confirmVerificationHandler := route.ConfirmVerificationHandler{Conf: conf, Db: db}
 	indexHandler := route.IndexHandler{}
-	tokenHandler := route.TokenHandler{svcs.Auth, db}
-	signupHandler := route.SignupHandler{svcs.Auth, db}
-	uploadHandler := route.UploadHandler{}
-	uploadAssetsHandler := route.UploadAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
-	userAssetsHandler := route.UserAssetsHandler{Repos: repos, StorageSvc: svcs.Storage}
+	previewHandler := route.PreviewHandler{Conf: conf, Repos: repos}
+	tokenHandler := route.TokenHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
+	removeTokenHandler := route.RemoveTokenHandler{}
+	signupHandler := route.SignupHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
+	uploadAssetsHandler := route.UploadAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
+	userAssetsHandler := route.UserAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
 
 	graphql := middleware.CommonMiddleware.Append(
-		route.GraphQLCors.Handler,
+		graphQLHandler.Cors().Handler,
 		authMiddleware.Use,
 		repos.Use,
 	).Then(graphQLHandler)
 	graphQLSchema := middleware.CommonMiddleware.Append(
-		route.GraphQLSchemaCors.Handler,
+		graphQLSchemaHandler.Cors().Handler,
 	).Then(graphQLSchemaHandler)
 	graphiql := middleware.CommonMiddleware.Append(
-		route.GraphiQLCors.Handler,
+		graphiQLHandler.Cors().Handler,
 	).Then(graphiQLHandler)
 	confirmVerification := middleware.CommonMiddleware.Append(
-		route.ConfirmVerificationCors.Handler,
+		confirmVerificationHandler.Cors().Handler,
 	).Then(confirmVerificationHandler)
 	index := middleware.CommonMiddleware.Then(indexHandler)
+	preview := middleware.CommonMiddleware.Append(
+		previewHandler.Cors().Handler,
+		authMiddleware.Use,
+		repos.Use,
+	).Then(previewHandler)
 	token := middleware.CommonMiddleware.Append(
-		route.TokenCors.Handler,
+		tokenHandler.Cors().Handler,
 	).Then(tokenHandler)
+	removeToken := middleware.CommonMiddleware.Append(
+		removeTokenHandler.Cors().Handler,
+	).Then(removeTokenHandler)
 	signup := middleware.CommonMiddleware.Append(
-		route.SignupCors.Handler,
+		signupHandler.Cors().Handler,
 		authMiddleware.Use,
 	).Then(signupHandler)
-	upload := middleware.CommonMiddleware.Then(uploadHandler)
 	uploadAssets := middleware.CommonMiddleware.Append(
-		route.UploadAssetsCors.Handler,
+		uploadAssetsHandler.Cors().Handler,
 		authMiddleware.Use,
 		repos.Use,
 	).Then(uploadAssetsHandler)
 	userAssets := middleware.CommonMiddleware.Append(
-		route.UserAssetsCors.Handler,
+		userAssetsHandler.Cors().Handler,
 		authMiddleware.Use,
 		repos.Use,
 	).Then(userAssetsHandler)
@@ -111,33 +125,41 @@ func main() {
 	r.Handle("/graphql", graphql)
 	r.Handle("/graphql/schema", graphQLSchema)
 	r.Handle("/graphiql", graphiql)
+	r.Handle("/preview", preview)
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
-	r.Handle("/upload", upload)
+	r.Handle("/remove_token", removeToken)
 	r.Handle("/upload/assets", uploadAssets)
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
 		confirmVerification,
 	)
 	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 
-	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			// Connect and check the server version
-			var version string
-			err = db.QueryRow("SELECT VERSION()").Scan(&version)
-			if err != nil {
-				mylog.Log.Fatal(err)
-				return
-			}
-			fmt.Fprintf(rw, "Connected to: %s", version)
-		},
-	))
+	if branch != "production" {
+		r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				// Connect and check the server version
+				var version string
+				err = db.QueryRow("SELECT VERSION()").Scan(&version)
+				if err != nil {
+					mylog.Log.Fatal(err)
+					return
+				}
+				fmt.Fprintf(rw, "Connected to: %s", version)
+			},
+		))
+	}
+
+	router := http.TimeoutHandler(r, 5*time.Second, "Timeout!")
+
 	port := util.GetOptionalEnv("PORT", "5000")
 	address := ":" + port
-	mylog.Log.Fatal(http.ListenAndServe(address, r))
+	mylog.Log.Fatal(http.ListenAndServe(address, router))
 }
 
 func initDB(conf *myconf.Config) error {
+	branch := util.GetRequiredEnv("BRANCH")
+
 	dbConfig := pgx.ConnConfig{
 		User:     conf.DBUser,
 		Password: conf.DBPassword,
@@ -147,7 +169,7 @@ func initDB(conf *myconf.Config) error {
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
+		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
 	}
 	defer db.Close()
 
@@ -162,9 +184,9 @@ func initDB(conf *myconf.Config) error {
 		new(data.Course),
 		new(data.CourseLesson),
 		new(data.Email),
+		new(data.EVT),
 		new(data.Enrolled),
 		new(data.Event),
-		new(data.EVT),
 		new(data.Label),
 		new(data.Labeled),
 		new(data.Lesson),
@@ -180,7 +202,7 @@ func initDB(conf *myconf.Config) error {
 
 	for _, model := range modelTypes {
 		if err := data.CreatePermissionSuite(db, model); err != nil {
-			mylog.Log.WithError(err).Fatal("error during permission suite creation")
+			mylog.Log.WithError(err).Fatal(util.Trace("error during permission suite creation"))
 			return err
 		}
 	}
@@ -204,77 +226,37 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 
-	adminPermissionsSQL := `
-		INSERT INTO role_permission(permission_id, role) (
-			SELECT
-				permission.id,
-				role.name
-			FROM role
-			JOIN permission ON true
-			WHERE role.name = 'ADMIN'
-		) ON CONFLICT ON CONSTRAINT role_permission_pkey DO NOTHING
-	`
-	commandTag, err := db.Exec(adminPermissionsSQL)
-	if err != nil {
-		return err
-	}
-	mylog.Log.WithFields(logrus.Fields{
-		"n": commandTag.RowsAffected(),
-	}).Infof("role permissions created for ADMIN")
-
-	userPermissionsSQL := `
-		INSERT INTO role_permission(permission_id, role) (
-			SELECT
-				permission.id,
-				role.name
-			FROM role
-			JOIN permission ON permission.audience = 'EVERYONE'
-			WHERE role.name = 'USER'
-		) ON CONFLICT ON CONSTRAINT role_permission_pkey DO NOTHING
-	`
-	commandTag, err = db.Exec(userPermissionsSQL)
-	if err != nil {
-		return err
-	}
-	mylog.Log.WithFields(logrus.Fields{
-		"n": commandTag.RowsAffected(),
-	}).Infof("role permissions created for USER")
-
-	guestId, _ := mytype.NewOID("User")
+	guestID, _ := mytype.NewOID("User")
 	guest := &data.User{}
-	guest.Id.Set(guestId)
+	guest.ID.Set(guestID)
 	guest.Login.Set("guest")
-	guest.Password.Set("guest")
+	guest.Password.Set(xid.New().String())
 	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
 		return err
 	}
 	if _, err := data.CreateUser(db, guest); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal("failed to create guest account")
+				mylog.Log.WithError(err).Fatal(util.Trace("failed to create guest account"))
 				return err
 			}
-			mylog.Log.Info("guest account already exists")
 		} else {
 			return err
 		}
 	}
 
-	markusId, _ := mytype.NewOID("User")
 	markus := &data.User{}
-	markus.Id.Set(markusId)
 	markus.Login.Set("markus")
-	markus.Password.Set("fender917")
+	markus.Password.Set(xid.New().String())
 	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
 		return err
 	}
 	if _, err := data.CreateUser(db, markus); err != nil {
 		if dfErr, ok := err.(data.DataFieldError); ok {
 			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal("failed to create markus account")
+				mylog.Log.WithError(err).Fatal(util.Trace("failed to create markus account"))
 				return err
 			}
-			mylog.Log.Info("markus account already exists")
 			markus, err = data.GetUserByLogin(db, "markus")
 			if err != nil {
 				return err
@@ -290,58 +272,55 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 	if !markusIsAdmin {
-		if err := data.GrantUserRoles(db, markus.Id.String, data.AdminRole); err != nil {
+		if err := data.GrantUserRoles(db, markus.ID.String, data.AdminRole); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
-					mylog.Log.WithError(err).Fatal("failed to grant markus admin role")
+					mylog.Log.WithError(err).Fatal(util.Trace("failed to grant markus admin role"))
 					return err
 				}
-				mylog.Log.Info("markus is already an admin")
 			} else {
 				return err
 			}
 		}
 	}
 
-	testUserId, _ := mytype.NewOID("User")
-	testUser := &data.User{}
-	testUser.Id.Set(testUserId)
-	testUser.Login.Set("test")
-	testUser.Password.Set("test")
-	if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
-		return err
-	}
-	if _, err := data.CreateUser(db, testUser); err != nil {
-		if dfErr, ok := err.(data.DataFieldError); ok {
-			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal("failed to create testUser account")
-				return err
-			}
-			mylog.Log.Info("testUser account already exists")
-			testUser, err = data.GetUserByLogin(db, "test")
-			if err != nil {
-				return err
-			}
-		} else {
+	if branch == "test" {
+		testUser := &data.User{}
+		testUser.Login.Set("test")
+		testUser.Password.Set("test")
+		if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
 			return err
 		}
-	}
-	testUserIsUser := false
-	for _, r := range testUser.Roles.Elements {
-		if r.String == data.UserRole {
-			testUserIsUser = true
-		}
-	}
-	if !testUserIsUser {
-		if err := data.GrantUserRoles(db, testUser.Id.String, data.UserRole); err != nil {
+		if _, err := data.CreateUser(db, testUser); err != nil {
 			if dfErr, ok := err.(data.DataFieldError); ok {
 				if dfErr.Code != data.DuplicateField {
-					mylog.Log.WithError(err).Fatal("failed to grant testUser admin role")
+					mylog.Log.WithError(err).Fatal(util.Trace("failed to create testUser account"))
 					return err
 				}
-				mylog.Log.Info("testUser is already an admin")
+				testUser, err = data.GetUserByLogin(db, "test")
+				if err != nil {
+					return err
+				}
 			} else {
 				return err
+			}
+		}
+		testUserIsUser := false
+		for _, r := range testUser.Roles.Elements {
+			if r.String == data.UserRole {
+				testUserIsUser = true
+			}
+		}
+		if !testUserIsUser {
+			if err := data.GrantUserRoles(db, testUser.ID.String, data.UserRole); err != nil {
+				if dfErr, ok := err.(data.DataFieldError); ok {
+					if dfErr.Code != data.DuplicateField {
+						mylog.Log.WithError(err).Fatal(util.Trace("failed to grant testUser user role"))
+						return err
+					}
+				} else {
+					return err
+				}
 			}
 		}
 	}

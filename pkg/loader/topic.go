@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewTopicLoader() *TopicLoader {
@@ -92,11 +93,14 @@ func (r *TopicLoader) Get(
 ) (*data.Topic, error) {
 	topicData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, ok := topicData.(*data.Topic)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGetByName.Prime(ctx, dataloader.StringKey(topic.Name.String), topic)
@@ -110,14 +114,17 @@ func (r *TopicLoader) GetByName(
 ) (*data.Topic, error) {
 	topicData, err := r.batchGetByName.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	topic, ok := topicData.(*data.Topic)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(topic.Id.String), topic)
+	r.batchGet.Prime(ctx, dataloader.StringKey(topic.ID.String), topic)
 
 	return topic, nil
 }
@@ -132,6 +139,7 @@ func (r *TopicLoader) GetMany(
 	}
 	topicData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
+		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
 	topics := make([]*data.Topic, len(topicData))
@@ -139,7 +147,9 @@ func (r *TopicLoader) GetMany(
 		var ok bool
 		topics[i], ok = d.(*data.Topic)
 		if !ok {
-			return nil, []error{fmt.Errorf("wrong type")}
+			err := ErrWrongType
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, []error{err}
 		}
 	}
 

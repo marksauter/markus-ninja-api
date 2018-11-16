@@ -1,0 +1,38 @@
+# An edge type for StudyActivityEvent.
+type StudyActivityEventEdge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The event at the end of the edge.
+  node: StudyActivityEvent
+}
+
+# A connection type for StudyActivityEvent.
+type StudyActivityConnection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [StudyActivityEventEdge]
+
+  # A list of nodes.
+  nodes: [StudyActivityEvent]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}
+
+# A connection type for StudyActivityEvent.
+type StudyReceivedActivityConnection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [StudyActivityEventEdge]
+
+  # A list of nodes.
+  nodes: [StudyActivityEvent]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

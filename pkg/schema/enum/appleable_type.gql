@@ -1,5 +1,8 @@
 # Represents the individual types of appleables to return.
 enum AppleableType {
+  # Returns courses.
+  COURSE
+
   # Returns studies.
   STUDY
 }

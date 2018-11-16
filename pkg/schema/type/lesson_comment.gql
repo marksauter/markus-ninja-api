@@ -2,9 +2,10 @@
 type LessonComment implements 
   Comment,
   Deleteable,
-  EventSourceable,
   Labelable,
+  LessonTimelineEvent,
   Node,
+  Publishable,
   StudyNode,
   UniformResourceLocatable,
   Updateable
@@ -24,7 +25,13 @@ type LessonComment implements
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
+  # The current draft of changes for the lesson comment body as Markdown.
+  draft: String!
+
   id: ID!
+
+  # Is this lesson comment published?
+  isPublished: Boolean!
 
   # Returns a list of labels for the current lesson comment.
   labels(
@@ -33,6 +40,9 @@ type LessonComment implements
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -43,6 +53,9 @@ type LessonComment implements
     # Ordering options for labels returned from the connection.
     orderBy: LabelOrder
   ): LabelConnection!
+
+  # Identifies when the lesson comment draft was last edited.
+  lastEditedAt: Time!
 
   # The lesson associated with this comment.
   lesson: Lesson!

@@ -2,6 +2,7 @@ package mytype
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -13,9 +14,25 @@ type Filename struct {
 	String string
 }
 
-var invalidFilenameChar = regexp.MustCompile(`[^\w\.]+`)
+var dotCheckRegex = regexp.MustCompile(`(^.|..|.$)`)
+var validFilenameRegex = regexp.MustCompile(`^[\w-.]{1,39}$`)
 
-const filenameReplacementStr = "-"
+var InvalidFilenameLength = errors.New("filename must be less than 40 characters")
+var InvalidFilenameHyphens = errors.New("filename cannot have multiple consecutive dots, and cannot begin or end with a dot")
+var InvalidFilenameCharacters = errors.New("filename may only contain alphanumeric characters, hyphens, underscores, or dots")
+
+func checkFilename(filename []byte) error {
+	if len(filename) > 39 {
+		return InvalidFilenameLength
+	}
+	if match := hyphenCheckRegex.Match(filename); match {
+		return InvalidFilenameHyphens
+	}
+	if match := validFilenameRegex.Match(filename); !match {
+		return InvalidFilenameCharacters
+	}
+	return nil
+}
 
 func (dst *Filename) Set(src interface{}) error {
 	if src == nil {
@@ -29,20 +46,26 @@ func (dst *Filename) Set(src interface{}) error {
 	case *Filename:
 		*dst = *value
 	case string:
-		value = invalidFilenameChar.ReplaceAllString(value, filenameReplacementStr)
+		if err := checkFilename([]byte(value)); err != nil {
+			return err
+		}
 		*dst = Filename{String: value, Status: pgtype.Present}
 	case *string:
 		if value == nil {
 			*dst = Filename{Status: pgtype.Null}
 		} else {
-			*value = invalidFilenameChar.ReplaceAllString(*value, filenameReplacementStr)
+			if err := checkFilename([]byte(*value)); err != nil {
+				return err
+			}
 			*dst = Filename{String: *value, Status: pgtype.Present}
 		}
 	case []byte:
 		if value == nil {
 			*dst = Filename{Status: pgtype.Null}
 		} else {
-			value = invalidFilenameChar.ReplaceAll(value, []byte(filenameReplacementStr))
+			if err := checkFilename(value); err != nil {
+				return err
+			}
 			*dst = Filename{String: string(value), Status: pgtype.Present}
 		}
 	default:

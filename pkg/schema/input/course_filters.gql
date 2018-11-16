@@ -1,0 +1,8 @@
+# Ways in which to filter lists of courses.
+input CourseFilters {
+  # List courses where the list of topic names exists on the course.
+  topics: [String!]
+
+  # Query to search courses by.
+  search: String
+}

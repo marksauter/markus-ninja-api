@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewEVTLoader() *EVTLoader {
@@ -48,9 +49,9 @@ type EVTLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *EVTLoader) Clear(emailId, token string) {
+func (r *EVTLoader) Clear(emailID, token string) {
 	ctx := context.Background()
-	compositeKey := newCompositeKey(emailId, token)
+	compositeKey := newCompositeKey(emailID, token)
 	r.batchGet.Clear(ctx, compositeKey)
 }
 
@@ -60,17 +61,20 @@ func (r *EVTLoader) ClearAll() {
 
 func (r *EVTLoader) Get(
 	ctx context.Context,
-	emailId,
+	emailID,
 	token string,
 ) (*data.EVT, error) {
-	compositeKey := newCompositeKey(emailId, token)
+	compositeKey := newCompositeKey(emailID, token)
 	evtData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	evt, ok := evtData.(*data.EVT)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	return evt, nil

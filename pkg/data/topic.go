@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -9,75 +8,96 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
-	"github.com/sirupsen/logrus"
 )
 
 type Topic struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
-	Id          mytype.OID         `db:"id" permit:"read"`
-	Name        pgtype.Text        `db:"name" permit:"create/read"`
-	TopicableId mytype.OID         `db:"topicable_id"`
+	ID          mytype.OID         `db:"id" permit:"read"`
+	Name        mytype.WordName    `db:"name" permit:"create/read"`
+	TopicableID mytype.OID         `db:"topicable_id"`
 	TopicedAt   pgtype.Timestamptz `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
-const countTopicByTopicableSQL = `
-	SELECT COUNT(*)
-	FROM topicable_topic
-	WHERE topicable_id = $1
-`
+func topicDelimeter(r rune) bool {
+	return r == '-'
+}
+
+type TopicFilterOptions struct {
+	Search *string
+}
+
+func (src *TopicFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 3)
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountTopicByTopicable(
 	db Queryer,
-	topicableId string,
+	topicableID string,
+	filters *TopicFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("topicable_id", topicableId).Info("CountTopicByTopicable(topicable_id)")
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topicable_id = ` + args.Append(topicableID)
+	}
+	from := "topicable_topic"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countTopicByTopicable", sql)
+
 	var n int32
-	err := prepareQueryRow(
-		db,
-		"countTopicByTopicable",
-		countTopicByTopicableSQL,
-		topicableId,
-	).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topics found"))
+	}
 	return n, err
 }
 
 func CountTopicBySearch(
 	db Queryer,
-	within *mytype.OID,
-	query string,
-) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("CountTopicBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	sql := `
-		SELECT COUNT(*)
-		FROM topic_search_index
-		WHERE document @@ to_tsquery('simple',` + args.Append(ToPrefixTsQuery(query)) + `)
-	`
-	if within != nil {
-		if within.Type != "Topicable" {
-			// Only studies 'contain' topics, so return 0 otherwise
-			return
-		}
-		andIn := fmt.Sprintf(
-			"AND topic_search_index.%s = %s",
-			within.DBVarName(),
-			args.Append(within),
-		)
-		sql = sql + andIn
-	}
+	filters *TopicFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
+	from := "topic_search_index"
 
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countTopicBySearch", sql)
 
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	mylog.Log.WithField("n", n).Info("")
-
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("topics found"))
+	}
+	return n, err
 }
 
 func getTopic(
@@ -90,14 +110,15 @@ func getTopic(
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.Description,
-		&row.Id,
+		&row.ID,
 		&row.Name,
 		&row.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get topic")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -108,38 +129,37 @@ func getManyTopic(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Topic,
 	args ...interface{},
-) ([]*Topic, error) {
-	var rows []*Topic
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Topic
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.UpdatedAt,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get topics")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
-const getTopicByIdSQL = `
+const getTopicByIDSQL = `
 	SELECT
 		created_at,
 		description,
@@ -154,95 +174,13 @@ func GetTopic(
 	db Queryer,
 	id string,
 ) (*Topic, error) {
-	mylog.Log.WithField("id", id).Info("GetTopic(id)")
-	return getTopic(db, "getTopicById", getTopicByIdSQL, id)
-}
-
-const getTopicNamesByTopicableSQL = `
-	SELECT
-		array_agg(name) topic_names
-	FROM topicable_topic
-	WHERE topicable_id = $1
-	GROUP BY topicable_id
-`
-
-func GetNamesByTopicable(
-	db Queryer,
-	topicableId string,
-) (names []string, err error) {
-	mylog.Log.WithField(
-		"topicable_id", topicableId,
-	).Info("GetNamesByTopicable(topicable_id)")
-	topicNames := pgtype.TextArray{}
-	err = prepareQueryRow(
-		db,
-		"getTopicNamesByTopicable",
-		getTopicNamesByTopicableSQL,
-		topicableId,
-	).Scan(topicNames)
-	if err == pgx.ErrNoRows {
-		return
-	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get topic")
-		return
-	}
-
-	err = topicNames.AssignTo(names)
-	return
-}
-
-func GetTopicByTopicable(
-	db Queryer,
-	topicableId string,
-	po *PageOptions,
-) ([]*Topic, error) {
-	mylog.Log.WithField(
-		"topicable_id", topicableId,
-	).Info("GetTopicByTopicable(topicable_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topicable_id = ` + args.Append(topicableId)}
-
-	selects := []string{
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"topicable_id",
-		"topiced_at",
-		"updated_at",
-	}
-	from := "topicable_topic"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getTopicsByTopicableId", sql)
-
-	var rows []*Topic
-
-	dbRows, err := prepareQuery(db, psName, sql, args...)
+	topic, err := getTopic(db, "getTopicByID", getTopicByIDSQL, id)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("topic found"))
 	}
-
-	for dbRows.Next() {
-		var row Topic
-		dbRows.Scan(
-			&row.CreatedAt,
-			&row.Description,
-			&row.Id,
-			&row.Name,
-			&row.TopicableId,
-			&row.TopicedAt,
-			&row.UpdatedAt,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get topics")
-		return nil, err
-	}
-
-	return rows, nil
+	return topic, err
 }
 
 const getTopicByNameSQL = `
@@ -260,25 +198,130 @@ func GetTopicByName(
 	db Queryer,
 	name string,
 ) (*Topic, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"name": name,
-	}).Info("GetTopicByName(user_id, name)")
-	return getTopic(db, "getTopicByName", getTopicByNameSQL, name)
+	topic, err := getTopic(db, "getTopicByName", getTopicByNameSQL, name)
+	if err != nil {
+		mylog.Log.WithField("name", name).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("name", name).Info(util.Trace("topic found"))
+	}
+	return topic, err
+}
+
+const getTopicNamesByTopicableSQL = `
+	SELECT
+		array_agg(name) topic_names
+	FROM topicable_topic
+	WHERE topicable_id = $1
+	GROUP BY topicable_id
+`
+
+func GetNamesByTopicable(
+	db Queryer,
+	topicableID string,
+) ([]string, error) {
+	names := []string{}
+	topicNames := pgtype.TextArray{}
+	err := prepareQueryRow(
+		db,
+		"getTopicNamesByTopicable",
+		getTopicNamesByTopicableSQL,
+		topicableID,
+	).Scan(topicNames)
+	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return names, ErrNotFound
+	} else if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return names, err
+	}
+
+	err = topicNames.AssignTo(names)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return names, err
+	}
+
+	mylog.Log.WithField("n", len(names)).Info(util.Trace("topic names found"))
+	return names, nil
+}
+
+func GetTopicByTopicable(
+	db Queryer,
+	topicableID string,
+	po *PageOptions,
+	filters *TopicFilterOptions,
+) ([]*Topic, error) {
+	var rows []*Topic
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topic, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topicable_id = ` + args.Append(topicableID)
+	}
+
+	selects := []string{
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"topicable_id",
+		"topiced_at",
+		"updated_at",
+	}
+	from := "topicable_topic"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getTopicsByTopicableID", sql)
+
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	defer dbRows.Close()
+
+	for dbRows.Next() {
+		var row Topic
+		dbRows.Scan(
+			&row.CreatedAt,
+			&row.Description,
+			&row.ID,
+			&row.Name,
+			&row.TopicableID,
+			&row.TopicedAt,
+			&row.UpdatedAt,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("topics found"))
+	return rows, nil
 }
 
 func CreateTopic(
 	db Queryer,
 	row *Topic,
 ) (*Topic, error) {
-	mylog.Log.Info("CreateTopic()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Topic")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Description.Status != pgtype.Undefined {
 		columns = append(columns, "description")
@@ -295,7 +338,7 @@ func CreateTopic(
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -311,55 +354,74 @@ func CreateTopic(
 	psName := preparedName("createTopic", sql)
 
 	err = prepareQueryRow(tx, psName, sql, args...).Scan(
-		&row.Id,
+		&row.ID,
 	)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create topic")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if row.TopicableId.Status != pgtype.Undefined {
+	if row.TopicableID.Status != pgtype.Undefined {
 		topiced := Topiced{}
-		topiced.TopicId.Set(&row.Id)
-		topiced.TopicableId.Set(&row.TopicableId)
+		topiced.TopicID.Set(&row.ID)
+		topiced.TopicableID.Set(&row.TopicableID)
 		_, err := CreateTopiced(tx, topiced)
 		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
-	topic, err := GetTopic(tx, row.Id.String)
+	topic, err := GetTopic(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("topic created"))
 	return topic, nil
 }
 
 func SearchTopic(
 	db Queryer,
-	query string,
 	po *PageOptions,
+	filters *TopicFilterOptions,
 ) ([]*Topic, error) {
-	mylog.Log.WithField("query", query).Info("SearchTopic(query)")
+	var rows []*Topic
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Topic, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
+
 	selects := []string{
 		"created_at",
 		"description",
@@ -368,19 +430,23 @@ func SearchTopic(
 		"updated_at",
 	}
 	from := "topic_search_index"
-	var args pgx.QueryArgs
-	sql := SearchSQL(selects, from, nil, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchTopicIndex", sql)
 
-	return getManyTopic(db, psName, sql, args...)
+	if err := getManyTopic(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("topics found"))
+	return rows, nil
 }
 
 func UpdateTopic(
 	db Queryer,
 	row *Topic,
 ) (*Topic, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateTopic(id)")
 	sets := make([]string, 0, 1)
 	args := pgx.QueryArgs(make([]interface{}, 0, 2))
 
@@ -389,12 +455,13 @@ func UpdateTopic(
 	}
 
 	if len(sets) == 0 {
-		return GetTopic(db, row.Id.String)
+		mylog.Log.Info(util.Trace("no updates"))
+		return GetTopic(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -404,35 +471,36 @@ func UpdateTopic(
 	sql := `
 		UPDATE topic
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateTopic", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	topic, err := GetTopic(tx, row.Id.String)
+	topic, err := GetTopic(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("topic updated"))
 	return topic, nil
-}
-
-func topicDelimeter(r rune) bool {
-	return r == '-'
 }

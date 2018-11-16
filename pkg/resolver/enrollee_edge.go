@@ -1,23 +1,32 @@
 package resolver
 
 import (
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewEnrolleeEdgeResolver(
-	cursor string,
 	node *repo.UserPermit,
 	repos *repo.Repos,
-) *enrolleeEdgeResolver {
+	conf *myconf.Config,
+) (*enrolleeEdgeResolver, error) {
+	id, err := node.ID()
+	if err != nil {
+		return nil, err
+	}
+	cursor := data.EncodeCursor(id.String)
 	return &enrolleeEdgeResolver{
+		conf:   conf,
 		cursor: cursor,
 		node:   node,
 		repos:  repos,
-	}
+	}, nil
 }
 
 type enrolleeEdgeResolver struct {
+	conf   *myconf.Config
 	cursor string
 	node   *repo.UserPermit
 	repos  *repo.Repos
@@ -32,5 +41,5 @@ func (r *enrolleeEdgeResolver) EnrolledAt() graphql.Time {
 }
 
 func (r *enrolleeEdgeResolver) Node() *userResolver {
-	return &userResolver{User: r.node, Repos: r.repos}
+	return &userResolver{User: r.node, Conf: r.conf, Repos: r.repos}
 }

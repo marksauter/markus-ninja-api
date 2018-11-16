@@ -2,16 +2,17 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type LessonPermit struct {
@@ -33,21 +34,27 @@ func (r *LessonPermit) Get() *data.Lesson {
 
 func (r *LessonPermit) Body() (*mytype.Markdown, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	return &r.lesson.Body, nil
 }
 
-func (r *LessonPermit) CourseId() (*mytype.OID, error) {
+func (r *LessonPermit) CourseID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("course_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.lesson.CourseId, nil
+	return &r.lesson.CourseID, nil
 }
 
 func (r *LessonPermit) CourseNumber() (*int32, error) {
 	if ok := r.checkFieldPermission("course_number"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if r.lesson.CourseNumber.Status == pgtype.Null {
 		return nil, nil
@@ -57,78 +64,149 @@ func (r *LessonPermit) CourseNumber() (*int32, error) {
 
 func (r *LessonPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.lesson.CreatedAt.Time, nil
 }
 
+func (r *LessonPermit) Draft() (string, error) {
+	if ok := r.checkFieldPermission("draft"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
+	}
+	return r.lesson.Draft.String, nil
+}
+
 func (r *LessonPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.lesson.Id, nil
+	return &r.lesson.ID, nil
+}
+
+func (r *LessonPermit) IsPublished() (bool, error) {
+	if ok := r.checkFieldPermission("published_at"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
+	}
+	return r.lesson.PublishedAt.Status != pgtype.Null, nil
+}
+
+func (r *LessonPermit) LastEditedAt() (time.Time, error) {
+	if ok := r.checkFieldPermission("last_edited_at"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
+	}
+	return r.lesson.LastEditedAt.Time, nil
 }
 
 func (r *LessonPermit) Number() (int32, error) {
 	if ok := r.checkFieldPermission("number"); !ok {
-		var i int32
-		return i, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		var n int32
+		return n, err
 	}
 	return r.lesson.Number.Int, nil
 }
 
 func (r *LessonPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.lesson.PublishedAt.Time, nil
 }
 
-func (r *LessonPermit) StudyId() (*mytype.OID, error) {
+func (r *LessonPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.lesson.StudyId, nil
+	return &r.lesson.StudyID, nil
 }
 
 func (r *LessonPermit) Title() (string, error) {
 	if ok := r.checkFieldPermission("title"); !ok {
-		return "", ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
 	}
 	return r.lesson.Title.String, nil
 }
 
 func (r *LessonPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
-		return time.Time{}, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return time.Time{}, err
 	}
 	return r.lesson.UpdatedAt.Time, nil
 }
 
-func (r *LessonPermit) UserId() (*mytype.OID, error) {
+func (r *LessonPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
-		return nil, ErrAccessDenied
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return &r.lesson.UserId, nil
+	return &r.lesson.UserID, nil
 }
 
-func NewLessonRepo() *LessonRepo {
+func NewLessonRepo(conf *myconf.Config) *LessonRepo {
 	return &LessonRepo{
+		conf: conf,
 		load: loader.NewLessonLoader(),
 	}
 }
 
 type LessonRepo struct {
+	conf   *myconf.Config
 	load   *loader.LessonLoader
 	permit *Permitter
 }
 
+func (r *LessonRepo) filterPermittable(
+	ctx context.Context,
+	accessLevel mytype.AccessLevel,
+	lessons []*data.Lesson,
+) ([]*LessonPermit, error) {
+	lessonPermits := make([]*LessonPermit, 0, len(lessons))
+	for _, l := range lessons {
+		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
+		if err != nil {
+			if err != ErrAccessDenied {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return nil, err
+			}
+		} else {
+			lessonPermits = append(lessonPermits, &LessonPermit{fieldPermFn, l})
+		}
+	}
+	return lessonPermits, nil
+}
+
 func (r *LessonRepo) Open(p *Permitter) error {
 	if p == nil {
-		return errors.New("permitter must not be nil")
+		err := ErrNilPermitter
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	r.permit = p
 	return nil
+}
+
+func (r *LessonRepo) Clear(id string) {
+	r.load.Clear(id)
 }
 
 func (r *LessonRepo) Close() {
@@ -137,8 +215,9 @@ func (r *LessonRepo) Close() {
 
 func (r *LessonRepo) CheckConnection() error {
 	if r.load == nil {
-		mylog.Log.Error("lesson connection closed")
-		return ErrConnClosed
+		err := ErrConnClosed
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
 	}
 	return nil
 }
@@ -147,75 +226,91 @@ func (r *LessonRepo) CheckConnection() error {
 
 func (r *LessonRepo) CountByEnrollee(
 	ctx context.Context,
-	userId string,
+	userID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonByEnrollee(db, userId)
+	return data.CountLessonByEnrollee(db, userID, filters)
 }
 
 func (r *LessonRepo) CountByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonByLabel(db, labelId)
+	return data.CountLessonByLabel(db, labelID, filters)
 }
 
 func (r *LessonRepo) CountBySearch(
 	ctx context.Context,
-	within *mytype.OID,
-	query string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonBySearch(db, within, query)
+	return data.CountLessonBySearch(db, filters)
 }
 
 func (r *LessonRepo) CountByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonByCourse(db, courseId)
+	return data.CountLessonByCourse(db, courseID, filters)
 }
 
 func (r *LessonRepo) CountByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonByStudy(db, studyId)
+	return data.CountLessonByStudy(db, studyID, filters)
 }
 
 func (r *LessonRepo) CountByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
+	filters *data.LessonFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return n, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
 	}
-	return data.CountLessonByUser(db, userId)
+	return data.CountLessonByUser(db, userID, filters)
 }
 
 func (r *LessonRepo) Create(
@@ -223,24 +318,75 @@ func (r *LessonRepo) Create(
 	l *data.Lesson,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.CreateAccess, l); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, err := data.CreateLesson(db, l)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) Exists(
+	ctx context.Context,
+	id string,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	return r.load.Exists(ctx, id)
+}
+
+func (r *LessonRepo) ExistsByNumber(
+	ctx context.Context,
+	studyID string,
+	number int32,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
+	}
+	return data.ExistsLessonByNumber(db, studyID, number)
+}
+
+func (r *LessonRepo) ExistsByOwnerStudyAndNumber(
+	ctx context.Context,
+	ownerLogin,
+	studyName string,
+	number int32,
+) (bool, error) {
+	if err := r.CheckConnection(); err != nil {
+		return false, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
+	}
+	return data.ExistsLessonByOwnerStudyAndNumber(db, ownerLogin, studyName, number)
 }
 
 func (r *LessonRepo) Get(
@@ -248,14 +394,45 @@ func (r *LessonRepo) Get(
 	id string,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, err := r.load.Get(ctx, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+// Same as Get(), but doesn't use the dataloader
+func (r *LessonRepo) Pull(
+	ctx context.Context,
+	id string,
+) (*LessonPermit, error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	lesson, err := data.GetLesson(db, id)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
@@ -263,168 +440,147 @@ func (r *LessonRepo) Get(
 
 func (r *LessonRepo) GetByEnrollee(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.GetLessonByEnrollee(db, userId, po)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.GetLessonByEnrollee(db, userID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByLabel(
 	ctx context.Context,
-	labelId string,
+	labelID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.GetLessonByLabel(db, labelId, po)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.GetLessonByLabel(db, labelID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByCourse(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.GetLessonByCourse(db, courseId, po)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.GetLessonByCourse(db, courseID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByStudy(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	po *data.PageOptions,
-	opts ...data.LessonFilterOption,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.GetLessonByStudy(db, studyId, po, opts...)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.GetLessonByStudy(db, studyID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByUser(
 	ctx context.Context,
-	userId string,
+	userID string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.GetLessonByUser(db, userId, po)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.GetLessonByUser(db, userID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) GetByCourseNumber(
 	ctx context.Context,
-	courseId string,
+	courseID string,
 	courseNumber int32,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	lesson, err := data.GetLessonByCourseNumber(db, courseId, courseNumber)
+	lesson, err := data.GetLessonByCourseNumber(db, courseID, courseNumber)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
@@ -432,22 +588,79 @@ func (r *LessonRepo) GetByCourseNumber(
 
 func (r *LessonRepo) GetByNumber(
 	ctx context.Context,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	lesson, err := data.GetLessonByNumber(db, studyId, number)
+	lesson, err := data.GetLessonByNumber(db, studyID, number)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &LessonPermit{fieldPermFn, lesson}, nil
+}
+
+func (r *LessonRepo) BatchGetByNumber(
+	ctx context.Context,
+	studyID string,
+	numbers []int32,
+) ([]*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	lessons, err := data.BatchGetLessonByNumber(db, studyID, numbers)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
+}
+
+func (r *LessonRepo) GetByOwnerStudyAndNumber(
+	ctx context.Context,
+	owner,
+	study string,
+	number int32,
+) (*LessonPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	lesson, err := data.GetLessonByOwnerStudyAndNumber(db, owner, study, number)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
@@ -458,46 +671,43 @@ func (r *LessonRepo) Delete(
 	lesson *data.Lesson,
 ) error {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return &myctx.ErrNotFound{"queryer"}
-	}
-	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, lesson); err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	return data.DeleteLesson(db, lesson.Id.String)
+	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, lesson); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	return data.DeleteLesson(db, lesson.ID.String)
 }
 
 func (r *LessonRepo) Search(
 	ctx context.Context,
-	within *mytype.OID,
-	query string,
 	po *data.PageOptions,
+	filters *data.LessonFilterOptions,
 ) ([]*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-	lessons, err := data.SearchLesson(db, within, query, po)
-	if err != nil {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonPermits := make([]*LessonPermit, len(lessons))
-	if len(lessons) > 0 {
-		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessons[0])
-		if err != nil {
-			return nil, err
-		}
-		for i, l := range lessons {
-			lessonPermits[i] = &LessonPermit{fieldPermFn, l}
-		}
+	lessons, err := data.SearchLesson(db, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
-	return lessonPermits, nil
+	return r.filterPermittable(ctx, mytype.ReadAccess, lessons)
 }
 
 func (r *LessonRepo) Update(
@@ -505,21 +715,27 @@ func (r *LessonRepo) Update(
 	l *data.Lesson,
 ) (*LessonPermit, error) {
 	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	lesson, err := data.UpdateLesson(db, l)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lesson)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	return &LessonPermit{fieldPermFn, lesson}, nil
@@ -530,6 +746,9 @@ func (r *LessonRepo) ViewerCanDelete(
 	l *data.Lesson,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
+		if err != ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
 		return false
 	}
 	return true
@@ -540,6 +759,11 @@ func (r *LessonRepo) ViewerCanUpdate(
 	l *data.Lesson,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
+		if err == ErrFieldAccessDenied {
+			return true
+		} else if err != ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
 		return false
 	}
 	return true

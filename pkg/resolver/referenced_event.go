@@ -3,16 +3,19 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 type referencedEventResolver struct {
-	Event *repo.EventPermit
-	Repos *repo.Repos
+	Conf            *myconf.Config
+	Event           *repo.EventPermit
+	ReferenceableID *mytype.OID
+	Repos           *repo.Repos
+	SourceID        *mytype.OID
 }
 
 func (r *referencedEventResolver) CreatedAt() (graphql.Time, error) {
@@ -28,126 +31,65 @@ func (r *referencedEventResolver) ID() (graphql.ID, error) {
 func (r *referencedEventResolver) IsCrossStudy(
 	ctx context.Context,
 ) (bool, error) {
-	sourceId, err := r.Event.SourceId()
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return false, err
 	}
-	sourcePermit, err := r.Repos.GetEventSourceable(ctx, sourceId)
+	source, err := r.Repos.Lesson().Get(ctx, r.SourceID.String)
 	if err != nil {
 		return false, err
 	}
-	source, ok := sourcePermit.(repo.StudyNodePermit)
-	if !ok {
-		return false, errors.New("cannot convert source_permit to study_node_permit")
-	}
-	sourceStudyId, err := source.StudyId()
+	sourceStudyID, err := source.StudyID()
 	if err != nil {
 		return false, err
 	}
-	targetId, err := r.Event.TargetId()
-	if err != nil {
-		return false, err
-	}
-	targetPermit, err := r.Repos.GetEventTargetable(ctx, targetId)
-	if err != nil {
-		return false, err
-	}
-	target, ok := targetPermit.(repo.StudyNodePermit)
-	if !ok {
-		return false, errors.New("cannot convert target_permit to study_node_permit")
-	}
-	targetStudyId, err := target.StudyId()
-	if err != nil {
-		return false, err
-	}
-	return sourceStudyId.String != targetStudyId.String, nil
+	return studyID.String != sourceStudyID.String, nil
 }
 
-func (r *referencedEventResolver) ResourcePath(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	id, err := r.Event.SourceId()
+func (r *referencedEventResolver) Referenceable(ctx context.Context) (*referenceableResolver, error) {
+	permit, err := r.Repos.GetReferenceable(ctx, r.ReferenceableID)
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	permit, err := r.Repos.GetEventSourceable(ctx, id)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
-		return uri, err
+		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return uri, err
-	}
-	urlable, ok := resolver.(uniformResourceLocatable)
+	referenceable, ok := resolver.(referenceable)
 	if !ok {
-		return uri, errors.New("cannot convert resolver to uniform_resource_locatable")
+		return nil, errors.New("cannot convert resolver to referenceable")
 	}
-	return urlable.ResourcePath(ctx)
+	return &referenceableResolver{referenceable}, nil
 }
 
-func (r *referencedEventResolver) Source(
-	ctx context.Context,
-) (*eventSourceableResolver, error) {
-	id, err := r.Event.SourceId()
+func (r *referencedEventResolver) Source(ctx context.Context) (*lessonResolver, error) {
+	source, err := r.Repos.Lesson().Get(ctx, r.SourceID.String)
 	if err != nil {
 		return nil, err
 	}
-	permit, err := r.Repos.GetEventSourceable(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	eventSourceable, ok := resolver.(eventSourceable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to event sourceable")
-	}
-	return &eventSourceableResolver{eventSourceable}, nil
+	return &lessonResolver{Lesson: source, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
-func (r *referencedEventResolver) Target(ctx context.Context) (*eventTargetableResolver, error) {
-	id, err := r.Event.TargetId()
+func (r *referencedEventResolver) Study(ctx context.Context) (*studyResolver, error) {
+	studyID, err := r.Event.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	permit, err := r.Repos.GetEventTargetable(ctx, id)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
-	if err != nil {
-		return nil, err
-	}
-	eventTargetable, ok := resolver.(eventTargetable)
-	if !ok {
-		return nil, errors.New("cannot convert resolver to event targetable")
-	}
-	return &eventTargetableResolver{eventTargetable}, nil
-}
-
-func (r *referencedEventResolver) URL(
-	ctx context.Context,
-) (mygql.URI, error) {
-	var uri mygql.URI
-	resourcePath, err := r.ResourcePath(ctx)
-	if err != nil {
-		return uri, err
-	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
-	return uri, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *referencedEventResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Event.UserId()
+	userID, err := r.Event.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

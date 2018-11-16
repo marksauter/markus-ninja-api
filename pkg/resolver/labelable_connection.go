@@ -1,20 +1,25 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewLabelableConnectionResolver(
-	repos *repo.Repos,
 	labelables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	labelID *mytype.OID,
+	search *string,
+	repos *repo.Repos,
+	conf *myconf.Config,
 ) (*labelableConnectionResolver, error) {
 	edges := make([]*labelableEdgeResolver, len(labelables))
 	for i := range edges {
-		edge, err := NewLabelableEdgeResolver(repos, labelables[i])
+		edge, err := NewLabelableEdgeResolver(labelables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -28,21 +33,25 @@ func NewLabelableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &labelableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		labelables: labelables,
+		labelID:    labelID,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		search:     search,
 	}
 	return resolver, nil
 }
 
 type labelableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*labelableEdgeResolver
 	labelables []repo.NodePermit
+	labelID    *mytype.OID
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	search     *string
 }
 
 func (r *labelableConnectionResolver) Edges() *[]*labelableEdgeResolver {
@@ -53,13 +62,28 @@ func (r *labelableConnectionResolver) Edges() *[]*labelableEdgeResolver {
 	return &[]*labelableEdgeResolver{}
 }
 
+func (r *labelableConnectionResolver) LessonCount(ctx context.Context) (int32, error) {
+	filters := &data.LessonFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Lesson().CountByLabel(ctx, r.labelID.String, filters)
+}
+
+func (r *labelableConnectionResolver) LessonCommentCount(ctx context.Context) (int32, error) {
+	// filters := &data.LessonCommentFilterOptions{
+	//   Search: r.search,
+	// }
+	// return r.repos.LessonComment().CountByLabel(ctx, r.labelID.String)
+	return int32(0), nil
+}
+
 func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 	n := len(r.labelables)
 	nodes := make([]*labelableResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		labelables := r.labelables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range labelables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}
@@ -75,8 +99,4 @@ func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 
 func (r *labelableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
-}
-
-func (r *labelableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
 }

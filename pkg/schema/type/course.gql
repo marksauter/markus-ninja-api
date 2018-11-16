@@ -2,9 +2,6 @@
 type Course implements
   Appleable,
   Createable,
-  Enrollable,
-  EventSourceable,
-  EventTargetable,
   Node,
   Searchable,
   StudyNode,
@@ -44,30 +41,6 @@ type Course implements
   # The description of the course rendered to HTML.
   descriptionHTML: HTML!
 
-  # The number of users that have enrolled in this enrollable.
-  enrolleeCount: Int!
-
-  # Returns a list users who have enrolled in this enrollable.
-  enrollees(
-    # Returns the elements in the list that come after the specified global ID.
-    after: String
-
-    # Returns the elements in the list that come before the specified global ID.
-    before: String
-
-    # Returns the first n elements form the list.
-    first: Int
-
-    # Returns the last n elements form the list.
-    last: Int
-
-    # Order for connection.
-    orderBy: EnrolleeOrder
-  ): EnrolleeConnection!
-
-  # Is the viewer dismissed, enrolled, or ignoring this enrollable.
-  enrollmentStatus: EnrollmentStatus!
-
   id: ID!
 
   # Returns a single lesson from the current course by number.
@@ -84,6 +57,9 @@ type Course implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for lessons returned from the connection.
+    filterBy: LessonFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -93,9 +69,6 @@ type Course implements
     # Ordering options for lessons returned from the connection.
     orderBy: LessonOrder
   ): LessonConnection!
-
-  # How many lessons there are in this course.
-  lessonCount: Int!
 
   # The name of the course.
   name: String!
@@ -123,6 +96,9 @@ type Course implements
     # Returns the elements in the list that come before the specified global ID.
     before: String
 
+    # Filtering options for topics returned from the connection.
+    filterBy: TopicFilters
+
     # Returns the first n elements form the list.
     first: Int
 
@@ -142,8 +118,8 @@ type Course implements
   # Can the viewer admin this object?
   viewerCanAdmin: Boolean!
 
-  # Can the viewer enroll in this enrollable.
-  viewerCanEnroll: Boolean!
+  # Can the viewer apple this appleable.
+  viewerCanApple: Boolean!
 
   # Has the viewer appled this appleable?
   viewerHasAppled: Boolean!

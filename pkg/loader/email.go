@@ -2,12 +2,13 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewEmailLoader() *EmailLoader {
@@ -31,62 +32,6 @@ func NewEmailLoader() *EmailLoader {
 							return
 						}
 						email, err := data.GetEmail(db, key.String())
-						results[i] = &dataloader.Result{Data: email, Error: err}
-					}(i, key)
-				}
-
-				wg.Wait()
-
-				return results
-			},
-		),
-		batchGetByUserBackup: createLoader(
-			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-				var (
-					n       = len(keys)
-					results = make([]*dataloader.Result, n)
-					wg      sync.WaitGroup
-				)
-
-				wg.Add(n)
-
-				for i, key := range keys {
-					go func(i int, key dataloader.Key) {
-						defer wg.Done()
-						db, ok := myctx.QueryerFromContext(ctx)
-						if !ok {
-							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
-							return
-						}
-						email, err := data.GetEmailByUserBackup(db, key.String())
-						results[i] = &dataloader.Result{Data: email, Error: err}
-					}(i, key)
-				}
-
-				wg.Wait()
-
-				return results
-			},
-		),
-		batchGetByUserPrimary: createLoader(
-			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
-				var (
-					n       = len(keys)
-					results = make([]*dataloader.Result, n)
-					wg      sync.WaitGroup
-				)
-
-				wg.Add(n)
-
-				for i, key := range keys {
-					go func(i int, key dataloader.Key) {
-						defer wg.Done()
-						db, ok := myctx.QueryerFromContext(ctx)
-						if !ok {
-							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
-							return
-						}
-						email, err := data.GetEmailByUserPrimary(db, key.String())
 						results[i] = &dataloader.Result{Data: email, Error: err}
 					}(i, key)
 				}
@@ -128,10 +73,8 @@ func NewEmailLoader() *EmailLoader {
 }
 
 type EmailLoader struct {
-	batchGet              *dataloader.Loader
-	batchGetByUserBackup  *dataloader.Loader
-	batchGetByUserPrimary *dataloader.Loader
-	batchGetByValue       *dataloader.Loader
+	batchGet        *dataloader.Loader
+	batchGetByValue *dataloader.Loader
 }
 
 func (r *EmailLoader) Clear(id string) {
@@ -150,50 +93,17 @@ func (r *EmailLoader) Get(
 ) (*data.Email, error) {
 	emailData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	email, ok := emailData.(*data.Email)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	r.batchGetByValue.Prime(ctx, dataloader.StringKey(email.Value.String), email)
-
-	return email, nil
-}
-
-func (r *EmailLoader) GetByUserPrimary(
-	ctx context.Context,
-	userId string,
-) (*data.Email, error) {
-	emailData, err := r.batchGetByUserPrimary.Load(ctx, dataloader.StringKey(userId))()
-	if err != nil {
-		return nil, err
-	}
-	email, ok := emailData.(*data.Email)
-	if !ok {
-		return nil, fmt.Errorf("wrong type")
-	}
-
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
-
-	return email, nil
-}
-
-func (r *EmailLoader) GetByUserBackup(
-	ctx context.Context,
-	userId string,
-) (*data.Email, error) {
-	emailData, err := r.batchGetByUserBackup.Load(ctx, dataloader.StringKey(userId))()
-	if err != nil {
-		return nil, err
-	}
-	email, ok := emailData.(*data.Email)
-	if !ok {
-		return nil, fmt.Errorf("wrong type")
-	}
-
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
 
 	return email, nil
 }
@@ -204,14 +114,17 @@ func (r *EmailLoader) GetByValue(
 ) (*data.Email, error) {
 	emailData, err := r.batchGetByValue.Load(ctx, dataloader.StringKey(value))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	email, ok := emailData.(*data.Email)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	r.batchGet.Prime(ctx, dataloader.StringKey(email.Id.String), email)
+	r.batchGet.Prime(ctx, dataloader.StringKey(email.ID.String), email)
 
 	return email, nil
 }

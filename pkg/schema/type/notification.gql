@@ -3,16 +3,22 @@ type Notification implements Node {
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
-  # The event that triggered the notification.
-  event: NotificationEvent!
-
   id: ID!
+
+  # Identifies the date and time when the object was last read.
+  lastReadAt: Time!
 
   # The reason for receiving this notification.
   reason: String!
 
+  # The lesson which is the subject of the notification.
+  subject: Lesson!
+
   # The study associated with this notification.
   study: Study!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
 
   # The user who performed the notification.
   user: User!

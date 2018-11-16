@@ -2,13 +2,14 @@ package loader
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 
 	"github.com/graph-gophers/dataloader"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewAppledLoader() *AppledLoader {
@@ -97,14 +98,17 @@ func (r *AppledLoader) Get(ctx context.Context, id int32) (*data.Appled, error) 
 	key := strconv.Itoa(int(id))
 	appledData, err := r.batchGet.Load(ctx, dataloader.StringKey(key))()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	appled, ok := appledData.(*data.Appled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	compositeKey := newCompositeKey(appled.AppleableId.String, appled.UserId.String)
+	compositeKey := newCompositeKey(appled.AppleableID.String, appled.UserID.String)
 	r.batchGetByAppleableAndUser.Prime(ctx, compositeKey, appled)
 
 	return appled, nil
@@ -112,20 +116,23 @@ func (r *AppledLoader) Get(ctx context.Context, id int32) (*data.Appled, error) 
 
 func (r *AppledLoader) GetByAppleableAndUser(
 	ctx context.Context,
-	appleableId,
-	userId string,
+	appleableID,
+	userID string,
 ) (*data.Appled, error) {
-	compositeKey := newCompositeKey(appleableId, userId)
+	compositeKey := newCompositeKey(appleableID, userID)
 	appledData, err := r.batchGetByAppleableAndUser.Load(ctx, compositeKey)()
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	appled, ok := appledData.(*data.Appled)
 	if !ok {
-		return nil, fmt.Errorf("wrong type")
+		err := ErrWrongType
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	key := strconv.Itoa(int(appled.Id.Int))
+	key := strconv.Itoa(int(appled.ID.Int))
 	r.batchGet.Prime(ctx, dataloader.StringKey(key), appled)
 
 	return appled, nil

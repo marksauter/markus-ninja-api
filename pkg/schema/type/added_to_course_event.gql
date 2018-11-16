@@ -1,0 +1,22 @@
+# Represents a added to course event on a given subject.
+type AddedToCourseEvent implements 
+  LessonTimelineEvent,
+  Node
+{
+  # The course to which the lesson was added.
+  course: Course!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The lesson which was added.
+  lesson: Lesson!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}

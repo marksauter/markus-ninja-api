@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -19,199 +18,199 @@ type Course struct {
 	CreatedAt   pgtype.Timestamptz  `db:"created_at" permit:"read"`
 	Description pgtype.Text         `db:"description" permit:"create/read/update"`
 	EnrolledAt  pgtype.Timestamptz  `db:"enrolled_at"`
-	Id          mytype.OID          `db:"id" permit:"read"`
-	Name        mytype.URLSafeName  `db:"name" permit:"create/read"`
+	ID          mytype.OID          `db:"id" permit:"read"`
+	Name        pgtype.Text         `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
 	Status      mytype.CourseStatus `db:"status" permit:"read/update"`
-	StudyId     mytype.OID          `db:"study_id" permit:"create/read"`
+	StudyID     mytype.OID          `db:"study_id" permit:"create/read"`
 	TopicedAt   pgtype.Timestamptz  `db:"topiced_at"`
 	UpdatedAt   pgtype.Timestamptz  `db:"updated_at" permit:"read"`
-	UserId      mytype.OID          `db:"user_id" permit:"create/read"`
+	UserID      mytype.OID          `db:"user_id" permit:"create/read"`
 }
 
-const countCourseByAppleeSQL = `
-	SELECT COUNT(*)
-	FROM course_appled
-	WHERE user_id = $1
-`
+func courseDelimeter(r rune) bool {
+	return r == '-' || r == '_'
+}
+
+type CourseFilterOptions struct {
+	Topics *[]string
+	Search *string
+}
+
+func (src *CourseFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
+	if src == nil {
+		return nil
+	}
+
+	fromParts := make([]string, 0, 2)
+	whereParts := make([]string, 0, 2)
+	if src.Topics != nil && len(*src.Topics) > 0 {
+		query := ToTsQuery(strings.Join(*src.Topics, " "))
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS topics_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".topics @@ topics_query END",
+		)
+	}
+	if src.Search != nil {
+		query := ToPrefixTsQuery(*src.Search)
+		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS document_query")
+		whereParts = append(
+			whereParts,
+			"CASE "+args.Append(query)+" WHEN '*' THEN TRUE ELSE "+from+".document @@ document_query END",
+		)
+	}
+
+	where := ""
+	if len(whereParts) > 0 {
+		where = "(" + strings.Join(whereParts, " AND ") + ")"
+	}
+
+	return &SQLParts{
+		From:  strings.Join(fromParts, ", "),
+		Where: where,
+	}
+}
 
 func CountCourseByApplee(
 	db Queryer,
-	appleeId string,
-) (n int32, err error) {
-	mylog.Log.WithField("applee_id", appleeId).Info("CountCourseByApplee(applee_id)")
-	err = prepareQueryRow(
-		db,
-		"countCourseByApplee",
-		countCourseByAppleeSQL,
-		appleeId,
-	).Scan(&n)
+	appleeID string,
+	filters *CourseFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
+	from := "appled_course"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByApplee", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
+	return n, err
 }
-
-const countCourseByEnrolleeSQL = `
-	SELECT COUNT(*)
-	FROM course_enrolled
-	WHERE user_id = $1
-`
 
 func CountCourseByEnrollee(
 	db Queryer,
-	enrolleeId string,
-) (n int32, err error) {
-	mylog.Log.WithField("enrollee_id", enrolleeId).Info("CountCourseByEnrollee(enrollee_id)")
-	err = prepareQueryRow(
-		db,
-		"countCourseByEnrollee",
-		countCourseByEnrolleeSQL,
-		enrolleeId,
-	).Scan(&n)
+	enrolleeID string,
+	filters *CourseFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+	from := "enrolled_course"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByEnrollee", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
+	return n, err
 }
-
-const countCourseByStudySQL = `
-	SELECT COUNT(*)
-	FROM course
-	WHERE study_id = $1
-`
 
 func CountCourseByStudy(
 	db Queryer,
-	studyId string,
-) (n int32, err error) {
-	mylog.Log.WithField("study_id", studyId).Info("CountCourseByStudy(study_id)")
-	err = prepareQueryRow(
-		db,
-		"countCourseByStudy",
-		countCourseByStudySQL,
-		studyId,
-	).Scan(&n)
+	studyID string,
+	filters *CourseFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+	from := "course_search_index"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByStudy", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
+	return n, err
 }
-
-const countCourseByTopicSQL = `
-	SELECT COUNT(*)
-	FROM topiced_course
-	WHERE topic_id = $1
-`
 
 func CountCourseByTopic(
 	db Queryer,
-	topicId string,
-) (n int32, err error) {
-	mylog.Log.WithField(
-		"topic_id", topicId,
-	).Info("CountCourseByTopic(topic_id)")
-	err = prepareQueryRow(
-		db,
-		"countCourseByTopic",
-		countCourseByTopicSQL,
-		topicId,
-	).Scan(&n)
+	topicID string,
+	filters *CourseFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
+	from := "topiced_course"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByTopic", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
+	return n, err
 }
-
-const countCourseByUserSQL = `
-	SELECT COUNT(*)
-	FROM course
-	WHERE user_id = $1
-`
 
 func CountCourseByUser(
 	db Queryer,
-	userId string,
-) (n int32, err error) {
-	mylog.Log.WithField("user_id", userId).Info("CountCourseByUser(user_id)")
-	err = prepareQueryRow(
-		db,
-		"countCourseByUser",
-		countCourseByUserSQL,
-		userId,
-	).Scan(&n)
+	userID string,
+	filters *CourseFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
+	from := "course_search_index"
 
-	mylog.Log.WithField("n", n).Info("")
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countCourseByUser", sql)
 
-	return
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
+	}
+	return n, err
 }
 
 func CountCourseBySearch(
 	db Queryer,
-	within *mytype.OID,
-	query string,
+	filters *CourseFilterOptions,
 ) (int32, error) {
-	mylog.Log.WithField("query", query).Info("CountCourseBySearch(query)")
-	var n int32
-	var args pgx.QueryArgs
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string { return "" }
 	from := "course_search_index"
-	in := within
-	if in != nil {
-		if in.Type != "User" && in.Type != "Topic" {
-			return n, fmt.Errorf(
-				"cannot search for courses within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(db, in.String)
-			if err != nil {
-				return n, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					nil,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
-	}
 
-	sql := CountSearchSQL(from, in, ToPrefixTsQuery(query), "document", &args)
-
+	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countCourseBySearch", sql)
 
+	var n int32
 	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
-	return n, err
-}
-
-func CountCourseByTopicSearch(
-	db Queryer,
-	query string,
-) (n int32, err error) {
-	mylog.Log.WithField("query", query).Info("CountCourseBySearch(query)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 2))
-	if query == "" {
-		query = "*"
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
 	}
-	sql := `
-		SELECT COUNT(*)
-		FROM course_search_index
-		WHERE topics @@ to_tsquery('simple',` + query + `)
-	`
-	psName := preparedName("countCourseBySearch", sql)
-
-	err = prepareQueryRow(db, psName, sql, args...).Scan(&n)
-
-	return
+	return n, err
 }
 
 func getCourse(
@@ -226,18 +225,19 @@ func getCourse(
 		&row.CompletedAt,
 		&row.CreatedAt,
 		&row.Description,
-		&row.Id,
+		&row.ID,
 		&row.Name,
 		&row.Number,
 		&row.Status,
-		&row.StudyId,
+		&row.StudyID,
 		&row.UpdatedAt,
-		&row.UserId,
+		&row.UserID,
 	)
 	if err == pgx.ErrNoRows {
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, ErrNotFound
 	} else if err != nil {
-		mylog.Log.WithError(err).Error("failed to get course")
+		mylog.Log.WithError(err).Debug(util.Trace(""))
 		return nil, err
 	}
 
@@ -248,14 +248,15 @@ func getManyCourse(
 	db Queryer,
 	name string,
 	sql string,
+	rows *[]*Course,
 	args ...interface{},
-) ([]*Course, error) {
-	var rows []*Course
-
+) error {
 	dbRows, err := prepareQuery(db, name, sql, args...)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
+	defer dbRows.Close()
 
 	for dbRows.Next() {
 		var row Course
@@ -264,28 +265,26 @@ func getManyCourse(
 			&row.CompletedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.Id,
+			&row.ID,
 			&row.Name,
 			&row.Number,
 			&row.Status,
-			&row.StudyId,
+			&row.StudyID,
 			&row.UpdatedAt,
-			&row.UserId,
+			&row.UserID,
 		)
-		rows = append(rows, &row)
+		*rows = append(*rows, &row)
 	}
 
 	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
-		return nil, err
+		mylog.Log.WithError(err).Debug(util.Trace(""))
+		return err
 	}
 
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
+	return nil
 }
 
-const getCourseByIdSQL = `
+const getCourseByIDSQL = `
 	SELECT
 		advanced_at,
 		completed_at,
@@ -306,260 +305,13 @@ func GetCourse(
 	db Queryer,
 	id string,
 ) (*Course, error) {
-	mylog.Log.WithField("id", id).Info("GetCourse(id)")
-	return getCourse(db, "getCourseById", getCourseByIdSQL, id)
-}
-
-func GetCourseByApplee(
-	db Queryer,
-	userId string,
-	po *PageOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByApplee(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`applee_id = ` + args.Append(userId)}
-
-	selects := []string{
-		"advanced_at",
-		"appled_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"number",
-		"status",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "appled_course"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getCoursesByAppled", sql)
-
-	var rows []*Course
-
-	dbRows, err := prepareQuery(db, psName, sql, args...)
+	course, err := getCourse(db, "getCourseByID", getCourseByIDSQL, id)
 	if err != nil {
-		return nil, err
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("id", id).Info(util.Trace("course found"))
 	}
-
-	for dbRows.Next() {
-		var row Course
-		dbRows.Scan(
-			&row.AdvancedAt,
-			&row.AppledAt,
-			&row.CompletedAt,
-			&row.CreatedAt,
-			&row.Description,
-			&row.Id,
-			&row.Name,
-			&row.Number,
-			&row.Status,
-			&row.StudyId,
-			&row.UpdatedAt,
-			&row.UserId,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
-}
-
-func GetCourseByEnrollee(
-	db Queryer,
-	userId string,
-	po *PageOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByEnrollee(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`enrollee_id = ` + args.Append(userId)}
-
-	selects := []string{
-		"advanced_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"enrolled_at",
-		"id",
-		"name",
-		"number",
-		"status",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "enrolled_course"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getCoursesByEnrollee", sql)
-
-	var rows []*Course
-
-	dbRows, err := prepareQuery(db, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row Course
-		dbRows.Scan(
-			&row.AdvancedAt,
-			&row.CompletedAt,
-			&row.CreatedAt,
-			&row.Description,
-			&row.EnrolledAt,
-			&row.Id,
-			&row.Name,
-			&row.Number,
-			&row.Status,
-			&row.StudyId,
-			&row.UpdatedAt,
-			&row.UserId,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
-}
-
-func GetCourseByTopic(
-	db Queryer,
-	topicId string,
-	po *PageOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("topic_id", topicId).Info("GetCourseByTopic(topic_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`topic_id = ` + args.Append(topicId)}
-
-	selects := []string{
-		"advanced_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"number",
-		"status",
-		"study_id",
-		"topiced_at",
-		"updated_at",
-		"user_id",
-	}
-	from := "topiced_course"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getCoursesByTopic", sql)
-
-	var rows []*Course
-
-	dbRows, err := prepareQuery(db, psName, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for dbRows.Next() {
-		var row Course
-		dbRows.Scan(
-			&row.AdvancedAt,
-			&row.CompletedAt,
-			&row.CreatedAt,
-			&row.Description,
-			&row.Id,
-			&row.Name,
-			&row.Number,
-			&row.Status,
-			&row.StudyId,
-			&row.TopicedAt,
-			&row.UpdatedAt,
-			&row.UserId,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error("failed to get courses")
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info("")
-
-	return rows, nil
-}
-
-func GetCourseByStudy(
-	db Queryer,
-	studyId string,
-	po *PageOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("study_id", studyId).Info("GetCourseByStudy(study_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`study_id = ` + args.Append(studyId)}
-
-	selects := []string{
-		"advanced_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"number",
-		"status",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "course"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getCoursesByStudyId", sql)
-
-	return getManyCourse(db, psName, sql, args...)
-}
-
-func GetCourseByUser(
-	db Queryer,
-	userId string,
-	po *PageOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("user_id", userId).Info("GetCourseByUser(user_id)")
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := []string{`user_id = ` + args.Append(userId)}
-
-	selects := []string{
-		"advanced_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"id",
-		"name",
-		"number",
-		"status",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "course"
-	sql := SQL(selects, from, where, &args, po)
-
-	psName := preparedName("getCoursesByUserId", sql)
-
-	return getManyCourse(db, psName, sql, args...)
+	return course, err
 }
 
 const getCourseByNameSQL = `
@@ -581,14 +333,16 @@ const getCourseByNameSQL = `
 
 func GetCourseByName(
 	db Queryer,
-	studyId,
+	studyID,
 	name string,
 ) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
-		"name":     name,
-	}).Info("GetCourseByName(study_id, name)")
-	return getCourse(db, "getCourseByName", getCourseByNameSQL, studyId, name)
+	course, err := getCourse(db, "getCourseByName", getCourseByNameSQL, studyID, name)
+	if err != nil {
+		mylog.Log.WithField("name", name).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("name", name).Info(util.Trace("course found"))
+	}
+	return course, err
 }
 
 const getCourseByNumberSQL = `
@@ -610,14 +364,22 @@ const getCourseByNumberSQL = `
 
 func GetCourseByNumber(
 	db Queryer,
-	studyId string,
+	studyID string,
 	number int32,
 ) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study_id": studyId,
-		"number":   number,
-	}).Info("GetCourseByNumber(study_id, number)")
-	return getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyId, number)
+	course, err := getCourse(db, "getCourseByNumber", getCourseByNumberSQL, studyID, number)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study_id": studyID,
+			"number":   number,
+		}).Info(util.Trace("course found"))
+	}
+	return course, err
 }
 
 const getCourseByStudyAndNameSQL = `
@@ -643,26 +405,370 @@ func GetCourseByStudyAndName(
 	study,
 	name string,
 ) (*Course, error) {
-	mylog.Log.WithFields(logrus.Fields{
-		"study": study,
-		"name":  name,
-	}).Info("GetCourseByStudyAndName(study, name)")
-	return getCourse(db, "getCourseByStudyAndName", getCourseByStudyAndNameSQL, study, name)
+	course, err := getCourse(
+		db,
+		"getCourseByStudyAndName",
+		getCourseByStudyAndNameSQL,
+		study,
+		name,
+	)
+	if err != nil {
+		mylog.Log.WithFields(logrus.Fields{
+			"study": study,
+			"name":  name,
+		}).WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithFields(logrus.Fields{
+			"study": study,
+			"name":  name,
+		}).Info(util.Trace("course found"))
+	}
+	return course, err
+}
+
+func GetCourseByApplee(
+	db Queryer,
+	appleeID string,
+	po *PageOptions,
+	filters *CourseFilterOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("applee_id", appleeID).Info("GetCourseByApplee(applee_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.applee_id = ` + args.Append(appleeID)
+	}
+
+	selects := []string{
+		"advanced_at",
+		"appled_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "appled_course"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getCoursesByAppled", sql)
+
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	defer dbRows.Close()
+
+	for dbRows.Next() {
+		var row Course
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.AppledAt,
+			&row.CompletedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.ID,
+			&row.Name,
+			&row.Number,
+			&row.Status,
+			&row.StudyID,
+			&row.UpdatedAt,
+			&row.UserID,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
+}
+
+func GetCourseByEnrollee(
+	db Queryer,
+	enrolleeID string,
+	po *PageOptions,
+	filters *CourseFilterOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetCourseByEnrollee(enrollee_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.enrollee_id = ` + args.Append(enrolleeID)
+	}
+
+	selects := []string{
+		"advanced_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"enrolled_at",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "enrolled_course"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getCoursesByEnrollee", sql)
+
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	defer dbRows.Close()
+
+	for dbRows.Next() {
+		var row Course
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CompletedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.EnrolledAt,
+			&row.ID,
+			&row.Name,
+			&row.Number,
+			&row.Status,
+			&row.StudyID,
+			&row.UpdatedAt,
+			&row.UserID,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
+}
+
+func GetCourseByTopic(
+	db Queryer,
+	topicID string,
+	po *PageOptions,
+	filters *CourseFilterOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("topic_id", topicID).Info("GetCourseByTopic(topic_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.topic_id = ` + args.Append(topicID)
+	}
+
+	selects := []string{
+		"advanced_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"topiced_at",
+		"updated_at",
+		"user_id",
+	}
+	from := "topiced_course"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getCoursesByTopic", sql)
+
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	defer dbRows.Close()
+
+	for dbRows.Next() {
+		var row Course
+		dbRows.Scan(
+			&row.AdvancedAt,
+			&row.CompletedAt,
+			&row.CreatedAt,
+			&row.Description,
+			&row.ID,
+			&row.Name,
+			&row.Number,
+			&row.Status,
+			&row.StudyID,
+			&row.TopicedAt,
+			&row.UpdatedAt,
+			&row.UserID,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
+}
+
+func GetCourseByStudy(
+	db Queryer,
+	studyID string,
+	po *PageOptions,
+	filters *CourseFilterOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("study_id", studyID).Info("GetCourseByStudy(study_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.study_id = ` + args.Append(studyID)
+	}
+
+	selects := []string{
+		"advanced_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "course_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getCoursesByStudyID", sql)
+
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
+}
+
+func GetCourseByUser(
+	db Queryer,
+	userID string,
+	po *PageOptions,
+	filters *CourseFilterOptions,
+) ([]*Course, error) {
+	mylog.Log.WithField("user_id", userID).Info("GetCourseByUser(user_id)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.user_id = ` + args.Append(userID)
+	}
+
+	selects := []string{
+		"advanced_at",
+		"completed_at",
+		"created_at",
+		"description",
+		"id",
+		"name",
+		"number",
+		"status",
+		"study_id",
+		"updated_at",
+		"user_id",
+	}
+	from := "course_search_index"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getCoursesByUserID", sql)
+
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
 }
 
 func CreateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
-	mylog.Log.Info("CreateCourse()")
 	args := pgx.QueryArgs(make([]interface{}, 0, 7))
 
 	var columns, values []string
 
 	id, _ := mytype.NewOID("Course")
-	row.Id.Set(id)
+	row.ID.Set(id)
 	columns = append(columns, "id")
-	values = append(values, args.Append(&row.Id))
+	values = append(values, args.Append(&row.ID))
 
 	if row.Description.Status != pgtype.Undefined {
 		columns = append(columns, "description")
@@ -680,18 +786,18 @@ func CreateCourse(
 		columns = append(columns, "number")
 		values = append(values, args.Append(&row.Number))
 	}
-	if row.StudyId.Status != pgtype.Undefined {
+	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
-		values = append(values, args.Append(&row.StudyId))
+		values = append(values, args.Append(&row.StudyID))
 	}
-	if row.UserId.Status != pgtype.Undefined {
+	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
-		values = append(values, args.Append(&row.UserId))
+		values = append(values, args.Append(&row.UserID))
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -707,42 +813,53 @@ func CreateCourse(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create course")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	// e, err := NewEvent(CreatedEvent, &row.UserId, &row.Id, &row.UserId)
-	// if err != nil {
-	//   return nil, err
-	// }
-	// _, err = CreateEvent(tx, e)
-	// if err != nil {
-	//   return nil, err
-	// }
-
-	course, err := GetCourse(tx, row.Id.String)
+	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	eventPayload, err := NewCourseCreatedPayload(&course.ID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := NewCourseEvent(eventPayload, &course.StudyID, &course.UserID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := CreateEvent(tx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.Info(util.Trace("course created"))
 	return course, nil
 }
 
@@ -755,25 +872,40 @@ func DeleteCourse(
 	db Queryer,
 	id string,
 ) error {
-	mylog.Log.WithField("id", id).Info("DeleteCourse(id)")
 	commandTag, err := prepareExec(db, "deleteCourse", deleteCourseSQL, id)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithField("id", id).WithError(err).Error(util.Trace(""))
+		return err
 	}
 
+	mylog.Log.WithField("id", id).Info(util.Trace("course deleted"))
 	return nil
 }
 
 func SearchCourse(
 	db Queryer,
-	within *mytype.OID,
-	query string,
 	po *PageOptions,
+	filters *CourseFilterOptions,
 ) ([]*Course, error) {
-	mylog.Log.WithField("query", query).Info("SearchCourse(query)")
+	var rows []*Course
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*Course, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	var args pgx.QueryArgs
+	where := func(string) string { return "" }
+
 	selects := []string{
 		"advanced_at",
 		"completed_at",
@@ -788,72 +920,23 @@ func SearchCourse(
 		"user_id",
 	}
 	from := "course_search_index"
-	var args pgx.QueryArgs
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
-	}
-
-	in := within
-	if in != nil {
-		if in.Type != "Study" && in.Type != "Topic" {
-			return nil, fmt.Errorf(
-				"cannot search for courses within type `%s`",
-				in.Type,
-			)
-		}
-		if in.Type == "Topic" {
-			topic, err := GetTopic(tx, in.String)
-			if err != nil {
-				return nil, err
-			}
-			from = ToSubQuery(
-				SearchSQL(
-					[]string{"*"},
-					from,
-					nil,
-					ToTsQuery(topic.Name.String),
-					"topics",
-					po,
-					&args,
-				),
-			)
-			// set `in` to nil so that it doesn't affect next call to SearchSQL
-			// TODO: fix this ugliness please
-			in = nil
-		}
-	}
-
-	sql := SearchSQL(selects, from, in, ToPrefixTsQuery(query), "document", po, &args)
+	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchCourseIndex", sql)
 
-	courses, err := getManyCourse(tx, psName, sql, args...)
-	if err != nil {
+	if err := getManyCourse(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if newTx {
-		err = CommitTransaction(tx)
-		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
-			return nil, err
-		}
-	}
-
-	return courses, nil
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
+	return rows, nil
 }
 
 func UpdateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
-	mylog.Log.WithField("id", row.Id.String).Info("UpdateCourse(id)")
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -871,12 +954,12 @@ func UpdateCourse(
 	}
 
 	if len(sets) == 0 {
-		return GetCourse(db, row.Id.String)
+		return GetCourse(db, row.ID.String)
 	}
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {
-		mylog.Log.WithError(err).Error("error starting transaction")
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if newTx {
@@ -886,46 +969,49 @@ func UpdateCourse(
 	sql := `
 		UPDATE course
 		SET ` + strings.Join(sets, ",") + `
-		WHERE id = ` + args.Append(row.Id.String) + `
+		WHERE id = ` + args.Append(row.ID.String) + `
 	`
 
 	psName := preparedName("updateCourse", sql)
 
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to update course")
 		if pgErr, ok := err.(pgx.PgError); ok {
 			switch PSQLError(pgErr.Code) {
 			case NotNullViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, RequiredFieldError(pgErr.ColumnName)
 			case UniqueViolation:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
 			default:
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
 		}
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 	if commandTag.RowsAffected() != 1 {
-		return nil, ErrNotFound
+		err := ErrNotFound
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
-	course, err := GetCourse(tx, row.Id.String)
+	course, err := GetCourse(tx, row.ID.String)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
 	if newTx {
 		err = CommitTransaction(tx)
 		if err != nil {
-			mylog.Log.WithError(err).Error("error during transaction")
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
 	}
 
+	mylog.Log.WithField("id", row.ID.String).Info(util.Trace("course updated"))
 	return course, nil
-}
-
-func courseDelimeter(r rune) bool {
-	return r == '-' || r == '_'
 }

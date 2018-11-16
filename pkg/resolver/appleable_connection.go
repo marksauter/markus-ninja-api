@@ -1,20 +1,26 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
 func NewAppleableConnectionResolver(
+	appleables []repo.NodePermit,
+	pageOptions *data.PageOptions,
+	userID *mytype.OID,
+	search *string,
 	repos *repo.Repos,
-	appleables []repo.NodePermit, pageOptions *data.PageOptions,
-	studyCount int32,
+	conf *myconf.Config,
 ) (*appleableConnectionResolver, error) {
 	edges := make([]*appleableEdgeResolver, len(appleables))
 	for i := range edges {
-		edge, err := NewAppleableEdgeResolver(repos, appleables[i])
+		edge, err := NewAppleableEdgeResolver(appleables[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -28,21 +34,32 @@ func NewAppleableConnectionResolver(
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
 	resolver := &appleableConnectionResolver{
+		conf:       conf,
 		edges:      edges,
 		appleables: appleables,
 		pageInfo:   pageInfo,
 		repos:      repos,
-		studyCount: studyCount,
+		search:     search,
+		userID:     userID,
 	}
 	return resolver, nil
 }
 
 type appleableConnectionResolver struct {
+	conf       *myconf.Config
 	edges      []*appleableEdgeResolver
 	appleables []repo.NodePermit
 	pageInfo   *pageInfoResolver
 	repos      *repo.Repos
-	studyCount int32
+	search     *string
+	userID     *mytype.OID
+}
+
+func (r *appleableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
+	filters := &data.CourseFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Course().CountByApplee(ctx, r.userID.String, filters)
 }
 
 func (r *appleableConnectionResolver) Edges() *[]*appleableEdgeResolver {
@@ -59,7 +76,7 @@ func (r *appleableConnectionResolver) Nodes() (*[]*appleableResolver, error) {
 	if n > 0 && !r.pageInfo.isEmpty {
 		appleables := r.appleables[r.pageInfo.start : r.pageInfo.end+1]
 		for _, t := range appleables {
-			resolver, err := nodePermitToResolver(t, r.repos)
+			resolver, err := nodePermitToResolver(t, r.repos, r.conf)
 			if err != nil {
 				return nil, err
 			}
@@ -77,6 +94,9 @@ func (r *appleableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *appleableConnectionResolver) StudyCount() int32 {
-	return r.studyCount
+func (r *appleableConnectionResolver) StudyCount(ctx context.Context) (int32, error) {
+	filters := &data.StudyFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.Study().CountByApplee(ctx, r.userID.String, filters)
 }

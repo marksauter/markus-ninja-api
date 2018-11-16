@@ -3,6 +3,6 @@ enum LabelOrderField {
   # Order labels by creation time.
   LABELED_AT
 
-  # Order labels by number.
-  NUMBER
+  # Order labels by name.
+  NAME
 }

@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Label = labelResolver
-
 type labelResolver struct {
+	Conf  *myconf.Config
 	Label *repo.LabelPermit
 	Repos *repo.Repos
 }
@@ -51,6 +51,7 @@ func (r *labelResolver) Labelables(
 		First   *int32
 		Last    *int32
 		OrderBy *OrderArg
+		Search  *string
 		Type    string
 	},
 ) (*labelableConnectionResolver, error) {
@@ -79,20 +80,28 @@ func (r *labelResolver) Labelables(
 		return nil, err
 	}
 
-	lessonCount, err := r.Repos.Lesson().CountByLabel(ctx, id.String)
-	if err != nil {
-		return nil, err
-	}
 	permits := []repo.NodePermit{}
 
 	switch labelableType {
 	case LabelableTypeLesson:
-		studies, err := r.Repos.Lesson().GetByLabel(ctx, id.String, pageOptions)
+		filters := &data.LessonFilterOptions{
+			Search: args.Search,
+		}
+		lessons, err := r.Repos.Lesson().GetByLabel(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(studies))
-		for i, l := range studies {
+		permits = make([]repo.NodePermit, len(lessons))
+		for i, l := range lessons {
+			permits[i] = l
+		}
+	case LabelableTypeLessonComment:
+		lessonComments, err := r.Repos.LessonComment().GetByLabel(ctx, id.String, pageOptions, nil)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(lessonComments))
+		for i, l := range lessonComments {
 			permits[i] = l
 		}
 	default:
@@ -100,10 +109,12 @@ func (r *labelResolver) Labelables(
 	}
 
 	return NewLabelableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
-		lessonCount,
+		id,
+		args.Search,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -132,15 +143,15 @@ func (r *labelResolver) ResourcePath(ctx context.Context) (mygql.URI, error) {
 func (r *labelResolver) Study(
 	ctx context.Context,
 ) (*studyResolver, error) {
-	studyId, err := r.Label.StudyId()
+	studyID, err := r.Label.StudyID()
 	if err != nil {
 		return nil, err
 	}
-	study, err := r.Repos.Study().Get(ctx, studyId.String)
+	study, err := r.Repos.Study().Get(ctx, studyID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *labelResolver) UpdatedAt() (graphql.Time, error) {
@@ -154,7 +165,7 @@ func (r *labelResolver) URL(ctx context.Context) (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("%s%s", clientURL, resourcePath))
+	uri = mygql.URI(fmt.Sprintf("%s%s", r.Conf.ClientURL, resourcePath))
 	return uri, nil
 }
 

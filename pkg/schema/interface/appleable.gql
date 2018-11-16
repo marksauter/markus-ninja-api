@@ -20,6 +20,9 @@ interface Appleable {
 
   id: ID!
 
+  # Can the viewer apple this appleable.
+  viewerCanApple: Boolean!
+
   # Has the viewer appled this appleable.
   viewerHasAppled: Boolean!
 }

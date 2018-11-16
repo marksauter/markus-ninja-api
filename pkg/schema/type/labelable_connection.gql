@@ -15,12 +15,15 @@ type LabelableConnection {
   # A list of edges.
   edges: [LabelableEdge]
 
+  # The number of lessons associated with the label.
+  lessonCount: Int!
+
+  # The number of lesson comments associated with the label.
+  lessonCommentCount: Int!
+
   # A list of nodes.
   nodes: [Labelable]
 
   # Information to aid in pagination.
   pageInfo: PageInfo!
-
-  # The number of studies associated with the label.
-  studyCount: Int!
 }

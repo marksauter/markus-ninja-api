@@ -5,9 +5,11 @@
 /.dockerfile-*
 *.toml
 /gin-bin
+/tmp
 
 note
 vendor/*
+log.txt
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*

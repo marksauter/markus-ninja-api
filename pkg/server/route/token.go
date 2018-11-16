@@ -1,31 +1,52 @@
 package route
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/badoux/checkmail"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
-var TokenCors = cors.New(cors.Options{
-	AllowedHeaders: []string{"Authorization"},
-	AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-	AllowedOrigins: []string{"ma.rkus.ninja", "http://localhost:*"},
-	Debug:          true,
-})
-
 type TokenHandler struct {
 	AuthSvc *service.AuthService
+	Conf    *myconf.Config
 	Db      data.Queryer
 }
 
+func (h TokenHandler) Cors() *cors.Cors {
+	branch := util.GetRequiredEnv("BRANCH")
+	allowedOrigins := []string{"ma.rkus.ninja"}
+	if branch != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:*")
+	}
+
+	return cors.New(cors.Options{
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Authorization"},
+		AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
+		AllowedOrigins:   allowedOrigins,
+		// Debug: true,
+	})
+}
+
 func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.AuthSvc == nil || h.Conf == nil || h.Db == nil {
+		err := errors.New("route inproperly setup")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		response := myhttp.InternalServerErrorResponse(err.Error())
+		myhttp.WriteResponseTo(rw, response)
+		return
+	}
+
 	rw.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	rw.Header().Set("Cache-Control", "no-store")
 	rw.Header().Set("Pragma", "no-cache")
@@ -68,7 +89,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
-	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.Id.String}
+	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.ID.String}
 	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -76,19 +97,12 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	response := TokenSuccessResponse{
-		AccessToken: jwt.String(),
-		ExpiresIn:   jwt.Payload.Exp,
-	}
-	myhttp.WriteResponseTo(rw, &response)
+	http.SetCookie(rw, &http.Cookie{
+		Name:     "access_token",
+		Value:    jwt.String(),
+		Expires:  time.Unix(jwt.Payload.Exp, 0),
+		HttpOnly: true,
+		// Secure:   true,
+	})
 	return
-}
-
-type TokenSuccessResponse struct {
-	AccessToken string              `json:"access_token,omitempty"`
-	ExpiresIn   myjwt.UnixTimestamp `json:"expires_in,omitempty"`
-}
-
-func (r *TokenSuccessResponse) StatusHTTP() int {
-	return http.StatusOK
 }

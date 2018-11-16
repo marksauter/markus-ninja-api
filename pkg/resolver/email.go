@@ -3,13 +3,13 @@ package resolver
 import (
 	"context"
 
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-type Email = emailResolver
-
 type emailResolver struct {
+	Conf  *myconf.Config
 	Email *repo.EmailPermit
 	Repos *repo.Repos
 }
@@ -33,15 +33,15 @@ func (r *emailResolver) Type() (string, error) {
 }
 
 func (r *emailResolver) User(ctx context.Context) (*userResolver, error) {
-	userId, err := r.Email.UserId()
+	userID, err := r.Email.UserID()
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.Repos.User().Get(ctx, userId.String)
+	user, err := r.Repos.User().Get(ctx, userID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *emailResolver) Value() (string, error) {
@@ -58,4 +58,11 @@ func (r *emailResolver) VerifiedAt() (*graphql.Time, error) {
 		return &gqlTime, err
 	}
 	return nil, nil
+}
+
+func (r *emailResolver) ViewerCanDelete(
+	ctx context.Context,
+) bool {
+	email := r.Email.Get()
+	return r.Repos.Email().ViewerCanDelete(ctx, email)
 }

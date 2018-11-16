@@ -3,12 +3,13 @@ package resolver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func (r *RootResolver) Asset(
@@ -28,14 +29,14 @@ func (r *RootResolver) Asset(
 	if err != nil {
 		return nil, err
 	}
-	return &userAssetResolver{UserAsset: userAsset, Repos: r.Repos}, nil
+	return &userAssetResolver{UserAsset: userAsset, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Node(
 	ctx context.Context,
-	args struct{ Id string },
+	args struct{ ID string },
 ) (*nodeResolver, error) {
-	id, err := mytype.ParseOID(args.Id)
+	id, err := mytype.ParseOID(args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func (r *RootResolver) Node(
 	if err != nil {
 		return nil, err
 	}
-	resolver, err := nodePermitToResolver(permit, r.Repos)
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -55,19 +56,19 @@ func (r *RootResolver) Node(
 }
 
 func (r *RootResolver) Nodes(ctx context.Context, args struct {
-	Ids []string
+	IDs []string
 }) ([]*nodeResolver, error) {
-	nodes := make([]*nodeResolver, len(args.Ids))
-	for i, id := range args.Ids {
-		nodeId, err := mytype.ParseOID(id)
+	nodes := make([]*nodeResolver, len(args.IDs))
+	for i, id := range args.IDs {
+		nodeID, err := mytype.ParseOID(id)
 		if err != nil {
 			return nil, err
 		}
-		permit, err := r.Repos.GetNode(ctx, nodeId)
+		permit, err := r.Repos.GetNode(ctx, nodeID)
 		if err != nil {
 			return nil, err
 		}
-		resolver, err := nodePermitToResolver(permit, r.Repos)
+		resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
 		if err != nil {
 			return nil, err
 		}
@@ -94,27 +95,16 @@ func (r *RootResolver) Search(
 		OrderBy *OrderArg
 		Query   string
 		Type    string
-		Within  *string
 	},
 ) (*searchableConnectionResolver, error) {
-	var within *mytype.OID
-	if args.Within != nil {
-		var err error
-		within, err = mytype.ParseOID(*args.Within)
-		if err != nil {
-			return nil, err
-		}
-		if within.Type != "User" && within.Type != "Study" && within.Type != "Topic" {
-			return nil, fmt.Errorf("cannot search within %s", within.Type)
-		}
-	}
+	resolver := searchableConnectionResolver{}
 	searchType, err := ParseSearchType(args.Type)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 	searchOrder, err := ParseSearchOrder(searchType, args.OrderBy)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -125,70 +115,93 @@ func (r *RootResolver) Search(
 		searchOrder,
 	)
 	if err != nil {
-		return nil, err
+		return &resolver, err
 	}
 
 	permits := []repo.NodePermit{}
 
 	switch searchType {
 	case SearchTypeCourse:
-		courses, err := r.Repos.Course().Search(ctx, within, args.Query, pageOptions)
+		filters := &data.CourseFilterOptions{
+			Search: &args.Query,
+		}
+		courses, err := r.Repos.Course().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(courses))
 		for i, l := range courses {
 			permits[i] = l
 		}
 	case SearchTypeLabel:
-		labels, err := r.Repos.Label().Search(ctx, within, args.Query, pageOptions)
+		filters := &data.LabelFilterOptions{
+			Search: &args.Query,
+		}
+		labels, err := r.Repos.Label().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(labels))
 		for i, l := range labels {
 			permits[i] = l
 		}
 	case SearchTypeLesson:
-		lessons, err := r.Repos.Lesson().Search(ctx, within, args.Query, pageOptions)
+		filters := &data.LessonFilterOptions{
+			IsPublished: util.NewBool(true),
+			Search:      &args.Query,
+		}
+		lessons, err := r.Repos.Lesson().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(lessons))
 		for i, l := range lessons {
 			permits[i] = l
 		}
 	case SearchTypeStudy:
-		studies, err := r.Repos.Study().Search(ctx, within, args.Query, pageOptions)
+		filters := &data.StudyFilterOptions{
+			Search: &args.Query,
+		}
+		studies, err := r.Repos.Study().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(studies))
 		for i, l := range studies {
 			permits[i] = l
 		}
 	case SearchTypeTopic:
-		topics, err := r.Repos.Topic().Search(ctx, args.Query, pageOptions)
+		filters := &data.TopicFilterOptions{
+			Search: &args.Query,
+		}
+		topics, err := r.Repos.Topic().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(topics))
 		for i, l := range topics {
 			permits[i] = l
 		}
 	case SearchTypeUser:
-		users, err := r.Repos.User().Search(ctx, args.Query, pageOptions)
+		filters := &data.UserFilterOptions{
+			Search: &args.Query,
+		}
+		users, err := r.Repos.User().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(users))
 		for i, l := range users {
 			permits[i] = l
 		}
 	case SearchTypeUserAsset:
-		userAssets, err := r.Repos.UserAsset().Search(ctx, within, args.Query, pageOptions)
+		filters := &data.UserAssetFilterOptions{
+			Search: &args.Query,
+		}
+		userAssets, err := r.Repos.UserAsset().Search(ctx, pageOptions, filters)
 		if err != nil {
-			return nil, err
+			return &resolver, err
 		}
 		permits = make([]repo.NodePermit, len(userAssets))
 		for i, l := range userAssets {
@@ -197,11 +210,11 @@ func (r *RootResolver) Search(
 	}
 
 	return NewSearchableConnectionResolver(
-		r.Repos,
 		permits,
 		pageOptions,
 		args.Query,
-		within,
+		r.Repos,
+		r.Conf,
 	)
 }
 
@@ -216,7 +229,7 @@ func (r *RootResolver) Study(
 	if err != nil {
 		return nil, err
 	}
-	return &studyResolver{Study: study, Repos: r.Repos}, nil
+	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Topic(
@@ -230,17 +243,20 @@ func (r *RootResolver) Topic(
 	if err != nil {
 		return nil, err
 	}
-	return &topicResolver{Topic: topic, Repos: r.Repos}, nil
+	return &topicResolver{Topic: topic, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) User(ctx context.Context, args struct {
 	Login string
 }) (*userResolver, error) {
+	if args.Login == repo.Guest {
+		return nil, nil
+	}
 	user, err := r.Repos.User().GetByLogin(ctx, args.Login)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
@@ -248,9 +264,12 @@ func (r *RootResolver) Viewer(ctx context.Context) (*userResolver, error) {
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
-	user, err := r.Repos.User().Get(ctx, viewer.Id.String)
+	if viewer.Login.String == repo.Guest {
+		return nil, nil
+	}
+	user, err := r.Repos.User().Get(ctx, viewer.ID.String)
 	if err != nil {
 		return nil, err
 	}
-	return &userResolver{User: user, Repos: r.Repos}, nil
+	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
 }

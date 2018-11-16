@@ -10,25 +10,13 @@ import (
 type EnrollableOrderField int
 
 const (
-	EnrollableAdvancedAt EnrollableOrderField = iota
-	EnrollableCreatedAt
-	EnrollableEnrolledAt
-	EnrollableName
-	EnrollableUpdatedAt
+	EnrollableEnrolledAt EnrollableOrderField = iota
 )
 
 func ParseEnrollableOrderField(s string) (EnrollableOrderField, error) {
 	switch strings.ToUpper(s) {
-	case "ADVANCED_AT":
-		return EnrollableAdvancedAt, nil
-	case "CREATED_AT":
-		return EnrollableCreatedAt, nil
 	case "ENROLLED_AT":
 		return EnrollableEnrolledAt, nil
-	case "NAME":
-		return EnrollableName, nil
-	case "UPDATED_AT":
-		return EnrollableUpdatedAt, nil
 	default:
 		var f EnrollableOrderField
 		return f, fmt.Errorf("invalid EnrollableOrderField: %q", s)
@@ -37,16 +25,8 @@ func ParseEnrollableOrderField(s string) (EnrollableOrderField, error) {
 
 func (f EnrollableOrderField) String() string {
 	switch f {
-	case EnrollableAdvancedAt:
-		return "advanced_at"
-	case EnrollableCreatedAt:
-		return "created_at"
 	case EnrollableEnrolledAt:
 		return "enrolled_at"
-	case EnrollableName:
-		return "name"
-	case EnrollableUpdatedAt:
-		return "updated_at"
 	default:
 		return "unknown"
 	}
@@ -72,12 +52,19 @@ func ParseEnrollableOrder(t EnrollableType, arg *OrderArg) (data.Order, error) {
 			field:     EnrollableEnrolledAt,
 		}, nil
 	}
-	switch t {
-	case EnrollableTypeStudy:
-		return ParseStudyOrder(arg)
-	default:
-		return nil, fmt.Errorf("invalid EnrollableType: %q", t)
+	direction, err := data.ParseOrderDirection(arg.Direction)
+	if err != nil {
+		return nil, err
 	}
+	field, err := ParseEnrollableOrderField(arg.Field)
+	if err != nil {
+		return nil, err
+	}
+	enrollableOrder := &EnrollableOrder{
+		direction: direction,
+		field:     field,
+	}
+	return enrollableOrder, nil
 }
 
 type enrollableOrderResolver struct {
