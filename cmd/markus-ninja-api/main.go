@@ -73,17 +73,11 @@ func main() {
 	)
 
 	r := mux.NewRouter()
-	if branch == "development.local" || branch == "test" {
-		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
-	}
-
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 
 	graphQLHandler := route.GraphQLHandler{Conf: conf, Schema: schema, Repos: repos}
 	graphQLSchemaHandler := route.GraphQLSchemaHandler{Conf: conf, Schema: schema}
-	graphiQLHandler := route.GraphiQLHandler{}
 	confirmVerificationHandler := route.ConfirmVerificationHandler{Conf: conf, Db: db}
-	indexHandler := route.IndexHandler{}
 	previewHandler := route.PreviewHandler{Conf: conf, Repos: repos}
 	tokenHandler := route.TokenHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	removeTokenHandler := route.RemoveTokenHandler{}
@@ -98,14 +92,12 @@ func main() {
 	).Then(graphQLHandler)
 	graphQLSchema := middleware.CommonMiddleware.Append(
 		graphQLSchemaHandler.Cors().Handler,
+		authMiddleware.Use,
 	).Then(graphQLSchemaHandler)
-	graphiql := middleware.CommonMiddleware.Append(
-		graphiQLHandler.Cors().Handler,
-	).Then(graphiQLHandler)
 	confirmVerification := middleware.CommonMiddleware.Append(
 		confirmVerificationHandler.Cors().Handler,
+		authMiddleware.Use,
 	).Then(confirmVerificationHandler)
-	index := middleware.CommonMiddleware.Then(indexHandler)
 	preview := middleware.CommonMiddleware.Append(
 		previewHandler.Cors().Handler,
 		authMiddleware.Use,
@@ -113,9 +105,11 @@ func main() {
 	).Then(previewHandler)
 	token := middleware.CommonMiddleware.Append(
 		tokenHandler.Cors().Handler,
+		authMiddleware.Use,
 	).Then(tokenHandler)
 	removeToken := middleware.CommonMiddleware.Append(
 		removeTokenHandler.Cors().Handler,
+		authMiddleware.Use,
 	).Then(removeTokenHandler)
 	signup := middleware.CommonMiddleware.Append(
 		signupHandler.Cors().Handler,
@@ -132,10 +126,8 @@ func main() {
 		repos.Use,
 	).Then(userAssetsHandler)
 
-	r.Handle("/", index)
 	r.Handle("/graphql", graphql)
 	r.Handle("/graphql/schema", graphQLSchema)
-	r.Handle("/graphiql", graphiql)
 	r.Handle("/preview", preview)
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
@@ -146,7 +138,23 @@ func main() {
 	)
 	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 
-	if branch != "production" {
+	// if branch == "development.local" || branch == "test" {
+	indexHandler := route.IndexHandler{}
+	graphiQLHandler := route.GraphiQLHandler{}
+	index := middleware.CommonMiddleware.Then(indexHandler)
+	graphiql := middleware.CommonMiddleware.Append(
+		graphiQLHandler.Cors().Handler,
+		authMiddleware.Use,
+	).Then(graphiQLHandler)
+	r.Handle("/", index)
+	r.Handle("/graphiql", graphiql)
+	// }
+
+	if branch == "development.local" || branch == "test" {
+		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
+	}
+
+	if branch == "development.local" || branch == "test" {
 		r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
 			func(rw http.ResponseWriter, req *http.Request) {
 				// Connect and check the server version

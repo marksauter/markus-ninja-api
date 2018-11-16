@@ -133,18 +133,40 @@
       }
 
       handleSubmit(e) {
-        e.preventDefault();
-        const type = "Basic";
-        const credentials = btoa(this.state.login + ":" + this.state.password);
+        e.preventDefault()
+        const { login, password } = this.state
+        const credentials = btoa(login + ":" + password)
         return fetch("/token", {
           method: "GET",
           headers: {
-            "Authorization": type + " " + credentials,
+            "Authorization": "Basic " + credentials,
           },
+          credentials: "include",
         }).then((response) => {
-          console.log(response)
-          window.location.replace("/graphiql");
-          return;
+          if (!response.ok) {
+            return response.text()
+          }
+          return Promise.resolve()
+        }).then((responseBody) => {
+          if (responseBody) {
+            try {
+              const body = JSON.parse(responseBody)
+              switch (body.error) {
+                case "invalid_credentials":
+                  return this.setState({
+                    error: "Invalid credentials",
+                  })
+                default:
+                  return this.setState({
+                    error: "An unknown error occurred",
+                  })
+              }
+            } catch (error) {
+              console.error(error)
+            }
+          }
+
+          window.location.replace("/graphiql")
         });
       }
 
