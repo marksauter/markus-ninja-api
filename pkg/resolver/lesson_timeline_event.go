@@ -26,6 +26,11 @@ func (r *lessonTimelineEventResolver) ToLessonComment() (*lessonCommentResolver,
 	return resolver, ok
 }
 
+func (r *lessonTimelineEventResolver) ToPublishedEvent() (*publishedEventResolver, bool) {
+	resolver, ok := r.lessonTimelineEvent.(*publishedEventResolver)
+	return resolver, ok
+}
+
 func (r *lessonTimelineEventResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
 	resolver, ok := r.lessonTimelineEvent.(*referencedEventResolver)
 	return resolver, ok

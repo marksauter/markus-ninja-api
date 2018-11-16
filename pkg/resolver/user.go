@@ -73,6 +73,10 @@ func (r *userResolver) Activity(
 			Type: mytype.CourseEvent.String(),
 		},
 		data.EventTypeFilter{
+			ActionIs: &[]string{mytype.PublishedAction.String()},
+			Type:     mytype.LessonEvent.String(),
+		},
+		data.EventTypeFilter{
 			Type: mytype.StudyEvent.String(),
 		},
 	}

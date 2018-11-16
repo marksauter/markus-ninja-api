@@ -42,13 +42,13 @@ func main() {
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("unable to connect to database")
+		mylog.Log.WithField("error", err).Fatal(util.Trace("unable to connect to database"))
 	}
 	defer db.Close()
 
 	svcs, err := service.NewServices(conf)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal("unable to start services")
+		mylog.Log.WithField("error", err).Fatal(util.Trace("unable to start services"))
 	}
 
 	repos := repo.NewRepos(db, conf)
@@ -62,7 +62,9 @@ func main() {
 	)
 
 	r := mux.NewRouter()
-	r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
+	if branch == "development.local" || branch == "test" {
+		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
+	}
 
 	authMiddleware := middleware.Authenticate{Db: db, AuthSvc: svcs.Auth}
 
@@ -75,7 +77,6 @@ func main() {
 	tokenHandler := route.TokenHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	removeTokenHandler := route.RemoveTokenHandler{}
 	signupHandler := route.SignupHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
-	uploadHandler := route.UploadHandler{}
 	uploadAssetsHandler := route.UploadAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
 	userAssetsHandler := route.UserAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
 
@@ -109,7 +110,6 @@ func main() {
 		signupHandler.Cors().Handler,
 		authMiddleware.Use,
 	).Then(signupHandler)
-	upload := middleware.CommonMiddleware.Then(uploadHandler)
 	uploadAssets := middleware.CommonMiddleware.Append(
 		uploadAssetsHandler.Cors().Handler,
 		authMiddleware.Use,
@@ -129,25 +129,26 @@ func main() {
 	r.Handle("/signup", signup)
 	r.Handle("/token", token)
 	r.Handle("/remove_token", removeToken)
-	r.Handle("/upload", upload)
 	r.Handle("/upload/assets", uploadAssets)
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
 		confirmVerification,
 	)
 	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 
-	r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
-		func(rw http.ResponseWriter, req *http.Request) {
-			// Connect and check the server version
-			var version string
-			err = db.QueryRow("SELECT VERSION()").Scan(&version)
-			if err != nil {
-				mylog.Log.Fatal(err)
-				return
-			}
-			fmt.Fprintf(rw, "Connected to: %s", version)
-		},
-	))
+	if branch != "production" {
+		r.Handle("/db", middleware.CommonMiddleware.ThenFunc(
+			func(rw http.ResponseWriter, req *http.Request) {
+				// Connect and check the server version
+				var version string
+				err = db.QueryRow("SELECT VERSION()").Scan(&version)
+				if err != nil {
+					mylog.Log.Fatal(err)
+					return
+				}
+				fmt.Fprintf(rw, "Connected to: %s", version)
+			},
+		))
+	}
 
 	router := http.TimeoutHandler(r, 5*time.Second, "Timeout!")
 

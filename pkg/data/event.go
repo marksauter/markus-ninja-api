@@ -95,9 +95,17 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 		whereType := make([]string, len(*src.Types))
 		var withType bool
 		for i, t := range *src.Types {
-			withType = false
-			if t.Type != mytype.LessonEvent.String() {
+			// If we are filtering only one type and that type is 'LessonEvent', then
+			// skip querying by type, because LessonEvents don't have a type field.
+			// TODO: fix how this works. I want one EventFilterOptions type, but I
+			// need it to behave differently when querying lesson events. Perhaps
+			// handle it in the relevant functions.
+			if len(*src.Types) == 1 && t.Type == mytype.LessonEvent.String() {
+				withType = false
+			} else {
 				withType = true
+			}
+			if withType {
 				whereType[i] = from + `.type = ` + args.Append(t.Type)
 			}
 			if t.ActionIs != nil && len(*t.ActionIs) > 0 {
