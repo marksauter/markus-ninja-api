@@ -3,7 +3,8 @@
 /.push-*
 /.container-*
 /.dockerfile-*
-*.toml
+config.*.local.toml
+config.test.toml
 /gin-bin
 /tmp
 

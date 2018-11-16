@@ -1,0 +1,21 @@
+[app]
+api_url = "https://api.rkus.ninja"
+client_url = "https://ma.rkus.ninja"
+name = "api.rkus.ninja"
+
+[auth]
+key_id = "alias/markus-ninja-api-key-alias"
+
+[aws]
+region = "us-east-1"
+upload_bucket = "markus-ninja-production-user-asset-us-east-1"
+
+[db]
+host = "markus-ninja-postgres.c2pp0svv6cjy.us-east-1.rds.amazonaws.com"
+port = 5432
+name = "markusninja"
+
+[mail]
+char_set = "UTF-8"
+sender = "noreply@rkus.ninja"
+root_url = "api.rkus.ninja"
