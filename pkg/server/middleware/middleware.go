@@ -14,6 +14,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/rs/xid"
 )
 
 var setRoleSQL = `
@@ -68,9 +70,34 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 		if err == http.ErrNoCookie {
 			user, err = data.GetUserCredentialsByLogin(a.Db, "guest")
 			if err != nil {
-				response := myhttp.UnauthorizedErrorResponse("user not found")
-				myhttp.WriteResponseTo(rw, response)
-				return
+				// guest account has to be there, so create the account if its not
+				if err == data.ErrNotFound {
+					guest := &data.User{}
+					guest.Login.Set("guest")
+					guest.Password.Set(xid.New().String())
+					if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
+						mylog.Log.WithError(err).Error(util.Trace(""))
+						response := myhttp.InternalServerErrorResponse("")
+						myhttp.WriteResponseTo(rw, response)
+						return
+					}
+					user, err = data.CreateUser(a.Db, guest)
+					if err != nil {
+						if dErr, ok := err.(data.DataEndUserError); ok {
+							if dErr.Code != data.UniqueViolation {
+								mylog.Log.WithError(err).Error(util.Trace(""))
+								response := myhttp.InternalServerErrorResponse("")
+								myhttp.WriteResponseTo(rw, response)
+								return
+							}
+						}
+					}
+				} else {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					response := myhttp.InternalServerErrorResponse("")
+					myhttp.WriteResponseTo(rw, response)
+					return
+				}
 			}
 		} else {
 			payload, err := a.AuthSvc.ValidateJWT(token)

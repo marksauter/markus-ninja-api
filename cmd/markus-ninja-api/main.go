@@ -29,10 +29,8 @@ func main() {
 	confFilename := fmt.Sprintf("config.%s", branch)
 	conf := myconf.Load(confFilename)
 
-	if branch != "production" && branch != "development" {
-		if err := initDB(conf); err != nil {
-			mylog.Log.WithField("error", err).Fatal("error initializing database")
-		}
+	if err := initDB(conf); err != nil {
+		mylog.Log.WithField("error", err).Fatal("error initializing database")
 	}
 
 	var dbUser, dbPassword string
@@ -179,13 +177,18 @@ func main() {
 func initDB(conf *myconf.Config) error {
 	branch := util.GetRequiredEnv("BRANCH")
 
+	var dbRootUser, dbRootPassword string
 	if branch == "production" || branch == "development" {
-		return fmt.Errorf("will not initialize db in branch %s", branch)
+		dbRootUser = util.GetRequiredEnv("DB_ROOT_USERNAME")
+		dbRootPassword = util.GetRequiredEnv("DB_ROOT_PASSWORD")
+	} else {
+		dbRootUser = conf.DBRootUser
+		dbRootPassword = conf.DBRootPassword
 	}
 
 	dbConfig := pgx.ConnConfig{
-		User:     conf.DBRootUser,
-		Password: conf.DBRootPassword,
+		User:     dbRootUser,
+		Password: dbRootPassword,
 		Host:     conf.DBHost,
 		Port:     conf.DBPort,
 		Database: conf.DBName,
@@ -250,11 +253,15 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 
-	guestID, _ := mytype.NewOID("User")
 	guest := &data.User{}
-	guest.ID.Set(guestID)
-	guest.Login.Set("guest")
-	guest.Password.Set(xid.New().String())
+	if err := guest.Login.Set("guest"); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	if err := guest.Password.Set(xid.New().String()); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
 	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
@@ -269,8 +276,14 @@ func initDB(conf *myconf.Config) error {
 	}
 
 	markus := &data.User{}
-	markus.Login.Set("markus")
-	markus.Password.Set(xid.New().String())
+	if err := markus.Login.Set("markus"); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
+	if err := markus.Password.Set(xid.New().String()); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	}
 	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
@@ -310,8 +323,14 @@ func initDB(conf *myconf.Config) error {
 
 	if branch == "test" {
 		testUser := &data.User{}
-		testUser.Login.Set("test")
-		testUser.Password.Set("test")
+		if err := testUser.Login.Set("test"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if err := testUser.Password.Set("test"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
 		if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
