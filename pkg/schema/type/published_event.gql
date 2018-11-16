@@ -1,6 +1,7 @@
 # Represents a published event on a given subject.
 type PublishedEvent implements 
   Node,
+  LessonTimelineEvent,
   StudyActivityEvent,
   UserActivityEvent
 {
