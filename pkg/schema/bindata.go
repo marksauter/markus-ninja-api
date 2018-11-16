@@ -267,7 +267,7 @@ func enumApple_giver_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/apple_giver_order_field.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/apple_giver_order_field.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -287,7 +287,7 @@ func enumAppleable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/appleable_order_field.gql", size: 332, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/appleable_order_field.gql", size: 332, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -307,7 +307,7 @@ func enumAppleable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/appleable_type.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1536854905, 0)}
+	info := bindataFileInfo{name: "enum/appleable_type.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -327,7 +327,7 @@ func enumCourse_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/course_order_field.gql", size: 362, mode: os.FileMode(420), modTime: time.Unix(1538820794, 0)}
+	info := bindataFileInfo{name: "enum/course_order_field.gql", size: 362, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -347,7 +347,7 @@ func enumCourse_statusGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/course_status.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/course_status.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -367,7 +367,7 @@ func enumEmail_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/email_type.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/email_type.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -387,7 +387,7 @@ func enumEnrollable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollable_order_field.gql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1539008623, 0)}
+	info := bindataFileInfo{name: "enum/enrollable_order_field.gql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -407,7 +407,7 @@ func enumEnrollable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollable_type.gql", size: 171, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/enrollable_type.gql", size: 171, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -427,7 +427,7 @@ func enumEnrollee_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollee_order_field.gql", size: 144, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/enrollee_order_field.gql", size: 144, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -447,7 +447,7 @@ func enumEnrollment_statusGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/enrollment_status.gql", size: 247, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/enrollment_status.gql", size: 247, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -467,7 +467,7 @@ func enumEvent_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/event_order_field.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/event_order_field.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -487,7 +487,7 @@ func enumLabel_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/label_order_field.gql", size: 163, mode: os.FileMode(420), modTime: time.Unix(1539013812, 0)}
+	info := bindataFileInfo{name: "enum/label_order_field.gql", size: 163, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -507,7 +507,7 @@ func enumLabelable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/labelable_order_field.gql", size: 284, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/labelable_order_field.gql", size: 284, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -527,7 +527,7 @@ func enumLabelable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/labelable_type.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/labelable_type.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -547,7 +547,7 @@ func enumLesson_comment_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/lesson_comment_order_field.gql", size: 211, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/lesson_comment_order_field.gql", size: 211, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -567,7 +567,7 @@ func enumLesson_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/lesson_order_field.gql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1541992624, 0)}
+	info := bindataFileInfo{name: "enum/lesson_order_field.gql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -587,7 +587,7 @@ func enumNotification_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/notification_order_field.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/notification_order_field.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -607,7 +607,7 @@ func enumOrder_directionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/order_direction.gql", size: 256, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/order_direction.gql", size: 256, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -627,7 +627,7 @@ func enumRef_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/ref_order_field.gql", size: 123, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/ref_order_field.gql", size: 123, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -647,7 +647,7 @@ func enumSearch_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/search_order_field.gql", size: 582, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/search_order_field.gql", size: 582, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -667,7 +667,7 @@ func enumSearch_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/search_type.gql", size: 464, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/search_type.gql", size: 464, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -687,7 +687,7 @@ func enumStudy_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/study_order_field.gql", size: 321, mode: os.FileMode(420), modTime: time.Unix(1538820795, 0)}
+	info := bindataFileInfo{name: "enum/study_order_field.gql", size: 321, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -707,7 +707,7 @@ func enumTopic_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topic_order_field.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/topic_order_field.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -727,7 +727,7 @@ func enumTopicable_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topicable_order_field.gql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1539194665, 0)}
+	info := bindataFileInfo{name: "enum/topicable_order_field.gql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -747,7 +747,7 @@ func enumTopicable_typeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/topicable_type.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1539359901, 0)}
+	info := bindataFileInfo{name: "enum/topicable_type.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -767,7 +767,7 @@ func enumUser_asset_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/user_asset_order_field.gql", size: 214, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "enum/user_asset_order_field.gql", size: 214, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -787,7 +787,7 @@ func enumUser_order_fieldGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "enum/user_order_field.gql", size: 237, mode: os.FileMode(420), modTime: time.Unix(1539007893, 0)}
+	info := bindataFileInfo{name: "enum/user_order_field.gql", size: 237, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -807,7 +807,7 @@ func inputAdd_course_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_course_lesson.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/add_course_lesson.gql", size: 160, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -827,7 +827,7 @@ func inputAdd_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_email.gql", size: 107, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/add_email.gql", size: 107, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -847,7 +847,7 @@ func inputAdd_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_label.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/add_label.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -867,7 +867,7 @@ func inputAdd_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/add_lesson_comment.gql", size: 131, mode: os.FileMode(420), modTime: time.Unix(1541085128, 0)}
+	info := bindataFileInfo{name: "input/add_lesson_comment.gql", size: 131, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -887,7 +887,7 @@ func inputApple_giver_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/apple_giver_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/apple_giver_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -907,7 +907,7 @@ func inputAppleable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/appleable_order.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/appleable_order.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -927,7 +927,7 @@ func inputCourse_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/course_filters.gql", size: 207, mode: os.FileMode(420), modTime: time.Unix(1538689899, 0)}
+	info := bindataFileInfo{name: "input/course_filters.gql", size: 207, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -947,7 +947,7 @@ func inputCourse_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/course_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/course_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -967,7 +967,7 @@ func inputCreate_courseGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_course.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/create_course.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -987,7 +987,7 @@ func inputCreate_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_label.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/create_label.gql", size: 148, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1007,7 +1007,7 @@ func inputCreate_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_lesson.gql", size: 95, mode: os.FileMode(420), modTime: time.Unix(1541008107, 0)}
+	info := bindataFileInfo{name: "input/create_lesson.gql", size: 95, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1027,7 +1027,7 @@ func inputCreate_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_study.gql", size: 104, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/create_study.gql", size: 104, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1047,7 +1047,7 @@ func inputCreate_userGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_user.gql", size: 115, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/create_user.gql", size: 115, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1067,7 +1067,7 @@ func inputCreate_user_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/create_user_asset.gql", size: 247, mode: os.FileMode(420), modTime: time.Unix(1540428487, 0)}
+	info := bindataFileInfo{name: "input/create_user_asset.gql", size: 247, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1087,7 +1087,7 @@ func inputDelete_courseGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_course.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_course.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1107,7 +1107,7 @@ func inputDelete_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_email.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_email.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1127,7 +1127,7 @@ func inputDelete_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_label.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_label.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1147,7 +1147,7 @@ func inputDelete_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_lesson.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_lesson.gql", size: 97, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1167,7 +1167,7 @@ func inputDelete_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_lesson_comment.gql", size: 126, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_lesson_comment.gql", size: 126, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1187,7 +1187,7 @@ func inputDelete_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_study.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_study.gql", size: 93, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1207,7 +1207,7 @@ func inputDelete_user_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_user_asset.gql", size: 110, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_user_asset.gql", size: 110, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1227,7 +1227,7 @@ func inputDelete_viewer_accountGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/delete_viewer_account.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/delete_viewer_account.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1247,7 +1247,7 @@ func inputEmail_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/email_filters.gql", size: 193, mode: os.FileMode(420), modTime: time.Unix(1538754234, 0)}
+	info := bindataFileInfo{name: "input/email_filters.gql", size: 193, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1267,7 +1267,7 @@ func inputEnrollable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/enrollable_order.gql", size: 251, mode: os.FileMode(420), modTime: time.Unix(1539009062, 0)}
+	info := bindataFileInfo{name: "input/enrollable_order.gql", size: 251, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1287,7 +1287,7 @@ func inputEnrollee_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/enrollee_order.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/enrollee_order.gql", size: 221, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1307,7 +1307,7 @@ func inputEvent_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/event_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/event_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1327,7 +1327,7 @@ func inputGive_appleGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/give_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/give_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1347,7 +1347,7 @@ func inputLabel_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/label_filters.gql", size: 180, mode: os.FileMode(420), modTime: time.Unix(1538771219, 0)}
+	info := bindataFileInfo{name: "input/label_filters.gql", size: 180, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1367,7 +1367,7 @@ func inputLabel_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/label_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/label_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1387,7 +1387,7 @@ func inputLabelable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/labelable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/labelable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1407,7 +1407,7 @@ func inputLesson_comment_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/lesson_comment_order.gql", size: 281, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/lesson_comment_order.gql", size: 281, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1427,7 +1427,7 @@ func inputLesson_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/lesson_filters.gql", size: 426, mode: os.FileMode(420), modTime: time.Unix(1541622910, 0)}
+	info := bindataFileInfo{name: "input/lesson_filters.gql", size: 426, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1447,7 +1447,7 @@ func inputLesson_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/lesson_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/lesson_order.gql", size: 243, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1467,7 +1467,7 @@ func inputLogin_userGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/login_user.gql", size: 167, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/login_user.gql", size: 167, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1487,7 +1487,7 @@ func inputMark_all_study_notification_as_readGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/mark_all_study_notification_as_read.gql", size: 172, mode: os.FileMode(420), modTime: time.Unix(1537293613, 0)}
+	info := bindataFileInfo{name: "input/mark_all_study_notification_as_read.gql", size: 172, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1507,7 +1507,7 @@ func inputMark_notification_as_readGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/mark_notification_as_read.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/mark_notification_as_read.gql", size: 142, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1527,7 +1527,7 @@ func inputMove_course_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/move_course_lesson.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1539706196, 0)}
+	info := bindataFileInfo{name: "input/move_course_lesson.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1547,7 +1547,7 @@ func inputNotification_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/notification_order.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/notification_order.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1567,7 +1567,7 @@ func inputPublish_lesson_comment_draftGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/publish_lesson_comment_draft.gql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1541079605, 0)}
+	info := bindataFileInfo{name: "input/publish_lesson_comment_draft.gql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1587,7 +1587,7 @@ func inputPublish_lesson_draftGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/publish_lesson_draft.gql", size: 109, mode: os.FileMode(420), modTime: time.Unix(1541011995, 0)}
+	info := bindataFileInfo{name: "input/publish_lesson_draft.gql", size: 109, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1607,7 +1607,7 @@ func inputRef_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/ref_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/ref_order.gql", size: 228, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1627,7 +1627,7 @@ func inputRemove_course_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/remove_course_lesson.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1539807307, 0)}
+	info := bindataFileInfo{name: "input/remove_course_lesson.gql", size: 150, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1647,7 +1647,7 @@ func inputRemove_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/remove_label.gql", size: 188, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/remove_label.gql", size: 188, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1667,7 +1667,7 @@ func inputRequest_email_verificationGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/request_email_verification.gql", size: 121, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/request_email_verification.gql", size: 121, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1687,7 +1687,7 @@ func inputRequest_password_resetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/request_password_reset.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/request_password_reset.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1707,7 +1707,7 @@ func inputReset_lesson_comment_draftGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/reset_lesson_comment_draft.gql", size: 134, mode: os.FileMode(420), modTime: time.Unix(1541847285, 0)}
+	info := bindataFileInfo{name: "input/reset_lesson_comment_draft.gql", size: 134, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1727,7 +1727,7 @@ func inputReset_lesson_draftGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/reset_lesson_draft.gql", size: 105, mode: os.FileMode(420), modTime: time.Unix(1541847291, 0)}
+	info := bindataFileInfo{name: "input/reset_lesson_draft.gql", size: 105, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1747,7 +1747,7 @@ func inputReset_passwordGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/reset_password.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/reset_password.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1767,7 +1767,7 @@ func inputSearch_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/search_order.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/search_order.gql", size: 240, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1787,7 +1787,7 @@ func inputStudy_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/study_filters.gql", size: 205, mode: os.FileMode(420), modTime: time.Unix(1538688231, 0)}
+	info := bindataFileInfo{name: "input/study_filters.gql", size: 205, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1807,7 +1807,7 @@ func inputStudy_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/study_order.gql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/study_order.gql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1827,7 +1827,7 @@ func inputTake_appleGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/take_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/take_apple.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1847,7 +1847,7 @@ func inputTopic_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/topic_filters.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1538773359, 0)}
+	info := bindataFileInfo{name: "input/topic_filters.gql", size: 114, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1867,7 +1867,7 @@ func inputTopic_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/topic_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/topic_order.gql", size: 238, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1887,7 +1887,7 @@ func inputTopicable_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/topicable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/topicable_order.gql", size: 248, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1907,7 +1907,7 @@ func inputUpdate_courseGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_course.gql", size: 199, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_course.gql", size: 199, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1927,7 +1927,7 @@ func inputUpdate_emailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_email.gql", size: 139, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_email.gql", size: 139, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1947,7 +1947,7 @@ func inputUpdate_enrollmentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_enrollment.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_enrollment.gql", size: 215, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1967,7 +1967,7 @@ func inputUpdate_labelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_label.gql", size: 195, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_label.gql", size: 195, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1987,7 +1987,7 @@ func inputUpdate_lessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_lesson.gql", size: 189, mode: os.FileMode(420), modTime: time.Unix(1541010270, 0)}
+	info := bindataFileInfo{name: "input/update_lesson.gql", size: 189, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2007,7 +2007,7 @@ func inputUpdate_lesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_lesson_comment.gql", size: 180, mode: os.FileMode(420), modTime: time.Unix(1541080280, 0)}
+	info := bindataFileInfo{name: "input/update_lesson_comment.gql", size: 180, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2027,7 +2027,7 @@ func inputUpdate_studyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_study.gql", size: 193, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_study.gql", size: 193, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2047,7 +2047,7 @@ func inputUpdate_topicGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_topic.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1537564582, 0)}
+	info := bindataFileInfo{name: "input/update_topic.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2067,7 +2067,7 @@ func inputUpdate_topicsGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_topics.gql", size: 168, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_topics.gql", size: 168, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2087,7 +2087,7 @@ func inputUpdate_user_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_user_asset.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1539624031, 0)}
+	info := bindataFileInfo{name: "input/update_user_asset.gql", size: 220, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2107,7 +2107,7 @@ func inputUpdate_viewer_accountGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_viewer_account.gql", size: 242, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_viewer_account.gql", size: 242, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2127,7 +2127,7 @@ func inputUpdate_viewer_profileGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/update_viewer_profile.gql", size: 234, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/update_viewer_profile.gql", size: 234, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2147,7 +2147,7 @@ func inputUser_asset_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/user_asset_filters.gql", size: 128, mode: os.FileMode(420), modTime: time.Unix(1538785728, 0)}
+	info := bindataFileInfo{name: "input/user_asset_filters.gql", size: 128, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2167,7 +2167,7 @@ func inputUser_asset_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/user_asset_order.gql", size: 246, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "input/user_asset_order.gql", size: 246, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2187,7 +2187,7 @@ func inputUser_filtersGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/user_filters.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1538775305, 0)}
+	info := bindataFileInfo{name: "input/user_filters.gql", size: 111, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2207,7 +2207,7 @@ func inputUser_orderGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "input/user_order.gql", size: 233, mode: os.FileMode(420), modTime: time.Unix(1539007506, 0)}
+	info := bindataFileInfo{name: "input/user_order.gql", size: 233, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2227,7 +2227,7 @@ func interfaceAppleableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/appleable.gql", size: 690, mode: os.FileMode(420), modTime: time.Unix(1539356993, 0)}
+	info := bindataFileInfo{name: "interface/appleable.gql", size: 690, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2247,7 +2247,7 @@ func interfaceCommentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/comment.gql", size: 291, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/comment.gql", size: 291, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2267,7 +2267,7 @@ func interfaceCommentableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/commentable.gql", size: 71, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/commentable.gql", size: 71, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2287,7 +2287,7 @@ func interfaceConnectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/connection.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/connection.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2307,7 +2307,7 @@ func interfaceCreateableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/createable.gql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/createable.gql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2327,7 +2327,7 @@ func interfaceDeleteableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/deleteable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/deleteable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2347,7 +2347,7 @@ func interfaceEdgeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/edge.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/edge.gql", size: 151, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2367,7 +2367,7 @@ func interfaceEnrollableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/enrollable.gql", size: 829, mode: os.FileMode(420), modTime: time.Unix(1539360000, 0)}
+	info := bindataFileInfo{name: "interface/enrollable.gql", size: 829, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2387,7 +2387,7 @@ func interfaceLabelableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/labelable.gql", size: 64, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/labelable.gql", size: 64, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2407,7 +2407,7 @@ func interfaceLesson_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/lesson_timeline_event.gql", size: 96, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/lesson_timeline_event.gql", size: 96, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2427,7 +2427,7 @@ func interfaceNodeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/node.gql", size: 29, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/node.gql", size: 29, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2447,7 +2447,7 @@ func interfacePublishableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/publishable.gql", size: 197, mode: os.FileMode(420), modTime: time.Unix(1541969881, 0)}
+	info := bindataFileInfo{name: "interface/publishable.gql", size: 197, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2467,7 +2467,7 @@ func interfaceReferenceableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/referenceable.gql", size: 73, mode: os.FileMode(420), modTime: time.Unix(1535674681, 0)}
+	info := bindataFileInfo{name: "interface/referenceable.gql", size: 73, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2487,7 +2487,7 @@ func interfaceRenameableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/renameable.gql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1542034100, 0)}
+	info := bindataFileInfo{name: "interface/renameable.gql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2507,7 +2507,7 @@ func interfaceSearchableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/searchable.gql", size: 70, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/searchable.gql", size: 70, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2527,7 +2527,7 @@ func interfaceStudy_activity_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/study_activity_event.gql", size: 94, mode: os.FileMode(420), modTime: time.Unix(1541969688, 0)}
+	info := bindataFileInfo{name: "interface/study_activity_event.gql", size: 94, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2547,7 +2547,7 @@ func interfaceStudy_nodeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/study_node.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/study_node.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2567,7 +2567,7 @@ func interfaceTokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/token.gql", size: 177, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/token.gql", size: 177, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2587,7 +2587,7 @@ func interfaceTopicableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/topicable.gql", size: 79, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/topicable.gql", size: 79, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2607,7 +2607,7 @@ func interfaceUniform_resource_locatableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/uniform_resource_locatable.gql", size: 196, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/uniform_resource_locatable.gql", size: 196, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2627,7 +2627,7 @@ func interfaceUpdateableGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/updateable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/updateable.gql", size: 135, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2647,7 +2647,7 @@ func interfaceUser_activity_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/user_activity_event.gql", size: 92, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/user_activity_event.gql", size: 92, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2667,7 +2667,7 @@ func interfaceUser_asset_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "interface/user_asset_timeline_event.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "interface/user_asset_timeline_event.gql", size: 103, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2687,7 +2687,7 @@ func scalarHtmlGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/html.gql", size: 45, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "scalar/html.gql", size: 45, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2707,7 +2707,7 @@ func scalarTimeGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/time.gql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "scalar/time.gql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2727,7 +2727,7 @@ func scalarUriGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "scalar/uri.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "scalar/uri.gql", size: 81, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2747,7 +2747,7 @@ func schemaGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema.gql", size: 6211, mode: os.FileMode(420), modTime: time.Unix(1541847258, 0)}
+	info := bindataFileInfo{name: "schema.gql", size: 6211, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2767,7 +2767,7 @@ func typeAccess_tokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/access_token.gql", size: 294, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/access_token.gql", size: 294, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2787,7 +2787,7 @@ func typeAdd_course_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_course_lesson_payload.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/add_course_lesson_payload.gql", size: 187, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2807,7 +2807,7 @@ func typeAdd_email_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_email_payload.gql", size: 245, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/add_email_payload.gql", size: 245, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2827,7 +2827,7 @@ func typeAdd_label_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_label_payload.gql", size: 181, mode: os.FileMode(420), modTime: time.Unix(1542063546, 0)}
+	info := bindataFileInfo{name: "type/add_label_payload.gql", size: 181, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2847,7 +2847,7 @@ func typeAdd_lesson_comment_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/add_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1535681321, 0)}
+	info := bindataFileInfo{name: "type/add_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2867,7 +2867,7 @@ func typeAdded_to_course_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/added_to_course_event.gql", size: 450, mode: os.FileMode(420), modTime: time.Unix(1542038979, 0)}
+	info := bindataFileInfo{name: "type/added_to_course_event.gql", size: 450, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2887,7 +2887,7 @@ func typeApple_giver_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/apple_giver_connection.gql", size: 517, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/apple_giver_connection.gql", size: 517, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2907,7 +2907,7 @@ func typeAppleable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/appleable_connection.gql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1538748342, 0)}
+	info := bindataFileInfo{name: "type/appleable_connection.gql", size: 580, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2927,7 +2927,7 @@ func typeAppled_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/appled_event.gql", size: 399, mode: os.FileMode(420), modTime: time.Unix(1535734698, 0)}
+	info := bindataFileInfo{name: "type/appled_event.gql", size: 399, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2947,7 +2947,7 @@ func typeCourseGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/course.gql", size: 3460, mode: os.FileMode(420), modTime: time.Unix(1539356981, 0)}
+	info := bindataFileInfo{name: "type/course.gql", size: 3460, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2967,7 +2967,7 @@ func typeCreate_course_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/create_course_payload.gql", size: 201, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/create_course_payload.gql", size: 201, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -2987,7 +2987,7 @@ func typeCreate_label_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/create_label_payload.gql", size: 195, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/create_label_payload.gql", size: 195, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3007,7 +3007,7 @@ func typeCreate_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/create_lesson_payload.gql", size: 201, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/create_lesson_payload.gql", size: 201, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3027,7 +3027,7 @@ func typeCreate_study_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/create_study_payload.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/create_study_payload.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3047,7 +3047,7 @@ func typeCreate_user_asset_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/create_user_asset_payload.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/create_user_asset_payload.gql", size: 264, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3067,7 +3067,7 @@ func typeCreated_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/created_event.gql", size: 424, mode: os.FileMode(420), modTime: time.Unix(1541970195, 0)}
+	info := bindataFileInfo{name: "type/created_event.gql", size: 424, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3087,7 +3087,7 @@ func typeDelete_course_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_course_payload.gql", size: 172, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_course_payload.gql", size: 172, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3107,7 +3107,7 @@ func typeDelete_email_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_email_payload.gql", size: 173, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_email_payload.gql", size: 173, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3127,7 +3127,7 @@ func typeDelete_label_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_label_payload.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_label_payload.gql", size: 164, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3147,7 +3147,7 @@ func typeDelete_lesson_comment_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1535678036, 0)}
+	info := bindataFileInfo{name: "type/delete_lesson_comment_payload.gql", size: 202, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3167,7 +3167,7 @@ func typeDelete_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_lesson_payload.gql", size: 169, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_lesson_payload.gql", size: 169, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3187,7 +3187,7 @@ func typeDelete_study_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_study_payload.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_study_payload.gql", size: 159, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3207,7 +3207,7 @@ func typeDelete_user_asset_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/delete_user_asset_payload.gql", size: 186, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/delete_user_asset_payload.gql", size: 186, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3227,7 +3227,7 @@ func typeEmailGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/email.gql", size: 940, mode: os.FileMode(420), modTime: time.Unix(1540470803, 0)}
+	info := bindataFileInfo{name: "type/email.gql", size: 940, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3247,7 +3247,7 @@ func typeEmail_verification_tokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/email_verification_token.gql", size: 227, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/email_verification_token.gql", size: 227, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3267,7 +3267,7 @@ func typeEnrollable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/enrollable_connection.gql", size: 669, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/enrollable_connection.gql", size: 669, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3287,7 +3287,7 @@ func typeEnrollee_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/enrollee_connection.gql", size: 518, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/enrollee_connection.gql", size: 518, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3307,7 +3307,7 @@ func typeEventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/event.gql", size: 735, mode: os.FileMode(420), modTime: time.Unix(1535677753, 0)}
+	info := bindataFileInfo{name: "type/event.gql", size: 735, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3327,7 +3327,7 @@ func typeLabelGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/label.gql", size: 1855, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/label.gql", size: 1855, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3347,7 +3347,7 @@ func typeLabelable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/labelable_connection.gql", size: 591, mode: os.FileMode(420), modTime: time.Unix(1538747992, 0)}
+	info := bindataFileInfo{name: "type/labelable_connection.gql", size: 591, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3367,7 +3367,7 @@ func typeLabeled_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/labeled_event.gql", size: 409, mode: os.FileMode(420), modTime: time.Unix(1542035892, 0)}
+	info := bindataFileInfo{name: "type/labeled_event.gql", size: 409, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3387,7 +3387,7 @@ func typeLessonGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/lesson.gql", size: 4659, mode: os.FileMode(420), modTime: time.Unix(1542034128, 0)}
+	info := bindataFileInfo{name: "type/lesson.gql", size: 4659, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3407,7 +3407,7 @@ func typeLesson_commentGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/lesson_comment.gql", size: 2468, mode: os.FileMode(420), modTime: time.Unix(1541969997, 0)}
+	info := bindataFileInfo{name: "type/lesson_comment.gql", size: 2468, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3427,7 +3427,7 @@ func typeLesson_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/lesson_timeline_event.gql", size: 512, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/lesson_timeline_event.gql", size: 512, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3447,7 +3447,7 @@ func typeLogin_user_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/login_user_payload.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1538322600, 0)}
+	info := bindataFileInfo{name: "type/login_user_payload.gql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3467,7 +3467,7 @@ func typeLogout_user_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/logout_user_payload.gql", size: 120, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/logout_user_payload.gql", size: 120, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3487,7 +3487,7 @@ func typeMove_course_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/move_course_lesson_payload.gql", size: 210, mode: os.FileMode(420), modTime: time.Unix(1539714148, 0)}
+	info := bindataFileInfo{name: "type/move_course_lesson_payload.gql", size: 210, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3507,7 +3507,7 @@ func typeNotificationGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/notification.gql", size: 1119, mode: os.FileMode(420), modTime: time.Unix(1535733681, 0)}
+	info := bindataFileInfo{name: "type/notification.gql", size: 1119, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3527,7 +3527,7 @@ func typePage_infoGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/page_info.gql", size: 377, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/page_info.gql", size: 377, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3547,7 +3547,7 @@ func typePassword_reset_tokenGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/password_reset_token.gql", size: 222, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/password_reset_token.gql", size: 222, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3567,7 +3567,7 @@ func typePublished_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/published_event.gql", size: 456, mode: os.FileMode(420), modTime: time.Unix(1542292121, 0)}
+	info := bindataFileInfo{name: "type/published_event.gql", size: 456, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3587,7 +3587,7 @@ func typeReferenced_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/referenced_event.gql", size: 540, mode: os.FileMode(420), modTime: time.Unix(1535734675, 0)}
+	info := bindataFileInfo{name: "type/referenced_event.gql", size: 540, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3607,7 +3607,7 @@ func typeRemove_course_lesson_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/remove_course_lesson_payload.gql", size: 305, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/remove_course_lesson_payload.gql", size: 305, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3627,7 +3627,7 @@ func typeRemove_label_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/remove_label_payload.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/remove_label_payload.gql", size: 191, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3647,7 +3647,7 @@ func typeRemoved_from_course_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/removed_from_course_event.gql", size: 464, mode: os.FileMode(420), modTime: time.Unix(1542038974, 0)}
+	info := bindataFileInfo{name: "type/removed_from_course_event.gql", size: 464, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3667,7 +3667,7 @@ func typeRenamed_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/renamed_event.gql", size: 506, mode: os.FileMode(420), modTime: time.Unix(1542157810, 0)}
+	info := bindataFileInfo{name: "type/renamed_event.gql", size: 506, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3687,7 +3687,7 @@ func typeSearchable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/searchable_connection.gql", size: 1023, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/searchable_connection.gql", size: 1023, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3707,7 +3707,7 @@ func typeStudyGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/study.gql", size: 7183, mode: os.FileMode(420), modTime: time.Unix(1541970142, 0)}
+	info := bindataFileInfo{name: "type/study.gql", size: 7183, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3727,7 +3727,7 @@ func typeStudy_activity_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/study_activity_event.gql", size: 827, mode: os.FileMode(420), modTime: time.Unix(1541968134, 0)}
+	info := bindataFileInfo{name: "type/study_activity_event.gql", size: 827, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3747,7 +3747,7 @@ func typeText_matchGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/text_match.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/text_match.gql", size: 273, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3767,7 +3767,7 @@ func typeText_match_highlightGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/text_match_highlight.gql", size: 288, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/text_match_highlight.gql", size: 288, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3787,7 +3787,7 @@ func typeTopicGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/topic.gql", size: 1651, mode: os.FileMode(420), modTime: time.Unix(1539357163, 0)}
+	info := bindataFileInfo{name: "type/topic.gql", size: 1651, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3807,7 +3807,7 @@ func typeTopicable_connectionGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/topicable_connection.gql", size: 575, mode: os.FileMode(420), modTime: time.Unix(1539194224, 0)}
+	info := bindataFileInfo{name: "type/topicable_connection.gql", size: 575, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3827,7 +3827,7 @@ func typeUnappled_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/unappled_event.gql", size: 343, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/unappled_event.gql", size: 343, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3847,7 +3847,7 @@ func typeUnlabeled_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/unlabeled_event.gql", size: 415, mode: os.FileMode(420), modTime: time.Unix(1542035884, 0)}
+	info := bindataFileInfo{name: "type/unlabeled_event.gql", size: 415, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3867,7 +3867,7 @@ func typeUpdate_topics_payloadGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/update_topics_payload.gql", size: 272, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/update_topics_payload.gql", size: 272, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3887,7 +3887,7 @@ func typeUserGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user.gql", size: 8093, mode: os.FileMode(420), modTime: time.Unix(1539356885, 0)}
+	info := bindataFileInfo{name: "type/user.gql", size: 8093, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3907,7 +3907,7 @@ func typeUser_activity_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_activity_event.gql", size: 816, mode: os.FileMode(420), modTime: time.Unix(1538598787, 0)}
+	info := bindataFileInfo{name: "type/user_activity_event.gql", size: 816, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3927,7 +3927,7 @@ func typeUser_assetGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_asset.gql", size: 2158, mode: os.FileMode(420), modTime: time.Unix(1542157755, 0)}
+	info := bindataFileInfo{name: "type/user_asset.gql", size: 2158, mode: os.FileMode(420), modTime: time.Unix(1542329263, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3947,7 +3947,7 @@ func typeUser_asset_timeline_eventGql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "type/user_asset_timeline_event.gql", size: 533, mode: os.FileMode(420), modTime: time.Unix(1535674648, 0)}
+	info := bindataFileInfo{name: "type/user_asset_timeline_event.gql", size: 533, mode: os.FileMode(420), modTime: time.Unix(1542328582, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
