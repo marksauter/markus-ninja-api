@@ -272,6 +272,9 @@ func initDB(conf *myconf.Config) error {
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
+		} else {
+			mylog.Log.WithError(err).Fatal(util.Trace("failed to create guest"))
+			return err
 		}
 	}
 
@@ -300,7 +303,7 @@ func initDB(conf *myconf.Config) error {
 				return err
 			}
 		} else {
-			mylog.Log.WithError(err).Error(util.Trace(""))
+			mylog.Log.WithError(err).Fatal(util.Trace("failed to create markus"))
 			return err
 		}
 	}
@@ -347,7 +350,7 @@ func initDB(conf *myconf.Config) error {
 					return err
 				}
 			} else {
-				mylog.Log.WithError(err).Error(util.Trace(""))
+				mylog.Log.WithError(err).Fatal(util.Trace("failed to create test"))
 				return err
 			}
 		}
