@@ -24,26 +24,44 @@ import (
 	"github.com/rs/xid"
 )
 
+var setRoleSQL = `
+	SET ROLE 'client'
+`
+
 func main() {
 	branch := util.GetRequiredEnv("BRANCH")
 	confFilename := fmt.Sprintf("config.%s", branch)
 	conf := myconf.Load(confFilename)
 
-	if err := initDB(conf); err != nil {
-		mylog.Log.WithField("error", err).Fatal("error initializing database")
+	var dbUser, dbPassword string
+	if branch == "production" || branch == "development" {
+		dbUser = util.GetRequiredEnv("DB_USERNAME")
+		dbPassword = util.GetRequiredEnv("DB_PASSWORD")
+	} else {
+		dbUser = conf.DBUser
+		dbPassword = conf.DBPassword
 	}
 
 	dbConfig := pgx.ConnConfig{
-		User:     "client",
+		User:     dbUser,
+		Password: dbPassword,
 		Host:     conf.DBHost,
 		Port:     conf.DBPort,
 		Database: conf.DBName,
 	}
 	db, err := mydb.Open(dbConfig)
 	if err != nil {
-		mylog.Log.WithField("error", err).Fatal(util.Trace("unable to connect to database"))
+		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
 	}
 	defer db.Close()
+
+	if err := initDB(db); err != nil {
+		mylog.Log.WithField("error", err).Fatal("error initializing database")
+	}
+
+	if _, err := db.Exec(setRoleSQL); err != nil {
+		mylog.Log.WithField("error", err).Fatal("failed to set role to client")
+	}
 
 	svcs, err := service.NewServices(conf)
 	if err != nil {
@@ -156,32 +174,10 @@ func main() {
 	mylog.Log.Fatal(http.ListenAndServe(address, router))
 }
 
-func initDB(conf *myconf.Config) error {
+func initDB(db *mydb.DB) error {
 	branch := util.GetRequiredEnv("BRANCH")
-	var dbUser, dbPassword string
-	if branch == "production" || branch == "development" {
-		dbUser = util.GetRequiredEnv("DB_USERNAME")
-		dbPassword = util.GetRequiredEnv("DB_PASSWORD")
-	} else {
-		dbUser = conf.DBUser
-		dbPassword = conf.DBPassword
-	}
 
-	dbConfig := pgx.ConnConfig{
-		User:     dbUser,
-		Password: dbPassword,
-		Host:     conf.DBHost,
-		Port:     conf.DBPort,
-		Database: conf.DBName,
-	}
-	db, err := mydb.Open(dbConfig)
-	if err != nil {
-		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
-	}
-	defer db.Close()
-
-	err = data.Initialize(db)
-	if err != nil {
+	if err := data.Initialize(db); err != nil {
 		return err
 	}
 
