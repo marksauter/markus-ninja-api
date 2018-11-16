@@ -606,17 +606,9 @@ func CreateUserAsset(
 
 	_, err = prepareExec(tx, psName, sql, args...)
 	if err != nil {
-		mylog.Log.WithError(err).Error("failed to create user_asset")
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -774,17 +766,8 @@ func UpdateUserAsset(
 	commandTag, err := prepareExec(tx, psName, sql, args...)
 	if err != nil {
 		if pgErr, ok := err.(pgx.PgError); ok {
-			switch PSQLError(pgErr.Code) {
-			case NotNullViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, RequiredFieldError(pgErr.ColumnName)
-			case UniqueViolation:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, DuplicateFieldError(ParseConstraintName(pgErr.ConstraintName))
-			default:
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return nil, err
-			}
+			mylog.Log.WithError(pgErr).Error(util.Trace(""))
+			return nil, handlePSQLError(pgErr)
 		}
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

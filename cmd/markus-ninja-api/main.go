@@ -202,7 +202,7 @@ func initDB(conf *myconf.Config) error {
 
 	for _, model := range modelTypes {
 		if err := data.CreatePermissionSuite(db, model); err != nil {
-			mylog.Log.WithError(err).Fatal(util.Trace("error during permission suite creation"))
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 	}
@@ -216,11 +216,13 @@ func initDB(conf *myconf.Config) error {
 		if !p.Authenticated {
 			err := data.UpdatePermissionAudience(db, &p.Operation, mytype.Everyone, p.Fields)
 			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		} else {
 			err := data.ConnectRolePermissions(db, &p.Operation, p.Fields, p.Roles)
 			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		}
@@ -232,16 +234,15 @@ func initDB(conf *myconf.Config) error {
 	guest.Login.Set("guest")
 	guest.Password.Set(xid.New().String())
 	if err := guest.PrimaryEmail.Set("guest@rkus.ninja"); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if _, err := data.CreateUser(db, guest); err != nil {
-		if dfErr, ok := err.(data.DataFieldError); ok {
-			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal(util.Trace("failed to create guest account"))
+		if dErr, ok := err.(data.DataEndUserError); ok {
+			if dErr.Code != data.UniqueViolation {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
-		} else {
-			return err
 		}
 	}
 
@@ -249,19 +250,22 @@ func initDB(conf *myconf.Config) error {
 	markus.Login.Set("markus")
 	markus.Password.Set(xid.New().String())
 	if err := markus.PrimaryEmail.Set("m@rkus.ninja"); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
 	if _, err := data.CreateUser(db, markus); err != nil {
-		if dfErr, ok := err.(data.DataFieldError); ok {
-			if dfErr.Code != data.DuplicateField {
-				mylog.Log.WithError(err).Fatal(util.Trace("failed to create markus account"))
+		if dErr, ok := err.(data.DataEndUserError); ok {
+			if dErr.Code != data.UniqueViolation {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 			markus, err = data.GetUserByLogin(db, "markus")
 			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		} else {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 	}
@@ -273,13 +277,11 @@ func initDB(conf *myconf.Config) error {
 	}
 	if !markusIsAdmin {
 		if err := data.GrantUserRoles(db, markus.ID.String, data.AdminRole); err != nil {
-			if dfErr, ok := err.(data.DataFieldError); ok {
-				if dfErr.Code != data.DuplicateField {
-					mylog.Log.WithError(err).Fatal(util.Trace("failed to grant markus admin role"))
+			if dErr, ok := err.(data.DataEndUserError); ok {
+				if dErr.Code != data.UniqueViolation {
+					mylog.Log.WithError(err).Error(util.Trace(""))
 					return err
 				}
-			} else {
-				return err
 			}
 		}
 	}
@@ -289,19 +291,22 @@ func initDB(conf *myconf.Config) error {
 		testUser.Login.Set("test")
 		testUser.Password.Set("test")
 		if err := testUser.PrimaryEmail.Set("test@example.com"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
 		if _, err := data.CreateUser(db, testUser); err != nil {
-			if dfErr, ok := err.(data.DataFieldError); ok {
-				if dfErr.Code != data.DuplicateField {
-					mylog.Log.WithError(err).Fatal(util.Trace("failed to create testUser account"))
+			if dErr, ok := err.(data.DataEndUserError); ok {
+				if dErr.Code != data.UniqueViolation {
+					mylog.Log.WithError(err).Error(util.Trace(""))
 					return err
 				}
 				testUser, err = data.GetUserByLogin(db, "test")
 				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
 					return err
 				}
 			} else {
+				mylog.Log.WithError(err).Error(util.Trace(""))
 				return err
 			}
 		}
@@ -313,13 +318,11 @@ func initDB(conf *myconf.Config) error {
 		}
 		if !testUserIsUser {
 			if err := data.GrantUserRoles(db, testUser.ID.String, data.UserRole); err != nil {
-				if dfErr, ok := err.(data.DataFieldError); ok {
-					if dfErr.Code != data.DuplicateField {
-						mylog.Log.WithError(err).Fatal(util.Trace("failed to grant testUser user role"))
+				if dErr, ok := err.(data.DataEndUserError); ok {
+					if dErr.Code != data.UniqueViolation {
+						mylog.Log.WithError(err).Error(util.Trace(""))
 						return err
 					}
-				} else {
-					return err
 				}
 			}
 		}
