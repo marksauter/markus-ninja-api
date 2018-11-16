@@ -36,7 +36,7 @@ func Load(name string) *Config {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
-	return &Config{
+	conf := &Config{
 		APIURL:    config.Get("app.api_url").(string),
 		AppName:   config.Get("app.name").(string),
 		ClientURL: config.Get("app.client_url").(string),
@@ -46,14 +46,23 @@ func Load(name string) *Config {
 		AWSRegion:       config.Get("aws.region").(string),
 		AWSUploadBucket: config.Get("aws.upload_bucket").(string),
 
-		DBHost:     config.Get("db.host").(string),
-		DBPort:     uint16(config.Get("db.port").(int64)),
-		DBUser:     config.Get("db.user").(string),
-		DBPassword: config.Get("db.password").(string),
-		DBName:     config.Get("db.name").(string),
+		DBHost: config.Get("db.host").(string),
+		DBPort: uint16(config.Get("db.port").(int64)),
+		DBName: config.Get("db.name").(string),
 
 		MailCharSet: config.Get("mail.char_set").(string),
 		MailSender:  config.Get("mail.sender").(string),
 		MailRootURL: config.Get("mail.root_url").(string),
 	}
+
+	dbUser := config.Get("db.user")
+	if dbUser != nil {
+		conf.DBUser = dbUser.(string)
+	}
+	dbPassword := config.Get("db.password")
+	if dbPassword != nil {
+		conf.DBPassword = dbPassword.(string)
+	}
+
+	return conf
 }

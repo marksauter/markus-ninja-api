@@ -34,8 +34,7 @@ func main() {
 	}
 
 	dbConfig := pgx.ConnConfig{
-		User: "client",
-		// Password: conf.DBPassword,
+		User:     "client",
 		Host:     conf.DBHost,
 		Port:     conf.DBPort,
 		Database: conf.DBName,
@@ -159,10 +158,18 @@ func main() {
 
 func initDB(conf *myconf.Config) error {
 	branch := util.GetRequiredEnv("BRANCH")
+	var dbUser, dbPassword string
+	if branch == "production" || branch == "development" {
+		dbUser = util.GetRequiredEnv("DB_USERNAME")
+		dbPassword = util.GetRequiredEnv("DB_PASSWORD")
+	} else {
+		dbUser = conf.DBUser
+		dbPassword = conf.DBPassword
+	}
 
 	dbConfig := pgx.ConnConfig{
-		User:     conf.DBUser,
-		Password: conf.DBPassword,
+		User:     dbUser,
+		Password: dbPassword,
 		Host:     conf.DBHost,
 		Port:     conf.DBPort,
 		Database: conf.DBName,
