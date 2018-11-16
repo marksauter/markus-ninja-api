@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	graphql "github.com/graph-gophers/graphql-go"
+	graphql "github.com/marksauter/graphql-go"
 )
 
 type lessonTimelineEvent interface {
