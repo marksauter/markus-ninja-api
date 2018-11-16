@@ -16,6 +16,14 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 )
 
+var setRoleSQL = `
+	SET ROLE client
+`
+
+var resetRoleSQL = `
+	RESET ROLE
+`
+
 type Middleware interface {
 	Use(context.Context, http.Handler) http.Handler
 }
@@ -48,6 +56,14 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
+
+		if _, err := a.Db.Exec(setRoleSQL); err != nil {
+			response := myhttp.InternalServerErrorResponse("")
+			myhttp.WriteResponseTo(rw, response)
+			return
+		}
+		defer a.Db.Exec(resetRoleSQL)
+
 		var user *data.User
 		if err == http.ErrNoCookie {
 			user, err = data.GetUserCredentialsByLogin(a.Db, "guest")

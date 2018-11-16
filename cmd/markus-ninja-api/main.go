@@ -24,14 +24,16 @@ import (
 	"github.com/rs/xid"
 )
 
-var setRoleSQL = `
-	SET ROLE 'client'
-`
-
 func main() {
 	branch := util.GetRequiredEnv("BRANCH")
 	confFilename := fmt.Sprintf("config.%s", branch)
 	conf := myconf.Load(confFilename)
+
+	if branch != "production" || branch != "development" {
+		if err := initDB(conf); err != nil {
+			mylog.Log.WithField("error", err).Fatal("error initializing database")
+		}
+	}
 
 	var dbUser, dbPassword string
 	if branch == "production" || branch == "development" {
@@ -54,14 +56,6 @@ func main() {
 		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
 	}
 	defer db.Close()
-
-	if err := initDB(db); err != nil {
-		mylog.Log.WithField("error", err).Fatal("error initializing database")
-	}
-
-	if _, err := db.Exec(setRoleSQL); err != nil {
-		mylog.Log.WithField("error", err).Fatal("failed to set role to client")
-	}
 
 	svcs, err := service.NewServices(conf)
 	if err != nil {
@@ -174,8 +168,25 @@ func main() {
 	mylog.Log.Fatal(http.ListenAndServe(address, router))
 }
 
-func initDB(db *mydb.DB) error {
+func initDB(conf *myconf.Config) error {
 	branch := util.GetRequiredEnv("BRANCH")
+
+	if branch == "production" || branch == "development" {
+		return fmt.Errorf("will not initialize db in branch %s", branch)
+	}
+
+	dbConfig := pgx.ConnConfig{
+		User:     conf.DBRootUser,
+		Password: conf.DBRootPassword,
+		Host:     conf.DBHost,
+		Port:     conf.DBPort,
+		Database: conf.DBName,
+	}
+	db, err := mydb.Open(dbConfig)
+	if err != nil {
+		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
+	}
+	defer db.Close()
 
 	if err := data.Initialize(db); err != nil {
 		return err
