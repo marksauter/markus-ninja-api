@@ -29,7 +29,7 @@ func main() {
 	confFilename := fmt.Sprintf("config.%s", branch)
 	conf := myconf.Load(confFilename)
 
-	if branch != "production" || branch != "development" {
+	if branch != "production" && branch != "development" {
 		if err := initDB(conf); err != nil {
 			mylog.Log.WithField("error", err).Fatal("error initializing database")
 		}
