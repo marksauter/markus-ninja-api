@@ -14,12 +14,38 @@ type DB struct {
 	*pgx.ConnPool
 }
 
+const setRoleSQL = `
+	SET ROLE client
+`
+
+func afterConnect(conn *pgx.Conn) error {
+	if _, err := conn.Exec(setRoleSQL); err != nil {
+		return err
+	}
+	return nil
+}
+
 func Open(config pgx.ConnConfig) (*DB, error) {
 	mylog.Log.Println("Connecting to database...")
 	pgxConnPoolConfig := pgx.ConnPoolConfig{
 		ConnConfig:     config,
 		MaxConnections: 5,
-		AfterConnect:   nil,
+		AfterConnect:   afterConnect,
+		AcquireTimeout: 5 * time.Second,
+	}
+	conn, err := pgx.NewConnPool(pgxConnPoolConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mylog.Log.Println("Database connected")
+	return &DB{conn}, nil
+}
+
+func OpenRoot(config pgx.ConnConfig) (*DB, error) {
+	mylog.Log.Println("Connecting to database...")
+	pgxConnPoolConfig := pgx.ConnPoolConfig{
+		ConnConfig:     config,
 		AcquireTimeout: 5 * time.Second,
 	}
 	conn, err := pgx.NewConnPool(pgxConnPoolConfig)

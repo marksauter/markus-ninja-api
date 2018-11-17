@@ -177,13 +177,15 @@ func main() {
 func initDB(conf *myconf.Config) error {
 	branch := util.GetRequiredEnv("BRANCH")
 
-	var dbRootUser, dbRootPassword string
+	var dbRootUser, dbRootPassword, dbPassword string
 	if branch == "production" || branch == "development" {
 		dbRootUser = util.GetRequiredEnv("DB_ROOT_USERNAME")
 		dbRootPassword = util.GetRequiredEnv("DB_ROOT_PASSWORD")
+		dbPassword = util.GetRequiredEnv("DB_PASSWORD")
 	} else {
 		dbRootUser = conf.DBRootUser
 		dbRootPassword = conf.DBRootPassword
+		dbPassword = conf.DBPassword
 	}
 
 	dbConfig := pgx.ConnConfig{
@@ -193,7 +195,7 @@ func initDB(conf *myconf.Config) error {
 		Port:     conf.DBPort,
 		Database: conf.DBName,
 	}
-	db, err := mydb.Open(dbConfig)
+	db, err := mydb.OpenRoot(dbConfig)
 	if err != nil {
 		mylog.Log.WithError(err).Fatal(util.Trace("unable to connect to database"))
 	}
@@ -201,6 +203,23 @@ func initDB(conf *myconf.Config) error {
 
 	if err := data.Initialize(db); err != nil {
 		return err
+	}
+
+	createRoleWWWSQL := `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT
+				FROM pg_catalog.pg_roles
+				WHERE rolname = 'client') THEN
+				CREATE ROLE www NOINHERIT LOGIN PASSWORD '` + dbPassword + `';
+				GRANT client TO www;
+			END IF;
+		END
+		$$
+	`
+	if _, err := db.Exec(createRoleWWWSQL); err != nil {
+		mylog.Log.WithError(err).Fatal(util.Trace("failed to create role"))
 	}
 
 	modelTypes := []interface{}{
