@@ -18,11 +18,11 @@ import (
 	"github.com/rs/xid"
 )
 
-var setRoleSQL = `
+const setRoleSQL = `
 	SET ROLE client
 `
 
-var resetRoleSQL = `
+const resetRoleSQL = `
 	RESET ROLE
 `
 
@@ -64,7 +64,11 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-		defer a.Db.Exec(resetRoleSQL)
+		defer func() {
+			if _, err := a.Db.Exec(resetRoleSQL); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+			}
+		}()
 
 		var user *data.User
 		if err == http.ErrNoCookie {

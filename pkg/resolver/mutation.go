@@ -1833,7 +1833,7 @@ func (r *RootResolver) ResetPassword(
 		mylog.Log.WithError(err).Error("failed to set password")
 		return false, err
 	}
-	if err := user.Password.CheckStrength(mytype.Moderate); err != nil {
+	if err := user.Password.CheckStrength(mytype.Weak); err != nil {
 		mylog.Log.WithError(err).Error("password failed strength check")
 		return false, err
 	}
@@ -2505,7 +2505,7 @@ func (r *RootResolver) UpdateViewerAccount(
 			mylog.Log.WithError(err).Error("failed to set password")
 			return nil, err
 		}
-		if err := user.Password.CheckStrength(mytype.Strong); err != nil {
+		if err := user.Password.CheckStrength(mytype.Weak); err != nil {
 			mylog.Log.WithError(err).Error("password failed strength check")
 			return nil, err
 		}
