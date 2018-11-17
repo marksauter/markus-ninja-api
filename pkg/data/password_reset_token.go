@@ -21,7 +21,7 @@ type PRT struct {
 	IssuedAt  pgtype.Timestamptz `db:"issued_at" permit:"create/read"`
 	RequestIP pgtype.Inet        `db:"request_ip" permit:"create/read"`
 	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
-	Token     pgtype.Varchar     `db:"token" permit:"create"`
+	Token     pgtype.Varchar     `db:"token" permit:"create/read"`
 }
 
 func getPRT(
