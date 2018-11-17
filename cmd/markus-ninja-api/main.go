@@ -103,7 +103,6 @@ func main() {
 	).Then(previewHandler)
 	token := middleware.CommonMiddleware.Append(
 		tokenHandler.Cors().Handler,
-		authMiddleware.Use,
 	).Then(tokenHandler)
 	removeToken := middleware.CommonMiddleware.Append(
 		removeTokenHandler.Cors().Handler,
