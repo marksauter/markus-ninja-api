@@ -18,14 +18,6 @@ import (
 	"github.com/rs/xid"
 )
 
-const setRoleSQL = `
-	SET ROLE client
-`
-
-const resetRoleSQL = `
-	RESET ROLE
-`
-
 type Middleware interface {
 	Use(context.Context, http.Handler) http.Handler
 }
@@ -58,17 +50,6 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			myhttp.WriteResponseTo(rw, response)
 			return
 		}
-
-		if _, err := a.Db.Exec(setRoleSQL); err != nil {
-			response := myhttp.InternalServerErrorResponse("")
-			myhttp.WriteResponseTo(rw, response)
-			return
-		}
-		defer func() {
-			if _, err := a.Db.Exec(resetRoleSQL); err != nil {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-			}
-		}()
 
 		var user *data.User
 		if err == http.ErrNoCookie {
