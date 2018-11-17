@@ -1,7 +1,7 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "184274575036.dkr.ecr.us-east-1.amazonaws.com/markus-ninja-api-amd64:v0.0.3-204-g2b52cb0-dirty",
+    "Name": "184274575036.dkr.ecr.us-east-1.amazonaws.com/markus-ninja-api-amd64:v0.0.3-203-g9fed4c6-dirty",
     "Update": "true"
   },
   "Ports": [
