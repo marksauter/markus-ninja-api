@@ -4,24 +4,20 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
-	"github.com/marksauter/markus-ninja-api/pkg/util"
 	"github.com/rs/cors"
 )
 
-type RemoveTokenHandler struct{}
+type RemoveTokenHandler struct {
+	Conf *myconf.Config
+}
 
 func (h RemoveTokenHandler) Cors() *cors.Cors {
-	branch := util.GetRequiredEnv("BRANCH")
-	allowedOrigins := []string{"ma.rkus.ninja"}
-	if branch != "production" {
-		allowedOrigins = append(allowedOrigins, "http://localhost:*")
-	}
-
 	return cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
-		AllowedOrigins:   allowedOrigins,
+		AllowedOrigins:   []string{h.Conf.ClientURL},
 		// Debug: true,
 	})
 }
