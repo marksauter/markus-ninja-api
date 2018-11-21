@@ -18,4 +18,4 @@ name = "markusninja"
 [mail]
 char_set = "UTF-8"
 sender = "noreply@rkus.ninja"
-root_url = "api.rkus.ninja"
+root_url = "https://api.rkus.ninja"

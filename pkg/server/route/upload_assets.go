@@ -38,17 +38,11 @@ type UploadAssetsHandler struct {
 }
 
 func (h UploadAssetsHandler) Cors() *cors.Cors {
-	branch := util.GetRequiredEnv("BRANCH")
-	allowedOrigins := []string{"ma.rkus.ninja"}
-	if branch != "production" {
-		allowedOrigins = append(allowedOrigins, "http://localhost:*")
-	}
-
 	return cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowedMethods:   []string{http.MethodOptions, http.MethodPost},
-		AllowedOrigins:   allowedOrigins,
+		AllowedOrigins:   []string{h.Conf.ClientURL},
 		// Debug: true,
 	})
 }

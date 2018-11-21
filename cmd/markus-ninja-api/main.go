@@ -78,7 +78,7 @@ func main() {
 	confirmVerificationHandler := route.ConfirmVerificationHandler{Conf: conf, Db: db}
 	previewHandler := route.PreviewHandler{Conf: conf, Repos: repos}
 	tokenHandler := route.TokenHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
-	removeTokenHandler := route.RemoveTokenHandler{}
+	removeTokenHandler := route.RemoveTokenHandler{Conf: conf}
 	signupHandler := route.SignupHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	uploadAssetsHandler := route.UploadAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
 	userAssetsHandler := route.UserAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
@@ -137,7 +137,7 @@ func main() {
 
 	// if branch == "development.local" || branch == "test" {
 	indexHandler := route.IndexHandler{}
-	graphiQLHandler := route.GraphiQLHandler{}
+	graphiQLHandler := route.GraphiQLHandler{Conf: conf}
 	index := middleware.CommonMiddleware.Then(indexHandler)
 	graphiql := middleware.CommonMiddleware.Append(
 		graphiQLHandler.Cors().Handler,

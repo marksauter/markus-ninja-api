@@ -26,17 +26,11 @@ type UserAssetsHandler struct {
 }
 
 func (h UserAssetsHandler) Cors() *cors.Cors {
-	branch := util.GetRequiredEnv("BRANCH")
-	allowedOrigins := []string{"ma.rkus.ninja"}
-	if branch != "production" {
-		allowedOrigins = append(allowedOrigins, "http://localhost:*")
-	}
-
 	return cors.New(cors.Options{
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"Content-Type"},
 		AllowedMethods:   []string{http.MethodOptions, http.MethodGet},
-		AllowedOrigins:   allowedOrigins,
+		AllowedOrigins:   []string{h.Conf.ClientURL},
 		// Debug: true,
 	})
 }

@@ -22,16 +22,10 @@ type ConfirmVerificationHandler struct {
 }
 
 func (h ConfirmVerificationHandler) Cors() *cors.Cors {
-	branch := util.GetRequiredEnv("BRANCH")
-	allowedOrigins := []string{"ma.rkus.ninja"}
-	if branch != "production" {
-		allowedOrigins = append(allowedOrigins, "http://localhost:*")
-	}
-
 	return cors.New(cors.Options{
 		AllowedHeaders: []string{"Content-Type"},
 		AllowedMethods: []string{http.MethodOptions, http.MethodPost},
-		AllowedOrigins: allowedOrigins,
+		AllowedOrigins: []string{h.Conf.ClientURL},
 	})
 }
 

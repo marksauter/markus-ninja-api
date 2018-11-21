@@ -3,22 +3,18 @@ package route
 import (
 	"net/http"
 
-	"github.com/marksauter/markus-ninja-api/pkg/util"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/rs/cors"
 )
 
-type GraphiQLHandler struct{}
+type GraphiQLHandler struct {
+	Conf *myconf.Config
+}
 
 func (h GraphiQLHandler) Cors() *cors.Cors {
-	branch := util.GetRequiredEnv("BRANCH")
-	allowedOrigins := []string{"ma.rkus.ninja"}
-	if branch != "production" {
-		allowedOrigins = append(allowedOrigins, "http://localhost:*")
-	}
-
 	return cors.New(cors.Options{
 		AllowedMethods: []string{http.MethodOptions, http.MethodGet},
-		AllowedOrigins: allowedOrigins,
+		AllowedOrigins: []string{h.Conf.ClientURL},
 	})
 }
 
