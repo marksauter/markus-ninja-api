@@ -919,7 +919,7 @@ type DeleteViewerAccountInput struct {
 func (r *RootResolver) DeleteViewerAccount(
 	ctx context.Context,
 	args struct{ Input DeleteViewerAccountInput },
-) (*graphql.ID, error) {
+) (*deleteViewerAccountPayloadResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -947,8 +947,11 @@ func (r *RootResolver) DeleteViewerAccount(
 		return nil, err
 	}
 
-	id := graphql.ID(user.ID.String)
-	return &id, nil
+	return &deleteViewerAccountPayloadResolver{
+		Conf:     r.Conf,
+		Repos:    r.Repos,
+		ViewerID: &user.ID,
+	}, nil
 }
 
 type GiveAppleInput struct {

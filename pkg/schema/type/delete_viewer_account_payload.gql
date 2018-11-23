@@ -1,0 +1,5 @@
+# Return type for DeleteViewerAccount.
+type DeleteViewerAccountPayload {
+  # The deleted viewer id.
+  deletedViewerId: ID!
+}

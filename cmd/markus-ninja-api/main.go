@@ -342,6 +342,54 @@ func initDB(conf *myconf.Config) error {
 		}
 	}
 
+	if branch != "production" {
+		devUser := &data.User{}
+		if err := devUser.Login.Set("user"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if err := devUser.Password.Set("user"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if err := devUser.PrimaryEmail.Set("user@example.com"); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if _, err := data.CreateUser(db, devUser); err != nil {
+			if dErr, ok := err.(data.DataEndUserError); ok {
+				if dErr.Code != data.UniqueViolation {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				devUser, err = data.GetUserByLogin(db, "user")
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+			} else {
+				mylog.Log.WithError(err).Fatal(util.Trace("failed to create dev user"))
+				return err
+			}
+		}
+		devUserIsUser := false
+		for _, r := range devUser.Roles.Elements {
+			if r.String == data.UserRole {
+				devUserIsUser = true
+			}
+		}
+		if !devUserIsUser {
+			if err := data.GrantUserRoles(db, devUser.ID.String, data.UserRole); err != nil {
+				if dErr, ok := err.(data.DataEndUserError); ok {
+					if dErr.Code != data.UniqueViolation {
+						mylog.Log.WithError(err).Error(util.Trace(""))
+						return err
+					}
+				}
+			}
+		}
+	}
+
 	if branch == "test" {
 		testUser := &data.User{}
 		if err := testUser.Login.Set("test"); err != nil {
