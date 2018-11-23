@@ -131,6 +131,6 @@ func (h ConfirmVerificationHandler) ServeHTTP(rw http.ResponseWriter, req *http.
 		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
+	http.Redirect(rw, req, h.Conf.ClientURL, http.StatusSeeOther)
 	return
 }

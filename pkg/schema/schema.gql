@@ -110,7 +110,7 @@ type Mutation {
   # Deletes a user asset.
   deleteUserAsset(input: DeleteUserAssetInput!): DeleteUserAssetPayload
   # Deletes the viewer's account.
-  deleteViewerAccount(input: DeleteViewerAccountInput!): ID
+  deleteViewerAccount(input: DeleteViewerAccountInput!): DeleteViewerAccountPayload
 
   # Gives an apple to an Appleable.
   giveApple(input: GiveAppleInput!): Appleable
