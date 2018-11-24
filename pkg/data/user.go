@@ -872,7 +872,9 @@ func SearchUser(
 	}
 
 	var args pgx.QueryArgs
-	where := func(string) string { return "" }
+	where := func(from string) string {
+		return from + `.login != 'guest'`
+	}
 
 	selects := []string{
 		"account_updated_at",

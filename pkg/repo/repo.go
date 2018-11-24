@@ -238,6 +238,8 @@ func (r *Repos) GetCreateable(
 	nodeID *mytype.OID,
 ) (NodePermit, error) {
 	switch nodeID.Type {
+	case "Course":
+		return r.Course().Get(ctx, nodeID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, nodeID.String)
 	case "Study":
@@ -336,6 +338,8 @@ func (r *Repos) GetNode(
 	nodeID *mytype.OID,
 ) (NodePermit, error) {
 	switch nodeID.Type {
+	case "Course":
+		return r.Course().Get(ctx, nodeID.String)
 	case "Email":
 		return r.Email().Get(ctx, nodeID.String)
 	case "Event":
