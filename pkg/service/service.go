@@ -22,7 +22,7 @@ func NewServices(conf *myconf.Config) (*Services, error) {
 		Sender:  conf.MailSender,
 		RootURL: conf.MailRootURL,
 	}
-	storageSvc, err := NewStorageService()
+	storageSvc, err := NewStorageService(conf)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

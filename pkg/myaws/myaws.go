@@ -20,3 +20,7 @@ func NewSession() *session.Session {
 
 	return sess
 }
+
+func GetSession() *session.Session {
+	return AWSSession
+}
