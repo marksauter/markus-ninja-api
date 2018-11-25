@@ -130,10 +130,10 @@ func main() {
 	r.Handle("/token", token)
 	r.Handle("/remove_token", removeToken)
 	r.Handle("/upload/assets", uploadAssets)
+	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 	r.Handle("/user/{login}/emails/{id}/confirm_verification/{token}",
 		confirmVerification,
 	)
-	r.Handle("/user/assets/{user_id}/{key}", userAssets)
 
 	// if branch == "development.local" || branch == "test" {
 	indexHandler := route.IndexHandler{}

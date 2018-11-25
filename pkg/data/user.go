@@ -140,7 +140,9 @@ func CountUserBySearch(
 	filters *UserFilterOptions,
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := func(from string) string { return "" }
+	where := func(from string) string {
+		return from + `.login != 'guest'`
+	}
 	from := "user_search_index"
 
 	sql := CountSQL(from, where, filters, &args)
