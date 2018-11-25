@@ -210,7 +210,6 @@ func (s *StorageService) Upload(
 	contentType string,
 	size int64,
 ) (*UploadResponse, error) {
-	mylog.Log.Info("StorageService.Upload()")
 	// Hash of the file contents to be used as the s3 object 'key'.
 	hash := sha1.New()
 	io.Copy(hash, file)
@@ -252,13 +251,14 @@ func (s *StorageService) Upload(
 			return nil, err
 		}
 
-		mylog.Log.WithField("size", n).Info(util.Trace("uploaded file"))
+		mylog.Log.WithField("size", n).Info(util.Trace("uploaded new file"))
 		return &UploadResponse{
 			Key:         key,
 			IsNewObject: true,
 		}, nil
 	}
 
+	mylog.Log.WithField("key", key).Info(util.Trace(""))
 	return &UploadResponse{
 		Key:         key,
 		IsNewObject: false,
