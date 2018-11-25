@@ -135,7 +135,6 @@ func main() {
 		confirmVerification,
 	)
 
-	// if branch == "development.local" || branch == "test" {
 	indexHandler := route.IndexHandler{}
 	graphiQLHandler := route.GraphiQLHandler{Conf: conf}
 	index := middleware.CommonMiddleware.Then(indexHandler)
@@ -145,7 +144,6 @@ func main() {
 	).Then(graphiQLHandler)
 	r.Handle("/", index)
 	r.Handle("/graphiql", graphiql)
-	// }
 
 	if branch == "development.local" || branch == "test" {
 		r.PathPrefix("/debug/").Handler(http.DefaultServeMux)
