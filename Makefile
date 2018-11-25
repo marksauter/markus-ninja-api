@@ -189,7 +189,7 @@ login:
 	aws ecr get-login --no-include-email --region us-east-1 | bash
 
 deploy:
-	@$(MAKE) --no-print-directory container
+	@$(MAKE) --no-print-directory BRANCH=production container
 	@$(MAKE) --no-print-directory push
 	@git add .
 	@git commit -m "$(VERSION)"
