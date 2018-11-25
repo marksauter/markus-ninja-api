@@ -17,11 +17,11 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/marksauter/markus-ninja-api/pkg/myaws"
+	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 	minio "github.com/minio/minio-go"
-	"github.com/minio/minio-go/pkg/credentials"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,13 +32,17 @@ type StorageService struct {
 }
 
 // NewStorageService - create a new storage service instance
-func NewStorageService() (*StorageService, error) {
-	credentials := credentials.NewFileAWSCredentials("", "")
+func NewStorageService(conf *myconf.Config) (*StorageService, error) {
+	credentials, err := myaws.GetSession().Config.Credentials.Get()
+	if err != nil {
+		return nil, err
+	}
 	endPoint := "s3.amazonaws.com"
 	useSSL := true
-	svc, err := minio.NewWithCredentials(
+	svc, err := minio.NewWithRegion(
 		endPoint,
-		credentials,
+		credentials.AccessKeyID,
+		credentials.SecretAccessKey,
 		useSSL,
 		myaws.AWSRegion,
 	)
@@ -48,7 +52,7 @@ func NewStorageService() (*StorageService, error) {
 	}
 	// svc.TraceOn(nil)
 	return &StorageService{
-		bucket: "markus-ninja-development-user-asset-us-east-1",
+		bucket: conf.AWSUploadBucket,
 		svc:    svc,
 	}, nil
 }
