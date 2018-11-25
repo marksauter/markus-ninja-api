@@ -190,7 +190,7 @@ login:
 
 deploy:
 	@$(MAKE) --no-print-directory BRANCH=production container
-	@$(MAKE) --no-print-directory push
+	@$(MAKE) --no-print-directory BRANCH=production push
 	@git add .
 	@git commit -m "$(VERSION)"
 	@eb deploy
