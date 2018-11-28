@@ -37,6 +37,8 @@ func NewStorageService(conf *myconf.Config) (*StorageService, error) {
 	if err != nil {
 		return nil, err
 	}
+	mylog.Log.Debug(credentials.AccessKeyID[:4], " ", credentials.AccessKeyID[len(credentials.AccessKeyID)-4:])
+	mylog.Log.Debug(credentials.SecretAccessKey[:4], " ", credentials.SecretAccessKey[len(credentials.SecretAccessKey)-7:])
 	endPoint := "s3.amazonaws.com"
 	useSSL := true
 	svc, err := minio.NewWithRegion(
