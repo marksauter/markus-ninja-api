@@ -11,6 +11,8 @@ var AWSSession = NewSession()
 
 func NewSession() *session.Session {
 	sess, err := session.NewSession(&aws.Config{
+		LogLevel:                      aws.LogLevel(aws.LogDebugWithHTTPBody),
+		CredentialsChainVerboseErrors: aws.Bool(true),
 		Region: aws.String(AWSRegion),
 	})
 
