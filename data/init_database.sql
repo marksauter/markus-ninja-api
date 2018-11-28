@@ -1034,7 +1034,7 @@ CREATE TABLE IF NOT EXISTS user_asset(
   asset_id     BIGINT       NOT NULL,
   description  TEXT,
   id           VARCHAR(100) PRIMARY KEY,
-  name         VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w-.]{1,39}$'),
+  name         VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
   name_tokens  TEXT         NOT NULL,
   study_id     VARCHAR(100) NOT NULL,
   updated_at   TIMESTAMPTZ  DEFAULT statement_timestamp(),
@@ -1432,12 +1432,13 @@ BEGIN
         NEW.user_id
       );
     WHEN 'UserAssetEvent' THEN
-      INSERT INTO user_asset_event (action, asset_id, event_id, payload, user_id)
+      INSERT INTO user_asset_event (action, asset_id, event_id, payload, study_id, user_id)
       VALUES (
         NEW.payload->>'action',
         NEW.payload->>'asset_id',
         NEW.id,
         NEW.payload,
+        NEW.study_id,
         NEW.user_id
       )
       ON CONFLICT DO NOTHING;
@@ -2023,6 +2024,7 @@ CREATE TABLE IF NOT EXISTS user_asset_event (
   created_at TIMESTAMPTZ  DEFAULT statement_timestamp(),
   event_id   VARCHAR(100) PRIMARY KEY,
   payload    JSONB        NOT NULL,
+  study_id   VARCHAR(100) NOT NULL,
   user_id    VARCHAR(100) NOT NULL,
   FOREIGN KEY (action)
     REFERENCES user_asset_event_action (name)
@@ -2032,6 +2034,9 @@ CREATE TABLE IF NOT EXISTS user_asset_event (
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (event_id)
     REFERENCES event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (user_id)
     REFERENCES account (id)
