@@ -50,7 +50,7 @@ func NewStorageService(conf *myconf.Config) (*StorageService, error) {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	// svc.TraceOn(nil)
+	svc.TraceOn(nil)
 	return &StorageService{
 		bucket: conf.AWSUploadBucket,
 		svc:    svc,
