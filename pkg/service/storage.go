@@ -22,6 +22,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 	minio "github.com/minio/minio-go"
+	minioCreds "github.com/minio/minio-go/pkg/credentials"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,26 +34,44 @@ type StorageService struct {
 
 // NewStorageService - create a new storage service instance
 func NewStorageService(conf *myconf.Config) (*StorageService, error) {
-	credentials, err := myaws.NewSession().Config.Credentials.Get()
-	if err != nil {
-		return nil, err
+	branch := util.GetRequiredEnv("BRANCH")
+	var svc *minio.Client
+	var err error
+	if branch != "production" {
+		credentials, err := myaws.NewSession().Config.Credentials.Get()
+		if err != nil {
+			return nil, err
+		}
+		endPoint := "s3.amazonaws.com"
+		useSSL := true
+		svc, err = minio.NewWithRegion(
+			endPoint,
+			credentials.AccessKeyID,
+			credentials.SecretAccessKey,
+			useSSL,
+			myaws.AWSRegion,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	} else {
+		iam := minioCreds.NewIAM("")
+		endPoint := "s3.amazonaws.com"
+		useSSL := true
+		svc, err = minio.NewWithCredentials(
+			endPoint,
+			iam,
+			useSSL,
+			myaws.AWSRegion,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
-	mylog.Log.Info(credentials.AccessKeyID[:4], " ", credentials.AccessKeyID[len(credentials.AccessKeyID)-4:])
-	mylog.Log.Info(credentials.SecretAccessKey[:4], " ", credentials.SecretAccessKey[len(credentials.SecretAccessKey)-7:])
-	endPoint := "s3.amazonaws.com"
-	useSSL := true
-	svc, err := minio.NewWithRegion(
-		endPoint,
-		credentials.AccessKeyID,
-		credentials.SecretAccessKey,
-		useSSL,
-		myaws.AWSRegion,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	svc.TraceOn(nil)
+
+	// svc.TraceOn(nil)
 	return &StorageService{
 		bucket: conf.AWSUploadBucket,
 		svc:    svc,
