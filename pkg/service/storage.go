@@ -33,7 +33,7 @@ type StorageService struct {
 
 // NewStorageService - create a new storage service instance
 func NewStorageService(conf *myconf.Config) (*StorageService, error) {
-	credentials, err := myaws.GetSession().Config.Credentials.Get()
+	credentials, err := myaws.NewSession().Config.Credentials.Get()
 	if err != nil {
 		return nil, err
 	}
