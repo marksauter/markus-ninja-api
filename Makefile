@@ -193,5 +193,4 @@ deploy:
 	@$(MAKE) --no-print-directory BRANCH=production push
 	@git add .
 	@git commit -m "$(VERSION)"
-	@zip -r build/eb-deploy.zip Dockerrun.aws.json .ebextensions 
 	@eb deploy
