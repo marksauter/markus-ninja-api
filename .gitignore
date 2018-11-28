@@ -17,3 +17,4 @@ log.txt
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 .ebignore/*
+/build/eb-deploy.zip
