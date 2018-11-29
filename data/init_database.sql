@@ -3961,7 +3961,7 @@ CREATE TABLE IF NOT EXISTS user_asset_search_index (
   document      TSVECTOR     NOT NULL,
   id            VARCHAR(100) PRIMARY KEY,
   key           TEXT         NOT NULL,
-  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w-.]{1,39}$'),
+  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
   name_tokens   TEXT         NOT NULL,
   original_name TEXT         NOT NULL, 
   size          BIGINT       NOT NULL,
