@@ -194,4 +194,4 @@ deploy:
 	@git add .
 	@git commit -m "$(VERSION)"
 	@zip -r build/eb-deploy.zip Dockerrun.aws.json .ebextensions
-	@eb deploy --label app-$(VERSION).zip
+	@eb deploy --label app-$(VERSION)
