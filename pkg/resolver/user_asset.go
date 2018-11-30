@@ -49,7 +49,7 @@ func (r *userAssetResolver) Href() (mygql.URI, error) {
 		return uri, err
 	}
 	href := fmt.Sprintf(
-		r.Conf.APIURL+"/user/assets/%s/%s",
+		r.Conf.ImagesURL+"/%s/%s",
 		userID.Short,
 		key,
 	)

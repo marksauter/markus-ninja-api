@@ -1,6 +1,7 @@
 [app]
 api_url = "https://api.rkus.ninja"
 client_url = "https://ma.rkus.ninja"
+images_url = "https://i.rkus.ninja"
 name = "api.rkus.ninja"
 
 [auth]

@@ -423,7 +423,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 
 		updated = true
 		src := fmt.Sprintf(
-			r.conf.APIURL+"/user/assets/%s/%s",
+			r.conf.ImagesURL+"/%s/%s",
 			userAsset.UserID.Short,
 			userAsset.Key.String,
 		)

@@ -10,6 +10,7 @@ type Config struct {
 	APIURL    string
 	AppName   string
 	ClientURL string
+	ImagesURL string
 
 	AuthKeyId string
 
@@ -42,6 +43,7 @@ func Load(name string) *Config {
 		APIURL:    config.Get("app.api_url").(string),
 		AppName:   config.Get("app.name").(string),
 		ClientURL: config.Get("app.client_url").(string),
+		ImagesURL: config.Get("app.images_url").(string),
 
 		AuthKeyId: config.Get("auth.key_id").(string),
 
