@@ -2572,7 +2572,7 @@ func (r *RootResolver) UpdateViewerProfile(
 		if *emailID == "" {
 			emailID = nil
 		}
-		if err := user.ProfileEmailID.Set(args.Input.EmailID); err != nil {
+		if err := user.ProfileEmailID.Set(emailID); err != nil {
 			return nil, myerr.UnexpectedError{"failed to set user profile_email_id"}
 		}
 	}

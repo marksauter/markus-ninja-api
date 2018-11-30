@@ -310,6 +310,9 @@ func (r *userResolver) Email(ctx context.Context) (*emailResolver, error) {
 
 	email, err := r.Repos.Email().Get(ctx, id.String)
 	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 
