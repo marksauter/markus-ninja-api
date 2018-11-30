@@ -78,9 +78,8 @@ func NewStorageService(conf *myconf.Config) (*StorageService, error) {
 	}, nil
 }
 
-// Get - get an object from passed contentType, userID, and key
+// Get - get an object from passed userID, and key
 func (s *StorageService) Get(
-	contentType string,
 	userID *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
@@ -93,7 +92,6 @@ func (s *StorageService) Get(
 	)
 	objectPath := strings.Join(
 		[]string{
-			contentType,
 			userID.Short,
 			objectName,
 		},
@@ -101,7 +99,6 @@ func (s *StorageService) Get(
 	)
 
 	mylog.Log.WithFields(logrus.Fields{
-		"type":    contentType,
 		"user_id": userID.String,
 		"key":     key,
 	}).Info(util.Trace("object found"))
@@ -116,7 +113,6 @@ func (s *StorageService) Get(
 // necessary
 func (s *StorageService) GetThumbnail(
 	size int,
-	contentType string,
 	userID *mytype.OID,
 	key string,
 ) (*minio.Object, error) {
@@ -133,12 +129,11 @@ func (s *StorageService) GetThumbnail(
 		thumbKey[9:],
 	)
 	objectPath := strings.Join([]string{
-		contentType,
 		userID.Short,
 		objectName,
 	}, "/")
 
-	_, err := s.svc.StatObject(
+	objInfo, err := s.svc.StatObject(
 		s.bucket,
 		objectPath,
 		minio.StatObjectOptions{},
@@ -152,7 +147,7 @@ func (s *StorageService) GetThumbnail(
 
 		mylog.Log.Info("generating new thumbnail...")
 
-		asset, err := s.Get(contentType, userID, key)
+		asset, err := s.Get(userID, key)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
@@ -201,7 +196,7 @@ func (s *StorageService) GetThumbnail(
 			objectPath,
 			thumbFile,
 			thumbStat.Size(),
-			minio.PutObjectOptions{ContentType: contentType},
+			minio.PutObjectOptions{ContentType: objInfo.ContentType},
 		)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -211,7 +206,6 @@ func (s *StorageService) GetThumbnail(
 
 	mylog.Log.WithFields(logrus.Fields{
 		"size":    size,
-		"type":    contentType,
 		"user_id": userID.String,
 		"key":     key,
 	}).Info(util.Trace("thumbnail found"))
@@ -248,7 +242,6 @@ func (s *StorageService) Upload(
 		key[9:],
 	)
 	objectPath := strings.Join([]string{
-		contentType,
 		userID.Short,
 		objectName,
 	}, "/")
