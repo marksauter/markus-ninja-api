@@ -81,7 +81,7 @@ func main() {
 	removeTokenHandler := route.RemoveTokenHandler{Conf: conf}
 	signupHandler := route.SignupHandler{AuthSvc: svcs.Auth, Conf: conf, Db: db}
 	uploadAssetsHandler := route.UploadAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
-	userAssetsHandler := route.UserAssetsHandler{Conf: conf, Repos: repos, StorageSvc: svcs.Storage}
+	userAssetsHandler := route.UserAssetsHandler{Conf: conf, StorageSvc: svcs.Storage}
 
 	graphql := middleware.CommonMiddleware.Append(
 		graphQLHandler.Cors().Handler,

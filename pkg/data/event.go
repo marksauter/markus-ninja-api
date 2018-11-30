@@ -651,14 +651,16 @@ func CreateEvent(
 	}
 
 	event, err := GetEvent(tx, row.ID.String)
-	if err != nil {
+	if err != nil && err != ErrNotFound {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	if err := CreateNotificationsFromEvent(tx, event); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+	if event != nil {
+		if err := CreateNotificationsFromEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	if newTx {

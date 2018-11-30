@@ -11,7 +11,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myhttp"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
-	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 	minio "github.com/minio/minio-go"
@@ -21,7 +20,6 @@ import (
 // UserAssetsHandler - handler for user assets route
 type UserAssetsHandler struct {
 	Conf       *myconf.Config
-	Repos      *repo.Repos
 	StorageSvc *service.StorageService
 }
 
@@ -36,7 +34,7 @@ func (h UserAssetsHandler) Cors() *cors.Cors {
 }
 
 func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if h.Conf == nil || h.Repos == nil || h.StorageSvc == nil {
+	if h.Conf == nil || h.StorageSvc == nil {
 		err := errors.New("route inproperly setup")
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		response := myhttp.InternalServerErrorResponse(err.Error())
@@ -82,26 +80,10 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		}
 	}
 
-	assetPermit, err := h.Repos.Asset().GetByKey(req.Context(), key)
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get asset")
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
-	contentType, err := assetPermit.ContentType()
-	if err != nil {
-		mylog.Log.WithError(err).Error("failed to get asset content type")
-		response := myhttp.InternalServerErrorResponse(err.Error())
-		myhttp.WriteResponseTo(rw, response)
-		return
-	}
-
 	var object *minio.Object
 	defer object.Close()
 	if s != "" {
-		object, err = h.StorageSvc.GetThumbnail(size, contentType, uid, key)
+		object, err = h.StorageSvc.GetThumbnail(size, uid, key)
 		if err != nil {
 			mylog.Log.WithError(err).Error("failed to get thumbnail")
 			response := myhttp.InternalServerErrorResponse(err.Error())
@@ -109,7 +91,7 @@ func (h UserAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 			return
 		}
 	} else {
-		object, err = h.StorageSvc.Get(contentType, uid, key)
+		object, err = h.StorageSvc.Get(uid, key)
 		if err != nil {
 			mylog.Log.WithError(err).Error("failed to get file")
 			response := myhttp.InternalServerErrorResponse(err.Error())
