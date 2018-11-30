@@ -1,6 +1,7 @@
 [app]
 api_url = "http://localhost:5000"
 client_url = "http://localhost:3000"
+images_url = "http://localhost:5050"
 name = "api.rkus.ninja"
 
 [auth]

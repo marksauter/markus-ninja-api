@@ -232,7 +232,7 @@ func (h UploadAssetsHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	}
 
 	href := fmt.Sprintf(
-		h.Conf.APIURL+"/user/assets/%s/%s",
+		h.Conf.ImagesURL+"/%s/%s",
 		viewer.ID.Short,
 		uploadResponse.Key,
 	)
