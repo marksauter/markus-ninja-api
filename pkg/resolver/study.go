@@ -326,7 +326,7 @@ func (r *studyResolver) Courses(
 		ctx,
 		studyID.String,
 		pageOptions,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -336,7 +336,7 @@ func (r *studyResolver) Courses(
 		courses,
 		pageOptions,
 		studyID,
-		args.FilterBy,
+		&filters,
 		r.Repos,
 		r.Conf,
 	)
