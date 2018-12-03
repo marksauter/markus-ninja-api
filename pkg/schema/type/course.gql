@@ -3,6 +3,7 @@ type Course implements
   Appleable,
   Createable,
   Node,
+  Publishable,
   Searchable,
   StudyNode,
   Topicable,
@@ -43,6 +44,12 @@ type Course implements
 
   id: ID!
 
+  # Is this course published?
+  isPublished: Boolean!
+
+  # Is this course publishable?
+  isPublishable: Boolean!
+
   # Returns a single lesson from the current course by number.
   lesson(
     # The number for the lesson to be returned.
@@ -78,6 +85,9 @@ type Course implements
 
   # The owner of the course.
   owner: User!
+
+  # Identifies when the course was published at.
+  publishedAt: Time
 
   # The HTTP path for this course.
   resourcePath: URI!

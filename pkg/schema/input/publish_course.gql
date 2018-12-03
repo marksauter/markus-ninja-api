@@ -1,0 +1,5 @@
+# Input type for PublishCourse.
+input PublishCourseInput {
+  # ID of the course.
+  courseId: ID!
+}

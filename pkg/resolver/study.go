@@ -310,6 +310,18 @@ func (r *studyResolver) Courses(
 		return &resolver, err
 	}
 
+	filters := data.CourseFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	courses, err := r.Repos.Course().GetByStudy(
 		ctx,
 		studyID.String,

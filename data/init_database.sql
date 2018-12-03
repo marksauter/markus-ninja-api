@@ -509,6 +509,7 @@ CREATE TABLE IF NOT EXISTS course(
   name          VARCHAR(40)   NOT NULL,
   name_tokens   TEXT          NOT NULL,
   number        INT           CHECK(number > 0),
+  published_at  TIMESTAMPTZ,
   status        course_status DEFAULT 'ADVANCING',
   study_id      VARCHAR(100)  NOT NULL,
   updated_at    TIMESTAMPTZ   DEFAULT statement_timestamp(),
@@ -1498,7 +1499,7 @@ $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'course_event_action') THEN
-    CREATE TYPE course_event_action AS ENUM('created', 'appled', 'unappled');
+    CREATE TYPE course_event_action AS ENUM('created', 'appled', 'unappled', 'published');
   END IF;
 END
 $$ language 'plpgsql';
@@ -1545,13 +1546,6 @@ CREATE OR REPLACE FUNCTION course_event_inserted()
 AS $$
 BEGIN
   CASE NEW.action
-    WHEN 'created' THEN
-      INSERT INTO received_event(event_id, user_id)
-      SELECT
-        NEW.event_id,
-        user_id
-      FROM study_enrolled
-      WHERE enrollable_id = NEW.study_id AND user_id != NEW.user_id;
     WHEN 'appled' THEN
       INSERT INTO received_event(event_id, user_id)
       SELECT
@@ -1559,6 +1553,14 @@ BEGIN
         user_id
       FROM user_enrolled
       WHERE enrollable_id = NEW.user_id;
+    WHEN 'published' THEN
+      INSERT INTO received_event(event_id, user_id)
+      SELECT
+        NEW.event_id,
+        user_id
+      FROM study_enrolled
+      WHERE enrollable_id = NEW.study_id AND user_id != NEW.user_id;
+    ELSE
   END CASE;
 
   RETURN NEW;
@@ -2748,6 +2750,7 @@ CREATE TABLE IF NOT EXISTS course_search_index (
   name          VARCHAR(40)  NOT NULL,
   name_tokens   TEXT         NOT NULL,
   number        INT          NOT NULL CHECK(number > 0),
+  published_at  TIMESTAMPTZ,
   status        course_status NOT NULL,
   study_id      VARCHAR(100) NOT NULL,
   topics        TSVECTOR     NOT NULL,   
@@ -2862,6 +2865,7 @@ AS $$
       completed_at = NEW.completed_at,
       description = NEW.description,
       document = doc,
+      published_at = NEW.published_at,
       name = NEW.name,
       name_tokens = NEW.name_tokens,
       status = NEW.status,
@@ -3333,7 +3337,7 @@ CREATE TABLE IF NOT EXISTS lesson_search_index (
   user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (course_id)
     REFERENCES course (id)
-    ON UPDATE CASCADE ON DELETE CASCADE,
+    ON UPDATE CASCADE ON DELETE NO ACTION,
   FOREIGN KEY (id)
     REFERENCES lesson (id)
     ON UPDATE CASCADE ON DELETE CASCADE,

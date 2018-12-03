@@ -14,6 +14,11 @@ type publishableResolver struct {
 	publishable
 }
 
+func (r *publishableResolver) ToCourse() (*courseResolver, bool) {
+	resolver, ok := r.publishable.(*courseResolver)
+	return resolver, ok
+}
+
 func (r *publishableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.publishable.(*lessonResolver)
 	return resolver, ok

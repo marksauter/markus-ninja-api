@@ -274,6 +274,8 @@ func (r *Repos) GetPublishable(
 	nodeID *mytype.OID,
 ) (NodePermit, error) {
 	switch nodeID.Type {
+	case "Course":
+		return r.Course().Get(ctx, nodeID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, nodeID.String)
 	case "LessonComment":

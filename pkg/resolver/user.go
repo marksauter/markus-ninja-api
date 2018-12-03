@@ -259,13 +259,14 @@ func (r *userResolver) Courses(
 		OrderBy  *OrderArg
 	},
 ) (*courseConnectionResolver, error) {
+	resolver := &courseConnectionResolver{}
 	userID, err := r.User.ID()
 	if err != nil {
-		return nil, err
+		return resolver, err
 	}
 	courseOrder, err := ParseCourseOrder(args.OrderBy)
 	if err != nil {
-		return nil, err
+		return resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -276,9 +277,21 @@ func (r *userResolver) Courses(
 		courseOrder,
 	)
 	if err != nil {
-		return nil, err
+		return resolver, err
 	}
 
+	filters := data.CourseFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	ok, err := r.IsViewer(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
 	courses, err := r.Repos.Course().GetByUser(
 		ctx,
 		userID.String,
@@ -286,9 +299,9 @@ func (r *userResolver) Courses(
 		args.FilterBy,
 	)
 	if err != nil {
-		return nil, err
+		return resolver, err
 	}
-	resolver, err := NewCourseConnectionResolver(
+	resolver, err = NewCourseConnectionResolver(
 		courses,
 		pageOptions,
 		userID,
@@ -297,7 +310,7 @@ func (r *userResolver) Courses(
 		r.Conf,
 	)
 	if err != nil {
-		return nil, err
+		return resolver, err
 	}
 	return resolver, nil
 }
@@ -632,18 +645,18 @@ func (r *userResolver) Lessons(
 		OrderBy  *OrderArg
 	},
 ) (*lessonConnectionResolver, error) {
-	resolver := lessonConnectionResolver{}
+	resolver := &lessonConnectionResolver{}
 	userID, err := r.User.ID()
 	if err != nil {
 		if err != repo.ErrAccessDenied {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 		}
-		return &resolver, err
+		return resolver, err
 	}
 	lessonOrder, err := ParseLessonOrder(args.OrderBy)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
+		return resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -655,7 +668,7 @@ func (r *userResolver) Lessons(
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
+		return resolver, err
 	}
 
 	filters := data.LessonFilterOptions{}
@@ -666,7 +679,7 @@ func (r *userResolver) Lessons(
 	ok, err := r.IsViewer(ctx)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
+		return resolver, err
 	} else if !ok {
 		filters.IsPublished = util.NewBool(true)
 	}
@@ -678,9 +691,9 @@ func (r *userResolver) Lessons(
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
+		return resolver, err
 	}
-	lessonConnectionResolver, err := NewLessonConnectionResolver(
+	resolver, err = NewLessonConnectionResolver(
 		lessons,
 		pageOptions,
 		userID,
@@ -690,9 +703,9 @@ func (r *userResolver) Lessons(
 	)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
+		return resolver, err
 	}
-	return lessonConnectionResolver, nil
+	return resolver, nil
 }
 
 func (r *userResolver) Login() (string, error) {
