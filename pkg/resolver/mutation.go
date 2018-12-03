@@ -30,12 +30,6 @@ func (r *RootResolver) AddCourseLesson(
 	ctx context.Context,
 	args struct{ Input AddCourseLessonInput },
 ) (*addCourseLessonPayloadResolver, error) {
-	viewer, ok := myctx.UserFromContext(ctx)
-	if !ok {
-		err := errors.New("viewer not found")
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -83,32 +77,9 @@ func (r *RootResolver) AddCourseLesson(
 			return nil, err
 		}
 	}
-	studyID, err := lesson.StudyID()
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, myerr.SomethingWentWrongError
-	}
 
 	_, err = r.Repos.CourseLesson().Connect(ctx, courseLesson)
 	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-
-	eventPayload, err := data.NewLessonAddedToCoursePayload(
-		&courseLesson.LessonID,
-		&courseLesson.CourseID,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
@@ -1195,6 +1166,21 @@ func (r *RootResolver) PublishCourse(
 	ctx context.Context,
 	args struct{ Input PublishCourseInput },
 ) (*courseResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err := errors.New("viewer not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
 	course := &data.Course{}
 	if err := course.ID.Set(args.Input.CourseID); err != nil {
 		return nil, errors.New("Invalid courseId")
@@ -1219,6 +1205,53 @@ func (r *RootResolver) PublishCourse(
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	studyID, err := coursePermit.StudyID()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	courseLessons, err := r.Repos.CourseLesson().GetByCourse(ctx, course.ID.String, nil)
+	if err != nil {
+		return nil, err
+	}
+	lessonIDs := make([]*mytype.OID, len(courseLessons))
+	for i, cl := range courseLessons {
+		lessonID, err := cl.LessonID()
+		if err != nil {
+			return nil, err
+		}
+		lessonIDs[i] = lessonID
+	}
+
+	for _, lid := range lessonIDs {
+		eventPayload, err := data.NewLessonAddedToCoursePayload(
+			lid,
+			&course.ID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	return &courseResolver{
