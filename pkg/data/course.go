@@ -855,7 +855,7 @@ func CreateCourse(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	event, err := NewCourseEvent(eventPayload, &course.StudyID, &course.UserID, true)
+	event, err := NewCourseEvent(eventPayload, &course.StudyID, &course.UserID, false)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
