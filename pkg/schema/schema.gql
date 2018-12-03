@@ -129,6 +129,8 @@ type Mutation {
   # Move course lesson to another position.
   moveCourseLesson(input: MoveCourseLessonInput!): MoveCourseLessonPayload
 
+  # Publishes a course.
+  publishCourse(input: PublishCourseInput!): Course
   # Publishes the body changes proposed in a lesson's draft.
   publishLessonDraft(input: PublishLessonDraftInput!): Lesson
   # Publishes the body changes proposed in a lesson comment's draft.

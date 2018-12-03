@@ -1,5 +1,8 @@
 # Ways in which to filter lists of courses.
 input CourseFilters {
+  # List courses that are published.
+  isPublished: Boolean
+
   # List courses where the list of topic names exists on the course.
   topics: [String!]
 

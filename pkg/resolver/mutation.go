@@ -55,20 +55,33 @@ func (r *RootResolver) AddCourseLesson(
 		return nil, errors.New("invalid value for lessonId")
 	}
 
+	course, err := r.Repos.Course().Pull(ctx, args.Input.CourseID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("course not found")
+	}
 	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, errors.New("lesson not found")
 	}
-	isPublished, err := lesson.IsPublished()
+
+	courseIsPublished, err := course.IsPublished()
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, myerr.SomethingWentWrongError
 	}
-	if !isPublished {
-		err := errors.New("lesson not published")
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+	if courseIsPublished {
+		lessonIsPublished, err := lesson.IsPublished()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
+		if !lessonIsPublished {
+			err := errors.New("lesson not published")
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 	studyID, err := lesson.StudyID()
 	if err != nil {
@@ -1171,6 +1184,47 @@ func (r *RootResolver) MoveCourseLesson(
 		CourseID: &courseLesson.CourseID,
 		LessonID: &courseLesson.LessonID,
 		Repos:    r.Repos,
+	}, nil
+}
+
+type PublishCourseInput struct {
+	CourseID string
+}
+
+func (r *RootResolver) PublishCourse(
+	ctx context.Context,
+	args struct{ Input PublishCourseInput },
+) (*courseResolver, error) {
+	course := &data.Course{}
+	if err := course.ID.Set(args.Input.CourseID); err != nil {
+		return nil, errors.New("Invalid courseId")
+	}
+	if err := course.PublishedAt.Set(time.Now()); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	isPublishable, err := r.Repos.Course().IsPublishable(ctx, course.ID.String)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if !isPublishable {
+		err := errors.New("course is not publishable")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	coursePermit, err := r.Repos.Course().Update(ctx, course)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return &courseResolver{
+		Course: coursePermit,
+		Conf:   r.Conf,
+		Repos:  r.Repos,
 	}, nil
 }
 

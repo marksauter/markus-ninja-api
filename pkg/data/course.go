@@ -21,6 +21,7 @@ type Course struct {
 	ID          mytype.OID          `db:"id" permit:"read"`
 	Name        pgtype.Text         `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
+	PublishedAt pgtype.Timestamptz  `db:"published_at" permit:"read/update"`
 	Status      mytype.CourseStatus `db:"status" permit:"read/update"`
 	StudyID     mytype.OID          `db:"study_id" permit:"create/read"`
 	TopicedAt   pgtype.Timestamptz  `db:"topiced_at"`
@@ -33,8 +34,9 @@ func courseDelimeter(r rune) bool {
 }
 
 type CourseFilterOptions struct {
-	Topics *[]string
-	Search *string
+	IsPublished *bool
+	Topics      *[]string
+	Search      *string
 }
 
 func (src *CourseFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
@@ -44,6 +46,13 @@ func (src *CourseFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts 
 
 	fromParts := make([]string, 0, 2)
 	whereParts := make([]string, 0, 2)
+	if src.IsPublished != nil {
+		if *src.IsPublished {
+			whereParts = append(whereParts, from+".published_at IS NOT NULL")
+		} else {
+			whereParts = append(whereParts, from+".published_at IS NULL")
+		}
+	}
 	if src.Topics != nil && len(*src.Topics) > 0 {
 		query := ToTsQuery(strings.Join(*src.Topics, " "))
 		fromParts = append(fromParts, "to_tsquery('simple',"+args.Append(query)+") AS topics_query")
@@ -228,6 +237,7 @@ func getCourse(
 		&row.ID,
 		&row.Name,
 		&row.Number,
+		&row.PublishedAt,
 		&row.Status,
 		&row.StudyID,
 		&row.UpdatedAt,
@@ -268,6 +278,7 @@ func getManyCourse(
 			&row.ID,
 			&row.Name,
 			&row.Number,
+			&row.PublishedAt,
 			&row.Status,
 			&row.StudyID,
 			&row.UpdatedAt,
@@ -293,6 +304,7 @@ const getCourseByIDSQL = `
 		id,
 		name,
 		number,
+		published_at,
 		status,
 		study_id,
 		updated_at,
@@ -323,6 +335,7 @@ const getCourseByNameSQL = `
 		id,
 		name,
 		number,
+		published_at,
 		status,
 		study_id,
 		updated_at,
@@ -354,6 +367,7 @@ const getCourseByNumberSQL = `
 		id,
 		name,
 		number,
+		published_at,
 		status,
 		study_id,
 		updated_at,
@@ -391,6 +405,7 @@ const getCourseByStudyAndNameSQL = `
 		c.id,
 		c.name,
 		c.number,
+		c.published_at,
 		c.status,
 		c.study_id,
 		c.updated_at,
@@ -458,6 +473,7 @@ func GetCourseByApplee(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"updated_at",
@@ -486,6 +502,7 @@ func GetCourseByApplee(
 			&row.ID,
 			&row.Name,
 			&row.Number,
+			&row.PublishedAt,
 			&row.Status,
 			&row.StudyID,
 			&row.UpdatedAt,
@@ -535,6 +552,7 @@ func GetCourseByEnrollee(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"updated_at",
@@ -563,6 +581,7 @@ func GetCourseByEnrollee(
 			&row.ID,
 			&row.Name,
 			&row.Number,
+			&row.PublishedAt,
 			&row.Status,
 			&row.StudyID,
 			&row.UpdatedAt,
@@ -611,6 +630,7 @@ func GetCourseByTopic(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"topiced_at",
@@ -639,6 +659,7 @@ func GetCourseByTopic(
 			&row.ID,
 			&row.Name,
 			&row.Number,
+			&row.PublishedAt,
 			&row.Status,
 			&row.StudyID,
 			&row.TopicedAt,
@@ -688,6 +709,7 @@ func GetCourseByStudy(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"updated_at",
@@ -738,6 +760,7 @@ func GetCourseByUser(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"updated_at",
@@ -878,6 +901,34 @@ func DeleteCourse(
 	return nil
 }
 
+const isCoursePublishableSQL = `
+	SELECT 
+		bool_and(l.published_at IS NOT NULL)
+	FROM course c
+	JOIN course_lesson cl ON cl.course_id = c.id
+	JOIN lesson l ON l.id = cl.lesson_id
+	WHERE c.id = $1
+`
+
+func IsCoursePublishable(
+	db Queryer,
+	id string,
+) (bool, error) {
+	isPublishable := pgtype.Bool{}
+	err := prepareQueryRow(
+		db,
+		"isCoursePublishable",
+		isCoursePublishableSQL,
+		id,
+	).Scan(&isPublishable)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return false, err
+	}
+
+	return isPublishable.Bool, nil
+}
+
 func SearchCourse(
 	db Queryer,
 	po *PageOptions,
@@ -905,6 +956,7 @@ func SearchCourse(
 		"id",
 		"name",
 		"number",
+		"published_at",
 		"status",
 		"study_id",
 		"updated_at",
@@ -928,6 +980,20 @@ func UpdateCourse(
 	db Queryer,
 	row *Course,
 ) (*Course, error) {
+	tx, err, newTx := BeginTransaction(db)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if newTx {
+		defer RollbackTransaction(tx)
+	}
+
+	currentCourse, err := GetCourse(tx, row.ID.String)
+	if err != nil {
+		return nil, err
+	}
+
 	sets := make([]string, 0, 4)
 	args := pgx.QueryArgs(make([]interface{}, 0, 5))
 
@@ -940,21 +1006,16 @@ func UpdateCourse(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, courseDelimeter), " "))
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
+	if row.PublishedAt.Status != pgtype.Undefined {
+		sets = append(sets, `published_at`+"="+args.Append(&row.PublishedAt))
+	}
 	if row.Status.Status != pgtype.Undefined {
 		sets = append(sets, `status`+"="+args.Append(&row.Status))
 	}
 
 	if len(sets) == 0 {
-		return GetCourse(db, row.ID.String)
-	}
-
-	tx, err, newTx := BeginTransaction(db)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if newTx {
-		defer RollbackTransaction(tx)
+		mylog.Log.Info(util.Trace("no updates"))
+		return currentCourse, nil
 	}
 
 	sql := `
@@ -984,6 +1045,24 @@ func UpdateCourse(
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
+	}
+
+	if currentCourse.PublishedAt.Status == pgtype.Null &&
+		course.PublishedAt.Status != pgtype.Null {
+		eventPayload, err := NewCoursePublishedPayload(&course.ID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := NewCourseEvent(eventPayload, &course.StudyID, &course.UserID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := CreateEvent(tx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	if newTx {

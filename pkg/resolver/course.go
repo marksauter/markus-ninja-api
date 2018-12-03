@@ -114,6 +114,25 @@ func (r *courseResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *courseResolver) IsPublished() (bool, error) {
+	return r.Course.IsPublished()
+}
+
+func (r *courseResolver) IsPublishable(ctx context.Context) (bool, error) {
+	isPublished, err := r.IsPublished()
+	if err != nil {
+		return false, err
+	}
+	if isPublished {
+		return false, nil
+	}
+	id, err := r.Course.ID()
+	if err != nil {
+		return false, err
+	}
+	return r.Repos.Course().IsPublishable(ctx, id.String)
+}
+
 func (r *courseResolver) Lesson(
 	ctx context.Context,
 	args struct{ Number int32 },
@@ -225,6 +244,17 @@ func (r *courseResolver) Owner(ctx context.Context) (*userResolver, error) {
 		return nil, err
 	}
 	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
+}
+
+func (r *courseResolver) PublishedAt() (*graphql.Time, error) {
+	t, err := r.Course.PublishedAt()
+	if err != nil {
+		return nil, err
+	}
+	if t != nil {
+		return &graphql.Time{*t}, nil
+	}
+	return nil, nil
 }
 
 func (r *courseResolver) ResourcePath(

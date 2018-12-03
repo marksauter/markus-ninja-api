@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	CourseCreated  = "created"
-	CourseAppled   = "appled"
-	CourseUnappled = "unappled"
+	CourseCreated   = "created"
+	CourseAppled    = "appled"
+	CourseUnappled  = "unappled"
+	CoursePublished = "published"
 
 	LessonCommentCreated   = "created"
 	LessonCommentMentioned = "mentioned"
@@ -62,6 +63,16 @@ func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 
 func NewCourseUnappledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 	payload := &CourseEventPayload{Action: CourseUnappled}
+	if err := payload.CourseID.Set(courseID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewCoursePublishedPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
+	payload := &CourseEventPayload{Action: CoursePublished}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

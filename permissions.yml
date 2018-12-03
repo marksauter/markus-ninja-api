@@ -68,6 +68,7 @@ permissions:
     fields:
       - description
       - name
+      - published_at
       - status
   - operation: Delete Course
     authenticated: true

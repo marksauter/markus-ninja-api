@@ -123,7 +123,8 @@ func (r *RootResolver) Search(
 	switch searchType {
 	case SearchTypeCourse:
 		filters := &data.CourseFilterOptions{
-			Search: &args.Query,
+			IsPublished: util.NewBool(true),
+			Search:      &args.Query,
 		}
 		courses, err := r.Repos.Course().Search(ctx, pageOptions, filters)
 		if err != nil {

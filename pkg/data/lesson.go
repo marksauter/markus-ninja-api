@@ -1160,7 +1160,7 @@ func UpdateLesson(
 
 	if len(sets) == 0 {
 		mylog.Log.Info(util.Trace("no updates"))
-		return GetLesson(db, row.ID.String)
+		return currentLesson, nil
 	}
 
 	sql := `

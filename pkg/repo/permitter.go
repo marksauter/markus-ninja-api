@@ -165,6 +165,18 @@ func (r *Permitter) ViewerCanRead(
 	node interface{},
 ) (bool, error) {
 	switch node := node.(type) {
+	case data.Course:
+		// If the course has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case *data.Course:
+		// If the course has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
 	case data.Lesson:
 		// If the lesson has not been published, then check if the viewer can admin
 		// the object

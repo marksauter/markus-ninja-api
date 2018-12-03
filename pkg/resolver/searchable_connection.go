@@ -54,7 +54,8 @@ type searchableConnectionResolver struct {
 
 func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
 	filters := &data.CourseFilterOptions{
-		Search: &r.query,
+		IsPublished: util.NewBool(true),
+		Search:      &r.query,
 	}
 	return r.repos.Course().CountBySearch(ctx, filters)
 }
