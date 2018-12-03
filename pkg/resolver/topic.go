@@ -11,6 +11,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 type topicResolver struct {
@@ -89,7 +90,8 @@ func (r *topicResolver) Topicables(
 	switch topicableType {
 	case TopicableTypeCourse:
 		filters := &data.CourseFilterOptions{
-			Search: args.Search,
+			IsPublished: util.NewBool(true),
+			Search:      args.Search,
 		}
 		courses, err := r.Repos.Course().GetByTopic(ctx, id.String, pageOptions, filters)
 		if err != nil {
