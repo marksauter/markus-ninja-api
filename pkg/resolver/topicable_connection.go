@@ -8,6 +8,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
+	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
 func NewTopicableConnectionResolver(
@@ -57,7 +58,8 @@ type topicableConnectionResolver struct {
 
 func (r *topicableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
 	filters := &data.CourseFilterOptions{
-		Search: r.search,
+		IsPublished: util.NewBool(true),
+		Search:      r.search,
 	}
 	return r.repos.Course().CountByTopic(ctx, r.topicID.String, filters)
 }
