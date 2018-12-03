@@ -296,7 +296,7 @@ func (r *userResolver) Courses(
 		ctx,
 		userID.String,
 		pageOptions,
-		args.FilterBy,
+		&filters,
 	)
 	if err != nil {
 		return resolver, err
@@ -305,7 +305,7 @@ func (r *userResolver) Courses(
 		courses,
 		pageOptions,
 		userID,
-		args.FilterBy,
+		&filters,
 		r.Repos,
 		r.Conf,
 	)
