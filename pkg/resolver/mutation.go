@@ -1793,7 +1793,7 @@ func (r *RootResolver) ResetLessonDraft(
 		return nil, errors.New("Invalid lessonId")
 	}
 
-	draft, err, updated := r.Repos.ReplaceMarkdownLinksWithRefs(
+	draft, err, _ := r.Repos.ReplaceMarkdownLinksWithRefs(
 		ctx,
 		body.String,
 		studyID.String,
@@ -1802,11 +1802,9 @@ func (r *RootResolver) ResetLessonDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	if updated {
-		if err := lesson.Draft.Set(draft); err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
+	if err := lesson.Draft.Set(draft); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	lessonPermit, err := r.Repos.Lesson().Update(ctx, lesson)
@@ -1852,7 +1850,7 @@ func (r *RootResolver) ResetLessonCommentDraft(
 		return nil, errors.New("Invalid lessonCommentId")
 	}
 
-	draft, err, updated := r.Repos.ReplaceMarkdownLinksWithRefs(
+	draft, err, _ := r.Repos.ReplaceMarkdownLinksWithRefs(
 		ctx,
 		body.String,
 		studyID.String,
@@ -1861,11 +1859,9 @@ func (r *RootResolver) ResetLessonCommentDraft(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	if updated {
-		if err := lessonComment.Draft.Set(draft); err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return nil, err
-		}
+	if err := lessonComment.Draft.Set(draft); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 
 	lessonCommentPermit, err := r.Repos.LessonComment().Update(ctx, lessonComment)
