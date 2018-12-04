@@ -776,7 +776,7 @@ func (r *userResolver) ResourcePath() (mygql.URI, error) {
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("/%s", login))
+	uri = mygql.URI(fmt.Sprintf("/u/%s", login))
 	return uri, nil
 }
 
