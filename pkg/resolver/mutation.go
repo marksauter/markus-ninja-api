@@ -1509,6 +1509,11 @@ func (r *RootResolver) RemoveCourseLesson(
 		return nil, err
 	}
 
+	course, err := r.Repos.Course().Pull(ctx, args.Input.CourseID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("course not found")
+	}
 	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -1520,22 +1525,29 @@ func (r *RootResolver) RemoveCourseLesson(
 		return nil, myerr.SomethingWentWrongError
 	}
 
-	eventPayload, err := data.NewLessonRemovedFromCoursePayload(
-		&courseLesson.LessonID,
-		&courseLesson.CourseID,
-	)
+	courseIsPublished, err := course.IsPublished()
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+		return nil, myerr.SomethingWentWrongError
 	}
-	event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+	if courseIsPublished {
+		eventPayload, err := data.NewLessonRemovedFromCoursePayload(
+			&courseLesson.LessonID,
+			&courseLesson.CourseID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		event, err := data.NewLessonEvent(eventPayload, studyID, &viewer.ID, true)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	if newTx {
