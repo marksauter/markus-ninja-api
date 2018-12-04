@@ -739,11 +739,19 @@ func (r *studyResolver) ResourcePath(
 	ctx context.Context,
 ) (mygql.URI, error) {
 	var uri mygql.URI
-	nameWithOwner, err := r.NameWithOwner(ctx)
+	owner, err := r.Owner(ctx)
 	if err != nil {
 		return uri, err
 	}
-	uri = mygql.URI(fmt.Sprintf("/%s", nameWithOwner))
+	ownerResourcePath, err := owner.ResourcePath()
+	if err != nil {
+		return uri, err
+	}
+	name, err := r.Name()
+	if err != nil {
+		return uri, err
+	}
+	uri = mygql.URI(fmt.Sprintf("%s/%s", ownerResourcePath, name))
 	return uri, nil
 }
 

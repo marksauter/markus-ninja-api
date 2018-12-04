@@ -430,7 +430,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 			userAsset.Key.String,
 		)
 		href := fmt.Sprintf(
-			r.conf.ClientURL+"/%s/%s/asset/%s",
+			r.conf.ClientURL+"/u/%s/%s/asset/%s",
 			user.Login.String,
 			study.Name.String,
 			userAsset.Name.String,
@@ -460,7 +460,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 
 		updated = true
 		href := fmt.Sprintf(
-			r.conf.ClientURL+"/%s/%s/lesson/%d",
+			r.conf.ClientURL+"/u/%s/%s/lesson/%d",
 			user.Login.String,
 			study.Name.String,
 			n,
@@ -493,7 +493,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		updated = true
 		link := fmt.Sprintf("%s/%s#%d", owner, name, n)
 		href := fmt.Sprintf(
-			r.conf.ClientURL+"/%s/%s/lesson/%d",
+			r.conf.ClientURL+"/u/%s/%s/lesson/%d",
 			owner,
 			name,
 			n,
@@ -518,7 +518,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 		}
 
 		updated = true
-		href := fmt.Sprintf(r.conf.ClientURL+"/%s", user.Login.String)
+		href := fmt.Sprintf(r.conf.ClientURL+"/u/%s", user.Login.String)
 		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---USER_LINK--->[@%s](%s)", name, href))
 	}
 	body = mytype.AtRefRegexp.ReplaceAllStringFunc(body, userRefToLink)
