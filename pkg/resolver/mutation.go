@@ -17,6 +17,7 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myjwt"
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
+	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/service"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
@@ -936,27 +937,36 @@ func (r *RootResolver) DeleteViewerAccount(
 	ctx context.Context,
 	args struct{ Input DeleteViewerAccountInput },
 ) (*deleteViewerAccountPayloadResolver, error) {
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		return nil, &myctx.ErrNotFound{"queryer"}
+	}
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
 	}
 
-	if viewer.Login.String != args.Input.Login {
-		return nil, errors.New("invalid credentials")
-	}
-
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		return nil, &myctx.ErrNotFound{"queryer"}
-	}
-
-	user, err := data.GetUserCredentialsByLogin(db, args.Input.Login)
-	if err != nil {
-		return nil, err
+	var user *data.User
+	if err := checkmail.ValidateFormat(args.Input.Login); err != nil {
+		if viewer.Login.String != args.Input.Login {
+			return nil, repo.ErrAccessDenied
+		}
+		user, err = data.GetUserCredentialsByLogin(db, args.Input.Login)
+		if err != nil {
+			return nil, InvalidCredentialsError
+		}
+	} else {
+		if viewer.PrimaryEmail.String != args.Input.Login {
+			return nil, repo.ErrAccessDenied
+		}
+		user, err = data.GetUserCredentialsByEmail(db, args.Input.Login)
+		if err != nil {
+			return nil, InvalidCredentialsError
+		}
 	}
 
 	if err := user.Password.CompareToPassword(args.Input.Password); err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, InvalidCredentialsError
 	}
 
 	if err := r.Repos.User().Delete(ctx, user); err != nil {
@@ -1660,25 +1670,26 @@ func (r *RootResolver) RequestEmailVerification(
 	ctx context.Context,
 	args struct{ Input RequestEmailVerificationInput },
 ) (bool, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return false, errors.New("viewer not found")
+	}
 	tx, err, newTx := myctx.TransactionFromContext(ctx)
 	if err != nil {
 		return false, err
 	} else if newTx {
 		defer data.RollbackTransaction(tx)
 	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
 
-	email, err := data.GetEmailByValue(tx, args.Input.Email)
+	emailPermit, err := r.Repos.Email().GetByValue(ctx, args.Input.Email)
 	if err != nil {
 		if err == data.ErrNotFound {
 			return false, errors.New("email not found")
 		}
 		return false, err
 	}
-
-	user, err := data.GetUser(tx, email.UserID.String)
-	if err != nil {
-		return false, err
-	}
+	email := emailPermit.Get()
 
 	if email.VerifiedAt.Status != pgtype.Null {
 		return false, errors.New("email already verified")
@@ -1686,13 +1697,15 @@ func (r *RootResolver) RequestEmailVerification(
 
 	evt := &data.EVT{}
 	if err := evt.EmailID.Set(&email.ID); err != nil {
-		return false, myerr.UnexpectedError{"failed to set evt email_id"}
+		mylog.Log.WithError(err).Error("failed to set evt email_id")
+		return false, myerr.SomethingWentWrongError
 	}
 	if err := evt.UserID.Set(&email.UserID); err != nil {
-		return false, myerr.UnexpectedError{"failed to set evt user_id"}
+		mylog.Log.WithError(err).Error("failed to set evt user_id")
+		return false, myerr.SomethingWentWrongError
 	}
 
-	_, err = data.CreateEVT(tx, evt)
+	_, err = r.Repos.EVT().Create(ctx, evt)
 	if err != nil {
 		return false, err
 	}
@@ -1700,7 +1713,7 @@ func (r *RootResolver) RequestEmailVerification(
 	sendMailInput := &service.SendEmailVerificationMailInput{
 		EmailID:   email.ID.Short,
 		To:        email.Value.String,
-		UserLogin: user.Login.String,
+		UserLogin: viewer.Login.String,
 		Token:     evt.Token.String,
 	}
 	err = r.Svcs.Mail.SendEmailVerificationMail(sendMailInput)
@@ -2692,8 +2705,8 @@ func (r *RootResolver) UpdateViewerProfile(
 			return nil, myerr.UnexpectedError{"failed to set user bio"}
 		}
 	}
+	emailID := args.Input.EmailID
 	if args.Input.EmailID != nil {
-		emailID := args.Input.EmailID
 		// If the email ID is empty, then set pointer to nil. This will ensure a
 		// NULL db value.
 		if *emailID == "" {
