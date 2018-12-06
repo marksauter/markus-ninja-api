@@ -24,6 +24,7 @@ $$ language 'plpgsql';
 CREATE TABLE IF NOT EXISTS email(
   created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
   id          VARCHAR(100) PRIMARY KEY,
+  public      BOOLEAN      DEFAULT FALSE,
   type        email_type   DEFAULT 'EXTRA',
   updated_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
   user_id     VARCHAR(100) NOT NULL,
@@ -113,6 +114,21 @@ CREATE OR REPLACE FUNCTION user_profile_will_update()
 AS $$
 BEGIN
   PERFORM check_user_profile_email_id(NEW.user_id, NEW.email_id);
+
+  IF NEW.email_id IS DISTINCT FROM OLD.email_id THEN
+    IF OLD.email_id IS DISTINCT FROM NULL THEN
+      UPDATE email
+      SET public = false
+      WHERE id = OLD.email_id;
+    END IF;
+
+    IF NEW.email_id IS DISTINCT FROM NULL THEN
+      UPDATE email
+      SET public = true
+      WHERE id = NEW.email_id;
+    END IF;
+  END IF;
+
   NEW.updated_at = statement_timestamp();
   RETURN NEW;
 END;

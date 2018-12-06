@@ -177,6 +177,20 @@ func (r *Permitter) ViewerCanRead(
 		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
 			return r.ViewerCanAdmin(ctx, node)
 		}
+	case data.Email:
+		// If the email is not public, then check if the viewer can admin
+		if node.Public.Status == pgtype.Undefined ||
+			node.Public.Status == pgtype.Null ||
+			!node.Public.Bool {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case *data.Email:
+		// If the email is not public, then check if the viewer can admin
+		if node.Public.Status == pgtype.Undefined ||
+			node.Public.Status == pgtype.Null ||
+			!node.Public.Bool {
+			return r.ViewerCanAdmin(ctx, node)
+		}
 	case data.Lesson:
 		// If the lesson has not been published, then check if the viewer can admin
 		// the object
@@ -635,6 +649,20 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 			return false, err
 		}
 		return vid == course.UserID.String, nil
+	case data.EVT:
+		email, err := r.repos.Email().load.Get(ctx, node.EmailID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == node.UserID.String && vid == email.UserID.String, nil
+	case *data.EVT:
+		email, err := r.repos.Email().load.Get(ctx, node.EmailID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == node.UserID.String && vid == email.UserID.String, nil
 	case data.Label:
 		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {

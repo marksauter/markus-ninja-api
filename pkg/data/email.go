@@ -13,6 +13,7 @@ import (
 type Email struct {
 	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
 	ID         mytype.OID         `db:"id" permit:"read"`
+	Public     pgtype.Bool        `db:"public" permit:"read"`
 	Type       mytype.EmailType   `db:"type" permit:"create/read/update"`
 	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
 	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
@@ -88,6 +89,7 @@ func getEmail(db Queryer, name string, sql string, args ...interface{}) (*Email,
 	err := prepareQueryRow(db, name, sql, args...).Scan(
 		&row.CreatedAt,
 		&row.ID,
+		&row.Public,
 		&row.Type,
 		&row.UserID,
 		&row.UpdatedAt,
@@ -124,6 +126,7 @@ func getManyEmail(
 		dbRows.Scan(
 			&row.CreatedAt,
 			&row.ID,
+			&row.Public,
 			&row.Type,
 			&row.UserID,
 			&row.UpdatedAt,
@@ -144,6 +147,7 @@ const getEmailByIDSQL = `
 	SELECT
 		created_at,
 		id,
+		public,
 		type,
 		user_id,
 		updated_at,
@@ -167,6 +171,7 @@ const getEmailByValueSQL = `
 	SELECT
 		created_at,
 		id,
+		public,
 		type,
 		user_id,
 		updated_at,
@@ -216,6 +221,7 @@ func GetEmailByUser(
 	selects := []string{
 		"created_at",
 		"id",
+		"public",
 		"type",
 		"user_id",
 		"updated_at",

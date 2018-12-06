@@ -109,11 +109,18 @@ permissions:
       - type
       - user_id
       - value
-  # Only owners can read/update/delete emails.
+  # Owners can read the whole email object.
   - operation: Read Email
     authenticated: true
     roles:
       - owner
+  # Everyone can read the following fields for an email 
+  # NOTE: the email must be public
+  - operation: Read Email
+    fields:
+      - id
+      - value
+  # Only owners can update/delete emails.
   - operation: Update Email
     authenticated: true
     roles:
@@ -151,8 +158,11 @@ permissions:
 
 
 
-  # Everyone can create email verification tokens.
+  # Only owners can create email verification tokens.
   - operation: Create EVT
+    authenticated: true
+    roles:
+      - owner
     fields:
       - email_id
       - user_id
