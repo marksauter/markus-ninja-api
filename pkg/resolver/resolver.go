@@ -151,6 +151,13 @@ func courseEventPermitToResolver(
 			Event:        event,
 			Repos:        repos,
 		}, nil
+	case data.CoursePublished:
+		return &publishedEventResolver{
+			Conf:          conf,
+			Event:         event,
+			PublishableID: &payload.CourseID,
+			Repos:         repos,
+		}, nil
 	case data.CourseUnappled:
 		return &unappledEventResolver{
 			AppleableID: &payload.CourseID,
@@ -180,6 +187,7 @@ func lessonEventPermitToResolver(
 	switch payload.Action {
 	case data.LessonAddedToCourse:
 		return &addedToCourseEventResolver{
+			Conf:     conf,
 			CourseID: &payload.CourseID,
 			Event:    event,
 			LessonID: &payload.LessonID,
@@ -187,6 +195,7 @@ func lessonEventPermitToResolver(
 		}, nil
 	case data.LessonCreated:
 		return &createdEventResolver{
+			Conf:         conf,
 			CreateableID: &payload.LessonID,
 			Event:        event,
 			Repos:        repos,
@@ -200,11 +209,13 @@ func lessonEventPermitToResolver(
 			return nil, err
 		}
 		return &lessonCommentResolver{
+			Conf:          conf,
 			LessonComment: lessonComment,
 			Repos:         repos,
 		}, nil
 	case data.LessonLabeled:
 		return &labeledEventResolver{
+			Conf:        conf,
 			LabelID:     &payload.LabelID,
 			LabelableID: &payload.LessonID,
 			Event:       event,
@@ -214,12 +225,14 @@ func lessonEventPermitToResolver(
 		return nil, nil
 	case data.LessonPublished:
 		return &publishedEventResolver{
-			PublishableID: &payload.LessonID,
+			Conf:          conf,
 			Event:         event,
+			PublishableID: &payload.LessonID,
 			Repos:         repos,
 		}, nil
 	case data.LessonReferenced:
 		return &referencedEventResolver{
+			Conf:            conf,
 			Event:           event,
 			ReferenceableID: &payload.LessonID,
 			Repos:           repos,
@@ -227,6 +240,7 @@ func lessonEventPermitToResolver(
 		}, nil
 	case data.LessonRemovedFromCourse:
 		return &removedFromCourseEventResolver{
+			Conf:     conf,
 			CourseID: &payload.CourseID,
 			Event:    event,
 			LessonID: &payload.LessonID,
@@ -234,6 +248,7 @@ func lessonEventPermitToResolver(
 		}, nil
 	case data.LessonRenamed:
 		return &renamedEventResolver{
+			Conf:         conf,
 			RenameableID: &payload.LessonID,
 			Rename:       &payload.Rename,
 			Event:        event,
@@ -241,6 +256,7 @@ func lessonEventPermitToResolver(
 		}, nil
 	case data.LessonUnlabeled:
 		return &unlabeledEventResolver{
+			Conf:        conf,
 			LabelID:     &payload.LabelID,
 			LabelableID: &payload.LessonID,
 			Event:       event,
