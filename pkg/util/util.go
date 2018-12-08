@@ -41,7 +41,14 @@ func StringToInterface(strs []string) []interface{} {
 }
 
 func MarkdownToHTML(input []byte) []byte {
-	unsafe := blackfriday.Run(input)
+	unsafe := blackfriday.Run(
+		input,
+		blackfriday.WithExtensions(
+			blackfriday.CommonExtensions|
+				blackfriday.HardLineBreak|
+				blackfriday.Footnotes,
+		),
+	)
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-z-A-Z0-9]+$")).OnElements("code")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^((caption|leading)(\s+|$))*$`)).OnElements("p")
