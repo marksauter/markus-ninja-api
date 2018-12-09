@@ -40,6 +40,36 @@ func StringToInterface(strs []string) []interface{} {
 	return results
 }
 
+var implicitFiguresRegexp = regexp.MustCompile(`<p><img src="(.+)" alt="(.*)"\s*/></p>`)
+
+func implicitFigures(s string) string {
+	result := implicitFiguresRegexp.FindStringSubmatch(s)
+	if len(result) == 0 {
+		return s
+	}
+	src := result[1]
+	figcaption := result[2]
+
+	figure := `<figure><img src="` + src + `" alt=""/>`
+	if figcaption != "" {
+		figure += `<figcaption>` + figcaption + `</figcaption>`
+	}
+	figure += `</figure>`
+
+	return figure
+}
+
+func MarkdownImplicitFigures(input []byte) []byte {
+	markdown := string(input)
+	withFigures := implicitFiguresRegexp.ReplaceAllStringFunc(markdown, implicitFigures)
+
+	return []byte(withFigures)
+}
+
+var codeBlockLanguageRegexp = regexp.MustCompile(`^language-[a-z-A-Z0-9]+$`)
+var paragraphClassesRegexp = regexp.MustCompile(`^((caption|leading)(\s+|$))*$`)
+var anchorTargetRegexp = regexp.MustCompile(`^(_blank)$`)
+
 func MarkdownToHTML(input []byte) []byte {
 	unsafe := blackfriday.Run(
 		input,
@@ -49,11 +79,12 @@ func MarkdownToHTML(input []byte) []byte {
 				blackfriday.Footnotes,
 		),
 	)
+	unsafeWithFigures := MarkdownImplicitFigures(unsafe)
 	p := bluemonday.UGCPolicy()
-	p.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-z-A-Z0-9]+$")).OnElements("code")
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`^((caption|leading)(\s+|$))*$`)).OnElements("p")
-	p.AllowAttrs("target").Matching(regexp.MustCompile(`^(_blank)$`)).OnElements("a")
-	return p.SanitizeBytes(unsafe)
+	p.AllowAttrs("class").Matching(codeBlockLanguageRegexp).OnElements("code")
+	p.AllowAttrs("class").Matching(paragraphClassesRegexp).OnElements("p")
+	p.AllowAttrs("target").Matching(anchorTargetRegexp).OnElements("a")
+	return p.SanitizeBytes(unsafeWithFigures)
 }
 
 func MarkdownToText(s string) string {
