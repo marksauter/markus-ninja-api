@@ -15,7 +15,7 @@ type Asset struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
 	ID        pgtype.Int8        `db:"id" permit:"read"`
 	Key       pgtype.Text        `db:"key" permit:"read"`
-	Name      mytype.Filename    `db:"name" permit:"create/read/update"`
+	Name      pgtype.Text        `db:"name" permit:"create/read/update"`
 	Size      pgtype.Int8        `db:"size" permit:"create/read"`
 	Subtype   pgtype.Text        `db:"subtype" permit:"create/read"`
 	Type      pgtype.Text        `db:"type" permit:"create/read"`
