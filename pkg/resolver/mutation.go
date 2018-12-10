@@ -320,6 +320,10 @@ func (r *RootResolver) AddLessonComment(
 		return nil, err
 	}
 
+	if strings.TrimSpace(draft) == "" {
+		return nil, errors.New("comment draft must not be empty")
+	}
+
 	lessonComment := &data.LessonComment{}
 	if err := lessonComment.ID.Set(args.Input.LessonCommentID); err != nil {
 		return nil, errors.New("Invalid lessonCommentId")
@@ -1416,6 +1420,10 @@ func (r *RootResolver) PublishLessonCommentDraft(
 	if err != nil {
 		return nil, err
 	}
+	lessonID, err := currentLessonCommentPermit.LessonID()
+	if err != nil {
+		return nil, err
+	}
 	studyID, err := currentLessonCommentPermit.StudyID()
 	if err != nil {
 		return nil, err
@@ -1423,6 +1431,10 @@ func (r *RootResolver) PublishLessonCommentDraft(
 	userID, err := currentLessonCommentPermit.UserID()
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.TrimSpace(draft) == "" {
+		return nil, errors.New("comment draft must not be empty")
 	}
 
 	lessonComment := &data.LessonComment{}
@@ -1438,7 +1450,7 @@ func (r *RootResolver) PublishLessonCommentDraft(
 	err = r.Repos.ParseLessonBodyForEvents(
 		ctx,
 		&lessonComment.Body,
-		&lessonComment.LessonID,
+		lessonID,
 		studyID,
 		userID,
 	)

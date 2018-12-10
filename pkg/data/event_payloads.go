@@ -1,6 +1,8 @@
 package data
 
 import (
+	"errors"
+
 	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -42,6 +44,9 @@ type CourseEventPayload struct {
 }
 
 func NewCourseCreatedPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
+	if courseID == nil {
+		return nil, errors.New("courseID must not be nil")
+	}
 	payload := &CourseEventPayload{Action: CourseCreated}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -52,6 +57,9 @@ func NewCourseCreatedPayload(courseID *mytype.OID) (*CourseEventPayload, error) 
 }
 
 func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
+	if courseID == nil {
+		return nil, errors.New("courseID must not be nil")
+	}
 	payload := &CourseEventPayload{Action: CourseAppled}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -62,6 +70,9 @@ func NewCourseAppledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
 }
 
 func NewCourseUnappledPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
+	if courseID == nil {
+		return nil, errors.New("courseID must not be nil")
+	}
 	payload := &CourseEventPayload{Action: CourseUnappled}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -72,6 +83,9 @@ func NewCourseUnappledPayload(courseID *mytype.OID) (*CourseEventPayload, error)
 }
 
 func NewCoursePublishedPayload(courseID *mytype.OID) (*CourseEventPayload, error) {
+	if courseID == nil {
+		return nil, errors.New("courseID must not be nil")
+	}
 	payload := &CourseEventPayload{Action: CoursePublished}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -97,6 +111,9 @@ type LessonEventPayload struct {
 }
 
 func NewLessonAddedToCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || courseID == nil {
+		return nil, errors.New("lessonID and courseID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonAddedToCourse}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -111,6 +128,9 @@ func NewLessonAddedToCoursePayload(lessonID, courseID *mytype.OID) (*LessonEvent
 }
 
 func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || commentID == nil {
+		return nil, errors.New("lessonID and commentID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonCommented}
 	if err := payload.CommentID.Set(commentID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -125,6 +145,9 @@ func NewLessonCommentedPayload(lessonID, commentID *mytype.OID) (*LessonEventPay
 }
 
 func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil {
+		return nil, errors.New("lessonID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonCreated}
 	if err := payload.LessonID.Set(lessonID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -135,6 +158,9 @@ func NewLessonCreatedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) 
 }
 
 func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil {
+		return nil, errors.New("lessonID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonMentioned}
 	if err := payload.LessonID.Set(lessonID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -145,6 +171,9 @@ func NewLessonMentionedPayload(lessonID *mytype.OID) (*LessonEventPayload, error
 }
 
 func NewLessonLabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || labelID == nil {
+		return nil, errors.New("lessonID and labelID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonLabeled}
 	if err := payload.LabelID.Set(labelID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -159,6 +188,9 @@ func NewLessonLabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload
 }
 
 func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil {
+		return nil, errors.New("lessonID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonPublished}
 	if err := payload.LessonID.Set(lessonID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -169,6 +201,9 @@ func NewLessonPublishedPayload(lessonID *mytype.OID) (*LessonEventPayload, error
 }
 
 func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || sourceID == nil {
+		return nil, errors.New("lessonID and sourceID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonReferenced}
 	if err := payload.LessonID.Set(lessonID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -183,6 +218,9 @@ func NewLessonReferencedPayload(lessonID, sourceID *mytype.OID) (*LessonEventPay
 }
 
 func NewLessonRemovedFromCoursePayload(lessonID, courseID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || courseID == nil {
+		return nil, errors.New("lessonID and courseID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonRemovedFromCourse}
 	if err := payload.CourseID.Set(courseID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -197,6 +235,9 @@ func NewLessonRemovedFromCoursePayload(lessonID, courseID *mytype.OID) (*LessonE
 }
 
 func NewLessonRenamedPayload(lessonID *mytype.OID, from, to string) (*LessonEventPayload, error) {
+	if lessonID == nil {
+		return nil, errors.New("lessonID must not be nil")
+	}
 	payload := &LessonEventPayload{
 		Action: LessonRenamed,
 		Rename: RenamePayload{
@@ -213,6 +254,9 @@ func NewLessonRenamedPayload(lessonID *mytype.OID, from, to string) (*LessonEven
 }
 
 func NewLessonUnlabeledPayload(lessonID, labelID *mytype.OID) (*LessonEventPayload, error) {
+	if lessonID == nil || labelID == nil {
+		return nil, errors.New("lessonID and labelID must not be nil")
+	}
 	payload := &LessonEventPayload{Action: LessonUnlabeled}
 	if err := payload.LabelID.Set(labelID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -232,6 +276,9 @@ type StudyEventPayload struct {
 }
 
 func NewStudyCreatedPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
+	if studyID == nil {
+		return nil, errors.New("studyID must not be nil")
+	}
 	payload := &StudyEventPayload{Action: StudyCreated}
 	if err := payload.StudyID.Set(studyID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -242,6 +289,9 @@ func NewStudyCreatedPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 }
 
 func NewStudyAppledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
+	if studyID == nil {
+		return nil, errors.New("studyID must not be nil")
+	}
 	payload := &StudyEventPayload{Action: StudyAppled}
 	if err := payload.StudyID.Set(studyID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -252,6 +302,9 @@ func NewStudyAppledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 }
 
 func NewStudyUnappledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
+	if studyID == nil {
+		return nil, errors.New("studyID must not be nil")
+	}
 	payload := &StudyEventPayload{Action: StudyUnappled}
 	if err := payload.StudyID.Set(studyID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -269,6 +322,9 @@ type UserAssetEventPayload struct {
 }
 
 func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil {
+		return nil, errors.New("assetID must not be nil")
+	}
 	payload := &UserAssetEventPayload{Action: UserAssetCreated}
 	if err := payload.AssetID.Set(assetID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -279,6 +335,9 @@ func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, er
 }
 
 func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || sourceID == nil {
+		return nil, errors.New("assetID and sourceID must not be nil")
+	}
 	payload := &UserAssetEventPayload{Action: UserAssetReferenced}
 	if err := payload.AssetID.Set(assetID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -293,6 +352,9 @@ func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEve
 }
 
 func NewUserAssetRenamedPayload(assetID *mytype.OID, from, to string) (*UserAssetEventPayload, error) {
+	if assetID == nil {
+		return nil, errors.New("assetID must not be nil")
+	}
 	payload := &UserAssetEventPayload{
 		Action: UserAssetRenamed,
 		Rename: RenamePayload{
