@@ -68,6 +68,7 @@ func MarkdownImplicitFigures(input []byte) []byte {
 
 var codeBlockLanguageRegexp = regexp.MustCompile(`^language-[a-z-A-Z0-9]+$`)
 var paragraphClassesRegexp = regexp.MustCompile(`^((caption|leading)(\s+|$))*$`)
+var figureClassesRegexp = regexp.MustCompile(`^((left|right)(\s+|$))*$`)
 var anchorTargetRegexp = regexp.MustCompile(`^(_blank)$`)
 
 func MarkdownToHTML(input []byte) []byte {
@@ -83,6 +84,7 @@ func MarkdownToHTML(input []byte) []byte {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class").Matching(codeBlockLanguageRegexp).OnElements("code")
 	p.AllowAttrs("class").Matching(paragraphClassesRegexp).OnElements("p")
+	p.AllowAttrs("class").Matching(figureClassesRegexp).OnElements("figure")
 	p.AllowAttrs("target").Matching(anchorTargetRegexp).OnElements("a")
 	return p.SanitizeBytes(unsafeWithFigures)
 }
@@ -152,6 +154,8 @@ func ReplaceWithPadding(match, replace string) string {
 		paddingLeft = "\n"
 	case '\t':
 		paddingLeft = "\t"
+	default:
+		paddingLeft = ""
 	}
 	switch match[len(match)-1] {
 	case ' ':
@@ -160,6 +164,8 @@ func ReplaceWithPadding(match, replace string) string {
 		paddingRight = "\n"
 	case '\t':
 		paddingRight = "\t"
+	default:
+		paddingRight = ""
 	}
 	return paddingLeft + replace + paddingRight
 }
@@ -185,4 +191,14 @@ func Trace(message string) string {
 func NewBool(value bool) *bool {
 	b := value
 	return &b
+}
+
+func RemoveQuotes(s string) string {
+	if len(s) > 0 && s[0] == '"' {
+		s = s[1:]
+	}
+	if len(s) > 0 && s[len(s)-1] == '"' {
+		s = s[:len(s)-1]
+	}
+	return s
 }
