@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -412,6 +414,25 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 			return s
 		}
 		name := result[1]
+		class := ""
+		caption := ""
+		query := ""
+		var queryValues url.Values
+		if len(result) >= 3 {
+			query = result[2]
+			queryValues, err = url.ParseQuery(query)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return s
+			}
+			class = queryValues.Get("class")
+			class = util.RemoveQuotes(class)
+			caption = queryValues.Get("caption")
+			caption = util.RemoveQuotes(caption)
+			queryValues.Del("class")
+			queryValues.Del("caption")
+			query = queryValues.Encode()
+		}
 		userAssetPermit, err := r.UserAsset().GetByName(
 			ctx,
 			studyID,
@@ -429,13 +450,28 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 			userAsset.UserID.Short,
 			userAsset.Key.String,
 		)
+		if query != "" {
+			src += "?" + query
+		}
 		href := fmt.Sprintf(
 			r.conf.ClientURL+"/u/%s/%s/asset/%s",
 			user.Login.String,
 			study.Name.String,
 			userAsset.Name.String,
 		)
-		return util.ReplaceWithPadding(s, fmt.Sprintf("<!---USER_ASSET_LINK--->[![$$%s](%s)](%s)", name, src, href))
+		link := `<figure`
+		if class != "" {
+			link += ` class="` + class + `"`
+		}
+		link += `><!---USER_ASSET_LINK--->`
+		link += `<a href="` + href + `" rel="nofollow"><img src="` +
+			src + `" alt="` + name + `"/></a>`
+		if caption != "" {
+			link += `<figcaption>` + caption + `</figcaption>`
+		}
+		link += `</figure>`
+
+		return util.ReplaceWithPadding(s, link)
 	}
 	body = mytype.AssetRefRegexp.ReplaceAllStringFunc(body, userAssetRefToLink)
 
@@ -532,7 +568,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 }
 
 var UserLinkRegexp = regexp.MustCompile(`<!---USER_LINK--->\[(@\w+)\]\(.*?\)`)
-var UserAssetLinkRegexp = regexp.MustCompile(`<!---USER_ASSET_LINK--->\[(\$\$\w+)\]\(.*?\)`)
+var UserAssetLinkRegexp = regexp.MustCompile(`<figure(?: class="(.*)")?><!---USER_ASSET_LINK---><a href=".*" rel="nofollow"><img src="(.*)" alt="(.*)"\/><\/a>(?:<figcaption>(.*)<\/figcaption>)?<\/figure>`)
 var LessonLinkRegexp = regexp.MustCompile(`<!---LESSON_LINK--->\[(#\d+)\]\(.*?\)`)
 var StudyLinkRegexp = regexp.MustCompile(`<!---STUDY_LINK--->\[(\w+\/[\w-]{1,39}#\d+)\]\(.*?\)`)
 
@@ -548,8 +584,37 @@ func (r *Repos) ReplaceMarkdownLinksWithRefs(
 		if len(result) == 0 {
 			return s
 		}
+		class := ""
+		name := ""
+		src := ""
+		query := ""
+		caption := ""
+		if len(result) > 1 {
+			class = result[1]
+		}
+		if len(result) > 2 {
+			src = result[2]
+			uri, err := url.ParseRequestURI(src)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return s
+			}
+			query = uri.RawQuery
+		}
+		if len(result) > 3 {
+			name = result[3]
+		}
+		if len(result) > 4 {
+			caption = result[4]
+		}
 		updated = true
-		return result[1]
+		ref := `$$` + name
+		queries := []string{query, `class="` + class + `"`, `caption="` + caption + `"`}
+		queries = util.RemoveEmptyStrings(queries)
+		if len(queries) > 0 {
+			ref += `?` + strings.Join(queries, "&") + `?`
+		}
+		return ref
 	}
 	markdown = UserAssetLinkRegexp.ReplaceAllStringFunc(markdown, userAssetLinkToRef)
 

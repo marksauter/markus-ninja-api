@@ -41,12 +41,13 @@ func (src *Markdown) AtRefs() []*AtRef {
 	return refs
 }
 
-var AssetRefRegexp = regexp.MustCompile(`(?:(?:^|\s)\${2})([\w-.]+)(?:\s|$)`)
+var AssetRefRegexp = regexp.MustCompile(`(?:(?:^|\s)\${2})([\w-.]+)(?:\?{2}(.*)\?{2})?(?:\s|$)`)
 
 // AssetRef -
 type AssetRef struct {
 	Name  string
 	Index []int
+	Query string
 }
 
 // AssetRefs -
@@ -55,10 +56,15 @@ func (src *Markdown) AssetRefs() []*AssetRef {
 	refs := make([]*AssetRef, len(result))
 	for i, r := range result {
 		name := src.String[r[2]:r[3]]
+		query := ""
+		if len(r) >= 5 {
+			query = src.String[r[3]:r[4]]
+		}
 		if name != "" {
 			ref := &AssetRef{
 				Name:  name,
 				Index: []int{r[0], r[1]},
+				Query: query,
 			}
 			refs[i] = ref
 		}
