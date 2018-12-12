@@ -477,14 +477,78 @@ END IF;
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION lesson_will_update()
+CREATE TABLE IF NOT EXISTS lesson_draft_backup(
+  created_at      TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  draft           TEXT,
+  id              SERIAL,
+  lesson_id       VARCHAR(100) NOT NULL,
+  updated_at      TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  PRIMARY KEY (lesson_id, id),
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS lesson_draft_backup_lesson_id_updated_at_idx
+  ON lesson_draft_backup (lesson_id, updated_at);
+
+CREATE OR REPLACE FUNCTION lesson_draft_backup_will_update()
   RETURNS TRIGGER
   SECURITY DEFINER
   LANGUAGE plpgsql
 AS $$
 BEGIN
+  NEW.updated_at = statement_timestamp();
+  RETURN NEW;
+END
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'lesson_draft_backup'
+    AND trigger_name = 'before_lesson_draft_backup_update'
+) THEN
+  CREATE TRIGGER before_lesson_draft_backup_update
+    BEFORE UPDATE ON lesson_draft_backup
+    FOR EACH ROW EXECUTE PROCEDURE lesson_draft_backup_will_update();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION lesson_will_update()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+DECLARE 
+  backup RECORD;
+  new_backup_id INT;
+BEGIN
   IF NEW.draft != OLD.draft THEN
     NEW.last_edited_at = statement_timestamp();
+
+    SELECT id, updated_at INTO backup
+    FROM lesson_draft_backup
+    ORDER BY updated_at DESC
+    LIMIT 1;
+
+    IF FOUND THEN
+      new_backup_id = (backup.id + 1) % 5;
+
+      IF age(statement_timestamp(), backup.updated_at) > INTERVAL '2 minute' THEN
+        INSERT INTO lesson_draft_backup(draft, id, lesson_id)
+        VALUES(OLD.draft, new_backup_id, NEW.id) 
+        ON CONFLICT (lesson_id, id) DO 
+          UPDATE SET draft = OLD.draft 
+          WHERE lesson_draft_backup.lesson_id = NEW.id AND lesson_draft_backup.id = new_backup_id;
+      END IF;
+    ELSE
+      INSERT INTO lesson_draft_backup(draft, lesson_id)
+      VALUES(OLD.draft, NEW.id); 
+    END IF;
   END IF;
 
   NEW.updated_at = statement_timestamp();
@@ -739,14 +803,74 @@ END IF;
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION lesson_comment_will_update()
+CREATE TABLE IF NOT EXISTS lesson_comment_draft_backup(
+  created_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  draft             TEXT,
+  id                SERIAL       PRIMARY KEY,
+  lesson_comment_id VARCHAR(100) NOT NULL,
+  updated_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  FOREIGN KEY (lesson_comment_id)
+    REFERENCES lesson_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION lesson_comment_draft_backup_will_update()
   RETURNS TRIGGER
   SECURITY DEFINER
   LANGUAGE plpgsql
 AS $$
 BEGIN
+  NEW.updated_at = statement_timestamp();
+  RETURN NEW;
+END
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'lesson_comment_draft_backup'
+    AND trigger_name = 'before_lesson_comment_draft_backup_update'
+) THEN
+  CREATE TRIGGER before_lesson_comment_draft_backup_update
+    BEFORE UPDATE ON lesson_comment_draft_backup
+    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_draft_backup_will_update();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION lesson_comment_will_update()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+DECLARE 
+  backup RECORD;
+  new_backup_id INT;
+BEGIN
   IF NEW.draft != OLD.draft THEN
     NEW.last_edited_at = statement_timestamp();
+
+    SELECT id, updated_at INTO backup
+    FROM lesson_comment_draft_backup
+    ORDER BY updated_at DESC
+    LIMIT 1;
+
+    IF FOUND THEN
+      new_backup_id = (backup.id + 1) % 5;
+
+      IF age(statement_timestamp(), backup.updated_at) > INTERVAL '2 minute' THEN
+        INSERT INTO lesson_comment_draft_backup(draft, id, lesson_comment_id)
+        VALUES(OLD.draft, new_backup_id, NEW.id) 
+        ON CONFLICT (lesson_comment_id, id) DO 
+          UPDATE SET draft = OLD.draft 
+          WHERE lesson_comment_draft_backup.lesson_comment_id = NEW.id AND lesson_comment_draft_backup.id = new_backup_id;
+      END IF;
+    ELSE
+      INSERT INTO lesson_comment_draft_backup(draft, lesson_comment_id)
+      VALUES(OLD.draft, NEW.id); 
+    END IF;
   END IF;
 
   NEW.updated_at = statement_timestamp();
