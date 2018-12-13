@@ -21,6 +21,7 @@ const (
 	LabeledNodeType
 	LessonNodeType
 	LessonCommentNodeType
+	LessonDraftBackupNodeType
 	NotificationNodeType
 	PRTNodeType
 	StudyNodeType
@@ -56,6 +57,8 @@ func (nt NodeType) String() string {
 		return "Lesson"
 	case LessonCommentNodeType:
 		return "LessonComment"
+	case LessonDraftBackupNodeType:
+		return "LessonDraftBackup"
 	case NotificationNodeType:
 		return "Notification"
 	case PRTNodeType:
@@ -101,6 +104,8 @@ func ParseNodeType(nodeType string) (NodeType, error) {
 		return LessonNodeType, nil
 	case "lessoncomment":
 		return LessonCommentNodeType, nil
+	case "lessondraftbackup":
+		return LessonDraftBackupNodeType, nil
 	case "notification":
 		return NotificationNodeType, nil
 	case "prt":

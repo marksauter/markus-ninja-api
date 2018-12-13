@@ -232,6 +232,7 @@ func initDB(conf *myconf.Config) error {
 		new(data.Labeled),
 		new(data.Lesson),
 		new(data.LessonComment),
+		new(data.LessonDraftBackup),
 		new(data.Notification),
 		new(data.PRT),
 		new(data.Study),

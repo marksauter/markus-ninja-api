@@ -1,0 +1,16 @@
+# Represents a lesson draft backup.
+type LessonDraftBackup {
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The lesson's backup draft.
+  draft: String!
+
+  id: ID!
+
+  # The lesson associated with this draft backup.
+  lesson: Lesson!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+}

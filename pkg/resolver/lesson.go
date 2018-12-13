@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
-	graphql "github.com/marksauter/graphql-go"
 	"github.com/jackc/pgx/pgtype"
+	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
@@ -142,6 +143,58 @@ func (r *lessonResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *lessonResolver) Draft() (string, error) {
 	return r.Lesson.Draft()
+}
+
+func (r *lessonResolver) DraftBackup(
+	ctx context.Context,
+	args struct{ ID string },
+) (*lessonDraftBackupResolver, error) {
+	lessonID, err := r.Lesson.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := strconv.ParseInt(args.ID, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid backup id")
+	}
+
+	draftBackup, err := r.Repos.LessonDraftBackup().Get(ctx, lessonID.String, int32(id))
+	if err != nil {
+		return nil, err
+	}
+	return &lessonDraftBackupResolver{
+		Conf:              r.Conf,
+		LessonDraftBackup: draftBackup,
+		Repos:             r.Repos,
+	}, nil
+}
+
+func (r *lessonResolver) DraftBackups(
+	ctx context.Context,
+) ([]*lessonDraftBackupResolver, error) {
+	resolvers := []*lessonDraftBackupResolver{}
+
+	lessonID, err := r.Lesson.ID()
+	if err != nil {
+		return resolvers, err
+	}
+
+	draftBackups, err := r.Repos.LessonDraftBackup().GetByLesson(ctx, lessonID.String)
+	if err != nil {
+		return resolvers, err
+	}
+
+	resolvers = make([]*lessonDraftBackupResolver, len(draftBackups))
+	for i, b := range draftBackups {
+		resolvers[i] = &lessonDraftBackupResolver{
+			Conf:              r.Conf,
+			LessonDraftBackup: b,
+			Repos:             r.Repos,
+		}
+	}
+
+	return resolvers, nil
 }
 
 func (r *lessonResolver) Enrollees(

@@ -11,9 +11,9 @@ import (
 
 type LessonDraftBackup struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at" permit:"read"`
-	Draft     pgtype.Text        `db:"draft" permit:"read/update"`
+	Draft     pgtype.Text        `db:"draft" permit:"read"`
 	ID        pgtype.Int4        `db:"id" permit:"read"`
-	LessonID  mytype.OID         `db:"lesson_id" permit:"create/read"`
+	LessonID  mytype.OID         `db:"lesson_id" permit:"read"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" permit:"read"`
 }
 
@@ -82,15 +82,15 @@ const getLessonDraftBackupSQL = `
 		draft,
 		id,
 		lesson_id,
-		updated_at,
+		updated_at
 	FROM lesson_draft_backup
 	WHERE lesson_id = $1 AND id = $2
 `
 
 func GetLessonDraftBackup(
 	db Queryer,
-	lessonID,
-	id string,
+	lessonID string,
+	id int32,
 ) (*LessonDraftBackup, error) {
 	lesson, err := getLessonDraftBackup(db, "getLessonDraftBackup", getLessonDraftBackupSQL, lessonID, id)
 	if err != nil {
@@ -102,7 +102,7 @@ func GetLessonDraftBackup(
 		mylog.Log.WithFields(logrus.Fields{
 			"lesson_id": lessonID,
 			"id":        id,
-		}).Info(util.Trace("lesson found"))
+		}).Info(util.Trace("lesson draft backup found"))
 	}
 	return lesson, err
 }
@@ -113,9 +113,10 @@ const getLessonDraftBackupByLessonSQL = `
 		draft,
 		id,
 		lesson_id,
-		updated_at,
+		updated_at
 	FROM lesson_draft_backup
 	WHERE lesson_id = $1
+	ORDER BY updated_at DESC
 `
 
 func GetLessonDraftBackupByLesson(
@@ -133,7 +134,7 @@ func GetLessonDraftBackupByLesson(
 	if err != nil {
 		mylog.Log.WithField("lesson_id", lessonID).WithError(err).Error(util.Trace(""))
 	} else {
-		mylog.Log.WithField("lesson_id", lessonID).Info(util.Trace("lesson found"))
+		mylog.Log.WithField("lesson_id", lessonID).Info(util.Trace("lesson draft backups found"))
 	}
 	return rows, err
 }
@@ -147,8 +148,8 @@ const restoreLessonDraftFromBackupSQl = `
 
 func RestoreLessonDraftFromBackup(
 	db Queryer,
-	lessonID,
-	backupID string,
+	lessonID string,
+	backupID int32,
 ) error {
 	commandTag, err := prepareExec(
 		db,
