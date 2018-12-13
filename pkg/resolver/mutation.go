@@ -2029,6 +2029,49 @@ func (r *RootResolver) ResetPassword(
 	return true, nil
 }
 
+// type RestoreLessonDraftFromBackupInput struct {
+//   BackupID string
+//   LessonID string
+// }
+//
+// func (r *RootResolver) RestoreLessonDraftFromBackup(
+//   ctx context.Context,
+//   args struct {
+//     Input RestoreLessonDraftFromBackupInput
+//   },
+// ) (*lessonResolver, error) {
+//   currentLessonPermit, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
+//   if err != nil {
+//     return nil, errors.New("lesson not found")
+//   }
+//   lesson := currentLessonPermit.Get()
+//
+//   id, err := strconv.ParseInt(args.Input.BackupID, 10, 32)
+//   if err != nil {
+//     return nil, errors.New("invalid backup id")
+//   }
+//
+//   err = r.Repos.LessonDraftBackup().Restore(
+//     ctx,
+//     lesson,
+//     int32(id),
+//   )
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   lessonPermit, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
+//   if err != nil {
+//     return nil, errors.New("lesson not found")
+//   }
+//
+//   return &lessonResolver{
+//     Conf:   r.Conf,
+//     Lesson: lessonPermit,
+//     Repos:  r.Repos,
+//   }, nil
+// }
+
 type TakeAppleInput struct {
 	AppleableID string
 }

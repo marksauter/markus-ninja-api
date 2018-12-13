@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/pgtype"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
@@ -57,8 +58,9 @@ func (src *Markdown) AssetRefs() []*AssetRef {
 	for i, r := range result {
 		name := src.String[r[2]:r[3]]
 		query := ""
-		if len(r) >= 5 {
-			query = src.String[r[3]:r[4]]
+		mylog.Log.Debugf("%#v", r)
+		if len(r) >= 6 && r[4] != -1 && r[5] != -1 {
+			query = src.String[r[4]:r[5]]
 		}
 		if name != "" {
 			ref := &AssetRef{

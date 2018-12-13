@@ -150,6 +150,8 @@ type Mutation {
   resetLessonCommentDraft(input: ResetLessonCommentDraftInput!): LessonComment
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
+  # Restores a lesson's draft from a backup.
+  restoreLessonDraftFromBackup(input: RestoreLessonDraftFromBackupInput!): Lesson
 
   # Takes an apple from an Appleable.
   takeApple(input: TakeAppleInput!): Appleable

@@ -536,7 +536,7 @@ BEGIN
     LIMIT 1;
 
     IF FOUND THEN
-      new_backup_id = (backup.id + 1) % 5;
+      new_backup_id = backup.id % 5 + 1;
 
       IF age(statement_timestamp(), backup.updated_at) > INTERVAL '2 minute' THEN
         INSERT INTO lesson_draft_backup(draft, id, lesson_id)
@@ -806,9 +806,10 @@ $$ language 'plpgsql';
 CREATE TABLE IF NOT EXISTS lesson_comment_draft_backup(
   created_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
   draft             TEXT,
-  id                SERIAL       PRIMARY KEY,
+  id                SERIAL,
   lesson_comment_id VARCHAR(100) NOT NULL,
   updated_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  PRIMARY KEY (lesson_comment_id, id),
   FOREIGN KEY (lesson_comment_id)
     REFERENCES lesson_comment (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
@@ -858,7 +859,7 @@ BEGIN
     LIMIT 1;
 
     IF FOUND THEN
-      new_backup_id = (backup.id + 1) % 5;
+      new_backup_id = backup.id % 5 + 1;
 
       IF age(statement_timestamp(), backup.updated_at) > INTERVAL '2 minute' THEN
         INSERT INTO lesson_comment_draft_backup(draft, id, lesson_comment_id)
@@ -4360,6 +4361,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON email_verification_token TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON password_reset_token TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON study TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson TO client;
+GRANT SELECT, UPDATE ON lesson_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course_lesson TO client;
 GRANT SELECT ON lesson_master TO client;

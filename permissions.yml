@@ -371,6 +371,14 @@ permissions:
 
 
 
+  # Only owners can read a lesson draft backup.
+  - operation: Read LessonDraftBackup
+    authenticated: true
+    roles:
+      - owner
+
+
+
   # Only owners can read/update/delete notifications.
   - operation: Read Notification
     authenticated: true

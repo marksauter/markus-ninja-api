@@ -55,6 +55,19 @@ type Lesson implements
   # The current draft of changes for the lesson body as Markdown.
   draft: String!
 
+  # Returns a single draft backup for the current lesson by id (1-5).
+  # The lesson's draft is backed up—after an update—every two minutes.
+  # There are at most 5 backups.
+  draftBackup(
+    # The ID of the backup.
+    id: ID!
+  ): LessonDraftBackup
+
+  # Returns a list of draft backups for the current lesson.
+  # The lesson's draft is backed up—after an update—every two minutes.
+  # There are at most 5 backups.
+  draftBackups: [LessonDraftBackup]!
+
   # Returns a list users who have enrolled in this enrollable.
   enrollees(
     # Returns the elements in the list that come after the specified global ID.
