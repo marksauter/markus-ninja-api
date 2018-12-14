@@ -484,7 +484,7 @@ func (r *Repos) ReplaceMarkdownRefsWithLinks(
 			link += `<figcaption>` + caption + `</figcaption>`
 		}
 		link += `</figure>`
-		link = fmt.Sprintf("\n%s\n", link)
+		link = fmt.Sprintf("\n\n%s\n\n", link)
 
 		return util.ReplaceWithPadding(s, link)
 	}
