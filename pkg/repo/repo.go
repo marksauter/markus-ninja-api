@@ -21,28 +21,29 @@ import (
 type key string
 
 const (
-	appledRepoKey            key = "appled"
-	assetRepoKey             key = "asset"
-	courseRepoKey            key = "course"
-	courseLessonRepoKey      key = "course_lesson"
-	emailRepoKey             key = "email"
-	enrolledRepoKey          key = "enrolled"
-	evtRepoKey               key = "evt"
-	labelRepoKey             key = "label"
-	labeledRepoKey           key = "labeled"
-	lessonRepoKey            key = "lesson"
-	lessonCommentRepoKey     key = "lesson_comment"
-	lessonDraftBackupRepoKey key = "lesson_draft_backup"
-	notificationRepoKey      key = "notification"
-	permRepoKey              key = "perm"
-	prtRepoKey               key = "prt"
-	eventRepoKey             key = "event"
-	studyRepoKey             key = "study"
-	topicRepoKey             key = "topic"
-	topicableRepoKey         key = "topicable"
-	topicedRepoKey           key = "topiced"
-	userRepoKey              key = "user"
-	userAssetRepoKey         key = "user_asset"
+	appledRepoKey                   key = "appled"
+	assetRepoKey                    key = "asset"
+	courseRepoKey                   key = "course"
+	courseLessonRepoKey             key = "course_lesson"
+	emailRepoKey                    key = "email"
+	enrolledRepoKey                 key = "enrolled"
+	evtRepoKey                      key = "evt"
+	labelRepoKey                    key = "label"
+	labeledRepoKey                  key = "labeled"
+	lessonRepoKey                   key = "lesson"
+	lessonCommentRepoKey            key = "lesson_comment"
+	lessonDraftBackupRepoKey        key = "lesson_draft_backup"
+	lessonCommentDraftBackupRepoKey key = "lesson_comment_draft_backup"
+	notificationRepoKey             key = "notification"
+	permRepoKey                     key = "perm"
+	prtRepoKey                      key = "prt"
+	eventRepoKey                    key = "event"
+	studyRepoKey                    key = "study"
+	topicRepoKey                    key = "topic"
+	topicableRepoKey                key = "topicable"
+	topicedRepoKey                  key = "topiced"
+	userRepoKey                     key = "user"
+	userAssetRepoKey                key = "user_asset"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -69,26 +70,27 @@ func NewRepos(db data.Queryer, conf *myconf.Config) *Repos {
 		conf: conf,
 		db:   db,
 		lookup: map[key]Repo{
-			appledRepoKey:            NewAppledRepo(conf),
-			assetRepoKey:             NewAssetRepo(conf),
-			courseRepoKey:            NewCourseRepo(conf),
-			courseLessonRepoKey:      NewCourseLessonRepo(conf),
-			emailRepoKey:             NewEmailRepo(conf),
-			enrolledRepoKey:          NewEnrolledRepo(conf),
-			evtRepoKey:               NewEVTRepo(conf),
-			labelRepoKey:             NewLabelRepo(conf),
-			labeledRepoKey:           NewLabeledRepo(conf),
-			lessonRepoKey:            NewLessonRepo(conf),
-			lessonCommentRepoKey:     NewLessonCommentRepo(conf),
-			lessonDraftBackupRepoKey: NewLessonDraftBackupRepo(conf),
-			notificationRepoKey:      NewNotificationRepo(conf),
-			prtRepoKey:               NewPRTRepo(conf),
-			eventRepoKey:             NewEventRepo(conf),
-			studyRepoKey:             NewStudyRepo(conf),
-			topicRepoKey:             NewTopicRepo(conf),
-			topicedRepoKey:           NewTopicedRepo(conf),
-			userRepoKey:              NewUserRepo(conf),
-			userAssetRepoKey:         NewUserAssetRepo(conf),
+			appledRepoKey:                   NewAppledRepo(conf),
+			assetRepoKey:                    NewAssetRepo(conf),
+			courseRepoKey:                   NewCourseRepo(conf),
+			courseLessonRepoKey:             NewCourseLessonRepo(conf),
+			emailRepoKey:                    NewEmailRepo(conf),
+			enrolledRepoKey:                 NewEnrolledRepo(conf),
+			evtRepoKey:                      NewEVTRepo(conf),
+			labelRepoKey:                    NewLabelRepo(conf),
+			labeledRepoKey:                  NewLabeledRepo(conf),
+			lessonRepoKey:                   NewLessonRepo(conf),
+			lessonCommentRepoKey:            NewLessonCommentRepo(conf),
+			lessonDraftBackupRepoKey:        NewLessonDraftBackupRepo(conf),
+			lessonCommentDraftBackupRepoKey: NewLessonCommentDraftBackupRepo(conf),
+			notificationRepoKey:             NewNotificationRepo(conf),
+			prtRepoKey:                      NewPRTRepo(conf),
+			eventRepoKey:                    NewEventRepo(conf),
+			studyRepoKey:                    NewStudyRepo(conf),
+			topicRepoKey:                    NewTopicRepo(conf),
+			topicedRepoKey:                  NewTopicedRepo(conf),
+			userRepoKey:                     NewUserRepo(conf),
+			userAssetRepoKey:                NewUserAssetRepo(conf),
 		},
 	}
 }
@@ -173,6 +175,11 @@ func (r *Repos) LessonComment() *LessonCommentRepo {
 
 func (r *Repos) LessonDraftBackup() *LessonDraftBackupRepo {
 	repo, _ := r.lookup[lessonDraftBackupRepoKey].(*LessonDraftBackupRepo)
+	return repo
+}
+
+func (r *Repos) LessonCommentDraftBackup() *LessonCommentDraftBackupRepo {
+	repo, _ := r.lookup[lessonCommentDraftBackupRepoKey].(*LessonCommentDraftBackupRepo)
 	return repo
 }
 

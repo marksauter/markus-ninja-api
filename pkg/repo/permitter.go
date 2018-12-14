@@ -219,6 +219,10 @@ func (r *Permitter) ViewerCanRead(
 		return r.ViewerCanAdmin(ctx, node)
 	case *data.LessonDraftBackup:
 		return r.ViewerCanAdmin(ctx, node)
+	case data.LessonCommentDraftBackup:
+		return r.ViewerCanAdmin(ctx, node)
+	case *data.LessonCommentDraftBackup:
+		return r.ViewerCanAdmin(ctx, node)
 	default:
 		return true, nil
 	}
@@ -504,6 +508,22 @@ func (r *Permitter) ViewerCanAdmin(
 			return false, err
 		}
 		userID := &lesson.UserID
+		return vid == userID.String, nil
+	case data.LessonCommentDraftBackup:
+		lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LessonCommentID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		userID := &lessonComment.UserID
+		return vid == userID.String, nil
+	case *data.LessonCommentDraftBackup:
+		lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LessonCommentID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		userID := &lessonComment.UserID
 		return vid == userID.String, nil
 	case data.Notification:
 		userID := &node.UserID

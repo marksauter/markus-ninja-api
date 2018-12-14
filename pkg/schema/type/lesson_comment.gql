@@ -28,6 +28,19 @@ type LessonComment implements
   # The current draft of changes for the lesson comment body as Markdown.
   draft: String!
 
+  # Returns a single draft backup for the current lesson comment by id (1-5).
+  # The lesson comment's draft is backed up—after an update—every two minutes.
+  # There are at most 5 backups.
+  draftBackup(
+    # The ID of the backup.
+    id: ID!
+  ): LessonCommentDraftBackup
+
+  # Returns a list of draft backups for the current lesson comment.
+  # The lesson comment's draft is backed up—after an update—every two minutes.
+  # There are at most 5 backups.
+  draftBackups: [LessonCommentDraftBackup]!
+
   id: ID!
 
   # Is this lesson comment published?

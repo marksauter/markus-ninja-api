@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
@@ -62,6 +63,58 @@ func (r *lessonCommentResolver) CreatedAt() (graphql.Time, error) {
 
 func (r *lessonCommentResolver) Draft() (string, error) {
 	return r.LessonComment.Draft()
+}
+
+func (r *lessonCommentResolver) DraftBackup(
+	ctx context.Context,
+	args struct{ ID string },
+) (*lessonCommentDraftBackupResolver, error) {
+	lessonCommentID, err := r.LessonComment.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := strconv.ParseInt(args.ID, 10, 32)
+	if err != nil {
+		return nil, errors.New("invalid backup id")
+	}
+
+	draftBackup, err := r.Repos.LessonCommentDraftBackup().Get(ctx, lessonCommentID.String, int32(id))
+	if err != nil {
+		return nil, err
+	}
+	return &lessonCommentDraftBackupResolver{
+		Conf: r.Conf,
+		LessonCommentDraftBackup: draftBackup,
+		Repos: r.Repos,
+	}, nil
+}
+
+func (r *lessonCommentResolver) DraftBackups(
+	ctx context.Context,
+) ([]*lessonCommentDraftBackupResolver, error) {
+	resolvers := []*lessonCommentDraftBackupResolver{}
+
+	lessonCommentID, err := r.LessonComment.ID()
+	if err != nil {
+		return resolvers, err
+	}
+
+	draftBackups, err := r.Repos.LessonCommentDraftBackup().GetByLessonComment(ctx, lessonCommentID.String)
+	if err != nil {
+		return resolvers, err
+	}
+
+	resolvers = make([]*lessonCommentDraftBackupResolver, len(draftBackups))
+	for i, b := range draftBackups {
+		resolvers[i] = &lessonCommentDraftBackupResolver{
+			Conf: r.Conf,
+			LessonCommentDraftBackup: b,
+			Repos: r.Repos,
+		}
+	}
+
+	return resolvers, nil
 }
 
 func (r *lessonCommentResolver) ID() (graphql.ID, error) {
