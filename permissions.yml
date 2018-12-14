@@ -307,7 +307,6 @@ permissions:
     roles:
       - owner
     fields:
-      - body
       - study_id
       - title
       - user_id
@@ -373,6 +372,14 @@ permissions:
 
   # Only owners can read a lesson draft backup.
   - operation: Read LessonDraftBackup
+    authenticated: true
+    roles:
+      - owner
+
+
+
+  # Only owners can read a lesson comment draft backup.
+  - operation: Read LessonCommentDraftBackup
     authenticated: true
     roles:
       - owner

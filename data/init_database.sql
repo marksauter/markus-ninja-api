@@ -4366,6 +4366,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON course TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course_lesson TO client;
 GRANT SELECT ON lesson_master TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_comment TO client;
+GRANT SELECT, UPDATE ON lesson_comment_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON label TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON labeled TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_labeled TO client;
