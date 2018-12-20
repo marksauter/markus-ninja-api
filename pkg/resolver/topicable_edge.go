@@ -18,7 +18,10 @@ func NewTopicableEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	cursor := data.EncodeCursor(id.String)
+	cursor, err := data.EncodeCursor(id.String)
+	if err != nil {
+		return nil, err
+	}
 	return &topicableEdgeResolver{
 		conf:   conf,
 		cursor: cursor,

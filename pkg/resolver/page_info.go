@@ -43,7 +43,7 @@ func NewPageInfoResolver(
 		}
 		var haveAfterEdge, haveBeforeEdge bool
 		for i, e := range edges {
-			if e.Cursor() == after.String() {
+			if e.Cursor() == after.String {
 				haveAfterEdge = true
 				if n > 1 {
 					start = int32(i + 1)
@@ -52,7 +52,7 @@ func NewPageInfoResolver(
 				}
 				hasPreviousPage = true
 			}
-			if e.Cursor() == before.String() {
+			if e.Cursor() == before.String {
 				haveBeforeEdge = true
 				if n > 1 {
 					end = int32(i - 1)

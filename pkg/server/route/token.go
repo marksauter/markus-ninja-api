@@ -16,6 +16,8 @@ import (
 	"github.com/rs/cors"
 )
 
+const afterOneWeek = time.Hour * 24 * 7
+
 type TokenHandler struct {
 	AuthSvc *service.AuthService
 	Conf    *myconf.Config
@@ -82,7 +84,7 @@ func (h TokenHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	exp := time.Now().Add(time.Hour * time.Duration(24)).Unix()
+	exp := time.Now().Add(afterOneWeek).Unix()
 	payload := myjwt.Payload{Exp: exp, Iat: time.Now().Unix(), Sub: user.ID.String}
 	jwt, err := h.AuthSvc.SignJWT(&payload)
 	if err != nil {

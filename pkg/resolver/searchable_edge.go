@@ -17,7 +17,10 @@ func NewSearchableEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	cursor := data.EncodeCursor(id.String)
+	cursor, err := data.EncodeCursor(id.String)
+	if err != nil {
+		return nil, err
+	}
 	return &searchableEdgeResolver{
 		conf:   conf,
 		cursor: cursor,

@@ -4,53 +4,49 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+
+	"github.com/jackc/pgx"
 )
 
 type Cursor struct {
-	s *string
-	v *string
+	String string
+	Value  string
 }
 
-func NewCursor(cursor *string) (*Cursor, error) {
+func NewCursor(cursor string) (*Cursor, error) {
 	v, err := DecodeCursor(cursor)
 	if err != nil {
 		return nil, err
 	}
 	c := &Cursor{
-		s: cursor,
-		v: v,
+		String: cursor,
+		Value:  v,
 	}
 	return c, nil
 }
 
-func (c *Cursor) String() string {
-	if c.s != nil {
-		return *c.s
-	}
-	return ""
+func (c *Cursor) SQL(field string, args *pgx.QueryArgs) string {
+	return field + " = " + args.Append(c.Value)
 }
 
-func (c *Cursor) Value() string {
-	if c.v != nil {
-		return *c.v
+func DecodeCursor(cursor string) (string, error) {
+	bs, err := base64.StdEncoding.DecodeString(cursor)
+	if err != nil {
+		return "", err
 	}
-	return ""
+	decodedValue := strings.TrimPrefix(string(bs), "cursor:")
+	return decodedValue, nil
 }
 
-func DecodeCursor(cursor *string) (*string, error) {
-	var decodedValue string
-	if cursor != nil {
-		bs, err := base64.StdEncoding.DecodeString(*cursor)
-		if err != nil {
-			return nil, err
-		}
-		decodedValue = strings.TrimPrefix(string(bs), "cursor:")
+func EncodeCursor(value interface{}) (string, error) {
+	cursor := ""
+	switch v := value.(type) {
+	case int32:
+		cursor = fmt.Sprintf("cursor:%d", v)
+	case string:
+		cursor = fmt.Sprintf("cursor:%s", v)
+	default:
+		return "", fmt.Errorf("invalid type %T for value", v)
 	}
-	return &decodedValue, nil
-}
-
-func EncodeCursor(id string) string {
-	return base64.StdEncoding.EncodeToString(
-		[]byte(fmt.Sprintf("cursor:%s", id)),
-	)
+	return base64.StdEncoding.EncodeToString([]byte(cursor)), nil
 }
