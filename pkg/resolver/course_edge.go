@@ -15,7 +15,10 @@ func NewCourseEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	cursor := data.EncodeCursor(id.String)
+	cursor, err := data.EncodeCursor(id.String)
+	if err != nil {
+		return nil, err
+	}
 	return &courseEdgeResolver{
 		conf:   conf,
 		cursor: cursor,

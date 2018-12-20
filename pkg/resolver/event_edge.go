@@ -15,7 +15,10 @@ func NewEventEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	cursor := data.EncodeCursor(id.String)
+	cursor, err := data.EncodeCursor(id.String)
+	if err != nil {
+		return nil, err
+	}
 	return &eventEdgeResolver{
 		conf:   conf,
 		cursor: cursor,

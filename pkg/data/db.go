@@ -202,7 +202,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 		pageOptions.Last = *last
 	}
 	if after != nil {
-		a, err := NewCursor(after)
+		a, err := NewCursor(*after)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
@@ -210,7 +210,7 @@ func NewPageOptions(after, before *string, first, last *int32, o Order) (*PageOp
 		pageOptions.After = a
 	}
 	if before != nil {
-		b, err := NewCursor(before)
+		b, err := NewCursor(*before)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
@@ -250,14 +250,14 @@ func (p *PageOptions) joins(from, as string, args *pgx.QueryArgs) string {
 	joins := make([]string, 0, 2)
 	if p.After != nil {
 		joins = append(joins, fmt.Sprintf(
-			"JOIN %[1]s AS %[2]s2 ON %[2]s2.id = "+args.Append(p.After.Value()),
+			"JOIN %[1]s AS %[2]s2 ON %[2]s2."+p.After.SQL("id", args),
 			from,
 			as,
 		))
 	}
 	if p.Before != nil {
 		joins = append(joins, fmt.Sprintf(
-			"JOIN %[1]s AS %[2]s3 ON %[2]s3.id = "+args.Append(p.Before.Value()),
+			"JOIN %[1]s AS %[2]s3 ON %[2]s3."+p.Before.SQL("id", args),
 			from,
 			as,
 		))

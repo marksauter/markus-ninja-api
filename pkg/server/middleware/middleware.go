@@ -89,6 +89,13 @@ func (a *Authenticate) Use(h http.Handler) http.Handler {
 			if err != nil {
 				response := myhttp.UnauthorizedErrorResponse(err.Error())
 				myhttp.WriteResponseTo(rw, response)
+				http.SetCookie(rw, &http.Cookie{
+					Name:     "access_token",
+					Value:    "",
+					Expires:  time.Unix(0, 0),
+					HttpOnly: true,
+					// Secure:   true,
+				})
 				return
 			}
 
