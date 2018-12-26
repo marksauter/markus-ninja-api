@@ -740,20 +740,26 @@ SELECT
 FROM lesson
 LEFT JOIN course_lesson ON course_lesson.lesson_id = lesson.id;
 
-CREATE TABLE IF NOT EXISTS lesson_comment(
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'commentable_type') THEN
+    CREATE TYPE commentable_type AS ENUM('Lesson', 'UserAsset');
+  END IF;
+END
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS comment(
   body            TEXT,
-  created_at      TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  commentable_id  VARCHAR(100)     NOT NULL,
+  type            commentable_type NOT NULL, 
+  created_at      TIMESTAMPTZ      DEFAULT statement_timestamp(),
   draft           TEXT,
-  id              VARCHAR(100) PRIMARY KEY,
-  last_edited_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
-  lesson_id       VARCHAR(100) NOT NULL,
+  id              VARCHAR(100)     PRIMARY KEY,
+  last_edited_at  TIMESTAMPTZ      DEFAULT statement_timestamp(),
   published_at    TIMESTAMPTZ,
-  study_id        VARCHAR(100) NOT NULL,
-  user_id         VARCHAR(100) NOT NULL,
-  updated_at      TIMESTAMPTZ  DEFAULT statement_timestamp(),
-  FOREIGN KEY (lesson_id)
-    REFERENCES lesson (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
+  study_id        VARCHAR(100)     NOT NULL,
+  user_id         VARCHAR(100)     NOT NULL,
+  updated_at      TIMESTAMPTZ      DEFAULT statement_timestamp(),
   FOREIGN KEY (study_id)
     REFERENCES study (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -762,60 +768,31 @@ CREATE TABLE IF NOT EXISTS lesson_comment(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS lesson_comment_user_id_lesson_id_null_published_at_unique_idx
-  ON lesson_comment (user_id, lesson_id)
+CREATE UNIQUE INDEX IF NOT EXISTS comment_user_id_commentable_id_published_at_null_uidx
+  ON comment (user_id, commentable_id)
   WHERE published_at IS NULL;
-CREATE INDEX IF NOT EXISTS lesson_comment_user_id_idx
-  ON lesson_comment (user_id);
-CREATE INDEX IF NOT EXISTS lesson_comment_study_id_idx
-  ON lesson_comment (study_id);
-CREATE INDEX IF NOT EXISTS lesson_comment_lesson_id_published_at_idx
-  ON lesson_comment (lesson_id, published_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS comment_user_id_idx
+  ON comment (user_id);
+CREATE INDEX IF NOT EXISTS comment_study_id_idx
+  ON comment (study_id);
+CREATE INDEX IF NOT EXISTS comment_commentable_id_published_at_not_null_idx
+  ON comment (commentable_id, published_at)
+  WHERE published_at IS NOT NULL;
 
-CREATE OR REPLACE FUNCTION lesson_comment_will_insert()
-  RETURNS TRIGGER
-  LANGUAGE plpgsql
-AS $$
-BEGIN
-  IF NEW.study_id IS NULL THEN
-    SELECT study.id
-    INTO NEW.study_id
-    FROM study
-    JOIN lesson ON lesson.id = NEW.lesson_id
-    WHERE study.id = lesson.study_id;
-  END IF;
-  RETURN NEW;
-END;
-$$;
 
-DO $$
-BEGIN
-IF NOT EXISTS(
-  SELECT *
-    FROM information_schema.triggers
-    WHERE event_object_table = 'lesson_comment'
-    AND trigger_name = 'before_lesson_comment_insert'
-) THEN
-  CREATE TRIGGER before_lesson_comment_insert
-    BEFORE INSERT ON lesson_comment
-    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_will_insert();
-END IF;
-END;
-$$ language 'plpgsql';
-
-CREATE TABLE IF NOT EXISTS lesson_comment_draft_backup(
-  created_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
-  draft             TEXT,
-  id                SERIAL,
-  lesson_comment_id VARCHAR(100) NOT NULL,
-  updated_at        TIMESTAMPTZ  DEFAULT statement_timestamp(),
-  PRIMARY KEY (lesson_comment_id, id),
-  FOREIGN KEY (lesson_comment_id)
-    REFERENCES lesson_comment (id)
+CREATE TABLE IF NOT EXISTS comment_draft_backup(
+  created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  draft       TEXT,
+  id          SERIAL,
+  comment_id  VARCHAR(100) NOT NULL,
+  updated_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  PRIMARY KEY (comment_id, id),
+  FOREIGN KEY (comment_id)
+    REFERENCES comment (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE OR REPLACE FUNCTION lesson_comment_draft_backup_will_update()
+CREATE OR REPLACE FUNCTION comment_draft_backup_will_update()
   RETURNS TRIGGER
   SECURITY DEFINER
   LANGUAGE plpgsql
@@ -831,17 +808,17 @@ BEGIN
 IF NOT EXISTS(
   SELECT *
     FROM information_schema.triggers
-    WHERE event_object_table = 'lesson_comment_draft_backup'
-    AND trigger_name = 'before_lesson_comment_draft_backup_update'
+    WHERE event_object_table = 'comment_draft_backup'
+    AND trigger_name = 'before_comment_draft_backup_update'
 ) THEN
-  CREATE TRIGGER before_lesson_comment_draft_backup_update
-    BEFORE UPDATE ON lesson_comment_draft_backup
-    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_draft_backup_will_update();
+  CREATE TRIGGER before_comment_draft_backup_update
+    BEFORE UPDATE ON comment_draft_backup
+    FOR EACH ROW EXECUTE PROCEDURE comment_draft_backup_will_update();
 END IF;
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION lesson_comment_will_update()
+CREATE OR REPLACE FUNCTION comment_will_update()
   RETURNS TRIGGER
   SECURITY DEFINER
   LANGUAGE plpgsql
@@ -854,7 +831,7 @@ BEGIN
     NEW.last_edited_at = statement_timestamp();
 
     SELECT id, updated_at INTO backup
-    FROM lesson_comment_draft_backup
+    FROM comment_draft_backup
     ORDER BY updated_at DESC
     LIMIT 1;
 
@@ -862,14 +839,14 @@ BEGIN
       new_backup_id = backup.id % 5 + 1;
 
       IF age(statement_timestamp(), backup.updated_at) > INTERVAL '2 minute' THEN
-        INSERT INTO lesson_comment_draft_backup(draft, id, lesson_comment_id)
+        INSERT INTO comment_draft_backup(draft, id, comment_id)
         VALUES(OLD.draft, new_backup_id, NEW.id) 
-        ON CONFLICT (lesson_comment_id, id) DO 
+        ON CONFLICT (comment_id, id) DO 
           UPDATE SET draft = OLD.draft 
-          WHERE lesson_comment_draft_backup.lesson_comment_id = NEW.id AND lesson_comment_draft_backup.id = new_backup_id;
+          WHERE comment_draft_backup.comment_id = NEW.id AND comment_draft_backup.id = new_backup_id;
       END IF;
     ELSE
-      INSERT INTO lesson_comment_draft_backup(draft, lesson_comment_id)
+      INSERT INTO comment_draft_backup(draft, comment_id)
       VALUES(OLD.draft, NEW.id); 
     END IF;
   END IF;
@@ -885,15 +862,26 @@ BEGIN
 IF NOT EXISTS(
   SELECT *
     FROM information_schema.triggers
-    WHERE event_object_table = 'lesson_comment'
-    AND trigger_name = 'before_lesson_comment_update'
+    WHERE event_object_table = 'comment'
+    AND trigger_name = 'before_comment_update'
 ) THEN
-  CREATE TRIGGER before_lesson_comment_update
-    BEFORE UPDATE ON lesson_comment
-    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_will_update();
+  CREATE TRIGGER before_comment_update
+    BEFORE UPDATE ON comment
+    FOR EACH ROW EXECUTE PROCEDURE comment_will_update();
 END IF;
 END;
 $$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS lesson_comment(
+  comment_id VARCHAR(100) NOT NULL,
+  lesson_id  VARCHAR(100) NOT NULL,
+  FOREIGN KEY (comment_id)
+    REFERENCES comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS label(
   color       TEXT         NOT NULL,
@@ -970,7 +958,7 @@ $$ language 'plpgsql';
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'labelable_type') THEN
-    CREATE TYPE labelable_type AS ENUM('Lesson', 'LessonComment');
+    CREATE TYPE labelable_type AS ENUM('Lesson', 'Comment');
   END IF;
 END
 $$ language 'plpgsql';
@@ -1011,7 +999,7 @@ CREATE TABLE IF NOT EXISTS lesson_labeled(
 CREATE INDEX IF NOT EXISTS lesson_labeled_label_id_labelable_id_idx
   ON lesson_labeled (label_id, labelable_id);
 
-CREATE TABLE IF NOT EXISTS lesson_comment_labeled(
+CREATE TABLE IF NOT EXISTS comment_labeled(
   created_at    TIMESTAMPTZ  DEFAULT statement_timestamp(),
   label_id      VARCHAR(100),
   labelable_id  VARCHAR(100),
@@ -1023,12 +1011,12 @@ CREATE TABLE IF NOT EXISTS lesson_comment_labeled(
     REFERENCES labeled (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (labelable_id)
-    REFERENCES lesson_comment (id)
+    REFERENCES comment (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS lesson_comment_labeled_label_id_labelable_id_idx
-  ON lesson_comment_labeled (label_id, labelable_id);
+CREATE INDEX IF NOT EXISTS comment_labeled_label_id_labelable_id_idx
+  ON comment_labeled (label_id, labelable_id);
 
 CREATE OR REPLACE VIEW label_search_index AS
 SELECT
@@ -1046,13 +1034,13 @@ SELECT
 FROM label_search_index
 JOIN labeled ON labeled.label_id = label_search_index.id;
 
-CREATE OR REPLACE VIEW labeled_lesson_comment AS
+CREATE OR REPLACE VIEW labeled_comment AS
 SELECT
-  lesson_comment.*,
-  lesson_comment_labeled.label_id,
-  lesson_comment_labeled.created_at labeled_at
-FROM lesson_comment
-JOIN lesson_comment_labeled ON lesson_comment_labeled.labelable_id = lesson_comment.id;
+  comment.*,
+  comment_labeled.label_id,
+  comment_labeled.created_at labeled_at
+FROM comment
+JOIN comment_labeled ON comment_labeled.labelable_id = comment.id;
 
 CREATE TABLE IF NOT EXISTS topic(
   created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
@@ -1223,8 +1211,182 @@ END IF;
 END;
 $$ language 'plpgsql';
 
+CREATE TABLE IF NOT EXISTS user_asset_comment(
+  comment_id VARCHAR(100) NOT NULL,
+  asset_id   VARCHAR(100) NOT NULL,
+  FOREIGN KEY (comment_id)
+    REFERENCES comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (asset_id)
+    REFERENCES user_asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_asset_labeled(
+  created_at    TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  label_id      VARCHAR(100),
+  labelable_id  VARCHAR(100),
+  labeled_id    INT          PRIMARY KEY,
+  FOREIGN KEY (label_id)
+    REFERENCES label (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (labeled_id)
+    REFERENCES labeled (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (labelable_id)
+    REFERENCES user_asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS user_asset_labeled_label_id_labelable_id_idx
+  ON user_asset_labeled (label_id, labelable_id);
+
+CREATE TABLE IF NOT EXISTS activity(
+  advanced_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ   DEFAULT statement_timestamp(),
+  description   TEXT,
+  id            VARCHAR(100)  PRIMARY KEY,
+  lesson_id     VARCHAR(100)  NOT NULL,
+  name          VARCHAR(40)   NOT NULL,
+  name_tokens   TEXT          NOT NULL,
+  number        INT           CHECK(number > 0),
+  study_id      VARCHAR(100)  NOT NULL,
+  updated_at    TIMESTAMPTZ   DEFAULT statement_timestamp(),
+  user_id       VARCHAR(100)  NOT NULL,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS activity_unique_study_id_name_key
+  ON activity (study_id, lower(name));
+CREATE UNIQUE INDEX IF NOT EXISTS activity_study_id_number_idx
+  ON activity (study_id, number);
+CREATE INDEX IF NOT EXISTS activity_study_id_created_at_idx
+  ON activity (study_id, created_at);
+CREATE INDEX IF NOT EXISTS activity_study_id_advanced_at_idx
+  ON activity (study_id, advanced_at);
+CREATE INDEX IF NOT EXISTS activity_user_id_idx
+  ON activity (user_id);
+
+CREATE OR REPLACE FUNCTION activity_will_insert()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  SELECT INTO NEW.number count(*)::INT
+  FROM activity
+  WHERE study_id = NEW.study_id;
+  NEW.number = NEW.number + 1;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'before_activity_insert'
+) THEN
+  CREATE TRIGGER before_activity_insert
+    BEFORE INSERT ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_will_insert(); 
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_will_update()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = statement_timestamp();
+  RETURN NEW;
+END
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'before_activity_update'
+) THEN
+  CREATE TRIGGER before_activity_update
+    BEFORE UPDATE ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_will_update();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION advance_activity(_activity_id VARCHAR)
+  RETURNS VOID
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE activity
+  SET advanced_at = statement_timestamp()
+  WHERE activity.id = _activity_id;
+$$;
+
+CREATE TABLE IF NOT EXISTS activity_asset(
+  created_at      TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  activity_id     VARCHAR(100) NOT NULL,
+  user_asset_id   VARCHAR(100) PRIMARY KEY,
+  number          INT          NOT NULL CHECK(number > 0),
+  UNIQUE (activity_id, number) DEFERRABLE INITIALLY DEFERRED,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_asset_id)
+    REFERENCES user_asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION activity_asset_will_insert()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  SELECT INTO NEW.number count(*)::INT
+  FROM activity_asset
+  WHERE activity_id = NEW.activity_id;
+  NEW.number = NEW.number + 1;
+
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'before_activity_asset_insert'
+) THEN
+  CREATE TRIGGER before_activity_asset_insert
+    BEFORE INSERT ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_will_insert(); 
+END IF;
+END;
+$$ language 'plpgsql';
+
 CREATE OR REPLACE VIEW user_asset_master AS
 SELECT
+  array_agg(activity_asset.activity_id) activity_ids,
   asset.id asset_id,
   asset.created_at,
   user_asset.description,
@@ -1240,7 +1402,9 @@ SELECT
   user_asset.updated_at,
   user_asset.user_id
 FROM user_asset
-JOIN asset ON asset.id = user_asset.asset_id;
+JOIN asset ON asset.id = user_asset.asset_id
+LEFT JOIN activity_asset ON activity_asset.user_asset_id = user_asset.id  
+GROUP BY user_asset.id;
 
 DO $$
 BEGIN
@@ -1424,12 +1588,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS event_type_name_key
 
 INSERT INTO event_type (name, description)
 VALUES
+  ('ActivityEvent', 'Triggered when an activity is created.'),
   ('CourseEvent', 'Triggered when a course is created, appled, or unappled.'),
   ('LessonEvent', 'Triggered when a lesson is created, added to a course, 
     removed from a course, commented, labeled, unlabeled, referenced, or renamed. 
     Also triggered when a user is mentioned in the lesson body.'),
   ('PublicEvent', 'Triggered when a study is made public.'),
-  ('UserAssetEvent', 'Triggered when a user asset is created.'),
+  ('UserAssetEvent', 'Triggered when a user asset is created, added to an activity,
+    removed from an activity, commented, labeled, unlabeled, referenced, or renamed.'),
   ('StudyEvent', 'Triggered when a study is created, appled, or unappled.')
 ON CONFLICT (name) DO NOTHING;
 
@@ -1504,6 +1670,51 @@ BEGIN
           WHERE payload->>'label_id' = NEW.payload->>'label_id'
             AND payload->>'action' = 'unlabeled'
             AND payload->>'lesson_id' = NEW.payload->>'lesson_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
+        ELSE
+          RETURN NEW;
+      END CASE;
+    WHEN 'UserAssetEvent' THEN
+      CASE NEW.payload->>'action'
+        WHEN 'added_to_activity' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'activity_id' = NEW.payload->>'activity_id'
+            AND payload->>'action' = 'added_to_activity'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
+        WHEN 'labeled' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'label_id' = NEW.payload->>'label_id'
+            AND payload->>'action' = 'labeled'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
+        WHEN 'removed_from_activity' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'activity_id' = NEW.payload->>'activity_id'
+            AND payload->>'action' = 'removed_from_activity'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
+        WHEN 'unlabeled' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'label_id' = NEW.payload->>'label_id'
+            AND payload->>'action' = 'unlabeled'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
 
           IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
             RETURN NULL;
@@ -1927,7 +2138,7 @@ CREATE TABLE IF NOT EXISTS lesson_commented_event (
   comment_id      VARCHAR(100) NOT NULL,
   event_id        VARCHAR(100) PRIMARY KEY,
   FOREIGN KEY (comment_id)
-    REFERENCES lesson_comment (id)
+    REFERENCES comment (id)
     ON UPDATE NO ACTION ON DELETE CASCADE,
   FOREIGN KEY (event_id)
     REFERENCES lesson_event (event_id)
@@ -2156,9 +2367,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_asset_event_action_unique_lower_name_idx
 
 INSERT INTO user_asset_event_action (name, description)
 VALUES
+  ('added_to_activity', 'The user asset was added to an activity.'),
   ('created', 'The user asset was created.'),
-  ('referenced', 'The user asset was referenced from a lesson.'),
+  ('commented', 'A comment was added to the user asset.'),
+  ('labeled', 'A label was added to the user asset.'),
+  ('mentioned', 'The user was @mentioned in a user asset body.'),
+  ('referenced', 'The user asset was referenced from a user asset.'),
+  ('removed_from_activity', 'The user asset was removed from an activity'),
   ('renamed', 'The user asset name was changed.')
+  ('unlabeled', 'A label was removed from the user asset.')
 ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS user_asset_event (
@@ -2189,6 +2406,9 @@ CREATE TABLE IF NOT EXISTS user_asset_event (
 CREATE UNIQUE INDEX IF NOT EXISTS user_asset_event_source_id_referenced_asset_id_unique_idx
   ON user_asset_event ((payload->'source_id'), action, asset_id) WHERE action = 'referenced';
 
+CREATE UNIQUE INDEX IF NOT EXISTS user_asset_event_asset_id_mentioned_asset_id_unique_idx
+  ON user_asset_event (asset_id, action, user_id) WHERE action = 'mentioned';
+
 CREATE INDEX IF NOT EXISTS user_asset_event_asset_id_created_at
   ON user_asset_event (asset_id, created_at);
 
@@ -2214,6 +2434,12 @@ CREATE OR REPLACE FUNCTION user_asset_event_inserted()
 AS $$
 BEGIN
   CASE NEW.action
+    WHEN 'added_to_activity' THEN
+      INSERT INTO user_asset_added_to_activity_event (activity_id, event_id)
+      VALUES (
+        NEW.payload->>'activity_id',
+        NEW.event_id
+      );
     WHEN 'created' THEN
       INSERT INTO received_event(event_id, user_id)
       SELECT
@@ -2221,6 +2447,18 @@ BEGIN
         user_id
       FROM study_enrolled
       WHERE enrollable_id = NEW.study_id AND user_id != NEW.user_id;
+    WHEN 'commented' THEN
+      INSERT INTO user_asset_commented_event (comment_id, event_id)
+      VALUES (
+        NEW.payload->>'comment_id',
+        NEW.event_id
+      );
+    WHEN 'labeled' THEN
+      INSERT INTO user_asset_labeled_event (event_id, label_id)
+      VALUES (
+        NEW.event_id,
+        NEW.payload->>'label_id'
+      );
     WHEN 'referenced' THEN
       INSERT INTO user_asset_referenced_event (event_id, source_id)
       VALUES (
@@ -2233,6 +2471,18 @@ BEGIN
         NEW.event_id,
         NEW.payload->'rename'->>'from',
         NEW.payload->'rename'->>'to'
+      );
+    WHEN 'removed_from_activity' THEN
+      INSERT INTO user_asset_removed_from_activity_event (activity_id, event_id)
+      VALUES (
+        NEW.payload->>'activity_id',
+        NEW.event_id
+      );
+    WHEN 'unlabeled' THEN
+      INSERT INTO user_asset_unlabeled_event (event_id, label_id)
+      VALUES (
+        NEW.event_id,
+        NEW.payload->>'label_id'
       );
   END CASE;
 
@@ -2251,6 +2501,84 @@ IF NOT EXISTS(
   CREATE TRIGGER after_user_asset_event_insert
     AFTER INSERT ON user_asset_event
     FOR EACH ROW EXECUTE PROCEDURE user_asset_event_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_added_to_activity_event (
+  activity_id     VARCHAR(100) NOT NULL,
+  event_id        VARCHAR(100) PRIMARY KEY,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_added_to_course_event'
+    AND trigger_name = 'after_user_asset_added_to_course_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_added_to_course_event_delete
+    AFTER DELETE ON user_asset_added_to_course_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_commented_event (
+  comment_id      VARCHAR(100) NOT NULL,
+  event_id        VARCHAR(100) PRIMARY KEY,
+  FOREIGN KEY (comment_id)
+    REFERENCES user_asset_comment (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_commented_event'
+    AND trigger_name = 'after_user_asset_commented_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_commented_event_delete
+    AFTER DELETE ON user_asset_commented_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_labeled_event (
+  event_id        VARCHAR(100) PRIMARY KEY,
+  label_id        VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (label_id)
+    REFERENCES label (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_labeled_event'
+    AND trigger_name = 'after_user_asset_labeled_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_labeled_event_delete
+    AFTER DELETE ON user_asset_labeled_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
 END IF;
 END;
 $$ language 'plpgsql';
@@ -2289,6 +2617,73 @@ CREATE TABLE IF NOT EXISTS user_asset_renamed_event (
     REFERENCES user_asset_event (event_id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_renamed_event'
+    AND trigger_name = 'after_user_asset_renamed_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_renamed_event_delete
+    AFTER DELETE ON user_asset_renamed_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_removed_from_activity_event (
+  activity_id       VARCHAR(100) NOT NULL,
+  event_id        VARCHAR(100) PRIMARY KEY,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_removed_from_activity_event'
+    AND trigger_name = 'after_user_asset_removed_from_activity_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_removed_from_activity_event_delete
+    AFTER DELETE ON user_asset_removed_from_activity_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_unlabeled_event (
+  event_id        VARCHAR(100) PRIMARY KEY,
+  label_id        VARCHAR(100) NOT NULL,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (label_id)
+    REFERENCES label (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_unlabeled_event'
+    AND trigger_name = 'after_user_asset_unlabeled_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_unlabeled_event_delete
+    AFTER DELETE ON user_asset_unlabeled_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
 
 CREATE OR REPLACE VIEW user_asset_event_master AS
 SELECT
@@ -2351,6 +2746,17 @@ AS $$
 BEGIN
   IF NEW.subject = 'Lesson' THEN
     INSERT INTO lesson_notification(notification_id, lesson_id, user_id)
+    VALUES (NEW.id, NEW.subject_id, NEW.user_id)
+    ON CONFLICT DO NOTHING;
+
+    IF NOT FOUND THEN
+      DELETE FROM notification WHERE id = NEW.id;
+      RETURN NULL;
+    END IF;
+  END IF;
+
+  IF NEW.subject = 'UserAsset' THEN
+    INSERT INTO user_asset_notification(notification_id, asset_id, user_id)
     VALUES (NEW.id, NEW.subject_id, NEW.user_id)
     ON CONFLICT DO NOTHING;
 
@@ -2444,6 +2850,39 @@ IF NOT EXISTS(
 ) THEN
   CREATE TRIGGER after_lesson_notification_delete
     AFTER DELETE ON lesson_notification
+    FOR EACH ROW EXECUTE PROCEDURE delete_notification();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_notification (
+  asset_id        VARCHAR(100) NOT NULL,
+  notification_id VARCHAR(100) PRIMARY KEY,
+  user_id         VARCHAR(100) NOT NULL,
+  FOREIGN KEY (asset_id)
+    REFERENCES user_asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (notification_id)
+    REFERENCES notification (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_asset_notification_user_id_asset_id_unique_idx
+  ON user_asset_notification (user_id, asset_id);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_notification'
+    AND trigger_name = 'after_user_asset_notification_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_notification_delete
+    AFTER DELETE ON user_asset_notification
     FOR EACH ROW EXECUTE PROCEDURE delete_notification();
 END IF;
 END;
@@ -3764,14 +4203,33 @@ AS $$
   WHERE id = _lesson_id;
 $$;
 
-CREATE OR REPLACE FUNCTION lesson_comment_updated()
+CREATE OR REPLACE FUNCTION refresh_user_asset_search_index_comment_count(_asset_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE user_asset_search_index
+  SET comment_count = (
+    SELECT count(user_asset_comment) comment_count 
+    FROM user_asset_comment
+    WHERE user_asset_comment.asset_id = _asset_id
+  )
+  WHERE id = _asset_id;
+$$;
+
+CREATE OR REPLACE FUNCTION comment_updated()
   RETURNS TRIGGER 
   SECURITY DEFINER
   LANGUAGE plpgsql
 AS $$
   BEGIN
     IF OLD.published_at IS NULL AND NEW.published_at IS NOT NULL THEN
-      PERFORM refresh_lesson_search_index_comment_count(NEW.lesson_id);
+      CASE NEW.type
+        WHEN 'Lesson' THEN
+          PERFORM refresh_lesson_search_index_comment_count(NEW.commentable_id);
+        WHEN 'UserAsset' THEN
+          PERFORM refresh_user_asset_search_index_comment_count(NEW.commentable_id);
+      END CASE;
     END IF;
 
     RETURN NEW;
@@ -3783,23 +4241,28 @@ BEGIN
 IF NOT EXISTS(
   SELECT *
     FROM information_schema.triggers
-    WHERE event_object_table = 'lesson_comment'
-    AND trigger_name = 'after_lesson_comment_update'
+    WHERE event_object_table = 'comment'
+    AND trigger_name = 'after_comment_update'
 ) THEN
-  CREATE TRIGGER after_lesson_comment_update
-    AFTER UPDATE ON lesson_comment
-    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_updated();
+  CREATE TRIGGER after_comment_update
+    AFTER UPDATE ON comment
+    FOR EACH ROW EXECUTE PROCEDURE comment_updated();
 END IF;
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE FUNCTION lesson_comment_deleted()
+CREATE OR REPLACE FUNCTION comment_deleted()
   RETURNS TRIGGER 
   SECURITY DEFINER
   LANGUAGE plpgsql
 AS $$
   BEGIN
-    PERFORM refresh_lesson_search_index_comment_count(OLD.lesson_id);
+    CASE OLD.type
+      WHEN 'Lesson' THEN
+        PERFORM refresh_lesson_search_index_comment_count(OLD.commentable_id);
+      WHEN 'UserAsset' THEN
+        PERFORM refresh_user_asset_search_index_comment_count(OLD.commentable_id);
+    END CASE;
     RETURN OLD;
   END;
 $$;
@@ -3809,12 +4272,12 @@ BEGIN
 IF NOT EXISTS(
   SELECT *
     FROM information_schema.triggers
-    WHERE event_object_table = 'lesson_comment'
-    AND trigger_name = 'after_lesson_comment_delete'
+    WHERE event_object_table = 'comment'
+    AND trigger_name = 'after_comment_delete'
 ) THEN
-  CREATE TRIGGER after_lesson_comment_delete
-    AFTER DELETE ON lesson_comment
-    FOR EACH ROW EXECUTE PROCEDURE lesson_comment_deleted();
+  CREATE TRIGGER after_comment_delete
+    AFTER DELETE ON comment
+    FOR EACH ROW EXECUTE PROCEDURE comment_deleted();
 END IF;
 END;
 $$ language 'plpgsql';
@@ -3848,8 +4311,8 @@ AS $$
         VALUES (NEW.labelable_id, NEW.id, NEW.label_id);
 
         PERFORM refresh_lesson_search_index_labels(NEW.labelable_id);
-      WHEN 'LessonComment' THEN
-        INSERT INTO lesson_comment_labeled(labelable_id, labeled_id, label_id)
+      WHEN 'Comment' THEN
+        INSERT INTO comment_labeled(labelable_id, labeled_id, label_id)
         VALUES (NEW.labelable_id, NEW.id, NEW.label_id);
     END CASE;
 
@@ -4100,21 +4563,25 @@ END;
 $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS user_asset_search_index (
-  asset_id      BIGINT       NOT NULL,
-  created_at    TIMESTAMPTZ  NOT NULL,
-  description   TEXT,
-  document      TSVECTOR     NOT NULL,
-  id            VARCHAR(100) PRIMARY KEY,
-  key           TEXT         NOT NULL,
-  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
-  name_tokens   TEXT         NOT NULL,
-  original_name TEXT         NOT NULL, 
-  size          BIGINT       NOT NULL,
-  study_id      VARCHAR(100) NOT NULL,
-  subtype       TEXT         NOT NULL,
-  type          TEXT         NOT NULL,
-  updated_at    TIMESTAMPTZ  NOT NULL,
-  user_id       VARCHAR(100) NOT NULL,
+  activity_id     VARCHAR(100),
+  activity_number INT,
+  asset_id        BIGINT       NOT NULL,
+  comment_count   INT          NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ  NOT NULL,
+  description     TEXT,
+  document        TSVECTOR     NOT NULL,
+  id              VARCHAR(100) PRIMARY KEY,
+  key             TEXT         NOT NULL,
+  labels          TSVECTOR     NOT NULL,   
+  name            VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
+  name_tokens     TEXT         NOT NULL,
+  original_name   TEXT         NOT NULL, 
+  size            BIGINT       NOT NULL,
+  study_id        VARCHAR(100) NOT NULL,
+  subtype         TEXT         NOT NULL,
+  type            TEXT         NOT NULL,
+  updated_at      TIMESTAMPTZ  NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (asset_id)
     REFERENCES asset (id)
     ON UPDATE CASCADE ON DELETE CASCADE,
@@ -4131,6 +4598,9 @@ CREATE TABLE IF NOT EXISTS user_asset_search_index (
 
 CREATE INDEX IF NOT EXISTS user_asset_search_index_fts_idx
   ON user_asset_search_index USING gin(document);
+
+CREATE INDEX IF NOT EXISTS user_asset_search_index_labels_idx
+  ON user_asset_search_index USING gin(labels);
 
 CREATE INDEX IF NOT EXISTS user_asset_search_index_created_at_idx
   ON user_asset_search_index (created_at);
@@ -4154,6 +4624,7 @@ AS $$
       document,
       id,
       key,
+      labels,
       name,
       name_tokens,
       original_name,
@@ -4171,6 +4642,7 @@ AS $$
       setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B'),
       NEW.id,
       asset.key,
+      setweight(to_tsvector('simple', ''), 'A'),
       NEW.name,
       NEW.name_tokens,
       asset.name,
@@ -4255,6 +4727,118 @@ BEGIN
   END IF;
 END
 $$;
+
+CREATE OR REPLACE FUNCTION refresh_user_asset_search_index_activity_info(_asset_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE user_asset_search_index
+  SET activity_id = activity_asset.activity_id,
+    activity_number = activity_asset.number
+  FROM activity_asset
+  WHERE user_asset_search_index.id = _asset_id
+    AND activity_asset.asset_id = _asset_id;
+$$;
+
+CREATE OR REPLACE FUNCTION refresh_user_asset_search_index_activity_number(_asset_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE user_asset_search_index
+  SET activity_number = activity_asset.number
+  FROM activity_asset
+  WHERE user_asset_search_index.id = _asset_id
+    AND activity_asset.asset_id = _asset_id;
+$$;
+
+CREATE OR REPLACE FUNCTION activity_asset_inserted()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    PERFORM advance_activity(NEW.activity_id);
+    PERFORM refresh_user_asset_search_index_activity_info(NEW.asset_id);
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_insert'
+) THEN
+  CREATE TRIGGER after_activity_asset_insert
+    AFTER INSERT ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_asset_deleted()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    UPDATE activity_asset
+    SET number = number - 1
+    WHERE activity_id = OLD.activity_id AND number > OLD.number;
+
+    UPDATE user_asset_search_index
+    SET activity_id = NULL,
+      activity_number = NULL
+    WHERE id = OLD.asset_id;
+
+    RETURN OLD;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_delete'
+) THEN
+  CREATE TRIGGER after_activity_asset_delete
+    AFTER DELETE ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_deleted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_asset_updated()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    PERFORM refresh_user_asset_search_index_activity_number(NEW.asset_id);
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_update'
+) THEN
+  CREATE TRIGGER after_activity_asset_update
+    AFTER UPDATE ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_updated();
+END IF;
+END;
+$$ language 'plpgsql';
 
 CREATE OR REPLACE VIEW apple_giver AS
 SELECT
@@ -4362,15 +4946,16 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON password_reset_token TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON study TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson TO client;
 GRANT SELECT, UPDATE ON lesson_draft_backup TO client;
+GRANT SELECT, INSERT, UPDATE, DELETE ON comment TO client;
+GRANT SELECT, UPDATE ON comment_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course_lesson TO client;
 GRANT SELECT ON lesson_master TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_comment TO client;
-GRANT SELECT, UPDATE ON lesson_comment_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON label TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON labeled TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_labeled TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_comment_labeled TO client;
+GRANT SELECT, INSERT, UPDATE, DELETE ON comment_labeled TO client;
 GRANT SELECT ON labelable_label TO client;
 GRANT SELECT ON labeled_lesson TO client;
 GRANT SELECT ON labeled_lesson_comment TO client;
@@ -4384,6 +4969,7 @@ GRANT SELECT ON topiced_study TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON asset TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset TO client;
 GRANT SELECT ON user_asset_master TO client;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_comment TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON appled TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course_appled TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON study_appled TO client;
