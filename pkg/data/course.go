@@ -105,30 +105,6 @@ func CountCourseByApplee(
 	return n, err
 }
 
-func CountCourseByEnrollee(
-	db Queryer,
-	enrolleeID string,
-	filters *CourseFilterOptions,
-) (int32, error) {
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := func(from string) string {
-		return from + `.enrollee_id = ` + args.Append(enrolleeID)
-	}
-	from := "enrolled_course"
-
-	sql := CountSQL(from, where, filters, &args)
-	psName := preparedName("countCourseByEnrollee", sql)
-
-	var n int32
-	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-	} else {
-		mylog.Log.WithField("n", n).Info(util.Trace("courses found"))
-	}
-	return n, err
-}
-
 func CountCourseByStudy(
 	db Queryer,
 	studyID string,
@@ -160,9 +136,10 @@ func CountCourseByTopic(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.topic_id = ` + args.Append(topicID)
+		return from + `.topic_id = ` + args.Append(topicID) + `
+			AND ` + from + `.type = 'Course'`
 	}
-	from := "topiced_course"
+	from := "topiced"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countCourseByTopic", sql)
@@ -499,85 +476,6 @@ func GetCourseByApplee(
 			&row.CompletedAt,
 			&row.CreatedAt,
 			&row.Description,
-			&row.ID,
-			&row.Name,
-			&row.Number,
-			&row.PublishedAt,
-			&row.Status,
-			&row.StudyID,
-			&row.UpdatedAt,
-			&row.UserID,
-		)
-		rows = append(rows, &row)
-	}
-
-	if err := dbRows.Err(); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-
-	mylog.Log.WithField("n", len(rows)).Info(util.Trace("courses found"))
-	return rows, nil
-}
-
-func GetCourseByEnrollee(
-	db Queryer,
-	enrolleeID string,
-	po *PageOptions,
-	filters *CourseFilterOptions,
-) ([]*Course, error) {
-	mylog.Log.WithField("enrollee_id", enrolleeID).Info("GetCourseByEnrollee(enrollee_id)")
-	var rows []*Course
-	if po != nil && po.Limit() > 0 {
-		limit := po.Limit()
-		if limit > 0 {
-			rows = make([]*Course, 0, limit)
-		} else {
-			mylog.Log.Info(util.Trace("limit is 0"))
-			return rows, nil
-		}
-	}
-
-	args := pgx.QueryArgs(make([]interface{}, 0, 4))
-	where := func(from string) string {
-		return from + `.enrollee_id = ` + args.Append(enrolleeID)
-	}
-
-	selects := []string{
-		"advanced_at",
-		"completed_at",
-		"created_at",
-		"description",
-		"enrolled_at",
-		"id",
-		"name",
-		"number",
-		"published_at",
-		"status",
-		"study_id",
-		"updated_at",
-		"user_id",
-	}
-	from := "enrolled_course"
-	sql := SQL3(selects, from, where, filters, &args, po)
-
-	psName := preparedName("getCoursesByEnrollee", sql)
-
-	dbRows, err := prepareQuery(db, psName, sql, args...)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	defer dbRows.Close()
-
-	for dbRows.Next() {
-		var row Course
-		dbRows.Scan(
-			&row.AdvancedAt,
-			&row.CompletedAt,
-			&row.CreatedAt,
-			&row.Description,
-			&row.EnrolledAt,
 			&row.ID,
 			&row.Name,
 			&row.Number,

@@ -11,8 +11,8 @@ type Notification implements Node {
   # The reason for receiving this notification.
   reason: String!
 
-  # The lesson which is the subject of the notification.
-  subject: Lesson!
+  # The subject of the notification.
+  subject: NotificationSubject!
 
   # The study associated with this notification.
   study: Study!

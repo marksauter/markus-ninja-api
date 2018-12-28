@@ -16,13 +16,13 @@ func (r *lessonTimelineEventResolver) ToAddedToCourseEvent() (*addedToCourseEven
 	return resolver, ok
 }
 
-func (r *lessonTimelineEventResolver) ToLabeledEvent() (*labeledEventResolver, bool) {
-	resolver, ok := r.lessonTimelineEvent.(*labeledEventResolver)
+func (r *lessonTimelineEventResolver) ToComment() (*commentResolver, bool) {
+	resolver, ok := r.lessonTimelineEvent.(*commentResolver)
 	return resolver, ok
 }
 
-func (r *lessonTimelineEventResolver) ToLessonComment() (*lessonCommentResolver, bool) {
-	resolver, ok := r.lessonTimelineEvent.(*lessonCommentResolver)
+func (r *lessonTimelineEventResolver) ToLabeledEvent() (*labeledEventResolver, bool) {
+	resolver, ok := r.lessonTimelineEvent.(*labeledEventResolver)
 	return resolver, ok
 }
 

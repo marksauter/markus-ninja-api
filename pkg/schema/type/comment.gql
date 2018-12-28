@@ -1,6 +1,5 @@
-# Represents a lesson comment.
-type LessonComment implements 
-  Comment,
+# Represents a comment.
+type Comment implements 
   Deleteable,
   Labelable,
   LessonTimelineEvent,
@@ -8,7 +7,8 @@ type LessonComment implements
   Publishable,
   StudyNode,
   UniformResourceLocatable,
-  Updateable
+  Updateable,
+  UserAssetTimelineEvent
 {
   # The author of the comment.
   author: User
@@ -22,31 +22,34 @@ type LessonComment implements
   # The body rendered to text.
   bodyText: String!
 
+  # The commentable associated with this comment.
+  commentable: Commentable!
+
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
-  # The current draft of changes for the lesson comment body as Markdown.
+  # The current draft of changes for the comment body as Markdown.
   draft: String!
 
-  # Returns a single draft backup for the current lesson comment by id (1-5).
-  # The lesson comment's draft is backed up—after an update—every two minutes.
+  # Returns a single draft backup for the current comment by id (1-5).
+  # The comment's draft is backed up—after an update—every two minutes.
   # There are at most 5 backups.
   draftBackup(
     # The ID of the backup.
     id: ID!
-  ): LessonCommentDraftBackup
+  ): CommentDraftBackup
 
-  # Returns a list of draft backups for the current lesson comment.
-  # The lesson comment's draft is backed up—after an update—every two minutes.
+  # Returns a list of draft backups for the current comment.
+  # The comment's draft is backed up—after an update—every two minutes.
   # There are at most 5 backups.
-  draftBackups: [LessonCommentDraftBackup]!
+  draftBackups: [CommentDraftBackup]!
 
   id: ID!
 
-  # Is this lesson comment published?
+  # Is this comment published?
   isPublished: Boolean!
 
-  # Returns a list of labels for the current lesson comment.
+  # Returns a list of labels for the current comment.
   labels(
     # Returns the elements in the list that come after the specified global ID.
     after: String
@@ -67,25 +70,22 @@ type LessonComment implements
     orderBy: LabelOrder
   ): LabelConnection!
 
-  # Identifies when the lesson comment draft was last edited.
+  # Identifies when the comment draft was last edited.
   lastEditedAt: Time!
 
-  # The lesson associated with this comment.
-  lesson: Lesson!
-
-  # Identifies when the lesson comment was published at.
+  # Identifies when the comment was published at.
   publishedAt: Time
 
-  # The HTTP path for this lesson comment.
+  # The HTTP path for this comment.
   resourcePath: URI!
 
-  # The study associated with this lesson comment.
+  # The study associated with this comment.
   study: Study!
 
   # Identifies the date and time when the object was last updated.
   updatedAt: Time!
 
-  # The HTTP URL for this lesson comment.
+  # The HTTP URL for this comment.
   url: URI!
 
   # Can the viewer delete this object.
@@ -98,25 +98,25 @@ type LessonComment implements
   viewerDidAuthor: Boolean!
 }
 
-# An edge type for LessonComment.
-type LessonCommentEdge implements Edge {
+# An edge type for Comment.
+type CommentEdge implements Edge {
   # A cursor for use in pagination.
   cursor: String!
 
   # The item at the end of the edge.
-  node: LessonComment
+  node: Comment
 }
 
-# A connection type for LessonComment.
-type LessonCommentConnection implements Connection {
+# A connection type for Comment.
+type CommentConnection implements Connection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [LessonCommentEdge]
+  edges: [CommentEdge]
 
   # A list of nodes.
-  nodes: [LessonComment]
+  nodes: [Comment]
 
   # The total count of items in the connection.
   totalCount: Int!

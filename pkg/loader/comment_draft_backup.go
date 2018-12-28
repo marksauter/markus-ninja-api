@@ -13,8 +13,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-func NewLessonCommentDraftBackupLoader() *LessonCommentDraftBackupLoader {
-	return &LessonCommentDraftBackupLoader{
+func NewCommentDraftBackupLoader() *CommentDraftBackupLoader {
+	return &CommentDraftBackupLoader{
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -39,8 +39,8 @@ func NewLessonCommentDraftBackupLoader() *LessonCommentDraftBackupLoader {
 							results[i] = &dataloader.Result{Error: err}
 							return
 						}
-						lessonComment, err := data.GetLessonCommentDraftBackup(db, ks[0], int32(id))
-						results[i] = &dataloader.Result{Data: lessonComment, Error: err}
+						comment, err := data.GetCommentDraftBackup(db, ks[0], int32(id))
+						results[i] = &dataloader.Result{Data: comment, Error: err}
 					}(i, key)
 				}
 
@@ -52,59 +52,59 @@ func NewLessonCommentDraftBackupLoader() *LessonCommentDraftBackupLoader {
 	}
 }
 
-type LessonCommentDraftBackupLoader struct {
+type CommentDraftBackupLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *LessonCommentDraftBackupLoader) Clear(id string) {
+func (r *CommentDraftBackupLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *LessonCommentDraftBackupLoader) ClearAll() {
+func (r *CommentDraftBackupLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *LessonCommentDraftBackupLoader) Get(
+func (r *CommentDraftBackupLoader) Get(
 	ctx context.Context,
-	lessonCommentID string,
+	commentID string,
 	id int32,
-) (*data.LessonCommentDraftBackup, error) {
-	compositeKey := newCompositeKey(lessonCommentID, fmt.Sprintf("%d", id))
-	lessonCommentData, err := r.batchGet.Load(ctx, compositeKey)()
+) (*data.CommentDraftBackup, error) {
+	compositeKey := newCompositeKey(commentID, fmt.Sprintf("%d", id))
+	commentData, err := r.batchGet.Load(ctx, compositeKey)()
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, ok := lessonCommentData.(*data.LessonCommentDraftBackup)
+	comment, ok := commentData.(*data.CommentDraftBackup)
 	if !ok {
 		err := ErrWrongType
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	return lessonComment, nil
+	return comment, nil
 }
 
-func (r *LessonCommentDraftBackupLoader) GetMany(
+func (r *CommentDraftBackupLoader) GetMany(
 	ctx context.Context,
-	lessonCommentID string,
+	commentID string,
 	ids *[]int32,
-) ([]*data.LessonCommentDraftBackup, []error) {
+) ([]*data.CommentDraftBackup, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, id := range *ids {
-		compositeKey := newCompositeKey(lessonCommentID, fmt.Sprintf("%d", id))
+		compositeKey := newCompositeKey(commentID, fmt.Sprintf("%d", id))
 		keys[i] = compositeKey
 	}
-	lessonCommentData, errs := r.batchGet.LoadMany(ctx, keys)()
+	commentData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
-	lessonComments := make([]*data.LessonCommentDraftBackup, len(lessonCommentData))
-	for i, d := range lessonCommentData {
+	comments := make([]*data.CommentDraftBackup, len(commentData))
+	for i, d := range commentData {
 		var ok bool
-		lessonComments[i], ok = d.(*data.LessonCommentDraftBackup)
+		comments[i], ok = d.(*data.CommentDraftBackup)
 		if !ok {
 			err := ErrWrongType
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -112,5 +112,5 @@ func (r *LessonCommentDraftBackupLoader) GetMany(
 		}
 	}
 
-	return lessonComments, nil
+	return comments, nil
 }

@@ -12,12 +12,17 @@ type labelableResolver struct {
 	labelable
 }
 
+func (r *labelableResolver) ToComment() (*commentResolver, bool) {
+	resolver, ok := r.labelable.(*commentResolver)
+	return resolver, ok
+}
+
 func (r *labelableResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.labelable.(*lessonResolver)
 	return resolver, ok
 }
 
-func (r *labelableResolver) ToLessonComment() (*lessonCommentResolver, bool) {
-	resolver, ok := r.labelable.(*lessonCommentResolver)
+func (r *labelableResolver) ToUserAsset() (*userAssetResolver, bool) {
+	resolver, ok := r.labelable.(*userAssetResolver)
 	return resolver, ok
 }

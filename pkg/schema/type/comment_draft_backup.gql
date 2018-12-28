@@ -1,0 +1,16 @@
+# Represents a comment draft backup.
+type CommentDraftBackup {
+  # The comment associated with this draft backup.
+  comment: Comment!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The comment's backup draft.
+  draft: String!
+
+  id: ID!
+
+  # Identifies the date and time when the object was last updated.
+  updatedAt: Time!
+}

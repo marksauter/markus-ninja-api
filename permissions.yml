@@ -47,6 +47,51 @@ permissions:
 
 
 
+  # Everyone can read comments.
+  - operation: Read Comment
+    fields:
+      - body
+      - commentable_id
+      - created_at
+      - id
+      - published_at
+      - study_id
+      - type
+      - updated_at
+      - user_id
+  # Admins and owners can read the whole comment.
+  - operation: Read Comment
+    authenticated: true
+    roles:
+      - admin
+      - owner
+  # Only authenticated users can create comments.
+  - operation: Create Comment
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - body
+      - commentable_id
+      - study_id
+      - type
+      - user_id
+  # Only owners can update/delete comments. 
+  - operation: Update Comment
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - body
+      - draft
+      - published_at
+  - operation: Delete Comment
+    authenticated: true
+    roles:
+      - owner
+
+
+
   # Everyone can read courses.
   - operation: Read Course
 
@@ -327,49 +372,6 @@ permissions:
 
 
 
-  # Everyone can read lesson comments.
-  - operation: Read LessonComment
-    fields:
-      - body
-      - created_at
-      - id
-      - lesson_id
-      - published_at
-      - study_id
-      - updated_at
-      - user_id
-  # Admins and owners can read the whole lesson comment.
-  - operation: Read LessonComment
-    authenticated: true
-    roles:
-      - admin
-      - owner
-  # Only authenticated users can create lesson comments.
-  - operation: Create LessonComment
-    authenticated: true
-    roles:
-      - user
-    fields:
-      - body
-      - lesson_id
-      - study_id
-      - user_id
-  # Only owners can update/delete lesson comments. 
-  - operation: Update LessonComment
-    authenticated: true
-    roles:
-      - owner
-    fields:
-      - body
-      - draft
-      - published_at
-  - operation: Delete LessonComment
-    authenticated: true
-    roles:
-      - owner
-
-
-
   # Only owners can read a lesson draft backup.
   - operation: Read LessonDraftBackup
     authenticated: true
@@ -378,8 +380,8 @@ permissions:
 
 
 
-  # Only owners can read a lesson comment draft backup.
-  - operation: Read LessonCommentDraftBackup
+  # Only owners can read a comment draft backup.
+  - operation: Read CommentDraftBackup
     authenticated: true
     roles:
       - owner

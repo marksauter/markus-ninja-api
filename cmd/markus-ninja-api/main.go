@@ -222,6 +222,8 @@ func initDB(conf *myconf.Config) error {
 	modelTypes := []interface{}{
 		new(data.Appled),
 		new(data.Asset),
+		new(data.Comment),
+		new(data.CommentDraftBackup),
 		new(data.Course),
 		new(data.CourseLesson),
 		new(data.Email),
@@ -231,9 +233,7 @@ func initDB(conf *myconf.Config) error {
 		new(data.Label),
 		new(data.Labeled),
 		new(data.Lesson),
-		new(data.LessonComment),
 		new(data.LessonDraftBackup),
-		new(data.LessonCommentDraftBackup),
 		new(data.Notification),
 		new(data.PRT),
 		new(data.Study),

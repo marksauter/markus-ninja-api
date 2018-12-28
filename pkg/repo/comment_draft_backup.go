@@ -14,89 +14,89 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type LessonCommentDraftBackupPermit struct {
+type CommentDraftBackupPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	lessonComment        *data.LessonCommentDraftBackup
+	comment              *data.CommentDraftBackup
 }
 
-func (r *LessonCommentDraftBackupPermit) Get() *data.LessonCommentDraftBackup {
-	lessonComment := r.lessonComment
-	fields := structs.Fields(lessonComment)
+func (r *CommentDraftBackupPermit) Get() *data.CommentDraftBackup {
+	comment := r.comment
+	fields := structs.Fields(comment)
 	for _, f := range fields {
 		name := f.Tag("db")
 		if ok := r.checkFieldPermission(name); !ok {
 			f.Zero()
 		}
 	}
-	return lessonComment
+	return comment
 }
 
-func (r *LessonCommentDraftBackupPermit) CreatedAt() (time.Time, error) {
+func (r *CommentDraftBackupPermit) CommentID() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("comment_id"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &r.comment.CommentID, nil
+}
+
+func (r *CommentDraftBackupPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.CreatedAt.Time, nil
+	return r.comment.CreatedAt.Time, nil
 }
 
-func (r *LessonCommentDraftBackupPermit) Draft() (string, error) {
+func (r *CommentDraftBackupPermit) Draft() (string, error) {
 	if ok := r.checkFieldPermission("draft"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
-	return r.lessonComment.Draft.String, nil
+	return r.comment.Draft.String, nil
 }
 
-func (r *LessonCommentDraftBackupPermit) ID() (int32, error) {
+func (r *CommentDraftBackupPermit) ID() (int32, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		var n int32
 		return n, err
 	}
-	return r.lessonComment.ID.Int, nil
+	return r.comment.ID.Int, nil
 }
 
-func (r *LessonCommentDraftBackupPermit) LessonCommentID() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("lesson_comment_id"); !ok {
-		err := ErrAccessDenied
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	return &r.lessonComment.LessonCommentID, nil
-}
-
-func (r *LessonCommentDraftBackupPermit) UpdatedAt() (time.Time, error) {
+func (r *CommentDraftBackupPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.UpdatedAt.Time, nil
+	return r.comment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentDraftBackupRepo(conf *myconf.Config) *LessonCommentDraftBackupRepo {
-	return &LessonCommentDraftBackupRepo{
+func NewCommentDraftBackupRepo(conf *myconf.Config) *CommentDraftBackupRepo {
+	return &CommentDraftBackupRepo{
 		conf: conf,
-		load: loader.NewLessonCommentDraftBackupLoader(),
+		load: loader.NewCommentDraftBackupLoader(),
 	}
 }
 
-type LessonCommentDraftBackupRepo struct {
+type CommentDraftBackupRepo struct {
 	conf   *myconf.Config
-	load   *loader.LessonCommentDraftBackupLoader
+	load   *loader.CommentDraftBackupLoader
 	permit *Permitter
 }
 
-func (r *LessonCommentDraftBackupRepo) filterPermittable(
+func (r *CommentDraftBackupRepo) filterPermittable(
 	ctx context.Context,
 	accessLevel mytype.AccessLevel,
-	lessonComments []*data.LessonCommentDraftBackup,
-) ([]*LessonCommentDraftBackupPermit, error) {
-	lessonCommentPermits := make([]*LessonCommentDraftBackupPermit, 0, len(lessonComments))
-	for _, l := range lessonComments {
+	comments []*data.CommentDraftBackup,
+) ([]*CommentDraftBackupPermit, error) {
+	commentPermits := make([]*CommentDraftBackupPermit, 0, len(comments))
+	for _, l := range comments {
 		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
 		if err != nil {
 			if err != ErrAccessDenied {
@@ -104,13 +104,13 @@ func (r *LessonCommentDraftBackupRepo) filterPermittable(
 				return nil, err
 			}
 		} else {
-			lessonCommentPermits = append(lessonCommentPermits, &LessonCommentDraftBackupPermit{fieldPermFn, l})
+			commentPermits = append(commentPermits, &CommentDraftBackupPermit{fieldPermFn, l})
 		}
 	}
-	return lessonCommentPermits, nil
+	return commentPermits, nil
 }
 
-func (r *LessonCommentDraftBackupRepo) Open(p *Permitter) error {
+func (r *CommentDraftBackupRepo) Open(p *Permitter) error {
 	if p == nil {
 		err := ErrNilPermitter
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -120,15 +120,15 @@ func (r *LessonCommentDraftBackupRepo) Open(p *Permitter) error {
 	return nil
 }
 
-func (r *LessonCommentDraftBackupRepo) Clear(id string) {
+func (r *CommentDraftBackupRepo) Clear(id string) {
 	r.load.Clear(id)
 }
 
-func (r *LessonCommentDraftBackupRepo) Close() {
+func (r *CommentDraftBackupRepo) Close() {
 	r.load.ClearAll()
 }
 
-func (r *LessonCommentDraftBackupRepo) CheckConnection() error {
+func (r *CommentDraftBackupRepo) CheckConnection() error {
 	if r.load == nil {
 		err := ErrConnClosed
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -139,34 +139,34 @@ func (r *LessonCommentDraftBackupRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonCommentDraftBackupRepo) Get(
+func (r *CommentDraftBackupRepo) Get(
 	ctx context.Context,
-	lessonCommentID string,
+	commentID string,
 	id int32,
-) (*LessonCommentDraftBackupPermit, error) {
+) (*CommentDraftBackupPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := r.load.Get(ctx, lessonCommentID, id)
+	comment, err := r.load.Get(ctx, commentID, id)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentDraftBackupPermit{fieldPermFn, lessonComment}, nil
+	return &CommentDraftBackupPermit{fieldPermFn, comment}, nil
 }
 
 // Same as Get(), but doesn't use the dataloader
-func (r *LessonCommentDraftBackupRepo) Pull(
+func (r *CommentDraftBackupRepo) Pull(
 	ctx context.Context,
-	lessonCommentID string,
+	commentID string,
 	id int32,
-) (*LessonCommentDraftBackupPermit, error) {
+) (*CommentDraftBackupPermit, error) {
 	db, ok := myctx.QueryerFromContext(ctx)
 	if !ok {
 		err := &myctx.ErrNotFound{"queryer"}
@@ -177,23 +177,23 @@ func (r *LessonCommentDraftBackupRepo) Pull(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := data.GetLessonCommentDraftBackup(db, lessonCommentID, id)
+	comment, err := data.GetCommentDraftBackup(db, commentID, id)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentDraftBackupPermit{fieldPermFn, lessonComment}, nil
+	return &CommentDraftBackupPermit{fieldPermFn, comment}, nil
 }
 
-func (r *LessonCommentDraftBackupRepo) GetByLessonComment(
+func (r *CommentDraftBackupRepo) GetByComment(
 	ctx context.Context,
-	lessonCommentID string,
-) ([]*LessonCommentDraftBackupPermit, error) {
+	commentID string,
+) ([]*CommentDraftBackupPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -204,17 +204,17 @@ func (r *LessonCommentDraftBackupRepo) GetByLessonComment(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.GetLessonCommentDraftBackupByLessonComment(db, lessonCommentID)
+	comments, err := data.GetCommentDraftBackupByComment(db, commentID)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentDraftBackupRepo) Restore(
+func (r *CommentDraftBackupRepo) Restore(
 	ctx context.Context,
-	lessonComment *data.LessonComment,
+	comment *data.Comment,
 	backupID int32,
 ) error {
 	if err := r.CheckConnection(); err != nil {
@@ -227,9 +227,9 @@ func (r *LessonCommentDraftBackupRepo) Restore(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, lessonComment); err != nil {
+	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, comment); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	return data.RestoreLessonCommentDraftFromBackup(db, lessonComment.ID.String, backupID)
+	return data.RestoreCommentDraftFromBackup(db, comment.ID.String, backupID)
 }

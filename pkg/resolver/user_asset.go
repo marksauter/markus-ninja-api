@@ -2,12 +2,16 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
+	"github.com/marksauter/markus-ninja-api/pkg/myctx"
+	"github.com/marksauter/markus-ninja-api/pkg/myerr"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
+	"github.com/marksauter/markus-ninja-api/pkg/mylog"
 	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 	"github.com/marksauter/markus-ninja-api/pkg/util"
@@ -17,6 +21,62 @@ type userAssetResolver struct {
 	Conf      *myconf.Config
 	Repos     *repo.Repos
 	UserAsset *repo.UserAssetPermit
+}
+
+func (r *userAssetResolver) Comments(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*commentConnectionResolver, error) {
+	userAssetID, err := r.UserAsset.ID()
+	if err != nil {
+		return nil, err
+	}
+	commentOrder, err := ParseCommentOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		commentOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	filters := data.CommentFilterOptions{
+		IsPublished: util.NewBool(true),
+	}
+	comments, err := r.Repos.Comment().GetByCommentable(
+		ctx,
+		userAssetID.String,
+		pageOptions,
+		&filters,
+	)
+	if err != nil {
+		return nil, err
+	}
+	commentConnectionResolver, err := NewCommentConnectionResolver(
+		comments,
+		pageOptions,
+		userAssetID,
+		&filters,
+		r.Repos,
+		r.Conf,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return commentConnectionResolver, nil
 }
 
 func (r *userAssetResolver) CreatedAt() (graphql.Time, error) {
@@ -60,6 +120,60 @@ func (r *userAssetResolver) Href() (mygql.URI, error) {
 func (r *userAssetResolver) ID() (graphql.ID, error) {
 	id, err := r.UserAsset.ID()
 	return graphql.ID(id.String), err
+}
+
+func (r *userAssetResolver) Labels(
+	ctx context.Context,
+	args struct {
+		After    *string
+		Before   *string
+		FilterBy *data.LabelFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
+	},
+) (*labelConnectionResolver, error) {
+	userAssetID, err := r.UserAsset.ID()
+	if err != nil {
+		return nil, err
+	}
+	labelOrder, err := ParseLabelOrder(args.OrderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		labelOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := r.Repos.Label().GetByLabelable(
+		ctx,
+		userAssetID.String,
+		pageOptions,
+		args.FilterBy,
+	)
+	if err != nil {
+		return nil, err
+	}
+	labelConnectionResolver, err := NewLabelConnectionResolver(
+		labels,
+		pageOptions,
+		userAssetID,
+		args.FilterBy,
+		r.Repos,
+		r.Conf,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return labelConnectionResolver, nil
 }
 
 func (r *userAssetResolver) Name() (string, error) {
@@ -217,4 +331,53 @@ func (r *userAssetResolver) ViewerCanDelete(ctx context.Context) bool {
 func (r *userAssetResolver) ViewerCanUpdate(ctx context.Context) bool {
 	userAsset := r.UserAsset.Get()
 	return r.Repos.UserAsset().ViewerCanUpdate(ctx, userAsset)
+}
+
+func (r *userAssetResolver) ViewerNewComment(ctx context.Context) (*commentResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+	userAssetID, err := r.UserAsset.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	commentPermit, err := r.Repos.Comment().GetUserNewComment(
+		ctx,
+		viewer.ID.String,
+		userAssetID.String,
+	)
+	if err != nil {
+		if err != data.ErrNotFound {
+			return nil, err
+		}
+		studyID, err := r.UserAsset.StudyID()
+		if err != nil {
+			return nil, err
+		}
+		comment := &data.Comment{}
+		if err := comment.CommentableID.Set(userAssetID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment commentable_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		if err := comment.StudyID.Set(studyID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment user_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		if err := comment.Type.Set(mytype.CommentableTypeUserAsset); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment type")
+			return nil, myerr.SomethingWentWrongError
+		}
+		if err := comment.UserID.Set(&viewer.ID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment user_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		commentPermit, err = r.Repos.Comment().Create(ctx, comment)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &commentResolver{Comment: commentPermit, Conf: r.Conf, Repos: r.Repos}, nil
 }

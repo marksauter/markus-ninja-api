@@ -1,0 +1,8 @@
+# Return type for AddComment.
+type AddCommentPayload {
+  # The edge from the commentable's comment connection.
+  commentEdge: CommentEdge!
+
+  # The commentable commented on.
+  commentable: Commentable!
+}

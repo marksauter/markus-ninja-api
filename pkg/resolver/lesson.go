@@ -70,12 +70,12 @@ func (r *lessonResolver) Comments(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*lessonCommentConnectionResolver, error) {
+) (*commentConnectionResolver, error) {
 	lessonID, err := r.Lesson.ID()
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentOrder, err := ParseLessonCommentOrder(args.OrderBy)
+	commentOrder, err := ParseCommentOrder(args.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -85,16 +85,16 @@ func (r *lessonResolver) Comments(
 		args.Before,
 		args.First,
 		args.Last,
-		lessonCommentOrder,
+		commentOrder,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	filters := data.LessonCommentFilterOptions{
+	filters := data.CommentFilterOptions{
 		IsPublished: util.NewBool(true),
 	}
-	lessonComments, err := r.Repos.LessonComment().GetByLesson(
+	comments, err := r.Repos.Comment().GetByCommentable(
 		ctx,
 		lessonID.String,
 		pageOptions,
@@ -103,8 +103,8 @@ func (r *lessonResolver) Comments(
 	if err != nil {
 		return nil, err
 	}
-	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
-		lessonComments,
+	commentConnectionResolver, err := NewCommentConnectionResolver(
+		comments,
 		pageOptions,
 		lessonID,
 		&filters,
@@ -114,7 +114,7 @@ func (r *lessonResolver) Comments(
 	if err != nil {
 		return nil, err
 	}
-	return lessonCommentConnectionResolver, nil
+	return commentConnectionResolver, nil
 }
 
 func (r *lessonResolver) Course(ctx context.Context) (*courseResolver, error) {
@@ -566,7 +566,7 @@ func (r *lessonResolver) ViewerDidAuthor(ctx context.Context) (bool, error) {
 	return viewer.ID.String == userID.String, nil
 }
 
-func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*lessonCommentResolver, error) {
+func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*commentResolver, error) {
 	viewer, ok := myctx.UserFromContext(ctx)
 	if !ok {
 		return nil, errors.New("viewer not found")
@@ -576,7 +576,7 @@ func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*lessonCommentRe
 		return nil, err
 	}
 
-	lessonCommentPermit, err := r.Repos.LessonComment().GetUserNewComment(
+	commentPermit, err := r.Repos.Comment().GetUserNewComment(
 		ctx,
 		viewer.ID.String,
 		lessonID.String,
@@ -589,24 +589,28 @@ func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*lessonCommentRe
 		if err != nil {
 			return nil, err
 		}
-		lessonComment := &data.LessonComment{}
-		if err := lessonComment.LessonID.Set(lessonID); err != nil {
-			mylog.Log.WithError(err).Error("failed to set lesson comment lesson_id")
+		comment := &data.Comment{}
+		if err := comment.CommentableID.Set(lessonID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment commentable_id")
 			return nil, myerr.SomethingWentWrongError
 		}
-		if err := lessonComment.StudyID.Set(studyID); err != nil {
-			mylog.Log.WithError(err).Error("failed to set lesson comment user_id")
+		if err := comment.StudyID.Set(studyID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment user_id")
 			return nil, myerr.SomethingWentWrongError
 		}
-		if err := lessonComment.UserID.Set(&viewer.ID); err != nil {
-			mylog.Log.WithError(err).Error("failed to set lesson comment user_id")
+		if err := comment.Type.Set(mytype.CommentableTypeLesson); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment type")
 			return nil, myerr.SomethingWentWrongError
 		}
-		lessonCommentPermit, err = r.Repos.LessonComment().Create(ctx, lessonComment)
+		if err := comment.UserID.Set(&viewer.ID); err != nil {
+			mylog.Log.WithError(err).Error("failed to set comment user_id")
+			return nil, myerr.SomethingWentWrongError
+		}
+		commentPermit, err = r.Repos.Comment().Create(ctx, comment)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &lessonCommentResolver{LessonComment: lessonCommentPermit, Conf: r.Conf, Repos: r.Repos}, nil
+	return &commentResolver{Comment: commentPermit, Conf: r.Conf, Repos: r.Repos}, nil
 }

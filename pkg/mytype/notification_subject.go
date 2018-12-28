@@ -8,109 +8,101 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type LabelableTypeValue int
+type NotificationSubjectValue int
 
 const (
-	LabelableTypeComment LabelableTypeValue = iota
-	LabelableTypeLesson
-	LabelableTypeUserAsset
+	NotificationSubjectLesson NotificationSubjectValue = iota
+	NotificationSubjectUserAsset
 )
 
-func (f LabelableTypeValue) String() string {
+func (f NotificationSubjectValue) String() string {
 	switch f {
-	case LabelableTypeComment:
-		return "Comment"
-	case LabelableTypeLesson:
+	case NotificationSubjectLesson:
 		return "Lesson"
-	case LabelableTypeUserAsset:
+	case NotificationSubjectUserAsset:
 		return "UserAsset"
 	default:
 		return "unknown"
 	}
 }
 
-type LabelableType struct {
+type NotificationSubject struct {
 	Status pgtype.Status
-	V      LabelableTypeValue
+	V      NotificationSubjectValue
 }
 
-func NewLabelableType(v LabelableTypeValue) LabelableType {
-	return LabelableType{
+func NewNotificationSubject(v NotificationSubjectValue) NotificationSubject {
+	return NotificationSubject{
 		Status: pgtype.Present,
 		V:      v,
 	}
 }
 
-func ParseLabelableType(s string) (LabelableType, error) {
+func ParseNotificationSubject(s string) (NotificationSubject, error) {
 	switch strings.Title(s) {
-	case "Comment":
-		return LabelableType{
-			Status: pgtype.Present,
-			V:      LabelableTypeComment,
-		}, nil
 	case "Lesson":
-		return LabelableType{
+		return NotificationSubject{
 			Status: pgtype.Present,
-			V:      LabelableTypeLesson,
+			V:      NotificationSubjectLesson,
 		}, nil
 	case "UserAsset":
-		return LabelableType{
+		return NotificationSubject{
 			Status: pgtype.Present,
-			V:      LabelableTypeUserAsset,
+			V:      NotificationSubjectUserAsset,
 		}, nil
 	default:
-		var f LabelableType
-		return f, fmt.Errorf("invalid LabelableType: %q", s)
+		var f NotificationSubject
+		return f, fmt.Errorf("invalid NotificationSubject: %q", s)
 	}
 }
 
-func (src *LabelableType) String() string {
+func (src *NotificationSubject) String() string {
 	return src.V.String()
 }
 
-func (dst *LabelableType) Set(src interface{}) error {
+func (dst *NotificationSubject) Set(src interface{}) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = NotificationSubject{Status: pgtype.Null}
 	}
 	switch value := src.(type) {
-	case LabelableType:
+	case NotificationSubject:
 		*dst = value
 		dst.Status = pgtype.Present
-	case *LabelableType:
+	case *NotificationSubject:
 		*dst = *value
 		dst.Status = pgtype.Present
-	case LabelableTypeValue:
+	case NotificationSubjectValue:
 		dst.V = value
 		dst.Status = pgtype.Present
-	case *LabelableTypeValue:
+	case *NotificationSubjectValue:
 		dst.V = *value
 		dst.Status = pgtype.Present
 	case string:
-		t, err := ParseLabelableType(value)
+		t, err := ParseNotificationSubject(value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case *string:
-		t, err := ParseLabelableType(*value)
+		t, err := ParseNotificationSubject(*value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case []byte:
-		t, err := ParseLabelableType(string(value))
+		t, err := ParseNotificationSubject(string(value))
 		if err != nil {
 			return err
 		}
 		*dst = t
 	default:
-		return fmt.Errorf("cannot convert %v to LabelableType", value)
+		return fmt.Errorf("cannot convert %v to NotificationSubject", value)
 	}
 
 	return nil
 }
 
-func (src *LabelableType) Get() interface{} {
+func (src *NotificationSubject) Get() interface{} {
 	switch src.Status {
 	case pgtype.Present:
 		return src
@@ -121,7 +113,7 @@ func (src *LabelableType) Get() interface{} {
 	}
 }
 
-func (src *LabelableType) AssignTo(dst interface{}) error {
+func (src *NotificationSubject) AssignTo(dst interface{}) error {
 	switch src.Status {
 	case pgtype.Present:
 		switch v := dst.(type) {
@@ -144,13 +136,13 @@ func (src *LabelableType) AssignTo(dst interface{}) error {
 	return fmt.Errorf("cannot decode %v into %T", src, dst)
 }
 
-func (dst *LabelableType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *NotificationSubject) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = NotificationSubject{Status: pgtype.Null}
 		return nil
 	}
 
-	t, err := ParseLabelableType(string(src))
+	t, err := ParseNotificationSubject(string(src))
 	if err != nil {
 		return err
 	}
@@ -158,11 +150,11 @@ func (dst *LabelableType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	return nil
 }
 
-func (dst *LabelableType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *NotificationSubject) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
 
-func (src *LabelableType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *NotificationSubject) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {
 	case pgtype.Null:
 		return nil, nil
@@ -173,14 +165,14 @@ func (src *LabelableType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, e
 	return append(buf, src.V.String()...), nil
 }
 
-func (src *LabelableType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *NotificationSubject) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	return src.EncodeText(ci, buf)
 }
 
 // Scan implements the database/sql Scanner interface.
-func (dst *LabelableType) Scan(src interface{}) error {
+func (dst *NotificationSubject) Scan(src interface{}) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = NotificationSubject{Status: pgtype.Null}
 		return nil
 	}
 
@@ -197,7 +189,7 @@ func (dst *LabelableType) Scan(src interface{}) error {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-func (src *LabelableType) Value() (driver.Value, error) {
+func (src *NotificationSubject) Value() (driver.Value, error) {
 	switch src.Status {
 	case pgtype.Present:
 		return src.V.String(), nil

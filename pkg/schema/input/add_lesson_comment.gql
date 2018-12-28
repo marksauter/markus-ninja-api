@@ -1,5 +1,0 @@
-# Input type for AddLessonComment.
-input AddLessonCommentInput {
-  # The ID of the lesson comment to add.
-  lessonCommentId: ID!
-}
