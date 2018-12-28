@@ -83,6 +83,15 @@ func (r *labelResolver) Labelables(
 	permits := []repo.NodePermit{}
 
 	switch labelableType {
+	case LabelableTypeComment:
+		comments, err := r.Repos.Comment().GetByLabel(ctx, id.String, pageOptions, nil)
+		if err != nil {
+			return nil, err
+		}
+		permits = make([]repo.NodePermit, len(comments))
+		for i, l := range comments {
+			permits[i] = l
+		}
 	case LabelableTypeLesson:
 		filters := &data.LessonFilterOptions{
 			Search: args.Search,
@@ -95,13 +104,16 @@ func (r *labelResolver) Labelables(
 		for i, l := range lessons {
 			permits[i] = l
 		}
-	case LabelableTypeLessonComment:
-		lessonComments, err := r.Repos.LessonComment().GetByLabel(ctx, id.String, pageOptions, nil)
+	case LabelableTypeUserAsset:
+		filters := &data.UserAssetFilterOptions{
+			Search: args.Search,
+		}
+		assets, err := r.Repos.UserAsset().GetByLabel(ctx, id.String, pageOptions, filters)
 		if err != nil {
 			return nil, err
 		}
-		permits = make([]repo.NodePermit, len(lessonComments))
-		for i, l := range lessonComments {
+		permits = make([]repo.NodePermit, len(assets))
+		for i, l := range assets {
 			permits[i] = l
 		}
 	default:

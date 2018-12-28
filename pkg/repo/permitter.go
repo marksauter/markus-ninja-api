@@ -165,6 +165,22 @@ func (r *Permitter) ViewerCanRead(
 	node interface{},
 ) (bool, error) {
 	switch node := node.(type) {
+	case data.Comment:
+		// If the comment has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case *data.Comment:
+		// If the comment has not been published, then check if the viewer can admin
+		// the object
+		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
+			return r.ViewerCanAdmin(ctx, node)
+		}
+	case data.CommentDraftBackup:
+		return r.ViewerCanAdmin(ctx, node)
+	case *data.CommentDraftBackup:
+		return r.ViewerCanAdmin(ctx, node)
 	case data.Course:
 		// If the course has not been published, then check if the viewer can admin
 		// the object
@@ -203,25 +219,9 @@ func (r *Permitter) ViewerCanRead(
 		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
 			return r.ViewerCanAdmin(ctx, node)
 		}
-	case data.LessonComment:
-		// If the lesson comment has not been published, then check if the viewer can admin
-		// the object
-		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
-			return r.ViewerCanAdmin(ctx, node)
-		}
-	case *data.LessonComment:
-		// If the lesson comment has not been published, then check if the viewer can admin
-		// the object
-		if node.PublishedAt.Status == pgtype.Undefined || node.PublishedAt.Status == pgtype.Null {
-			return r.ViewerCanAdmin(ctx, node)
-		}
 	case data.LessonDraftBackup:
 		return r.ViewerCanAdmin(ctx, node)
 	case *data.LessonDraftBackup:
-		return r.ViewerCanAdmin(ctx, node)
-	case data.LessonCommentDraftBackup:
-		return r.ViewerCanAdmin(ctx, node)
-	case *data.LessonCommentDraftBackup:
 		return r.ViewerCanAdmin(ctx, node)
 	default:
 		return true, nil
@@ -266,6 +266,44 @@ func (r *Permitter) ViewerCanAdmin(
 			}
 			userID = &appled.UserID
 		}
+		return vid == userID.String, nil
+	case data.Comment:
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			comment, err := r.repos.Comment().load.Get(ctx, node.ID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = &comment.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Comment:
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			comment, err := r.repos.Comment().load.Get(ctx, node.ID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = &comment.UserID
+		}
+		return vid == userID.String, nil
+	case data.CommentDraftBackup:
+		comment, err := r.repos.Comment().load.Get(ctx, node.CommentID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		userID := &comment.UserID
+		return vid == userID.String, nil
+	case *data.CommentDraftBackup:
+		comment, err := r.repos.Comment().load.Get(ctx, node.CommentID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		userID := &comment.UserID
 		return vid == userID.String, nil
 	case data.Course:
 		userID := &node.UserID
@@ -414,6 +452,13 @@ func (r *Permitter) ViewerCanAdmin(
 	case data.Labeled:
 		userID := mytype.OID{}
 		switch node.LabelableID.Type {
+		case "Comment":
+			comment, err := r.repos.Comment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = comment.UserID
 		case "Lesson":
 			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
@@ -421,18 +466,25 @@ func (r *Permitter) ViewerCanAdmin(
 				return false, err
 			}
 			userID = lesson.UserID
-		case "LessonComment":
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+		case "UserAsset":
+			lesson, err := r.repos.UserAsset().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return false, err
 			}
-			userID = lessonComment.UserID
+			userID = lesson.UserID
 		}
 		return vid == userID.String, nil
 	case *data.Labeled:
 		userID := mytype.OID{}
 		switch node.LabelableID.Type {
+		case "Comment":
+			comment, err := r.repos.Comment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = comment.UserID
 		case "Lesson":
 			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
@@ -440,13 +492,13 @@ func (r *Permitter) ViewerCanAdmin(
 				return false, err
 			}
 			userID = lesson.UserID
-		case "LessonComment":
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+		case "UserAsset":
+			lesson, err := r.repos.UserAsset().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return false, err
 			}
-			userID = lessonComment.UserID
+			userID = lesson.UserID
 		}
 		return vid == userID.String, nil
 	case data.Lesson:
@@ -471,28 +523,6 @@ func (r *Permitter) ViewerCanAdmin(
 			userID = &lesson.UserID
 		}
 		return vid == userID.String, nil
-	case data.LessonComment:
-		userID := &node.UserID
-		if node.UserID.Status == pgtype.Undefined {
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.ID.String)
-			if err != nil {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return false, err
-			}
-			userID = &lessonComment.UserID
-		}
-		return vid == userID.String, nil
-	case *data.LessonComment:
-		userID := &node.UserID
-		if node.UserID.Status == pgtype.Undefined {
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.ID.String)
-			if err != nil {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return false, err
-			}
-			userID = &lessonComment.UserID
-		}
-		return vid == userID.String, nil
 	case data.LessonDraftBackup:
 		lesson, err := r.repos.Lesson().load.Get(ctx, node.LessonID.String)
 		if err != nil {
@@ -508,22 +538,6 @@ func (r *Permitter) ViewerCanAdmin(
 			return false, err
 		}
 		userID := &lesson.UserID
-		return vid == userID.String, nil
-	case data.LessonCommentDraftBackup:
-		lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LessonCommentID.String)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return false, err
-		}
-		userID := &lessonComment.UserID
-		return vid == userID.String, nil
-	case *data.LessonCommentDraftBackup:
-		lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LessonCommentID.String)
-		if err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return false, err
-		}
-		userID := &lessonComment.UserID
 		return vid == userID.String, nil
 	case data.Notification:
 		userID := &node.UserID
@@ -720,6 +734,13 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 	case data.Labeled:
 		userID := mytype.OID{}
 		switch node.LabelableID.Type {
+		case "Comment":
+			comment, err := r.repos.Comment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = comment.UserID
 		case "Lesson":
 			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
@@ -727,18 +748,25 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 				return false, err
 			}
 			userID = lesson.UserID
-		case "LessonComment":
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+		case "UserAsset":
+			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return false, err
 			}
-			userID = lessonComment.UserID
+			userID = userAsset.UserID
 		}
 		return vid == userID.String, nil
 	case *data.Labeled:
 		userID := mytype.OID{}
 		switch node.LabelableID.Type {
+		case "Comment":
+			comment, err := r.repos.Comment().load.Get(ctx, node.LabelableID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = comment.UserID
 		case "Lesson":
 			lesson, err := r.repos.Lesson().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
@@ -746,13 +774,13 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 				return false, err
 			}
 			userID = lesson.UserID
-		case "LessonComment":
-			lessonComment, err := r.repos.LessonComment().load.Get(ctx, node.LabelableID.String)
+		case "UserAsset":
+			userAsset, err := r.repos.UserAsset().load.Get(ctx, node.LabelableID.String)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return false, err
 			}
-			userID = lessonComment.UserID
+			userID = userAsset.UserID
 		}
 		return vid == userID.String, nil
 	case data.Lesson:

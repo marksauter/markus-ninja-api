@@ -11,22 +11,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	LessonNotification = "Lesson"
-)
-
 type Notification struct {
-	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
-	ID         mytype.OID         `db:"id" permit:"read"`
-	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read"`
-	Reason     pgtype.Text        `db:"reason" permit:"read"`
-	ReasonName pgtype.Varchar     `db:"reason_name" permit:"create"`
-	Subject    pgtype.Text        `db:"subject" permit:"create/read"`
-	SubjectID  mytype.OID         `db:"subject_id" permit:"create/read"`
-	StudyID    mytype.OID         `db:"study_id" permit:"create/read"`
-	Unread     pgtype.Bool        `db:"unread" permit:"read"`
-	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
-	UserID     mytype.OID         `db:"user_id" permit:"create/read"`
+	CreatedAt  pgtype.Timestamptz         `db:"created_at" permit:"read"`
+	ID         mytype.OID                 `db:"id" permit:"read"`
+	LastReadAt pgtype.Timestamptz         `db:"last_read_at" permit:"read"`
+	Reason     pgtype.Text                `db:"reason" permit:"read"`
+	ReasonName pgtype.Varchar             `db:"reason_name" permit:"create"`
+	Subject    mytype.NotificationSubject `db:"subject" permit:"create/read"`
+	SubjectID  mytype.OID                 `db:"subject_id" permit:"create/read"`
+	StudyID    mytype.OID                 `db:"study_id" permit:"create/read"`
+	Unread     pgtype.Bool                `db:"unread" permit:"read"`
+	UpdatedAt  pgtype.Timestamptz         `db:"updated_at" permit:"read"`
+	UserID     mytype.OID                 `db:"user_id" permit:"create/read"`
 }
 
 const countNotificationByStudySQL = `
@@ -291,7 +287,7 @@ func BatchCreateNotification(
 		notifications[i] = []interface{}{
 			src.ID.String,
 			enrolled.ReasonName.String,
-			src.Subject.String,
+			src.Subject.String(),
 			src.SubjectID.String,
 			src.StudyID.String,
 			enrolled.UserID.String,
@@ -438,7 +434,7 @@ func CreateNotificationsFromEvent(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
-		if err := row.Subject.Set(LessonNotification); err != nil {
+		if err := row.Subject.Set(mytype.NotificationSubjectLesson); err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
@@ -470,6 +466,48 @@ func CreateNotificationsFromEvent(
 		default:
 			mylog.Log.Debugf(
 				"will not notify users when a lesson '%s'",
+				payload.Action,
+			)
+			return nil
+		}
+	case mytype.UserAssetEvent:
+		payload := &UserAssetEventPayload{}
+		if err := event.Payload.AssignTo(payload); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if err := row.Subject.Set(mytype.NotificationSubjectUserAsset); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		if err := row.SubjectID.Set(&payload.AssetID); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+
+		switch payload.Action {
+		case UserAssetCommented:
+			enrolleds, err = GetEnrolledByEnrollable(tx, payload.AssetID.String, nil, nil)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+		case UserAssetMentioned:
+			if err := row.ReasonName.Set(MentionReason); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if err := row.UserID.Set(&event.UserID); err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+
+			_, err := CreateNotification(tx, row)
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		default:
+			mylog.Log.Debugf(
+				"will not notify users when a user asset '%s'",
 				payload.Action,
 			)
 			return nil

@@ -192,7 +192,7 @@ type Study implements
     orderBy: LessonOrder
   ): LessonConnection!
 
-  lessonComments(
+  comments(
     # Returns the elements in the list that come after the specified global ID.
     after: String
 
@@ -204,7 +204,7 @@ type Study implements
 
     # Returns the last n elements form the list.
     last: Int
-  ): LessonCommentConnection!
+  ): CommentConnection!
 
   # The name of the study.
   name: String!

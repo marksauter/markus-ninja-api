@@ -28,6 +28,12 @@ func nodePermitToResolver(
 		return nil, err
 	}
 	switch id.Type {
+	case "Comment":
+		comment, ok := p.(*repo.CommentPermit)
+		if !ok {
+			return nil, errors.New("cannot convert permit to comment")
+		}
+		return &commentResolver{Comment: comment, Conf: conf, Repos: repos}, nil
 	case "Course":
 		course, ok := p.(*repo.CoursePermit)
 		if !ok {
@@ -58,12 +64,6 @@ func nodePermitToResolver(
 			return nil, errors.New("cannot convert permit to lesson")
 		}
 		return &lessonResolver{Lesson: lesson, Conf: conf, Repos: repos}, nil
-	case "LessonComment":
-		lessonComment, ok := p.(*repo.LessonCommentPermit)
-		if !ok {
-			return nil, errors.New("cannot convert permit to lessonComment")
-		}
-		return &lessonCommentResolver{LessonComment: lessonComment, Conf: conf, Repos: repos}, nil
 	case "Notification":
 		notification, ok := p.(*repo.NotificationPermit)
 		if !ok {
@@ -201,17 +201,17 @@ func lessonEventPermitToResolver(
 			Repos:        repos,
 		}, nil
 	case data.LessonCommented:
-		lessonComment, err := repos.LessonComment().Get(
+		comment, err := repos.Comment().Get(
 			ctx,
 			payload.CommentID.String,
 		)
 		if err != nil {
 			return nil, err
 		}
-		return &lessonCommentResolver{
-			Conf:          conf,
-			LessonComment: lessonComment,
-			Repos:         repos,
+		return &commentResolver{
+			Conf:    conf,
+			Comment: comment,
+			Repos:   repos,
 		}, nil
 	case data.LessonLabeled:
 		return &labeledEventResolver{

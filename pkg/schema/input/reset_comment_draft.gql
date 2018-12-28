@@ -1,0 +1,5 @@
+# Input type for ResetCommentDraft.
+input ResetCommentDraftInput {
+  # ID of the comment.
+  commentId: ID!
+}

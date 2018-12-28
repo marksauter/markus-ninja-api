@@ -1,0 +1,8 @@
+# Properties by which comment connections can be ordered.
+enum CommentOrderField {
+  # Order comments by creation time.
+  CREATED_AT
+
+  # Order comments by update time.
+  UPDATED_AT
+}

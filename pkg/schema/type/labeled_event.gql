@@ -1,7 +1,8 @@
 # Represents a labeled event on a given subject.
 type LabeledEvent implements 
   LessonTimelineEvent,
-  Node
+  Node,
+  UserAssetTimelineEvent
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!

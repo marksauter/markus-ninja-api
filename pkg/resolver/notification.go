@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 
 	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -33,16 +34,24 @@ func (r *notificationResolver) Reason() (string, error) {
 	return r.Notification.Reason()
 }
 
-func (r *notificationResolver) Subject(ctx context.Context) (*lessonResolver, error) {
+func (r *notificationResolver) Subject(ctx context.Context) (*notificationSubjectResolver, error) {
 	subjectID, err := r.Notification.SubjectID()
 	if err != nil {
 		return nil, err
 	}
-	subject, err := r.Repos.Lesson().Get(ctx, subjectID.String)
+	permit, err := r.Repos.GetNotificationSubject(ctx, subjectID)
 	if err != nil {
 		return nil, err
 	}
-	return &lessonResolver{Lesson: subject, Conf: r.Conf, Repos: r.Repos}, nil
+	resolver, err := nodePermitToResolver(permit, r.Repos, r.Conf)
+	if err != nil {
+		return nil, err
+	}
+	subject, ok := resolver.(notificationSubject)
+	if !ok {
+		return nil, errors.New("cannot convert resolver to notification subject")
+	}
+	return &notificationSubjectResolver{subject}, nil
 }
 
 func (r *notificationResolver) Study(ctx context.Context) (*studyResolver, error) {

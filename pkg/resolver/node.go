@@ -22,13 +22,18 @@ func (r *nodeResolver) ToAppledEvent() (*appledEventResolver, bool) {
 	return resolver, ok
 }
 
-func (r *nodeResolver) ToCreatedEvent() (*createdEventResolver, bool) {
-	resolver, ok := r.node.(*createdEventResolver)
+func (r *nodeResolver) ToComment() (*commentResolver, bool) {
+	resolver, ok := r.node.(*commentResolver)
 	return resolver, ok
 }
 
 func (r *nodeResolver) ToCourse() (*courseResolver, bool) {
 	resolver, ok := r.node.(*courseResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToCreatedEvent() (*createdEventResolver, bool) {
+	resolver, ok := r.node.(*createdEventResolver)
 	return resolver, ok
 }
 
@@ -54,11 +59,6 @@ func (r *nodeResolver) ToLabeledEvent() (*labeledEventResolver, bool) {
 
 func (r *nodeResolver) ToLesson() (*lessonResolver, bool) {
 	resolver, ok := r.node.(*lessonResolver)
-	return resolver, ok
-}
-
-func (r *nodeResolver) ToLessonComment() (*lessonCommentResolver, bool) {
-	resolver, ok := r.node.(*lessonCommentResolver)
 	return resolver, ok
 }
 

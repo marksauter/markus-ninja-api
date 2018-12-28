@@ -5,6 +5,7 @@ type Lesson implements
   Enrollable,
   Labelable,
   Node,
+  NotificationSubject,
   Publishable,
   Referenceable,
   Renameable,
@@ -43,8 +44,8 @@ type Lesson implements
     last: Int
 
     # Ordering options for comments returned from the connection.
-    orderBy: LessonCommentOrder
-  ): LessonCommentConnection!
+    orderBy: CommentOrder
+  ): CommentConnection!
 
   # The course associated with the lesson, if any.
   course: Course
@@ -179,7 +180,7 @@ type Lesson implements
   viewerDidAuthor: Boolean!
 
   # The viewer's current working draft comment.
-  viewerNewComment: LessonComment!
+  viewerNewComment: Comment!
 }
 
 # An edge type for Lesson.

@@ -47,7 +47,7 @@ var uniqueCourseStudyIDNumber = "course_unique_study_id_number_idx"
 
 var uniqueCourseLessonCourseIDNumber = "course_lesson_course_id_number_key"
 
-var uniqueLessonCommentUserIDLessonIDNullPublishedAt = "lesson_comment_user_id_lesson_id_null_published_at_unique_idx"
+var uniqueCommentUserIDLessonIDNullPublishedAt = "comment_user_id_lesson_id_null_published_at_unique_idx"
 
 var uniqueLabelStudyIDName = "label_unique_study_id_name_idx"
 var ErrStudyLabelNameUnavailable = DataEndUserError{UniqueViolation, "study label name unavailable"}

@@ -89,6 +89,31 @@ func (src *UserAssetFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLPar
 	}
 }
 
+func CountUserAssetByLabel(
+	db Queryer,
+	labelID string,
+	filters *UserAssetFilterOptions,
+) (int32, error) {
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID) + `
+			AND ` + from + `.type = 'UserAsset'`
+	}
+	from := "labeled"
+
+	sql := CountSQL(from, where, filters, &args)
+	psName := preparedName("countUserAssetByLabel", sql)
+
+	var n int32
+	err := prepareQueryRow(db, psName, sql, args...).Scan(&n)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+	} else {
+		mylog.Log.WithField("n", n).Info(util.Trace("user assets found"))
+	}
+	return n, err
+}
+
 func CountUserAssetBySearch(
 	db Queryer,
 	filters *UserAssetFilterOptions,
@@ -447,6 +472,57 @@ func GetUserAssetByUserStudyAndName(
 		}).Info(util.Trace("user asset found"))
 	}
 	return userAsset, err
+}
+
+func GetUserAssetByLabel(
+	db Queryer,
+	labelID string,
+	po *PageOptions,
+	filters *UserAssetFilterOptions,
+) ([]*UserAsset, error) {
+	var rows []*UserAsset
+	if po != nil && po.Limit() > 0 {
+		limit := po.Limit()
+		if limit > 0 {
+			rows = make([]*UserAsset, 0, limit)
+		} else {
+			mylog.Log.Info(util.Trace("limit is 0"))
+			return rows, nil
+		}
+	}
+
+	args := pgx.QueryArgs(make([]interface{}, 0, 4))
+	where := func(from string) string {
+		return from + `.label_id = ` + args.Append(labelID)
+	}
+
+	selects := []string{
+		"asset_id",
+		"created_at",
+		"description",
+		"id",
+		"key",
+		"name",
+		"original_name",
+		"size",
+		"study_id",
+		"subtype",
+		"type",
+		"updated_at",
+		"user_id",
+	}
+	from := "labeled_user_asset"
+	sql := SQL3(selects, from, where, filters, &args, po)
+
+	psName := preparedName("getUserAssetsByLabel", sql)
+
+	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	mylog.Log.WithField("n", len(rows)).Info(util.Trace("user assets found"))
+	return rows, nil
 }
 
 func GetUserAssetByStudy(

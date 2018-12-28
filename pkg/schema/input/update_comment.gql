@@ -1,0 +1,8 @@
+# Input type for UpdateComment.
+input UpdateCommentInput {
+  # The draft of the comment.
+  draft: String
+
+  # ID of the comment.
+  commentId: ID!
+}

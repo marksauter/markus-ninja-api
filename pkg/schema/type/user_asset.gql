@@ -1,7 +1,10 @@
 # Represents a user.
 type UserAsset implements 
+  Commentable,
   Deleteable,
+  Labelable,
   Node,
+  NotificationSubject,
   Referenceable,
   Renameable,
   Searchable,
@@ -9,6 +12,24 @@ type UserAsset implements
   UniformResourceLocatable,
   Updateable 
 {
+  # Returns a list of comments for the current user asset.
+  comments(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for comments returned from the connection.
+    orderBy: CommentOrder
+  ): CommentConnection!
+
   # Identifies the date and time when the object was created.
   createdAt: Time!
 
@@ -22,6 +43,27 @@ type UserAsset implements
   href: URI!
 
   id: ID!
+
+  # Returns a list of labels for the current user asset.
+  labels(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for labels returned from the connection.
+    filterBy: LabelFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for labels returned from the connection.
+    orderBy: LabelOrder
+  ): LabelConnection!
 
   # The name of this asset.
   name: String!
@@ -76,6 +118,9 @@ type UserAsset implements
 
   # Can the viewer update this object?
   viewerCanUpdate: Boolean!
+
+  # The viewer's current working draft comment.
+  viewerNewComment: Comment!
 }
 
 # An edge type for UserAsset.
