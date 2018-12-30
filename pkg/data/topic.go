@@ -330,10 +330,6 @@ func CreateTopic(
 	if row.Name.Status != pgtype.Undefined {
 		columns = append(columns, "name")
 		values = append(values, args.Append(&row.Name))
-		nameTokens := &pgtype.Text{}
-		nameTokens.Set(strings.Join(util.Split(row.Name.String, topicDelimeter), " "))
-		columns = append(columns, "name_tokens")
-		values = append(values, args.Append(nameTokens))
 	}
 
 	tx, err, newTx := BeginTransaction(db)

@@ -1029,13 +1029,38 @@ CREATE TABLE IF NOT EXISTS topic(
   created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
   description TEXT,
   id          VARCHAR(100) PRIMARY KEY,
-  name        VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-zA-Z0-9-]{1,39}$'),
-  name_tokens TEXT         NOT NULL,
+  name        VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-z0-9-]{1,39}$'),
   updated_at  TIMESTAMPTZ  DEFAULT statement_timestamp()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS topic_unique_name_idx
   ON topic (lower(name));
+
+CREATE OR REPLACE FUNCTION topic_will_insert()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.name = lower(NEW.name);
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'topic'
+    AND trigger_name = 'before_topic_insert'
+) THEN
+  CREATE TRIGGER before_topic_insert
+    BEFORE INSERT ON topic
+    FOR EACH ROW EXECUTE PROCEDURE topic_will_insert();
+END IF;
+END;
+$$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION topic_will_update()
   RETURNS TRIGGER
@@ -3166,7 +3191,7 @@ AS $$
   SET
     topics = (
       SELECT 
-        setweight(to_tsvector('simple', coalesce(string_agg(topic.name_tokens, ' '), '')), 'A')
+        setweight(to_tsvector('simple', topic.name), 'A')
       FROM topiced
       JOIN topic ON topic.id = topiced.topic_id
       WHERE topiced.topicable_id = _course_id
@@ -3448,7 +3473,7 @@ AS $$
   SET
     topics = (
       SELECT 
-        setweight(to_tsvector('simple', coalesce(string_agg(topic.name_tokens, ' '), '')), 'A')
+        setweight(to_tsvector('simple', topic.name), 'A')
       FROM topiced
       JOIN topic ON topic.id = topiced.topic_id
       WHERE topiced.topicable_id = _study_id
@@ -4016,8 +4041,7 @@ CREATE TABLE IF NOT EXISTS topic_search_index (
   description   TEXT,
   document      TSVECTOR     NOT NULL,
   id            VARCHAR(100) PRIMARY KEY,
-  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-zA-Z0-9-]{1,39}$'),
-  name_tokens   TEXT         NOT NULL,
+  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-z0-9-]{1,39}$'),
   topiced_count BIGINT       NOT NULL DEFAULT 0,  
   updated_at    TIMESTAMPTZ  NOT NULL,
   FOREIGN KEY (id)
@@ -4046,16 +4070,14 @@ AS $$
       document,
       id,
       name,
-      name_tokens,
       updated_at
     ) VALUES (
       NEW.created_at,
       NEW.description,
-      setweight(to_tsvector('simple', NEW.name_tokens), 'A') ||
+      setweight(to_tsvector('simple', NEW.name), 'A') ||
       setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B'),
       NEW.id,
       NEW.name,
-      NEW.name_tokens,
       NEW.updated_at
     );
 
@@ -4087,7 +4109,7 @@ AS $$
     doc TSVECTOR;
   BEGIN
     IF NEW.name != OLD.name OR NEW.description != OLD.description THEN
-      doc = setweight(to_tsvector('simple', NEW.name_tokens), 'A') ||
+      doc = setweight(to_tsvector('simple', NEW.name), 'A') ||
         setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B'); 
     ELSE
       doc = (SELECT document FROM topic_search_index WHERE id = NEW.id); 
@@ -4098,7 +4120,6 @@ AS $$
       document = doc,
       description = NEW.description,
       name = NEW.name,
-      name_tokens = NEW.name_tokens,
       updated_at = NEW.updated_at
     WHERE id = NEW.id;
 
