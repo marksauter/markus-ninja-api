@@ -3191,7 +3191,7 @@ AS $$
   SET
     topics = (
       SELECT 
-        setweight(to_tsvector('simple', topic.name), 'A')
+        setweight(to_tsvector('simple', coalesce(string_agg(topic.name, ' '), '')), 'A')
       FROM topiced
       JOIN topic ON topic.id = topiced.topic_id
       WHERE topiced.topicable_id = _course_id
@@ -3473,7 +3473,7 @@ AS $$
   SET
     topics = (
       SELECT 
-        setweight(to_tsvector('simple', topic.name), 'A')
+        setweight(to_tsvector('simple', coalesce(string_agg(topic.name, ' '), '')), 'A')
       FROM topiced
       JOIN topic ON topic.id = topiced.topic_id
       WHERE topiced.topicable_id = _study_id
