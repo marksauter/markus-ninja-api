@@ -2749,17 +2749,6 @@ BEGIN
       END IF;
   END CASE;
 
-  IF NEW.subject = 'UserAsset' THEN
-    INSERT INTO user_asset_notification(notification_id, asset_id, user_id)
-    VALUES (NEW.id, NEW.subject_id, NEW.user_id)
-    ON CONFLICT DO NOTHING;
-
-    IF NOT FOUND THEN
-      DELETE FROM notification WHERE id = NEW.id;
-      RETURN NULL;
-    END IF;
-  END IF;
-
   RETURN NEW;
 END;
 $$;
@@ -2826,39 +2815,6 @@ CREATE TABLE IF NOT EXISTS user_asset_notification (
     REFERENCES notification (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
-
-CREATE TABLE IF NOT EXISTS user_asset_notification (
-  asset_id        VARCHAR(100) NOT NULL,
-  notification_id VARCHAR(100) PRIMARY KEY,
-  user_id         VARCHAR(100) NOT NULL,
-  FOREIGN KEY (asset_id)
-    REFERENCES user_asset (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (notification_id)
-    REFERENCES notification (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE,
-  FOREIGN KEY (user_id)
-    REFERENCES account (id)
-    ON UPDATE NO ACTION ON DELETE CASCADE
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS user_asset_notification_user_id_asset_id_unique_idx
-  ON user_asset_notification (user_id, asset_id);
-
-DO $$
-BEGIN
-IF NOT EXISTS(
-  SELECT *
-    FROM information_schema.triggers
-    WHERE event_object_table = 'user_asset_notification'
-    AND trigger_name = 'after_user_asset_notification_delete'
-) THEN
-  CREATE TRIGGER after_user_asset_notification_delete
-    AFTER DELETE ON user_asset_notification
-    FOR EACH ROW EXECUTE PROCEDURE delete_notification();
-END IF;
-END;
-$$ language 'plpgsql';
 
 CREATE OR REPLACE VIEW notification_master AS
 SELECT
