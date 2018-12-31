@@ -12,18 +12,21 @@ type LabelableEdge {
 
 # A list of labelables.
 type LabelableConnection {
+  # The number of comments associated with the label.
+  commentCount: Int!
+
   # A list of edges.
   edges: [LabelableEdge]
 
   # The number of lessons associated with the label.
   lessonCount: Int!
 
-  # The number of lesson comments associated with the label.
-  lessonCommentCount: Int!
-
   # A list of nodes.
   nodes: [Labelable]
 
   # Information to aid in pagination.
   pageInfo: PageInfo!
+
+  # The number of user assets associated with the label.
+  userAssetCount: Int!
 }

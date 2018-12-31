@@ -1,8 +1,11 @@
 # Represents the individual types of labelables to return.
 enum LabelableType {
+  # Returns comments.
+  COMMENT
+
   # Returns lessons.
   LESSON
 
-  # Returns lesson comments.
-  LESSON_COMMENT
+  # Returns user assets.
+  USER_ASSET
 }

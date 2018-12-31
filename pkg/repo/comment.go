@@ -15,142 +15,151 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-type LessonCommentPermit struct {
+type CommentPermit struct {
 	checkFieldPermission FieldPermissionFunc
-	lessonComment        *data.LessonComment
+	comment              *data.Comment
 }
 
-func (r *LessonCommentPermit) Get() *data.LessonComment {
-	lessonComment := r.lessonComment
-	fields := structs.Fields(lessonComment)
+func (r *CommentPermit) Get() *data.Comment {
+	comment := r.comment
+	fields := structs.Fields(comment)
 	for _, f := range fields {
 		name := f.Tag("db")
 		if ok := r.checkFieldPermission(name); !ok {
 			f.Zero()
 		}
 	}
-	return lessonComment
+	return comment
 }
 
-func (r *LessonCommentPermit) Body() (*mytype.Markdown, error) {
+func (r *CommentPermit) Body() (*mytype.Markdown, error) {
 	if ok := r.checkFieldPermission("body"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &r.lessonComment.Body, nil
+	return &r.comment.Body, nil
 }
 
-func (r *LessonCommentPermit) CreatedAt() (time.Time, error) {
+func (r *CommentPermit) CommentableID() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("commentable_id"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &r.comment.CommentableID, nil
+}
+
+func (r *CommentPermit) CreatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("created_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.CreatedAt.Time, nil
+	return r.comment.CreatedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) Draft() (string, error) {
+func (r *CommentPermit) Draft() (string, error) {
 	if ok := r.checkFieldPermission("draft"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
-	return r.lessonComment.Draft.String, nil
+	return r.comment.Draft.String, nil
 }
 
-func (r *LessonCommentPermit) ID() (*mytype.OID, error) {
+func (r *CommentPermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &r.lessonComment.ID, nil
+	return &r.comment.ID, nil
 }
 
-func (r *LessonCommentPermit) IsPublished() (bool, error) {
+func (r *CommentPermit) IsPublished() (bool, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return false, err
 	}
-	return r.lessonComment.PublishedAt.Status != pgtype.Null, nil
+	return r.comment.PublishedAt.Status != pgtype.Null, nil
 }
 
-func (r *LessonCommentPermit) LastEditedAt() (time.Time, error) {
+func (r *CommentPermit) LastEditedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("last_edited_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.LastEditedAt.Time, nil
+	return r.comment.LastEditedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) LessonID() (*mytype.OID, error) {
-	if ok := r.checkFieldPermission("lesson_id"); !ok {
-		err := ErrAccessDenied
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	return &r.lessonComment.LessonID, nil
-}
-
-func (r *LessonCommentPermit) PublishedAt() (time.Time, error) {
+func (r *CommentPermit) PublishedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("published_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.PublishedAt.Time, nil
+	return r.comment.PublishedAt.Time, nil
 }
 
-func (r *LessonCommentPermit) StudyID() (*mytype.OID, error) {
+func (r *CommentPermit) StudyID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("study_id"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &r.lessonComment.StudyID, nil
+	return &r.comment.StudyID, nil
 }
 
-func (r *LessonCommentPermit) UserID() (*mytype.OID, error) {
+func (r *CommentPermit) Type() (string, error) {
+	if ok := r.checkFieldPermission("type"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return "", err
+	}
+	return r.comment.Type.String(), nil
+}
+
+func (r *CommentPermit) UserID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("user_id"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &r.lessonComment.UserID, nil
+	return &r.comment.UserID, nil
 }
 
-func (r *LessonCommentPermit) UpdatedAt() (time.Time, error) {
+func (r *CommentPermit) UpdatedAt() (time.Time, error) {
 	if ok := r.checkFieldPermission("updated_at"); !ok {
 		err := ErrAccessDenied
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return time.Time{}, err
 	}
-	return r.lessonComment.UpdatedAt.Time, nil
+	return r.comment.UpdatedAt.Time, nil
 }
 
-func NewLessonCommentRepo(conf *myconf.Config) *LessonCommentRepo {
-	return &LessonCommentRepo{
+func NewCommentRepo(conf *myconf.Config) *CommentRepo {
+	return &CommentRepo{
 		conf: conf,
-		load: loader.NewLessonCommentLoader(),
+		load: loader.NewCommentLoader(),
 	}
 }
 
-type LessonCommentRepo struct {
+type CommentRepo struct {
 	conf   *myconf.Config
-	load   *loader.LessonCommentLoader
+	load   *loader.CommentLoader
 	permit *Permitter
 }
 
-func (r *LessonCommentRepo) filterPermittable(
+func (r *CommentRepo) filterPermittable(
 	ctx context.Context,
 	accessLevel mytype.AccessLevel,
-	lessonComments []*data.LessonComment,
-) ([]*LessonCommentPermit, error) {
-	lessonCommentPermits := make([]*LessonCommentPermit, 0, len(lessonComments))
-	for _, l := range lessonComments {
+	comments []*data.Comment,
+) ([]*CommentPermit, error) {
+	commentPermits := make([]*CommentPermit, 0, len(comments))
+	for _, l := range comments {
 		fieldPermFn, err := r.permit.Check(ctx, accessLevel, l)
 		if err != nil {
 			if err != ErrAccessDenied {
@@ -158,13 +167,13 @@ func (r *LessonCommentRepo) filterPermittable(
 				return nil, err
 			}
 		} else {
-			lessonCommentPermits = append(lessonCommentPermits, &LessonCommentPermit{fieldPermFn, l})
+			commentPermits = append(commentPermits, &CommentPermit{fieldPermFn, l})
 		}
 	}
-	return lessonCommentPermits, nil
+	return commentPermits, nil
 }
 
-func (r *LessonCommentRepo) Open(p *Permitter) error {
+func (r *CommentRepo) Open(p *Permitter) error {
 	if p == nil {
 		err := ErrNilPermitter
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -174,11 +183,11 @@ func (r *LessonCommentRepo) Open(p *Permitter) error {
 	return nil
 }
 
-func (r *LessonCommentRepo) Close() {
+func (r *CommentRepo) Close() {
 	r.load.ClearAll()
 }
 
-func (r *LessonCommentRepo) CheckConnection() error {
+func (r *CommentRepo) CheckConnection() error {
 	if r.load == nil {
 		err := ErrConnClosed
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -189,10 +198,10 @@ func (r *LessonCommentRepo) CheckConnection() error {
 
 // Service methods
 
-func (r *LessonCommentRepo) CountByLabel(
+func (r *CommentRepo) CountByLabel(
 	ctx context.Context,
 	labelID string,
-	filters *data.LessonCommentFilterOptions,
+	filters *data.CommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -201,13 +210,13 @@ func (r *LessonCommentRepo) CountByLabel(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return n, err
 	}
-	return data.CountLessonCommentByLabel(db, labelID, filters)
+	return data.CountCommentByLabel(db, labelID, filters)
 }
 
-func (r *LessonCommentRepo) CountByLesson(
+func (r *CommentRepo) CountByCommentable(
 	ctx context.Context,
-	lessonID string,
-	filters *data.LessonCommentFilterOptions,
+	commentableID string,
+	filters *data.CommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -216,13 +225,13 @@ func (r *LessonCommentRepo) CountByLesson(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return n, err
 	}
-	return data.CountLessonCommentByLesson(db, lessonID, filters)
+	return data.CountCommentByCommentable(db, commentableID, filters)
 }
 
-func (r *LessonCommentRepo) CountByStudy(
+func (r *CommentRepo) CountByStudy(
 	ctx context.Context,
 	studyID string,
-	filters *data.LessonCommentFilterOptions,
+	filters *data.CommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -231,13 +240,13 @@ func (r *LessonCommentRepo) CountByStudy(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return n, err
 	}
-	return data.CountLessonCommentByStudy(db, studyID, filters)
+	return data.CountCommentByStudy(db, studyID, filters)
 }
 
-func (r *LessonCommentRepo) CountByUser(
+func (r *CommentRepo) CountByUser(
 	ctx context.Context,
 	userID string,
-	filters *data.LessonCommentFilterOptions,
+	filters *data.CommentFilterOptions,
 ) (int32, error) {
 	var n int32
 	db, ok := myctx.QueryerFromContext(ctx)
@@ -246,13 +255,13 @@ func (r *LessonCommentRepo) CountByUser(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return n, err
 	}
-	return data.CountLessonCommentByUser(db, userID, filters)
+	return data.CountCommentByUser(db, userID, filters)
 }
 
-func (r *LessonCommentRepo) Create(
+func (r *CommentRepo) Create(
 	ctx context.Context,
-	lc *data.LessonComment,
-) (*LessonCommentPermit, error) {
+	lc *data.Comment,
+) (*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -267,44 +276,44 @@ func (r *LessonCommentRepo) Create(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := data.CreateLessonComment(db, lc)
+	comment, err := data.CreateComment(db, lc)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
+	return &CommentPermit{fieldPermFn, comment}, nil
 }
 
-func (r *LessonCommentRepo) Get(
+func (r *CommentRepo) Get(
 	ctx context.Context,
 	id string,
-) (*LessonCommentPermit, error) {
+) (*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := r.load.Get(ctx, id)
+	comment, err := r.load.Get(ctx, id)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
+	return &CommentPermit{fieldPermFn, comment}, nil
 }
 
-func (r *LessonCommentRepo) BatchGet(
+func (r *CommentRepo) BatchGet(
 	ctx context.Context,
 	ids []string,
-) ([]*LessonCommentPermit, error) {
+) ([]*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -315,19 +324,19 @@ func (r *LessonCommentRepo) BatchGet(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.BatchGetLessonComment(db, ids)
+	comments, err := data.BatchGetComment(db, ids)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentRepo) GetUserNewComment(
+func (r *CommentRepo) GetUserNewComment(
 	ctx context.Context,
 	userID,
-	lessonID string,
-) (*LessonCommentPermit, error) {
+	commentableID string,
+) (*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -338,25 +347,25 @@ func (r *LessonCommentRepo) GetUserNewComment(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := data.GetUserNewLessonComment(db, userID, lessonID)
+	comment, err := data.GetUserNewComment(db, userID, commentableID)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
+	return &CommentPermit{fieldPermFn, comment}, nil
 }
 
-func (r *LessonCommentRepo) GetByLabel(
+func (r *CommentRepo) GetByLabel(
 	ctx context.Context,
 	labelID string,
 	po *data.PageOptions,
-	filters *data.LessonCommentFilterOptions,
-) ([]*LessonCommentPermit, error) {
+	filters *data.CommentFilterOptions,
+) ([]*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -367,20 +376,20 @@ func (r *LessonCommentRepo) GetByLabel(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.GetLessonCommentByLabel(db, labelID, po, filters)
+	comments, err := data.GetCommentByLabel(db, labelID, po, filters)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentRepo) GetByLesson(
+func (r *CommentRepo) GetByCommentable(
 	ctx context.Context,
-	lessonID string,
+	commentableID string,
 	po *data.PageOptions,
-	filters *data.LessonCommentFilterOptions,
-) ([]*LessonCommentPermit, error) {
+	filters *data.CommentFilterOptions,
+) ([]*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -391,20 +400,20 @@ func (r *LessonCommentRepo) GetByLesson(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.GetLessonCommentByLesson(db, lessonID, po, filters)
+	comments, err := data.GetCommentByCommentable(db, commentableID, po, filters)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentRepo) GetByStudy(
+func (r *CommentRepo) GetByStudy(
 	ctx context.Context,
 	studyID string,
 	po *data.PageOptions,
-	filters *data.LessonCommentFilterOptions,
-) ([]*LessonCommentPermit, error) {
+	filters *data.CommentFilterOptions,
+) ([]*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -415,20 +424,20 @@ func (r *LessonCommentRepo) GetByStudy(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.GetLessonCommentByStudy(db, studyID, po, filters)
+	comments, err := data.GetCommentByStudy(db, studyID, po, filters)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentRepo) GetByUser(
+func (r *CommentRepo) GetByUser(
 	ctx context.Context,
 	userID string,
 	po *data.PageOptions,
-	filters *data.LessonCommentFilterOptions,
-) ([]*LessonCommentPermit, error) {
+	filters *data.CommentFilterOptions,
+) ([]*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -439,17 +448,17 @@ func (r *LessonCommentRepo) GetByUser(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComments, err := data.GetLessonCommentByUser(db, userID, po, filters)
+	comments, err := data.GetCommentByUser(db, userID, po, filters)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, lessonComments)
+	return r.filterPermittable(ctx, mytype.ReadAccess, comments)
 }
 
-func (r *LessonCommentRepo) Delete(
+func (r *CommentRepo) Delete(
 	ctx context.Context,
-	lc *data.LessonComment,
+	lc *data.Comment,
 ) error {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -465,13 +474,13 @@ func (r *LessonCommentRepo) Delete(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return err
 	}
-	return data.DeleteLessonComment(db, lc.ID.String)
+	return data.DeleteComment(db, lc.ID.String)
 }
 
-func (r *LessonCommentRepo) Update(
+func (r *CommentRepo) Update(
 	ctx context.Context,
-	lc *data.LessonComment,
-) (*LessonCommentPermit, error) {
+	lc *data.Comment,
+) (*CommentPermit, error) {
 	if err := r.CheckConnection(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -486,22 +495,22 @@ func (r *LessonCommentRepo) Update(
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, err := data.UpdateLessonComment(db, lc)
+	comment, err := data.UpdateComment(db, lc)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, lessonComment)
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, comment)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	return &LessonCommentPermit{fieldPermFn, lessonComment}, nil
+	return &CommentPermit{fieldPermFn, comment}, nil
 }
 
-func (r *LessonCommentRepo) ViewerCanDelete(
+func (r *CommentRepo) ViewerCanDelete(
 	ctx context.Context,
-	l *data.LessonComment,
+	l *data.Comment,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.DeleteAccess, l); err != nil {
 		return false
@@ -509,9 +518,9 @@ func (r *LessonCommentRepo) ViewerCanDelete(
 	return true
 }
 
-func (r *LessonCommentRepo) ViewerCanUpdate(
+func (r *CommentRepo) ViewerCanUpdate(
 	ctx context.Context,
-	l *data.LessonComment,
+	l *data.Comment,
 ) bool {
 	if _, err := r.permit.Check(ctx, mytype.UpdateAccess, l); err != nil {
 		return false

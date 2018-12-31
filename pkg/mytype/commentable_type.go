@@ -8,109 +8,101 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type LabelableTypeValue int
+type CommentableTypeValue int
 
 const (
-	LabelableTypeComment LabelableTypeValue = iota
-	LabelableTypeLesson
-	LabelableTypeUserAsset
+	CommentableTypeLesson CommentableTypeValue = iota
+	CommentableTypeUserAsset
 )
 
-func (f LabelableTypeValue) String() string {
+func (f CommentableTypeValue) String() string {
 	switch f {
-	case LabelableTypeComment:
-		return "Comment"
-	case LabelableTypeLesson:
+	case CommentableTypeLesson:
 		return "Lesson"
-	case LabelableTypeUserAsset:
+	case CommentableTypeUserAsset:
 		return "UserAsset"
 	default:
 		return "unknown"
 	}
 }
 
-type LabelableType struct {
+type CommentableType struct {
 	Status pgtype.Status
-	V      LabelableTypeValue
+	V      CommentableTypeValue
 }
 
-func NewLabelableType(v LabelableTypeValue) LabelableType {
-	return LabelableType{
+func NewCommentableType(v CommentableTypeValue) CommentableType {
+	return CommentableType{
 		Status: pgtype.Present,
 		V:      v,
 	}
 }
 
-func ParseLabelableType(s string) (LabelableType, error) {
+func ParseCommentableType(s string) (CommentableType, error) {
 	switch strings.Title(s) {
-	case "Comment":
-		return LabelableType{
-			Status: pgtype.Present,
-			V:      LabelableTypeComment,
-		}, nil
 	case "Lesson":
-		return LabelableType{
+		return CommentableType{
 			Status: pgtype.Present,
-			V:      LabelableTypeLesson,
+			V:      CommentableTypeLesson,
 		}, nil
 	case "UserAsset":
-		return LabelableType{
+		return CommentableType{
 			Status: pgtype.Present,
-			V:      LabelableTypeUserAsset,
+			V:      CommentableTypeUserAsset,
 		}, nil
 	default:
-		var f LabelableType
-		return f, fmt.Errorf("invalid LabelableType: %q", s)
+		var f CommentableType
+		return f, fmt.Errorf("invalid CommentableType: %q", s)
 	}
 }
 
-func (src *LabelableType) String() string {
+func (src *CommentableType) String() string {
 	return src.V.String()
 }
 
-func (dst *LabelableType) Set(src interface{}) error {
+func (dst *CommentableType) Set(src interface{}) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = CommentableType{Status: pgtype.Null}
 	}
 	switch value := src.(type) {
-	case LabelableType:
+	case CommentableType:
 		*dst = value
 		dst.Status = pgtype.Present
-	case *LabelableType:
+	case *CommentableType:
 		*dst = *value
 		dst.Status = pgtype.Present
-	case LabelableTypeValue:
+	case CommentableTypeValue:
 		dst.V = value
 		dst.Status = pgtype.Present
-	case *LabelableTypeValue:
+	case *CommentableTypeValue:
 		dst.V = *value
 		dst.Status = pgtype.Present
 	case string:
-		t, err := ParseLabelableType(value)
+		t, err := ParseCommentableType(value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case *string:
-		t, err := ParseLabelableType(*value)
+		t, err := ParseCommentableType(*value)
 		if err != nil {
 			return err
 		}
 		*dst = t
 	case []byte:
-		t, err := ParseLabelableType(string(value))
+		t, err := ParseCommentableType(string(value))
 		if err != nil {
 			return err
 		}
 		*dst = t
 	default:
-		return fmt.Errorf("cannot convert %v to LabelableType", value)
+		return fmt.Errorf("cannot convert %v to CommentableType", value)
 	}
 
 	return nil
 }
 
-func (src *LabelableType) Get() interface{} {
+func (src *CommentableType) Get() interface{} {
 	switch src.Status {
 	case pgtype.Present:
 		return src
@@ -121,7 +113,7 @@ func (src *LabelableType) Get() interface{} {
 	}
 }
 
-func (src *LabelableType) AssignTo(dst interface{}) error {
+func (src *CommentableType) AssignTo(dst interface{}) error {
 	switch src.Status {
 	case pgtype.Present:
 		switch v := dst.(type) {
@@ -144,13 +136,13 @@ func (src *LabelableType) AssignTo(dst interface{}) error {
 	return fmt.Errorf("cannot decode %v into %T", src, dst)
 }
 
-func (dst *LabelableType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *CommentableType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = CommentableType{Status: pgtype.Null}
 		return nil
 	}
 
-	t, err := ParseLabelableType(string(src))
+	t, err := ParseCommentableType(string(src))
 	if err != nil {
 		return err
 	}
@@ -158,11 +150,11 @@ func (dst *LabelableType) DecodeText(ci *pgtype.ConnInfo, src []byte) error {
 	return nil
 }
 
-func (dst *LabelableType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
+func (dst *CommentableType) DecodeBinary(ci *pgtype.ConnInfo, src []byte) error {
 	return dst.DecodeText(ci, src)
 }
 
-func (src *LabelableType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *CommentableType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	switch src.Status {
 	case pgtype.Null:
 		return nil, nil
@@ -173,14 +165,14 @@ func (src *LabelableType) EncodeText(ci *pgtype.ConnInfo, buf []byte) ([]byte, e
 	return append(buf, src.V.String()...), nil
 }
 
-func (src *LabelableType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
+func (src *CommentableType) EncodeBinary(ci *pgtype.ConnInfo, buf []byte) ([]byte, error) {
 	return src.EncodeText(ci, buf)
 }
 
 // Scan implements the database/sql Scanner interface.
-func (dst *LabelableType) Scan(src interface{}) error {
+func (dst *CommentableType) Scan(src interface{}) error {
 	if src == nil {
-		*dst = LabelableType{Status: pgtype.Null}
+		*dst = CommentableType{Status: pgtype.Null}
 		return nil
 	}
 
@@ -197,7 +189,7 @@ func (dst *LabelableType) Scan(src interface{}) error {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-func (src *LabelableType) Value() (driver.Value, error) {
+func (src *CommentableType) Value() (driver.Value, error) {
 	switch src.Status {
 	case pgtype.Present:
 		return src.V.String(), nil

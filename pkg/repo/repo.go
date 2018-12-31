@@ -21,29 +21,29 @@ import (
 type key string
 
 const (
-	appledRepoKey                   key = "appled"
-	assetRepoKey                    key = "asset"
-	courseRepoKey                   key = "course"
-	courseLessonRepoKey             key = "course_lesson"
-	emailRepoKey                    key = "email"
-	enrolledRepoKey                 key = "enrolled"
-	evtRepoKey                      key = "evt"
-	labelRepoKey                    key = "label"
-	labeledRepoKey                  key = "labeled"
-	lessonRepoKey                   key = "lesson"
-	lessonCommentRepoKey            key = "lesson_comment"
-	lessonDraftBackupRepoKey        key = "lesson_draft_backup"
-	lessonCommentDraftBackupRepoKey key = "lesson_comment_draft_backup"
-	notificationRepoKey             key = "notification"
-	permRepoKey                     key = "perm"
-	prtRepoKey                      key = "prt"
-	eventRepoKey                    key = "event"
-	studyRepoKey                    key = "study"
-	topicRepoKey                    key = "topic"
-	topicableRepoKey                key = "topicable"
-	topicedRepoKey                  key = "topiced"
-	userRepoKey                     key = "user"
-	userAssetRepoKey                key = "user_asset"
+	appledRepoKey             key = "appled"
+	assetRepoKey              key = "asset"
+	commentRepoKey            key = "comment"
+	commentDraftBackupRepoKey key = "comment_draft_backup"
+	courseRepoKey             key = "course"
+	courseLessonRepoKey       key = "course_lesson"
+	emailRepoKey              key = "email"
+	enrolledRepoKey           key = "enrolled"
+	evtRepoKey                key = "evt"
+	labelRepoKey              key = "label"
+	labeledRepoKey            key = "labeled"
+	lessonRepoKey             key = "lesson"
+	lessonDraftBackupRepoKey  key = "lesson_draft_backup"
+	notificationRepoKey       key = "notification"
+	permRepoKey               key = "perm"
+	prtRepoKey                key = "prt"
+	eventRepoKey              key = "event"
+	studyRepoKey              key = "study"
+	topicRepoKey              key = "topic"
+	topicableRepoKey          key = "topicable"
+	topicedRepoKey            key = "topiced"
+	userRepoKey               key = "user"
+	userAssetRepoKey          key = "user_asset"
 )
 
 var ErrConnClosed = errors.New("connection is closed")
@@ -70,27 +70,27 @@ func NewRepos(db data.Queryer, conf *myconf.Config) *Repos {
 		conf: conf,
 		db:   db,
 		lookup: map[key]Repo{
-			appledRepoKey:                   NewAppledRepo(conf),
-			assetRepoKey:                    NewAssetRepo(conf),
-			courseRepoKey:                   NewCourseRepo(conf),
-			courseLessonRepoKey:             NewCourseLessonRepo(conf),
-			emailRepoKey:                    NewEmailRepo(conf),
-			enrolledRepoKey:                 NewEnrolledRepo(conf),
-			evtRepoKey:                      NewEVTRepo(conf),
-			labelRepoKey:                    NewLabelRepo(conf),
-			labeledRepoKey:                  NewLabeledRepo(conf),
-			lessonRepoKey:                   NewLessonRepo(conf),
-			lessonCommentRepoKey:            NewLessonCommentRepo(conf),
-			lessonDraftBackupRepoKey:        NewLessonDraftBackupRepo(conf),
-			lessonCommentDraftBackupRepoKey: NewLessonCommentDraftBackupRepo(conf),
-			notificationRepoKey:             NewNotificationRepo(conf),
-			prtRepoKey:                      NewPRTRepo(conf),
-			eventRepoKey:                    NewEventRepo(conf),
-			studyRepoKey:                    NewStudyRepo(conf),
-			topicRepoKey:                    NewTopicRepo(conf),
-			topicedRepoKey:                  NewTopicedRepo(conf),
-			userRepoKey:                     NewUserRepo(conf),
-			userAssetRepoKey:                NewUserAssetRepo(conf),
+			appledRepoKey:             NewAppledRepo(conf),
+			assetRepoKey:              NewAssetRepo(conf),
+			commentRepoKey:            NewCommentRepo(conf),
+			commentDraftBackupRepoKey: NewCommentDraftBackupRepo(conf),
+			courseRepoKey:             NewCourseRepo(conf),
+			courseLessonRepoKey:       NewCourseLessonRepo(conf),
+			emailRepoKey:              NewEmailRepo(conf),
+			enrolledRepoKey:           NewEnrolledRepo(conf),
+			evtRepoKey:                NewEVTRepo(conf),
+			labelRepoKey:              NewLabelRepo(conf),
+			labeledRepoKey:            NewLabeledRepo(conf),
+			lessonRepoKey:             NewLessonRepo(conf),
+			lessonDraftBackupRepoKey:  NewLessonDraftBackupRepo(conf),
+			notificationRepoKey:       NewNotificationRepo(conf),
+			prtRepoKey:                NewPRTRepo(conf),
+			eventRepoKey:              NewEventRepo(conf),
+			studyRepoKey:              NewStudyRepo(conf),
+			topicRepoKey:              NewTopicRepo(conf),
+			topicedRepoKey:            NewTopicedRepo(conf),
+			userRepoKey:               NewUserRepo(conf),
+			userAssetRepoKey:          NewUserAssetRepo(conf),
 		},
 	}
 }
@@ -120,6 +120,16 @@ func (r *Repos) Appled() *AppledRepo {
 
 func (r *Repos) Asset() *AssetRepo {
 	repo, _ := r.lookup[assetRepoKey].(*AssetRepo)
+	return repo
+}
+
+func (r *Repos) Comment() *CommentRepo {
+	repo, _ := r.lookup[commentRepoKey].(*CommentRepo)
+	return repo
+}
+
+func (r *Repos) CommentDraftBackup() *CommentDraftBackupRepo {
+	repo, _ := r.lookup[commentDraftBackupRepoKey].(*CommentDraftBackupRepo)
 	return repo
 }
 
@@ -168,18 +178,8 @@ func (r *Repos) Lesson() *LessonRepo {
 	return repo
 }
 
-func (r *Repos) LessonComment() *LessonCommentRepo {
-	repo, _ := r.lookup[lessonCommentRepoKey].(*LessonCommentRepo)
-	return repo
-}
-
 func (r *Repos) LessonDraftBackup() *LessonDraftBackupRepo {
 	repo, _ := r.lookup[lessonDraftBackupRepoKey].(*LessonDraftBackupRepo)
-	return repo
-}
-
-func (r *Repos) LessonCommentDraftBackup() *LessonCommentDraftBackupRepo {
-	repo, _ := r.lookup[lessonCommentDraftBackupRepoKey].(*LessonCommentDraftBackupRepo)
 	return repo
 }
 
@@ -249,6 +249,22 @@ func (r *Repos) GetAppleable(
 	}
 }
 
+func (r *Repos) GetCommentable(
+	ctx context.Context,
+	nodeID *mytype.OID,
+) (NodePermit, error) {
+	switch nodeID.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeID.String)
+	case "UserAsset":
+		return r.UserAsset().Get(ctx, nodeID.String)
+	default:
+		err := fmt.Errorf("invalid type '%s' for commentable id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+}
+
 func (r *Repos) GetCreateable(
 	ctx context.Context,
 	nodeID *mytype.OID,
@@ -294,8 +310,8 @@ func (r *Repos) GetPublishable(
 		return r.Course().Get(ctx, nodeID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, nodeID.String)
-	case "LessonComment":
-		return r.LessonComment().Get(ctx, nodeID.String)
+	case "Comment":
+		return r.Comment().Get(ctx, nodeID.String)
 	default:
 		err := fmt.Errorf("invalid type '%s' for publishable id", nodeID.Type)
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -340,10 +356,12 @@ func (r *Repos) GetLabelable(
 	labelableID *mytype.OID,
 ) (NodePermit, error) {
 	switch labelableID.Type {
+	case "Comment":
+		return r.Comment().Get(ctx, labelableID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, labelableID.String)
-	case "LessonComment":
-		return r.LessonComment().Get(ctx, labelableID.String)
+	case "UserAsset":
+		return r.UserAsset().Get(ctx, labelableID.String)
 	default:
 		err := fmt.Errorf("invalid type '%s' for labelable id", labelableID.Type)
 		mylog.Log.WithError(err).Error(util.Trace(""))
@@ -366,8 +384,8 @@ func (r *Repos) GetNode(
 		return r.Label().Get(ctx, nodeID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, nodeID.String)
-	case "LessonComment":
-		return r.LessonComment().Get(ctx, nodeID.String)
+	case "Comment":
+		return r.Comment().Get(ctx, nodeID.String)
 	case "Notification":
 		return r.Notification().Get(ctx, nodeID.String)
 	case "Study":
@@ -380,6 +398,22 @@ func (r *Repos) GetNode(
 		return r.UserAsset().Get(ctx, nodeID.String)
 	default:
 		err := fmt.Errorf("invalid type '%s' for node id", nodeID.Type)
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+}
+
+func (r *Repos) GetNotificationSubject(
+	ctx context.Context,
+	nodeID *mytype.OID,
+) (NodePermit, error) {
+	switch nodeID.Type {
+	case "Lesson":
+		return r.Lesson().Get(ctx, nodeID.String)
+	case "UserAsset":
+		return r.UserAsset().Get(ctx, nodeID.String)
+	default:
+		err := fmt.Errorf("invalid type '%s' for notification subject id", nodeID.Type)
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}

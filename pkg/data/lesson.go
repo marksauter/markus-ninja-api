@@ -128,9 +128,10 @@ func CountLessonByLabel(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.label_id = ` + args.Append(labelID)
+		return from + `.label_id = ` + args.Append(labelID) + `
+			AND ` + from + `.type = 'Lesson'`
 	}
-	from := "labeled_lesson"
+	from := "labeled"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countLessonByLabel", sql)

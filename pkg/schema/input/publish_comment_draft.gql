@@ -1,0 +1,5 @@
+# Input type for PublishCommentDraft.
+input PublishCommentDraftInput {
+  # ID of the comment.
+  commentId: ID!
+}

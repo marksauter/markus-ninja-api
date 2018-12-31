@@ -178,6 +178,21 @@ func (r *UserAssetRepo) CheckConnection() error {
 
 // Service methods
 
+func (r *UserAssetRepo) CountByLabel(
+	ctx context.Context,
+	labelID string,
+	filters *data.UserAssetFilterOptions,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
+	}
+	return data.CountUserAssetByLabel(db, labelID, filters)
+}
+
 func (r *UserAssetRepo) CountBySearch(
 	ctx context.Context,
 	filters *data.UserAssetFilterOptions,
@@ -368,6 +383,41 @@ func (r *UserAssetRepo) GetByUserStudyAndName(
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+}
+
+func (r *UserAssetRepo) GetByLabel(
+	ctx context.Context,
+	labelID string,
+	po *data.PageOptions,
+	filters *data.UserAssetFilterOptions,
+) ([]*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	userAssets, err := data.GetUserAssetByLabel(db, labelID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
+	if len(userAssets) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		for i, l := range userAssets {
+			userAssetPermits[i] = &UserAssetPermit{fieldPermFn, l}
+		}
+	}
+	return userAssetPermits, nil
 }
 
 func (r *UserAssetRepo) GetByStudy(

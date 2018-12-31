@@ -1,5 +1,0 @@
-# Input type for ResetLessonCommentDraft.
-input ResetLessonCommentDraftInput {
-  # ID of the lesson comment.
-  lessonCommentId: ID!
-}

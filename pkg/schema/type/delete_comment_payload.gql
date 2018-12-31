@@ -1,0 +1,8 @@
+# Return type for DeleteComment.
+type DeleteCommentPayload {
+  # The deleted comment id.
+  deletedCommentId: ID!
+
+  # The commentable the deleted comment was for.
+  commentable: Commentable!
+}
