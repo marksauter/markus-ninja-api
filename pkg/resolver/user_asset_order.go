@@ -10,13 +10,16 @@ import (
 type UserAssetOrderField int
 
 const (
-	UserAssetCreatedAt UserAssetOrderField = iota
+	UserAssetActivityNumber UserAssetOrderField = iota
+	UserAssetCreatedAt
 	UserAssetName
 	UserAssetUpdatedAt
 )
 
 func ParseUserAssetOrderField(s string) (UserAssetOrderField, error) {
 	switch strings.ToUpper(s) {
+	case "ACTIVITY_NUMBER":
+		return UserAssetActivityNumber, nil
 	case "CREATED_AT":
 		return UserAssetCreatedAt, nil
 	case "NAME":
@@ -31,6 +34,8 @@ func ParseUserAssetOrderField(s string) (UserAssetOrderField, error) {
 
 func (f UserAssetOrderField) String() string {
 	switch f {
+	case UserAssetActivityNumber:
+		return "activity_number"
 	case UserAssetCreatedAt:
 		return "created_at"
 	case UserAssetName:

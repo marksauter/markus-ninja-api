@@ -12,6 +12,12 @@ type UserAsset implements
   UniformResourceLocatable,
   Updateable 
 {
+  # The activity associated with the user asset, if any.
+  activity: Activity
+
+  # Identifies the user asset's number within its associated activity, if any.
+  activityNumber: Int
+
   # Returns a list of comments for the current user asset.
   comments(
     # Returns the elements in the list that come after the specified global ID.

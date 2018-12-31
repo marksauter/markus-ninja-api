@@ -52,6 +52,13 @@ type searchableConnectionResolver struct {
 	query       string
 }
 
+func (r *searchableConnectionResolver) ActivityCount(ctx context.Context) (int32, error) {
+	filters := &data.ActivityFilterOptions{
+		Search: &r.query,
+	}
+	return r.repos.Activity().CountBySearch(ctx, filters)
+}
+
 func (r *searchableConnectionResolver) CourseCount(ctx context.Context) (int32, error) {
 	filters := &data.CourseFilterOptions{
 		IsPublished: util.NewBool(true),

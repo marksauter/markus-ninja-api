@@ -1,5 +1,8 @@
 # Properties by which asset connections can be ordered.
 enum UserAssetOrderField {
+  # Order assets by their number within an activity.
+  ACTIVITY_NUMBER
+
   # Order assets by creation time.
   CREATED_AT
 
