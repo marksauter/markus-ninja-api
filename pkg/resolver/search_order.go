@@ -73,6 +73,8 @@ func ParseSearchOrder(t SearchType, arg *OrderArg) (data.Order, error) {
 		}, nil
 	}
 	switch t {
+	case SearchTypeActivity:
+		return ParseActivityOrder(arg)
 	case SearchTypeCourse:
 		return ParseCourseOrder(arg)
 	case SearchTypeLesson:

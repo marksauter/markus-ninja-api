@@ -23,6 +23,25 @@ type userAssetResolver struct {
 	UserAsset *repo.UserAssetPermit
 }
 
+func (r *userAssetResolver) Activity(ctx context.Context) (*activityResolver, error) {
+	activityID, err := r.UserAsset.ActivityID()
+	if err != nil {
+		return nil, err
+	}
+	activity, err := r.Repos.Activity().Get(ctx, activityID.String)
+	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &activityResolver{Activity: activity, Conf: r.Conf, Repos: r.Repos}, nil
+}
+
+func (r *userAssetResolver) ActivityNumber() (*int32, error) {
+	return r.UserAsset.ActivityNumber()
+}
+
 func (r *userAssetResolver) Comments(
 	ctx context.Context,
 	args struct {

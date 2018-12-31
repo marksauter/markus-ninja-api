@@ -121,6 +121,18 @@ func (r *RootResolver) Search(
 	permits := []repo.NodePermit{}
 
 	switch searchType {
+	case SearchTypeActivity:
+		filters := &data.ActivityFilterOptions{
+			Search: &args.Query,
+		}
+		activities, err := r.Repos.Activity().Search(ctx, pageOptions, filters)
+		if err != nil {
+			return &resolver, err
+		}
+		permits = make([]repo.NodePermit, len(activities))
+		for i, l := range activities {
+			permits[i] = l
+		}
 	case SearchTypeCourse:
 		filters := &data.CourseFilterOptions{
 			IsPublished: util.NewBool(true),
