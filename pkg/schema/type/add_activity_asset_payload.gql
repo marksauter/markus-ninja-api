@@ -1,0 +1,8 @@
+# Return type for AddActivityAsset.
+type AddActivityAssetPayload {
+  # The activity added to.
+  activity: Activity!
+
+  # The edge from the activity's asset connection.
+  assetEdge: UserAssetEdge!
+}

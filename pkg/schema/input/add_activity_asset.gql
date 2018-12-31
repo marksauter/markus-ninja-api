@@ -1,0 +1,8 @@
+# Input type for AddActivityAsset.
+input AddActivityAssetInput {
+  # The Node ID of the activity.
+  activityId: ID!
+
+  # The Node ID of the asset.
+  assetId: ID!
+}

@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	ActivityEvent  = "ActivityEvent"
 	CourseEvent    = "CourseEvent"
 	LessonEvent    = "LessonEvent"
 	PublicEvent    = "PublicEvent"
@@ -48,6 +49,10 @@ func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID
 	}
 
 	return e, nil
+}
+
+func NewActivityEvent(payload *ActivityEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(ActivityEvent, payload, studyID, userID, public)
 }
 
 func NewCourseEvent(payload *CourseEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {

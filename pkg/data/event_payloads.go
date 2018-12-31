@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	ActivityCreated = "created"
+
 	CourseCreated   = "created"
 	CourseAppled    = "appled"
 	CourseUnappled  = "unappled"
@@ -29,14 +31,34 @@ const (
 	StudyAppled   = "appled"
 	StudyUnappled = "unappled"
 
-	UserAssetCommented  = "commented"
-	UserAssetCreated    = "created"
-	UserAssetLabeled    = "labeled"
-	UserAssetMentioned  = "mentioned"
-	UserAssetReferenced = "referenced"
-	UserAssetRenamed    = "renamed"
-	UserAssetUnlabeled  = "unlabeled"
+	UserAssetAddedToActivity     = "added_to_activity"
+	UserAssetCommented           = "commented"
+	UserAssetCreated             = "created"
+	UserAssetLabeled             = "labeled"
+	UserAssetMentioned           = "mentioned"
+	UserAssetReferenced          = "referenced"
+	UserAssetRemovedFromActivity = "removed_from_activity"
+	UserAssetRenamed             = "renamed"
+	UserAssetUnlabeled           = "unlabeled"
 )
+
+type ActivityEventPayload struct {
+	Action     string     `json:"action,omitempty"`
+	ActivityID mytype.OID `json:"activity_id,omitempty"`
+}
+
+func NewActivityCreatedPayload(activityID *mytype.OID) (*ActivityEventPayload, error) {
+	if activityID == nil {
+		return nil, errors.New("activityID must not be nil")
+	}
+	payload := &ActivityEventPayload{Action: ActivityCreated}
+	if err := payload.ActivityID.Set(activityID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
 
 type CourseEventPayload struct {
 	Action   string     `json:"action,omitempty"`
@@ -315,12 +337,30 @@ func NewStudyUnappledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 }
 
 type UserAssetEventPayload struct {
-	Action    string        `json:"action,omitempty"`
-	AssetID   mytype.OID    `json:"asset_id,omitempty"`
-	CommentID mytype.OID    `json:"comment_id,omitempty"`
-	LabelID   mytype.OID    `json:"label_id,omitempty"`
-	Rename    RenamePayload `json:"rename,omitempty"`
-	SourceID  mytype.OID    `json:"source_id,omitempty"`
+	Action     string        `json:"action,omitempty"`
+	ActivityID mytype.OID    `json:"activity_id,omitempty"`
+	AssetID    mytype.OID    `json:"asset_id,omitempty"`
+	CommentID  mytype.OID    `json:"comment_id,omitempty"`
+	LabelID    mytype.OID    `json:"label_id,omitempty"`
+	Rename     RenamePayload `json:"rename,omitempty"`
+	SourceID   mytype.OID    `json:"source_id,omitempty"`
+}
+
+func NewUserAssetAddedToActivityPayload(assetID, activityID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || activityID == nil {
+		return nil, errors.New("assetID and activityID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetAddedToActivity}
+	if err := payload.ActivityID.Set(activityID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
 }
 
 func NewUserAssetCommentedPayload(assetID, commentID *mytype.OID) (*UserAssetEventPayload, error) {
@@ -393,6 +433,23 @@ func NewUserAssetReferencedPayload(assetID, sourceID *mytype.OID) (*UserAssetEve
 		return nil, err
 	}
 	if err := payload.SourceID.Set(sourceID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewUserAssetRemovedFromActivityPayload(assetID, activityID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || activityID == nil {
+		return nil, errors.New("assetID and activityID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetRemovedFromActivity}
+	if err := payload.ActivityID.Set(activityID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if err := payload.AssetID.Set(assetID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}

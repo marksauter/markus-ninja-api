@@ -1,0 +1,8 @@
+# Return type for MoveActivityAsset.
+type MoveActivityAssetPayload {
+  # The activity in which the asset was moved.
+  activity: Activity!
+
+  # The edge from the activity's asset connection.
+  assetEdge: UserAssetEdge!
+}

@@ -1,0 +1,22 @@
+# Represents a added to activity event on a given subject.
+type AddedToActivityEvent implements 
+  UserAssetTimelineEvent,
+  Node
+{
+  # The activity to which the asset was added.
+  activity: Activity!
+
+  # The asset which was added.
+  asset: UserAsset!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  id: ID!
+
+  # The study from which the event occurred.
+  study: Study!
+
+  # The user who performed the event.
+  user: User!
+}

@@ -245,6 +245,60 @@ func (r *Permitter) ViewerCanAdmin(
 	}
 	vid := viewer.ID.String
 	switch node := node.(type) {
+	case data.Activity:
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			activity, err := r.repos.Activity().load.Get(ctx, node.ID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = &activity.UserID
+		}
+		return vid == userID.String, nil
+	case *data.Activity:
+		userID := &node.UserID
+		if node.UserID.Status == pgtype.Undefined {
+			activity, err := r.repos.Activity().load.Get(ctx, node.ID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			userID = &activity.UserID
+		}
+		return vid == userID.String, nil
+	case data.ActivityAsset:
+		activityID := &node.ActivityID
+		if activityID.Status == pgtype.Undefined {
+			activityAsset, err := r.repos.ActivityAsset().load.Get(ctx, node.AssetID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			activityID = &activityAsset.ActivityID
+		}
+		activity, err := r.repos.Activity().load.Get(ctx, activityID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == activity.UserID.String, nil
+	case *data.ActivityAsset:
+		activityID := &node.ActivityID
+		if activityID.Status == pgtype.Undefined {
+			activityAsset, err := r.repos.ActivityAsset().load.Get(ctx, node.AssetID.String)
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return false, err
+			}
+			activityID = &activityAsset.ActivityID
+		}
+		activity, err := r.repos.Activity().load.Get(ctx, activityID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == activity.UserID.String, nil
 	case data.Appled:
 		userID := &node.UserID
 		if node.UserID.Status == pgtype.Undefined {
@@ -675,6 +729,34 @@ func (r *Permitter) ViewerCanCreateWithOwnership(
 	}
 	vid := viewer.ID.String
 	switch node := node.(type) {
+	case data.Activity:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == study.UserID.String, nil
+	case *data.Activity:
+		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == study.UserID.String, nil
+	case data.ActivityAsset:
+		activity, err := r.repos.Activity().load.Get(ctx, node.ActivityID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == activity.UserID.String, nil
+	case *data.ActivityAsset:
+		activity, err := r.repos.Activity().load.Get(ctx, node.ActivityID.String)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return false, err
+		}
+		return vid == activity.UserID.String, nil
 	case data.Course:
 		study, err := r.repos.Study().load.Get(ctx, node.StudyID.String)
 		if err != nil {

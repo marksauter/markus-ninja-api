@@ -1,8 +1,8 @@
 # Represents an created event on a given subject.
 type CreatedEvent implements 
   Node,
-  UserActivityEvent,
-  StudyActivityEvent
+  UserTimelineEvent,
+  StudyTimelineEvent
 {
   # The createable assocated with this `created` event.
   createable: Createable!

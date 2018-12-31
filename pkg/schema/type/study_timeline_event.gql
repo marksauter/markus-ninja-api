@@ -1,37 +1,37 @@
-# An edge type for UserActivityEvent.
-type UserActivityEventEdge {
+# An edge type for StudyTimelineEvent.
+type StudyTimelineEventEdge {
   # A cursor for use in pagination.
   cursor: String!
 
   # The event at the end of the edge.
-  node: UserActivityEvent
+  node: StudyTimelineEvent
 }
 
-# A connection type for UserActivityEvent.
-type UserActivityConnection {
+# A connection type for StudyTimelineEvent.
+type StudyTimelineConnection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [UserActivityEventEdge]
+  edges: [StudyTimelineEventEdge]
 
   # A list of nodes.
-  nodes: [UserActivityEvent]
+  nodes: [StudyTimelineEvent]
 
   # The total count of items in the connection.
   totalCount: Int!
 }
 
-# A connection type for UserActivityEvent.
-type UserReceivedActivityConnection {
+# A connection type for StudyTimelineEvent.
+type StudyReceivedTimelineConnection {
   # Information to aid in pagination.
   pageInfo: PageInfo!
 
   # A list of edges.
-  edges: [UserActivityEventEdge]
+  edges: [StudyTimelineEventEdge]
 
   # A list of nodes.
-  nodes: [UserActivityEvent]
+  nodes: [StudyTimelineEvent]
 
   # The total count of items in the connection.
   totalCount: Int!

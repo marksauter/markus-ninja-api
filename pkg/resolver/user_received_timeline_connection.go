@@ -10,16 +10,16 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewUserReceivedActivityConnectionResolver(
+func NewUserReceivedTimelineConnectionResolver(
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	userID *mytype.OID,
 	repos *repo.Repos,
 	conf *myconf.Config,
-) (*userReceivedActivityConnectionResolver, error) {
-	edges := make([]*userActivityEventEdgeResolver, len(events))
+) (*userReceivedTimelineConnectionResolver, error) {
+	edges := make([]*userTimelineEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewUserActivityEventEdgeResolver(events[i], repos, conf)
+		edge, err := NewUserTimelineEventEdgeResolver(events[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -32,7 +32,7 @@ func NewUserReceivedActivityConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &userReceivedActivityConnectionResolver{
+	resolver := &userReceivedTimelineConnectionResolver{
 		conf:     conf,
 		edges:    edges,
 		events:   events,
@@ -43,26 +43,26 @@ func NewUserReceivedActivityConnectionResolver(
 	return resolver, nil
 }
 
-type userReceivedActivityConnectionResolver struct {
+type userReceivedTimelineConnectionResolver struct {
 	conf     *myconf.Config
-	edges    []*userActivityEventEdgeResolver
+	edges    []*userTimelineEventEdgeResolver
 	events   []*repo.EventPermit
 	pageInfo *pageInfoResolver
 	repos    *repo.Repos
 	userID   *mytype.OID
 }
 
-func (r *userReceivedActivityConnectionResolver) Edges() *[]*userActivityEventEdgeResolver {
+func (r *userReceivedTimelineConnectionResolver) Edges() *[]*userTimelineEventEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*userActivityEventEdgeResolver{}
+	return &[]*userTimelineEventEdgeResolver{}
 }
 
-func (r *userReceivedActivityConnectionResolver) Nodes(ctx context.Context) (*[]*userActivityEventResolver, error) {
+func (r *userReceivedTimelineConnectionResolver) Nodes(ctx context.Context) (*[]*userTimelineEventResolver, error) {
 	n := len(r.events)
-	nodes := make([]*userActivityEventResolver, 0, n)
+	nodes := make([]*userTimelineEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
@@ -70,20 +70,20 @@ func (r *userReceivedActivityConnectionResolver) Nodes(ctx context.Context) (*[]
 			if err != nil {
 				return nil, err
 			}
-			event, ok := resolver.(userActivityEvent)
+			event, ok := resolver.(userTimelineEvent)
 			if !ok {
-				return nil, errors.New("cannot convert resolver to user activity event")
+				return nil, errors.New("cannot convert resolver to user timeline event")
 			}
-			nodes = append(nodes, &userActivityEventResolver{event})
+			nodes = append(nodes, &userTimelineEventResolver{event})
 		}
 	}
 	return &nodes, nil
 }
 
-func (r *userReceivedActivityConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *userReceivedTimelineConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *userReceivedActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+func (r *userReceivedTimelineConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
 	return r.repos.Event().CountReceivedByUser(ctx, r.userID.String, nil)
 }

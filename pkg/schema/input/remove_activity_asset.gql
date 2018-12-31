@@ -1,0 +1,8 @@
+# Input type for RemoveActivityAsset.
+input RemoveActivityAssetInput {
+  # ID of the activity. 
+  activityId: ID!
+
+  # ID of the asset. 
+  assetId: ID!
+}

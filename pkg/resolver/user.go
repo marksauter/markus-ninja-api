@@ -27,34 +27,25 @@ func (r *userResolver) AccountUpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *userResolver) Activity(
+func (r *userResolver) Activities(
 	ctx context.Context,
 	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
+		After    *string
+		Before   *string
+		FilterBy *data.ActivityFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
 	},
-) (*userActivityConnectionResolver, error) {
-	resolver := userActivityConnectionResolver{}
-
-	filters := &data.EventFilterOptions{}
-	ok, err := r.IsViewer(ctx)
-	if err != nil && err != repo.ErrAccessDenied {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	} else if !ok {
-		filters.IsPublic = util.NewBool(true)
-	}
-
+) (*activityConnectionResolver, error) {
+	resolver := &activityConnectionResolver{}
 	userID, err := r.User.ID()
 	if err != nil {
-		return &resolver, err
+		return resolver, err
 	}
-	eventOrder, err := ParseEventOrder(args.OrderBy)
+	activityOrder, err := ParseActivityOrder(args.OrderBy)
 	if err != nil {
-		return &resolver, err
+		return resolver, err
 	}
 
 	pageOptions, err := data.NewPageOptions(
@@ -62,43 +53,38 @@ func (r *userResolver) Activity(
 		args.Before,
 		args.First,
 		args.Last,
-		eventOrder,
+		activityOrder,
 	)
 	if err != nil {
-		return &resolver, err
+		return resolver, err
 	}
 
-	eventTypes := []data.EventTypeFilter{
-		data.EventTypeFilter{
-			Type: mytype.CourseEvent.String(),
-		},
-		data.EventTypeFilter{
-			ActionIs: &[]string{mytype.PublishedAction.String()},
-			Type:     mytype.LessonEvent.String(),
-		},
-		data.EventTypeFilter{
-			Type: mytype.StudyEvent.String(),
-		},
+	filters := data.ActivityFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
 	}
-	filters.Types = &eventTypes
-	events, err := r.Repos.Event().GetByUser(
+
+	activities, err := r.Repos.Activity().GetByUser(
 		ctx,
 		userID.String,
 		pageOptions,
-		filters,
+		&filters,
 	)
 	if err != nil {
-		return &resolver, err
+		return resolver, err
 	}
-
-	return NewUserActivityConnectionResolver(
-		events,
+	resolver, err = NewActivityConnectionResolver(
+		activities,
 		pageOptions,
 		userID,
-		filters,
+		&filters,
 		r.Repos,
 		r.Conf,
 	)
+	if err != nil {
+		return resolver, err
+	}
+	return resolver, nil
 }
 
 func (r *userResolver) Appled(
@@ -209,7 +195,7 @@ func (r *userResolver) Assets(
 
 	userAssets, err := r.Repos.UserAsset().GetByUser(
 		ctx,
-		id,
+		id.String,
 		pageOptions,
 		args.FilterBy,
 	)
@@ -721,7 +707,7 @@ func (r *userResolver) ProfileUpdatedAt() (graphql.Time, error) {
 	return graphql.Time{t}, err
 }
 
-func (r *userResolver) ReceivedActivity(
+func (r *userResolver) ReceivedTimeline(
 	ctx context.Context,
 	args struct {
 		After   *string
@@ -730,7 +716,7 @@ func (r *userResolver) ReceivedActivity(
 		Last    *int32
 		OrderBy *OrderArg
 	},
-) (*userReceivedActivityConnectionResolver, error) {
+) (*userReceivedTimelineConnectionResolver, error) {
 	userID, err := r.User.ID()
 	if err != nil {
 		return nil, err
@@ -761,7 +747,7 @@ func (r *userResolver) ReceivedActivity(
 		return nil, err
 	}
 
-	return NewUserReceivedActivityConnectionResolver(
+	return NewUserReceivedTimelineConnectionResolver(
 		events,
 		pageOptions,
 		userID,
@@ -849,6 +835,80 @@ func (r *userResolver) Studies(
 		return nil, err
 	}
 	return resolver, nil
+}
+
+func (r *userResolver) Timeline(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*userTimelineConnectionResolver, error) {
+	resolver := userTimelineConnectionResolver{}
+
+	filters := &data.EventFilterOptions{}
+	ok, err := r.IsViewer(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublic = util.NewBool(true)
+	}
+
+	userID, err := r.User.ID()
+	if err != nil {
+		return &resolver, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return &resolver, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	eventTypes := []data.EventTypeFilter{
+		data.EventTypeFilter{
+			Type: mytype.CourseEvent.String(),
+		},
+		data.EventTypeFilter{
+			ActionIs: &[]string{mytype.PublishedAction.String()},
+			Type:     mytype.LessonEvent.String(),
+		},
+		data.EventTypeFilter{
+			Type: mytype.StudyEvent.String(),
+		},
+	}
+	filters.Types = &eventTypes
+	events, err := r.Repos.Event().GetByUser(
+		ctx,
+		userID.String,
+		pageOptions,
+		filters,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	return NewUserTimelineConnectionResolver(
+		events,
+		pageOptions,
+		userID,
+		filters,
+		r.Repos,
+		r.Conf,
+	)
 }
 
 func (r *userResolver) URL() (mygql.URI, error) {

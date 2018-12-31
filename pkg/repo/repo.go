@@ -21,6 +21,8 @@ import (
 type key string
 
 const (
+	activityRepoKey           key = "activity"
+	activityAssetRepoKey      key = "activity_asset"
 	appledRepoKey             key = "appled"
 	assetRepoKey              key = "asset"
 	commentRepoKey            key = "comment"
@@ -70,6 +72,8 @@ func NewRepos(db data.Queryer, conf *myconf.Config) *Repos {
 		conf: conf,
 		db:   db,
 		lookup: map[key]Repo{
+			activityRepoKey:           NewActivityRepo(conf),
+			activityAssetRepoKey:      NewActivityAssetRepo(conf),
 			appledRepoKey:             NewAppledRepo(conf),
 			assetRepoKey:              NewAssetRepo(conf),
 			commentRepoKey:            NewCommentRepo(conf),
@@ -111,6 +115,16 @@ func (r *Repos) CloseAll() {
 	for _, repo := range r.lookup {
 		repo.Close()
 	}
+}
+
+func (r *Repos) Activity() *ActivityRepo {
+	repo, _ := r.lookup[activityRepoKey].(*ActivityRepo)
+	return repo
+}
+
+func (r *Repos) ActivityAsset() *ActivityAssetRepo {
+	repo, _ := r.lookup[activityAssetRepoKey].(*ActivityAssetRepo)
+	return repo
 }
 
 func (r *Repos) Appled() *AppledRepo {
@@ -270,6 +284,8 @@ func (r *Repos) GetCreateable(
 	nodeID *mytype.OID,
 ) (NodePermit, error) {
 	switch nodeID.Type {
+	case "Activity":
+		return r.Activity().Get(ctx, nodeID.String)
 	case "Course":
 		return r.Course().Get(ctx, nodeID.String)
 	case "Lesson":
@@ -374,6 +390,10 @@ func (r *Repos) GetNode(
 	nodeID *mytype.OID,
 ) (NodePermit, error) {
 	switch nodeID.Type {
+	case "Activity":
+		return r.Activity().Get(ctx, nodeID.String)
+	case "Comment":
+		return r.Comment().Get(ctx, nodeID.String)
 	case "Course":
 		return r.Course().Get(ctx, nodeID.String)
 	case "Email":
@@ -384,8 +404,6 @@ func (r *Repos) GetNode(
 		return r.Label().Get(ctx, nodeID.String)
 	case "Lesson":
 		return r.Lesson().Get(ctx, nodeID.String)
-	case "Comment":
-		return r.Comment().Get(ctx, nodeID.String)
 	case "Notification":
 		return r.Notification().Get(ctx, nodeID.String)
 	case "Study":

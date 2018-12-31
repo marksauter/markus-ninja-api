@@ -1,4 +1,56 @@
 permissions:
+  # Everyone can read activities.
+  - operation: Read Activity
+
+  # Only authenticated users can create activities.
+  - operation: Create Activity
+    authenticated: true
+    roles:
+      - user
+    fields:
+      - description
+      - lesson_id
+      - name
+      - study_id
+      - user_id
+  # Only owners can update/delete activities.
+  - operation: Update Activity
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - description
+      - name
+  - operation: Delete Activity
+    authenticated: true
+    roles:
+      - owner
+
+
+
+  # Only owners can connect/disconnect activity assets.
+  - operation: Connect ActivityAsset 
+    authenticated: true
+    roles:
+      - owner
+  - operation: Disconnect ActivityAsset
+    authenticated: true
+    roles:
+      - owner
+  # Owners can read/update activity assets.
+  - operation: Read ActivityAsset
+    authenticated: true
+    roles:
+      - owner
+  - operation: Update ActivityAsset
+    authenticated: true
+    roles:
+      - owner
+    fields:
+      - number
+
+
+
   # Only authenticated users can connect/disconnect appled.
   - operation: Connect Appled 
     authenticated: true

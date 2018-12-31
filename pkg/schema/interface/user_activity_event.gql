@@ -1,4 +1,0 @@
-# Events that can be a part of a user's activity.
-interface UserActivityEvent {
-  id: ID!
-}

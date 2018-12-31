@@ -1,0 +1,8 @@
+# Return type for CreateActivity.
+type CreateActivityPayload {
+  # The edge from the study's activity connection.
+  activityEdge: ActivityEdge!
+
+  # The study for which the activity was created.
+  study: Study!
+}

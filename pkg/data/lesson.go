@@ -258,7 +258,7 @@ func existsLesson(
 const existsLessonByIDSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		WHERE id = $1
 	)
 `
@@ -279,7 +279,7 @@ func ExistsLesson(
 const existsLessonByNumberSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		JOIN study ON study.id = $1
 		WHERE lesson.number = $2
 	)
@@ -314,7 +314,7 @@ func ExistsLessonByNumber(
 const existsLessonByOwnerStudyAndNumberSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		JOIN account ON account.login = $1
 		JOIN study ON study.name = $2
 		WHERE lesson.number = $3
