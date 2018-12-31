@@ -220,6 +220,8 @@ func initDB(conf *myconf.Config) error {
 	}
 
 	modelTypes := []interface{}{
+		new(data.Activity),
+		new(data.ActivityAsset),
 		new(data.Appled),
 		new(data.Asset),
 		new(data.Comment),

@@ -24,31 +24,49 @@ type studyResolver struct {
 
 func (r *studyResolver) Activity(
 	ctx context.Context,
-	args struct {
-		After   *string
-		Before  *string
-		First   *int32
-		Last    *int32
-		OrderBy *OrderArg
-	},
-) (*studyActivityConnectionResolver, error) {
-	resolver := studyActivityConnectionResolver{}
-
-	filters := &data.EventFilterOptions{}
-	ok, err := r.ViewerCanAdmin(ctx)
-	if err != nil && err != repo.ErrAccessDenied {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	} else if !ok {
-		filters.IsPublic = util.NewBool(true)
-	}
-
+	args struct{ Number int32 },
+) (*activityResolver, error) {
 	studyID, err := r.Study.ID()
 	if err != nil {
+		return nil, err
+	}
+	activity, err := r.Repos.Activity().GetByNumber(
+		ctx,
+		studyID.String,
+		args.Number,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &activityResolver{
+		Conf:     r.Conf,
+		Activity: activity,
+		Repos:    r.Repos,
+	}, nil
+}
+
+func (r *studyResolver) Activities(
+	ctx context.Context,
+	args struct {
+		After    *string
+		Before   *string
+		FilterBy *data.ActivityFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
+	},
+) (*activityConnectionResolver, error) {
+	resolver := activityConnectionResolver{}
+	studyID, err := r.Study.ID()
+	if err != nil {
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
 		return &resolver, err
 	}
-	eventOrder, err := ParseEventOrder(args.OrderBy)
+	activityOrder, err := ParseActivityOrder(args.OrderBy)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return &resolver, err
 	}
 
@@ -57,46 +75,41 @@ func (r *studyResolver) Activity(
 		args.Before,
 		args.First,
 		args.Last,
-		eventOrder,
+		activityOrder,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return &resolver, err
 	}
 
-	eventTypes := []data.EventTypeFilter{
-		data.EventTypeFilter{
-			ActionIs: &[]string{
-				mytype.CreatedAction.String(),
-			},
-			Type: mytype.CourseEvent.String(),
-		},
-		data.EventTypeFilter{
-			ActionIs: &[]string{
-				mytype.CreatedAction.String(),
-				mytype.PublishedAction.String(),
-			},
-			Type: mytype.LessonEvent.String(),
-		},
+	filters := data.ActivityFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
 	}
-	filters.Types = &eventTypes
-	events, err := r.Repos.Event().GetByStudy(
+
+	activities, err := r.Repos.Activity().GetByStudy(
 		ctx,
 		studyID.String,
 		pageOptions,
-		filters,
+		&filters,
 	)
 	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
 		return &resolver, err
 	}
-
-	return NewStudyActivityConnectionResolver(
-		events,
+	activityConnectionResolver, err := NewActivityConnectionResolver(
+		activities,
 		pageOptions,
 		studyID,
-		filters,
+		&filters,
 		r.Repos,
 		r.Conf,
 	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+	return activityConnectionResolver, nil
 }
 
 func (r *studyResolver) AdvancedAt() (*graphql.Time, error) {
@@ -227,7 +240,7 @@ func (r *studyResolver) Assets(
 	}
 	userAssets, err := r.Repos.UserAsset().GetByStudy(
 		ctx,
-		studyID,
+		studyID.String,
 		pageOptions,
 		args.FilterBy,
 	)
@@ -753,6 +766,83 @@ func (r *studyResolver) ResourcePath(
 	}
 	uri = mygql.URI(fmt.Sprintf("%s/%s", ownerResourcePath, name))
 	return uri, nil
+}
+
+func (r *studyResolver) Timeline(
+	ctx context.Context,
+	args struct {
+		After   *string
+		Before  *string
+		First   *int32
+		Last    *int32
+		OrderBy *OrderArg
+	},
+) (*studyTimelineConnectionResolver, error) {
+	resolver := studyTimelineConnectionResolver{}
+
+	filters := &data.EventFilterOptions{}
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != nil && err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublic = util.NewBool(true)
+	}
+
+	studyID, err := r.Study.ID()
+	if err != nil {
+		return &resolver, err
+	}
+	eventOrder, err := ParseEventOrder(args.OrderBy)
+	if err != nil {
+		return &resolver, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		eventOrder,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	eventTypes := []data.EventTypeFilter{
+		data.EventTypeFilter{
+			ActionIs: &[]string{
+				mytype.CreatedAction.String(),
+			},
+			Type: mytype.CourseEvent.String(),
+		},
+		data.EventTypeFilter{
+			ActionIs: &[]string{
+				mytype.CreatedAction.String(),
+				mytype.PublishedAction.String(),
+			},
+			Type: mytype.LessonEvent.String(),
+		},
+	}
+	filters.Types = &eventTypes
+	events, err := r.Repos.Event().GetByStudy(
+		ctx,
+		studyID.String,
+		pageOptions,
+		filters,
+	)
+	if err != nil {
+		return &resolver, err
+	}
+
+	return NewStudyTimelineConnectionResolver(
+		events,
+		pageOptions,
+		studyID,
+		filters,
+		r.Repos,
+		r.Conf,
+	)
 }
 
 func (r *studyResolver) Topics(

@@ -9,7 +9,9 @@ import (
 type NodeType int
 
 const (
-	AppledNodeType NodeType = iota
+	ActivityNodeType NodeType = iota
+	ActivityAssetNodeType
+	AppledNodeType
 	AssetNodeType
 	CommentNodeType
 	CommentDraftBackupNodeType
@@ -34,6 +36,10 @@ const (
 
 func (nt NodeType) String() string {
 	switch nt {
+	case ActivityNodeType:
+		return "Activity"
+	case ActivityAssetNodeType:
+		return "ActivityAsset"
 	case AppledNodeType:
 		return "Appled"
 	case AssetNodeType:
@@ -83,6 +89,10 @@ func (nt NodeType) String() string {
 
 func ParseNodeType(nodeType string) (NodeType, error) {
 	switch strings.ToLower(nodeType) {
+	case "activity":
+		return ActivityNodeType, nil
+	case "activityasset":
+		return ActivityAssetNodeType, nil
 	case "appled":
 		return AppledNodeType, nil
 	case "asset":

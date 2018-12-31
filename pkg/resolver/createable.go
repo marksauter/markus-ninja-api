@@ -12,6 +12,11 @@ type createableResolver struct {
 	createable
 }
 
+func (r *createableResolver) ToActivity() (*activityResolver, bool) {
+	resolver, ok := r.createable.(*activityResolver)
+	return resolver, ok
+}
+
 func (r *createableResolver) ToCourse() (*courseResolver, bool) {
 	resolver, ok := r.createable.(*courseResolver)
 	return resolver, ok

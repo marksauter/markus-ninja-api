@@ -1,0 +1,11 @@
+# Input type for MoveActivityAsset.
+input MoveActivityAssetInput {
+  # ID of the asset to move after.
+  afterAssetId: ID!
+
+  # ID of the activity.
+  activityId: ID!
+
+  # ID of the asset.
+  assetId: ID!
+}

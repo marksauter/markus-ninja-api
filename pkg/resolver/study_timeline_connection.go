@@ -10,17 +10,17 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewStudyActivityConnectionResolver(
+func NewStudyTimelineConnectionResolver(
 	events []*repo.EventPermit,
 	pageOptions *data.PageOptions,
 	studyID *mytype.OID,
 	filters *data.EventFilterOptions,
 	repos *repo.Repos,
 	conf *myconf.Config,
-) (*studyActivityConnectionResolver, error) {
-	edges := make([]*studyActivityEventEdgeResolver, len(events))
+) (*studyTimelineConnectionResolver, error) {
+	edges := make([]*studyTimelineEventEdgeResolver, len(events))
 	for i := range edges {
-		edge, err := NewStudyActivityEventEdgeResolver(events[i], repos, conf)
+		edge, err := NewStudyTimelineEventEdgeResolver(events[i], repos, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +33,7 @@ func NewStudyActivityConnectionResolver(
 
 	pageInfo := NewPageInfoResolver(edgeResolvers, pageOptions)
 
-	resolver := &studyActivityConnectionResolver{
+	resolver := &studyTimelineConnectionResolver{
 		conf:     conf,
 		edges:    edges,
 		events:   events,
@@ -45,9 +45,9 @@ func NewStudyActivityConnectionResolver(
 	return resolver, nil
 }
 
-type studyActivityConnectionResolver struct {
+type studyTimelineConnectionResolver struct {
 	conf     *myconf.Config
-	edges    []*studyActivityEventEdgeResolver
+	edges    []*studyTimelineEventEdgeResolver
 	events   []*repo.EventPermit
 	filters  *data.EventFilterOptions
 	pageInfo *pageInfoResolver
@@ -55,17 +55,17 @@ type studyActivityConnectionResolver struct {
 	studyID  *mytype.OID
 }
 
-func (r *studyActivityConnectionResolver) Edges() *[]*studyActivityEventEdgeResolver {
+func (r *studyTimelineConnectionResolver) Edges() *[]*studyTimelineEventEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
 		return &edges
 	}
-	return &[]*studyActivityEventEdgeResolver{}
+	return &[]*studyTimelineEventEdgeResolver{}
 }
 
-func (r *studyActivityConnectionResolver) Nodes(ctx context.Context) (*[]*studyActivityEventResolver, error) {
+func (r *studyTimelineConnectionResolver) Nodes(ctx context.Context) (*[]*studyTimelineEventResolver, error) {
 	n := len(r.events)
-	nodes := make([]*studyActivityEventResolver, 0, n)
+	nodes := make([]*studyTimelineEventResolver, 0, n)
 	if n > 0 && !r.pageInfo.isEmpty {
 		events := r.events[r.pageInfo.start : r.pageInfo.end+1]
 		for _, e := range events {
@@ -73,20 +73,20 @@ func (r *studyActivityConnectionResolver) Nodes(ctx context.Context) (*[]*studyA
 			if err != nil {
 				return nil, err
 			}
-			event, ok := resolver.(studyActivityEvent)
+			event, ok := resolver.(studyTimelineEvent)
 			if !ok {
-				return nil, errors.New("cannot convert resolver to study activity event")
+				return nil, errors.New("cannot convert resolver to study timeline event")
 			}
-			nodes = append(nodes, &studyActivityEventResolver{event})
+			nodes = append(nodes, &studyTimelineEventResolver{event})
 		}
 	}
 	return &nodes, nil
 }
 
-func (r *studyActivityConnectionResolver) PageInfo() (*pageInfoResolver, error) {
+func (r *studyTimelineConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
 }
 
-func (r *studyActivityConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
+func (r *studyTimelineConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
 	return r.repos.Event().CountByStudy(ctx, r.studyID.String, r.filters)
 }

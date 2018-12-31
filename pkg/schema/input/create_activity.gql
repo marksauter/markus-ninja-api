@@ -1,0 +1,14 @@
+# Input type for CreateActivity.
+input CreateActivityInput {
+  # A brief description of the activity.
+  description: String
+
+  # The ID of the lesson referenced by this activity. 
+  lessonId: ID!
+
+  # The name of the activity.
+  name: String!
+
+  # The ID of the study under which to create the activity. 
+  studyId: ID!
+}

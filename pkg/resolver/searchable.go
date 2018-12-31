@@ -12,6 +12,11 @@ type searchableResolver struct {
 	searchable
 }
 
+func (r *searchableResolver) ToActivity() (*activityResolver, bool) {
+	resolver, ok := r.searchable.(*activityResolver)
+	return resolver, ok
+}
+
 func (r *searchableResolver) ToCourse() (*courseResolver, bool) {
 	resolver, ok := r.searchable.(*courseResolver)
 	return resolver, ok

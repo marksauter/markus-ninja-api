@@ -1,6 +1,6 @@
 # Represents a 'unappled' event on a given appleable.
 type UnappledEvent implements 
-  UserActivityEvent,
+  UserTimelineEvent,
   Node
 {
   # The appleable assocated with this 'unappled' event.
