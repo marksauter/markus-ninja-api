@@ -1,4 +1,10 @@
 # Things that can be commented on.
 interface Commentable {
   id: ID!
+
+  # The study associated with this commentable.
+  study: Study!
+
+  # The viewer's current working draft comment.
+  viewerNewComment: Comment!
 }

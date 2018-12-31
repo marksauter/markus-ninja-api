@@ -14,9 +14,6 @@ const (
 	CourseUnappled  = "unappled"
 	CoursePublished = "published"
 
-	LessonCommentCreated   = "created"
-	LessonCommentMentioned = "mentioned"
-
 	LessonAddedToCourse     = "added_to_course"
 	LessonCreated           = "created"
 	LessonCommented         = "commented"
@@ -32,10 +29,13 @@ const (
 	StudyAppled   = "appled"
 	StudyUnappled = "unappled"
 
+	UserAssetCommented  = "commented"
 	UserAssetCreated    = "created"
+	UserAssetLabeled    = "labeled"
 	UserAssetMentioned  = "mentioned"
 	UserAssetReferenced = "referenced"
 	UserAssetRenamed    = "renamed"
+	UserAssetUnlabeled  = "unlabeled"
 )
 
 type CourseEventPayload struct {
@@ -315,10 +315,29 @@ func NewStudyUnappledPayload(studyID *mytype.OID) (*StudyEventPayload, error) {
 }
 
 type UserAssetEventPayload struct {
-	Action   string        `json:"action,omitempty"`
-	AssetID  mytype.OID    `json:"asset_id,omitempty"`
-	Rename   RenamePayload `json:"rename,omitempty"`
-	SourceID mytype.OID    `json:"source_id,omitempty"`
+	Action    string        `json:"action,omitempty"`
+	AssetID   mytype.OID    `json:"asset_id,omitempty"`
+	CommentID mytype.OID    `json:"comment_id,omitempty"`
+	LabelID   mytype.OID    `json:"label_id,omitempty"`
+	Rename    RenamePayload `json:"rename,omitempty"`
+	SourceID  mytype.OID    `json:"source_id,omitempty"`
+}
+
+func NewUserAssetCommentedPayload(assetID, commentID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || commentID == nil {
+		return nil, errors.New("assetID and commentID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetCommented}
+	if err := payload.CommentID.Set(commentID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
 }
 
 func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, error) {
@@ -326,6 +345,36 @@ func NewUserAssetCreatedPayload(assetID *mytype.OID) (*UserAssetEventPayload, er
 		return nil, errors.New("assetID must not be nil")
 	}
 	payload := &UserAssetEventPayload{Action: UserAssetCreated}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewUserAssetMentionedPayload(assetID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil {
+		return nil, errors.New("assetID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetMentioned}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewUserAssetLabeledPayload(assetID, labelID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || labelID == nil {
+		return nil, errors.New("assetID and labelID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetLabeled}
+	if err := payload.LabelID.Set(labelID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
 	if err := payload.AssetID.Set(assetID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
@@ -361,6 +410,23 @@ func NewUserAssetRenamedPayload(assetID *mytype.OID, from, to string) (*UserAsse
 			From: from,
 			To:   to,
 		},
+	}
+	if err := payload.AssetID.Set(assetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func NewUserAssetUnlabeledPayload(assetID, labelID *mytype.OID) (*UserAssetEventPayload, error) {
+	if assetID == nil || labelID == nil {
+		return nil, errors.New("assetID and labelID must not be nil")
+	}
+	payload := &UserAssetEventPayload{Action: UserAssetUnlabeled}
+	if err := payload.LabelID.Set(labelID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
 	}
 	if err := payload.AssetID.Set(assetID); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))

@@ -250,6 +250,70 @@ func (r *studyResolver) Assets(
 	return userAssetConnectionResolver, nil
 }
 
+func (r *studyResolver) Comments(
+	ctx context.Context,
+	args struct {
+		After  *string
+		Before *string
+		First  *int32
+		Last   *int32
+	},
+) (*commentConnectionResolver, error) {
+	resolver := commentConnectionResolver{}
+	studyID, err := r.Study.ID()
+	if err != nil {
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
+	}
+	commentOrder := NewCommentOrder(data.DESC, CommentCreatedAt)
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		commentOrder,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+
+	filters := data.CommentFilterOptions{}
+	ok, err := r.ViewerCanAdmin(ctx)
+	if err != repo.ErrAccessDenied {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	} else if !ok {
+		filters.IsPublished = util.NewBool(true)
+	}
+	comments, err := r.Repos.Comment().GetByStudy(
+		ctx,
+		studyID.String,
+		pageOptions,
+		&filters,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+	commentConnectionResolver, err := NewCommentConnectionResolver(
+		comments,
+		pageOptions,
+		studyID,
+		&filters,
+		r.Repos,
+		r.Conf,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+	return commentConnectionResolver, nil
+}
+
 func (r *studyResolver) Course(
 	ctx context.Context,
 	args struct{ Number int32 },
@@ -631,70 +695,6 @@ func (r *studyResolver) Lessons(
 		return &resolver, err
 	}
 	return lessonConnectionResolver, nil
-}
-
-func (r *studyResolver) LessonComments(
-	ctx context.Context,
-	args struct {
-		After  *string
-		Before *string
-		First  *int32
-		Last   *int32
-	},
-) (*lessonCommentConnectionResolver, error) {
-	resolver := lessonCommentConnectionResolver{}
-	studyID, err := r.Study.ID()
-	if err != nil {
-		if err != repo.ErrAccessDenied {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-		}
-		return &resolver, err
-	}
-	lessonCommentOrder := NewLessonCommentOrder(data.DESC, LessonCommentCreatedAt)
-
-	pageOptions, err := data.NewPageOptions(
-		args.After,
-		args.Before,
-		args.First,
-		args.Last,
-		lessonCommentOrder,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	}
-
-	filters := data.LessonCommentFilterOptions{}
-	ok, err := r.ViewerCanAdmin(ctx)
-	if err != repo.ErrAccessDenied {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	} else if !ok {
-		filters.IsPublished = util.NewBool(true)
-	}
-	lessonComments, err := r.Repos.LessonComment().GetByStudy(
-		ctx,
-		studyID.String,
-		pageOptions,
-		&filters,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	}
-	lessonCommentConnectionResolver, err := NewLessonCommentConnectionResolver(
-		lessonComments,
-		pageOptions,
-		studyID,
-		&filters,
-		r.Repos,
-		r.Conf,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return &resolver, err
-	}
-	return lessonCommentConnectionResolver, nil
 }
 
 func (r *studyResolver) Name() (string, error) {

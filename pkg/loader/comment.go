@@ -11,8 +11,8 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
-func NewLessonCommentLoader() *LessonCommentLoader {
-	return &LessonCommentLoader{
+func NewCommentLoader() *CommentLoader {
+	return &CommentLoader{
 		batchGet: createLoader(
 			func(ctx context.Context, keys dataloader.Keys) []*dataloader.Result {
 				var (
@@ -31,8 +31,8 @@ func NewLessonCommentLoader() *LessonCommentLoader {
 							results[i] = &dataloader.Result{Error: &myctx.ErrNotFound{"queryer"}}
 							return
 						}
-						lessonComment, err := data.GetLessonComment(db, key.String())
-						results[i] = &dataloader.Result{Data: lessonComment, Error: err}
+						comment, err := data.GetComment(db, key.String())
+						results[i] = &dataloader.Result{Data: comment, Error: err}
 					}(i, key)
 				}
 
@@ -44,55 +44,55 @@ func NewLessonCommentLoader() *LessonCommentLoader {
 	}
 }
 
-type LessonCommentLoader struct {
+type CommentLoader struct {
 	batchGet *dataloader.Loader
 }
 
-func (r *LessonCommentLoader) Clear(id string) {
+func (r *CommentLoader) Clear(id string) {
 	ctx := context.Background()
 	r.batchGet.Clear(ctx, dataloader.StringKey(id))
 }
 
-func (r *LessonCommentLoader) ClearAll() {
+func (r *CommentLoader) ClearAll() {
 	r.batchGet.ClearAll()
 }
 
-func (r *LessonCommentLoader) Get(
+func (r *CommentLoader) Get(
 	ctx context.Context,
 	id string,
-) (*data.LessonComment, error) {
-	lessonCommentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
+) (*data.Comment, error) {
+	commentData, err := r.batchGet.Load(ctx, dataloader.StringKey(id))()
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
-	lessonComment, ok := lessonCommentData.(*data.LessonComment)
+	comment, ok := commentData.(*data.Comment)
 	if !ok {
 		err := ErrWrongType
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
 
-	return lessonComment, nil
+	return comment, nil
 }
 
-func (r *LessonCommentLoader) GetMany(
+func (r *CommentLoader) GetMany(
 	ctx context.Context,
 	ids *[]string,
-) ([]*data.LessonComment, []error) {
+) ([]*data.Comment, []error) {
 	keys := make(dataloader.Keys, len(*ids))
 	for i, k := range *ids {
 		keys[i] = dataloader.StringKey(k)
 	}
-	lessonCommentData, errs := r.batchGet.LoadMany(ctx, keys)()
+	commentData, errs := r.batchGet.LoadMany(ctx, keys)()
 	if errs != nil {
 		mylog.Log.WithField("errors", errs).Error(util.Trace(""))
 		return nil, errs
 	}
-	lessonComments := make([]*data.LessonComment, len(lessonCommentData))
-	for i, d := range lessonCommentData {
+	comments := make([]*data.Comment, len(commentData))
+	for i, d := range commentData {
 		var ok bool
-		lessonComments[i], ok = d.(*data.LessonComment)
+		comments[i], ok = d.(*data.Comment)
 		if !ok {
 			err := ErrWrongType
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -100,5 +100,5 @@ func (r *LessonCommentLoader) GetMany(
 		}
 	}
 
-	return lessonComments, nil
+	return comments, nil
 }

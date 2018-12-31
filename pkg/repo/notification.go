@@ -74,7 +74,7 @@ func (r *NotificationPermit) Subject() (string, error) {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
-	return r.notification.Subject.String, nil
+	return r.notification.Subject.String(), nil
 }
 
 func (r *NotificationPermit) SubjectID() (*mytype.OID, error) {

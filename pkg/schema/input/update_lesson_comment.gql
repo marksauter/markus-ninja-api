@@ -1,8 +1,0 @@
-# Input type for UpdateLessonComment.
-input UpdateLessonCommentInput {
-  # The draft of the lesson comment.
-  draft: String
-
-  # ID of the lesson comment.
-  lessonCommentId: ID!
-}

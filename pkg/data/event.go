@@ -11,12 +11,11 @@ import (
 )
 
 const (
-	CourseEvent        = "CourseEvent"
-	LessonCommentEvent = "LessonCommentEvent"
-	LessonEvent        = "LessonEvent"
-	PublicEvent        = "PublicEvent"
-	UserAssetEvent     = "UserAssetEvent"
-	StudyEvent         = "StudyEvent"
+	CourseEvent    = "CourseEvent"
+	LessonEvent    = "LessonEvent"
+	PublicEvent    = "PublicEvent"
+	UserAssetEvent = "UserAssetEvent"
+	StudyEvent     = "StudyEvent"
 )
 
 type Event struct {

@@ -85,9 +85,11 @@ func (r *labelConnectionResolver) TotalCount(ctx context.Context) (int32, error)
 		return n, nil
 	}
 	switch r.nodeID.Type {
+	case "Comment":
+		return r.repos.Label().CountByLabelable(ctx, r.nodeID.String, r.filters)
 	case "Lesson":
 		return r.repos.Label().CountByLabelable(ctx, r.nodeID.String, r.filters)
-	case "LessonComment":
+	case "UserAsset":
 		return r.repos.Label().CountByLabelable(ctx, r.nodeID.String, r.filters)
 	case "Study":
 		return r.repos.Label().CountByStudy(ctx, r.nodeID.String, r.filters)

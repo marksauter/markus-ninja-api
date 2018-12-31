@@ -244,21 +244,6 @@ func (r *CourseRepo) CountByApplee(
 	return data.CountCourseByApplee(db, appleeID, filters)
 }
 
-func (r *CourseRepo) CountByEnrollee(
-	ctx context.Context,
-	enrolleeID string,
-	filters *data.CourseFilterOptions,
-) (int32, error) {
-	var n int32
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err := &myctx.ErrNotFound{"queryer"}
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return n, err
-	}
-	return data.CountCourseByEnrollee(db, enrolleeID, filters)
-}
-
 func (r *CourseRepo) CountByTopic(
 	ctx context.Context,
 	topicID string,
@@ -414,30 +399,6 @@ func (r *CourseRepo) GetByApplee(
 		return nil, err
 	}
 	courses, err := data.GetCourseByApplee(db, appleeID, po, filters)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	return r.filterPermittable(ctx, mytype.ReadAccess, courses)
-}
-
-func (r *CourseRepo) GetByEnrollee(
-	ctx context.Context,
-	enrolleeID string,
-	po *data.PageOptions,
-	filters *data.CourseFilterOptions,
-) ([]*CoursePermit, error) {
-	if err := r.CheckConnection(); err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	db, ok := myctx.QueryerFromContext(ctx)
-	if !ok {
-		err := &myctx.ErrNotFound{"queryer"}
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
-	}
-	courses, err := data.GetCourseByEnrollee(db, enrolleeID, po, filters)
 	if err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err

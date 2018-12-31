@@ -54,6 +54,14 @@ type labelableConnectionResolver struct {
 	search     *string
 }
 
+func (r *labelableConnectionResolver) CommentCount(ctx context.Context) (int32, error) {
+	// filters := &data.CommentFilterOptions{
+	//   Search: r.search,
+	// }
+	// return r.repos.Comment().CountByLabel(ctx, r.labelID.String)
+	return int32(0), nil
+}
+
 func (r *labelableConnectionResolver) Edges() *[]*labelableEdgeResolver {
 	if len(r.edges) > 0 && !r.pageInfo.isEmpty {
 		edges := r.edges[r.pageInfo.start : r.pageInfo.end+1]
@@ -67,14 +75,6 @@ func (r *labelableConnectionResolver) LessonCount(ctx context.Context) (int32, e
 		Search: r.search,
 	}
 	return r.repos.Lesson().CountByLabel(ctx, r.labelID.String, filters)
-}
-
-func (r *labelableConnectionResolver) LessonCommentCount(ctx context.Context) (int32, error) {
-	// filters := &data.LessonCommentFilterOptions{
-	//   Search: r.search,
-	// }
-	// return r.repos.LessonComment().CountByLabel(ctx, r.labelID.String)
-	return int32(0), nil
 }
 
 func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
@@ -99,4 +99,11 @@ func (r *labelableConnectionResolver) Nodes() (*[]*labelableResolver, error) {
 
 func (r *labelableConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 	return r.pageInfo, nil
+}
+
+func (r *labelableConnectionResolver) UserAssetCount(ctx context.Context) (int32, error) {
+	filters := &data.UserAssetFilterOptions{
+		Search: r.search,
+	}
+	return r.repos.UserAsset().CountByLabel(ctx, r.labelID.String, filters)
 }

@@ -1,0 +1,5 @@
+# Input type for AddComment.
+input AddCommentInput {
+  # The ID of the comment to add.
+  commentId: ID!
+}

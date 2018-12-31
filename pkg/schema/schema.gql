@@ -80,7 +80,7 @@ type Mutation {
   # Adds a label to a labelable.
   addLabel(input: AddLabelInput!): AddLabelPayload
   # Adds a comment to a lesson.
-  addLessonComment(input: AddLessonCommentInput!): AddLessonCommentPayload
+  addComment(input: AddCommentInput!): AddCommentPayload
 
   # Creates a new course.
   createCourse(input: CreateCourseInput!): CreateCoursePayload
@@ -104,7 +104,7 @@ type Mutation {
   # Deletes a lesson from a study.
   deleteLesson(input: DeleteLessonInput!): DeleteLessonPayload
   # Deletes a comment from a lesson.
-  deleteLessonComment(input: DeleteLessonCommentInput!): DeleteLessonCommentPayload
+  deleteComment(input: DeleteCommentInput!): DeleteCommentPayload
   # Deletes a study.
   deleteStudy(input: DeleteStudyInput!): DeleteStudyPayload
   # Deletes a user asset.
@@ -133,8 +133,8 @@ type Mutation {
   publishCourse(input: PublishCourseInput!): Course
   # Publishes the body changes proposed in a lesson's draft.
   publishLessonDraft(input: PublishLessonDraftInput!): Lesson
-  # Publishes the body changes proposed in a lesson comment's draft.
-  publishLessonCommentDraft(input: PublishLessonCommentDraftInput!): LessonComment
+  # Publishes the body changes proposed in a comment's draft.
+  publishCommentDraft(input: PublishCommentDraftInput!): Comment
 
   # Removes a lesson from a course.
   removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload
@@ -146,8 +146,8 @@ type Mutation {
   requestPasswordReset(input: RequestPasswordResetInput!): PRT
   # Resets a lesson's draft to match its body.
   resetLessonDraft(input: ResetLessonDraftInput!): Lesson
-  # Resets a lesson comment's draft to match its body.
-  resetLessonCommentDraft(input: ResetLessonCommentDraftInput!): LessonComment
+  # Resets a comment's draft to match its body.
+  resetCommentDraft(input: ResetCommentDraftInput!): Comment
   # Resets a user's password.
   resetPassword(input: ResetPasswordInput!): Boolean!
 
@@ -164,8 +164,8 @@ type Mutation {
   updateLabel(input: UpdateLabelInput!): Label
   # Updates the body and/or title of a lesson.
   updateLesson(input: UpdateLessonInput!): Lesson
-  # Updates the body of a lesson comment.
-  updateLessonComment(input: UpdateLessonCommentInput!): LessonComment
+  # Updates the body of a comment.
+  updateComment(input: UpdateCommentInput!): Comment
   # Updates the description and/or name of a study.
   updateStudy(input: UpdateStudyInput!): Study
   # Updates the description of a topic.

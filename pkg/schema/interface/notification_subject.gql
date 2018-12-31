@@ -1,0 +1,7 @@
+# Subject of a notification.
+interface NotificationSubject {
+  id: ID!
+
+  # The HTTP path for the subject.
+  resourcePath: URI!
+}

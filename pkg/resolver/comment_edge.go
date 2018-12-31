@@ -6,11 +6,11 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewLessonCommentEdgeResolver(
-	node *repo.LessonCommentPermit,
+func NewCommentEdgeResolver(
+	node *repo.CommentPermit,
 	repos *repo.Repos,
 	conf *myconf.Config,
-) (*lessonCommentEdgeResolver, error) {
+) (*commentEdgeResolver, error) {
 	id, err := node.ID()
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func NewLessonCommentEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	return &lessonCommentEdgeResolver{
+	return &commentEdgeResolver{
 		conf:   conf,
 		cursor: cursor,
 		node:   node,
@@ -27,17 +27,17 @@ func NewLessonCommentEdgeResolver(
 	}, nil
 }
 
-type lessonCommentEdgeResolver struct {
+type commentEdgeResolver struct {
 	conf   *myconf.Config
 	cursor string
-	node   *repo.LessonCommentPermit
+	node   *repo.CommentPermit
 	repos  *repo.Repos
 }
 
-func (r *lessonCommentEdgeResolver) Cursor() string {
+func (r *commentEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *lessonCommentEdgeResolver) Node() *lessonCommentResolver {
-	return &lessonCommentResolver{LessonComment: r.node, Conf: r.conf, Repos: r.repos}
+func (r *commentEdgeResolver) Node() *commentResolver {
+	return &commentResolver{Comment: r.node, Conf: r.conf, Repos: r.repos}
 }
