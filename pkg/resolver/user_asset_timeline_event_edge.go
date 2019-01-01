@@ -48,7 +48,7 @@ func (r *userAssetTimelineEventEdgeResolver) Node(ctx context.Context) (*userAss
 	}
 	event, ok := resolver.(userAssetTimelineEvent)
 	if !ok {
-		return nil, errors.New("cannot convert resolver to userAsset_timeline_event")
+		return nil, errors.New("cannot convert resolver to user_asset_timeline_event")
 	}
 	return &userAssetTimelineEventResolver{event}, nil
 }

@@ -531,9 +531,9 @@ func CreateActivity(
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
 	}
-	if row.Number.Status != pgtype.Undefined {
-		columns = append(columns, "number")
-		values = append(values, args.Append(&row.Number))
+	if row.LessonID.Status != pgtype.Undefined {
+		columns = append(columns, "lesson_id")
+		values = append(values, args.Append(&row.LessonID))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")

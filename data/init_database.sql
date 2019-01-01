@@ -931,30 +931,6 @@ CREATE TABLE IF NOT EXISTS comment_labeled(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE OR REPLACE VIEW label_search_index AS
-SELECT
-  label.*,
-  count(labeled) AS labeled_count
-FROM label
-LEFT JOIN labeled ON labeled.label_id = label.id
-GROUP BY label.id;
-
-CREATE OR REPLACE VIEW labelable_label AS
-SELECT
-  label_search_index.*,
-  labeled.labelable_id,
-  labeled.created_at labeled_at
-FROM label_search_index
-JOIN labeled ON labeled.label_id = label_search_index.id;
-
-CREATE OR REPLACE VIEW labeled_comment AS
-SELECT
-  comment.*,
-  labeled.label_id,
-  labeled.created_at labeled_at
-FROM comment
-JOIN labeled ON labeled.labelable_id = comment.id;
-
 CREATE TABLE IF NOT EXISTS topic(
   created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
   description TEXT,
@@ -1624,6 +1600,15 @@ CREATE OR REPLACE FUNCTION event_inserted()
 AS $$
 BEGIN
   CASE NEW.type
+    WHEN 'ActivityEvent' THEN
+      INSERT INTO activity_event (action, activity_id, event_id, study_id, user_id)
+      VALUES (
+        (NEW.payload->>'action')::activity_event_action,
+        NEW.payload->>'activity_id',
+        NEW.id,
+        NEW.study_id,
+        NEW.user_id
+      );
     WHEN 'CourseEvent' THEN
       INSERT INTO course_event (action, course_id, event_id, study_id, user_id)
       VALUES (
@@ -1719,6 +1704,49 @@ BEGIN
   RETURN OLD;
 END;
 $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_event_action') THEN
+    CREATE TYPE activity_event_action AS ENUM('created');
+  END IF;
+END
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS activity_event (
+  action     activity_event_action NOT NULL,
+  activity_id  VARCHAR(100)        NOT NULL,
+  event_id   VARCHAR(100)        PRIMARY KEY,
+  study_id    VARCHAR(100)       NOT NULL,
+  user_id    VARCHAR(100)        NOT NULL,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_event'
+    AND trigger_name = 'after_activity_event_delete'
+) THEN
+  CREATE TRIGGER after_activity_event_delete
+    AFTER DELETE ON activity_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
 
 DO $$
 BEGIN
@@ -3216,6 +3244,7 @@ AS $$
       description,
       document,
       id,
+      lesson_id,
       name,
       name_tokens,
       number,
@@ -3228,6 +3257,7 @@ AS $$
       setweight(to_tsvector('simple', NEW.name_tokens), 'A') ||
       setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B'),
       NEW.id,
+      NEW.lesson_id,
       NEW.name,
       NEW.name_tokens,
       NEW.number,
@@ -4866,16 +4896,18 @@ SELECT
   course_search_index.*,
   appled.user_id applee_id,
   appled.created_at appled_at
-FROM course_search_index
-JOIN appled ON appled.appleable_id = course_search_index.id;
+FROM appled
+JOIN course_search_index ON course_search_index.id = appled.appleable_id
+WHERE appled.type = 'Course';
 
 CREATE OR REPLACE VIEW appled_study AS
 SELECT
   study_search_index.*,
   appled.user_id applee_id,
   appled.created_at appled_at
-FROM study_search_index
-JOIN appled ON appled.appleable_id = study_search_index.id;
+FROM appled
+JOIN study_search_index ON study_search_index.id = appled.appleable_id
+WHERE appled.type = 'Study';
 
 CREATE OR REPLACE VIEW enrollee AS
 SELECT
@@ -4890,40 +4922,70 @@ SELECT
   lesson_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM lesson_search_index
-JOIN enrolled ON enrolled.enrollable_id = lesson_search_index.id AND enrolled.status = 'ENROLLED'; 
+FROM enrolled
+JOIN lesson_search_index ON lesson_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'Lesson' AND enrolled.status = 'ENROLLED'; 
 
 CREATE OR REPLACE VIEW enrolled_study AS
 SELECT
   study_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM study_search_index
-JOIN enrolled ON enrolled.enrollable_id = study_search_index.id AND enrolled.status = 'ENROLLED'; 
+FROM enrolled
+JOIN study_search_index ON study_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'Study' AND enrolled.status = 'ENROLLED'; 
 
 CREATE OR REPLACE VIEW enrolled_user AS
 SELECT
   user_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM user_search_index
-JOIN enrolled ON enrolled.enrollable_id = user_search_index.id AND enrolled.status = 'ENROLLED';
+FROM enrolled
+JOIN user_search_index ON user_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'User' AND enrolled.status = 'ENROLLED'; 
+
+CREATE OR REPLACE VIEW label_search_index AS
+SELECT
+  label.*,
+  count(labeled) AS labeled_count
+FROM label
+LEFT JOIN labeled ON labeled.label_id = label.id
+GROUP BY label.id;
+
+CREATE OR REPLACE VIEW labelable_label AS
+SELECT
+  label_search_index.*,
+  labeled.labelable_id,
+  labeled.created_at labeled_at
+FROM label_search_index
+JOIN labeled ON labeled.label_id = label_search_index.id;
+
+CREATE OR REPLACE VIEW labeled_comment AS
+SELECT
+  comment.*,
+  labeled.label_id,
+  labeled.created_at labeled_at
+FROM labeled
+JOIN comment ON comment.id = labeled.labelable_id
+WHERE labeled.type = 'Comment';
 
 CREATE OR REPLACE VIEW labeled_lesson AS
 SELECT
   lesson_search_index.*,
   labeled.label_id,
   labeled.created_at labeled_at
-FROM lesson_search_index
-JOIN labeled ON labeled.labelable_id = lesson_search_index.id;
+FROM labeled
+JOIN lesson_search_index ON lesson_search_index.id = labeled.labelable_id
+WHERE labeled.type = 'Lesson';
 
 CREATE OR REPLACE VIEW labeled_user_asset AS
 SELECT
   user_asset_search_index.*,
   labeled.label_id,
   labeled.created_at labeled_at
-FROM user_asset_search_index
-JOIN labeled ON labeled.labelable_id = user_asset_search_index.id;
+FROM labeled
+JOIN user_asset_search_index ON user_asset_search_index.id = labeled.labelable_id
+WHERE labeled.type = 'UserAsset';
 
 CREATE OR REPLACE VIEW topicable_topic AS
 SELECT
@@ -4938,16 +5000,18 @@ SELECT
   course_search_index.*,
   topiced.topic_id,
   topiced.created_at topiced_at
-FROM course_search_index
-JOIN topiced ON topiced.topicable_id = course_search_index.id;
+FROM topiced
+JOIN course_search_index ON course_search_index.id = topiced.topicable_id
+WHERE topiced.type = 'Course';
 
 CREATE OR REPLACE VIEW topiced_study AS
 SELECT
   study_search_index.*,
   topiced.topic_id,
   topiced.created_at topiced_at
-FROM study_search_index
-JOIN topiced ON topiced.topicable_id = study_search_index.id;
+FROM topiced
+JOIN study_search_index ON study_search_index.id = topiced.topicable_id
+WHERE topiced.type = 'Study';
 
 GRANT CONNECT ON DATABASE markusninja TO client;
 GRANT USAGE ON SCHEMA public TO client;
