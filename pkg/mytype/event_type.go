@@ -11,7 +11,8 @@ import (
 type EventTypeValue int
 
 const (
-	CourseEvent EventTypeValue = iota
+	ActivityEvent EventTypeValue = iota
+	CourseEvent
 	LessonEvent
 	PublicEvent
 	StudyEvent
@@ -20,6 +21,8 @@ const (
 
 func (f EventTypeValue) String() string {
 	switch f {
+	case ActivityEvent:
+		return "ActivityEvent"
 	case CourseEvent:
 		return "CourseEvent"
 	case LessonEvent:
@@ -49,6 +52,11 @@ func NewEventType(v EventTypeValue) EventType {
 
 func ParseEventType(s string) (EventType, error) {
 	switch strings.Title(s) {
+	case "ActivityEvent":
+		return EventType{
+			Status: pgtype.Present,
+			V:      ActivityEvent,
+		}, nil
 	case "CourseEvent":
 		return EventType{
 			Status: pgtype.Present,

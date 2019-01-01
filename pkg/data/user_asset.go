@@ -19,6 +19,7 @@ type UserAsset struct {
 	Description    pgtype.Text        `db:"description" permit:"create/read/update"`
 	ID             mytype.OID         `db:"id" permit:"read"`
 	Key            pgtype.Text        `db:"key" permit:"read"`
+	LabeledAt      pgtype.Timestamptz `db:"labeled_at"`
 	Name           mytype.Filename    `db:"name" permit:"create/read/update"`
 	OriginalName   pgtype.Text        `db:"original_name" permit:"read"`
 	Size           pgtype.Int8        `db:"size" permit:"read"`
@@ -147,10 +148,9 @@ func CountUserAssetByLabel(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.label_id = ` + args.Append(labelID) + `
-			AND ` + from + `.type = 'UserAsset'`
+		return from + `.label_id = ` + args.Append(labelID)
 	}
-	from := "labeled"
+	from := "labeled_user_asset"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countUserAssetByLabel", sql)
@@ -609,11 +609,14 @@ func GetUserAssetByLabel(
 	}
 
 	selects := []string{
+		"activity_id",
+		"activity_number",
 		"asset_id",
 		"created_at",
 		"description",
 		"id",
 		"key",
+		"labeled_at",
 		"name",
 		"original_name",
 		"size",
@@ -628,7 +631,37 @@ func GetUserAssetByLabel(
 
 	psName := preparedName("getUserAssetsByLabel", sql)
 
-	if err := getManyUserAsset(db, psName, sql, &rows, args...); err != nil {
+	dbRows, err := prepareQuery(db, psName, sql, args...)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	defer dbRows.Close()
+
+	for dbRows.Next() {
+		var row UserAsset
+		dbRows.Scan(
+			&row.ActivityID,
+			&row.ActivityNumber,
+			&row.AssetID,
+			&row.CreatedAt,
+			&row.Description,
+			&row.ID,
+			&row.Key,
+			&row.LabeledAt,
+			&row.Name,
+			&row.OriginalName,
+			&row.Size,
+			&row.StudyID,
+			&row.Subtype,
+			&row.Type,
+			&row.UpdatedAt,
+			&row.UserID,
+		)
+		rows = append(rows, &row)
+	}
+
+	if err := dbRows.Err(); err != nil {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return nil, err
 	}
@@ -662,15 +695,17 @@ func GetUserAssetByActivity(
 	selects := []string{
 		"activity_id",
 		"activity_number",
-		"body",
+		"asset_id",
 		"created_at",
-		"draft",
+		"description",
 		"id",
-		"last_edited_at",
-		"number",
-		"published_at",
+		"key",
+		"name",
+		"original_name",
+		"size",
 		"study_id",
-		"title",
+		"subtype",
+		"type",
 		"updated_at",
 		"user_id",
 	}
@@ -711,6 +746,8 @@ func GetUserAssetByStudy(
 	}
 
 	selects := []string{
+		"activity_id",
+		"activity_number",
 		"asset_id",
 		"created_at",
 		"description",
@@ -762,6 +799,8 @@ func GetUserAssetByUser(
 	}
 
 	selects := []string{
+		"activity_id",
+		"activity_number",
 		"asset_id",
 		"created_at",
 		"description",
@@ -930,6 +969,8 @@ func SearchUserAsset(
 	where := func(string) string { return "" }
 
 	selects := []string{
+		"activity_id",
+		"activity_number",
 		"asset_id",
 		"created_at",
 		"description",

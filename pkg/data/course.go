@@ -17,7 +17,6 @@ type Course struct {
 	AppledAt    pgtype.Timestamptz  `db:"appled_at"`
 	CreatedAt   pgtype.Timestamptz  `db:"created_at" permit:"read"`
 	Description pgtype.Text         `db:"description" permit:"create/read/update"`
-	EnrolledAt  pgtype.Timestamptz  `db:"enrolled_at"`
 	ID          mytype.OID          `db:"id" permit:"read"`
 	Name        pgtype.Text         `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
@@ -136,10 +135,9 @@ func CountCourseByTopic(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.topic_id = ` + args.Append(topicID) + `
-			AND ` + from + `.type = 'Course'`
+		return from + `.topic_id = ` + args.Append(topicID)
 	}
-	from := "topiced"
+	from := "topiced_course"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countCourseByTopic", sql)
@@ -702,10 +700,6 @@ func CreateCourse(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, courseDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
-	}
-	if row.Number.Status != pgtype.Undefined {
-		columns = append(columns, "number")
-		values = append(values, args.Append(&row.Number))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
