@@ -814,14 +814,14 @@ func (r *studyResolver) Timeline(
 			ActionIs: &[]string{
 				mytype.CreatedAction.String(),
 			},
-			Type: mytype.CourseEvent.String(),
+			Type: data.CourseEvent,
 		},
 		data.EventTypeFilter{
 			ActionIs: &[]string{
 				mytype.CreatedAction.String(),
 				mytype.PublishedAction.String(),
 			},
-			Type: mytype.LessonEvent.String(),
+			Type: data.LessonEvent,
 		},
 	}
 	filters.Types = &eventTypes

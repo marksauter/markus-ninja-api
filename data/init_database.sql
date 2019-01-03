@@ -2384,6 +2384,7 @@ BEGIN
         NEW.event_id,
         NEW.payload->>'label_id'
       );
+    ELSE
   END CASE;
 
   RETURN NEW;

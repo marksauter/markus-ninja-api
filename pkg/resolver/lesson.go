@@ -25,6 +25,73 @@ type lessonResolver struct {
 	Repos  *repo.Repos
 }
 
+func (r *lessonResolver) Activities(
+	ctx context.Context,
+	args struct {
+		After    *string
+		Before   *string
+		FilterBy *data.ActivityFilterOptions
+		First    *int32
+		Last     *int32
+		OrderBy  *OrderArg
+	},
+) (*activityConnectionResolver, error) {
+	resolver := activityConnectionResolver{}
+	lessonID, err := r.Lesson.ID()
+	if err != nil {
+		if err != repo.ErrAccessDenied {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+		}
+		return &resolver, err
+	}
+	activityOrder, err := ParseActivityOrder(args.OrderBy)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+
+	pageOptions, err := data.NewPageOptions(
+		args.After,
+		args.Before,
+		args.First,
+		args.Last,
+		activityOrder,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+
+	filters := data.ActivityFilterOptions{}
+	if args.FilterBy != nil {
+		filters = *args.FilterBy
+	}
+
+	activities, err := r.Repos.Activity().GetByLesson(
+		ctx,
+		lessonID.String,
+		pageOptions,
+		&filters,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+	activityConnectionResolver, err := NewActivityConnectionResolver(
+		activities,
+		pageOptions,
+		lessonID,
+		&filters,
+		r.Repos,
+		r.Conf,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return &resolver, err
+	}
+	return activityConnectionResolver, nil
+}
+
 func (r *lessonResolver) Author(ctx context.Context) (*userResolver, error) {
 	userID, err := r.Lesson.UserID()
 	if err != nil {
@@ -477,7 +544,7 @@ func (r *lessonResolver) Timeline(
 		Types: &[]data.EventTypeFilter{
 			data.EventTypeFilter{
 				ActionIsNot: &actionIsNot,
-				Type:        mytype.LessonEvent.String(),
+				Type:        data.LessonEvent,
 			},
 		},
 	}
@@ -596,10 +663,6 @@ func (r *lessonResolver) ViewerNewComment(ctx context.Context) (*commentResolver
 		}
 		if err := comment.StudyID.Set(studyID); err != nil {
 			mylog.Log.WithError(err).Error("failed to set comment user_id")
-			return nil, myerr.SomethingWentWrongError
-		}
-		if err := comment.Type.Set(mytype.CommentableTypeLesson); err != nil {
-			mylog.Log.WithError(err).Error("failed to set comment type")
 			return nil, myerr.SomethingWentWrongError
 		}
 		if err := comment.UserID.Set(&viewer.ID); err != nil {

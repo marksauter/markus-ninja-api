@@ -17,7 +17,7 @@ type Enrolled struct {
 	EnrollableID mytype.OID              `db:"enrollable_id" permit:"read"`
 	ReasonName   pgtype.Varchar          `db:"reason_name" permit:"read"`
 	Status       mytype.EnrollmentStatus `db:"status" permit:"read/update"`
-	Type         mytype.EnrollmentType   `db:"type" permit:"read"`
+	Type         pgtype.Text             `db:"type" permit:"read"`
 	UserID       mytype.OID              `db:"user_id" permit:"read"`
 }
 
@@ -339,13 +339,13 @@ func CreateEnrolled(
 	if row.EnrollableID.Status != pgtype.Undefined {
 		columns = append(columns, "enrollable_id")
 		values = append(values, args.Append(&row.EnrollableID))
+		columns = append(columns, "type")
+		values = append(values, args.Append(row.EnrollableID.Type))
 	}
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
 		values = append(values, args.Append(&row.ReasonName))
 	}
-	columns = append(columns, "type")
-	values = append(values, args.Append(row.EnrollableID.Type))
 	if row.Status.Status != pgtype.Undefined {
 		columns = append(columns, "status")
 		values = append(values, args.Append(&row.Status))

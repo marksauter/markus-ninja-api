@@ -13,18 +13,18 @@ import (
 
 // Comment - data type comment
 type Comment struct {
-	Body          mytype.Markdown        `db:"body" permit:"create/read/update"`
-	CommentableID mytype.OID             `db:"commentable_id" permit:"create/read"`
-	CreatedAt     pgtype.Timestamptz     `db:"created_at" permit:"read"`
-	Draft         pgtype.Text            `db:"draft" permit:"read/update"`
-	ID            mytype.OID             `db:"id" permit:"read"`
-	LabeledAt     pgtype.Timestamptz     `db:"labeled_at" permit:"read"`
-	LastEditedAt  pgtype.Timestamptz     `db:"last_edited_at" permit:"read"`
-	PublishedAt   pgtype.Timestamptz     `db:"published_at" permit:"read/update"`
-	StudyID       mytype.OID             `db:"study_id" permit:"create/read"`
-	Type          mytype.CommentableType `db:"type" permit:"create/read"`
-	UpdatedAt     pgtype.Timestamptz     `db:"updated_at" permit:"read"`
-	UserID        mytype.OID             `db:"user_id" permit:"create/read"`
+	Body          mytype.Markdown    `db:"body" permit:"create/read/update"`
+	CommentableID mytype.OID         `db:"commentable_id" permit:"create/read"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" permit:"read"`
+	Draft         pgtype.Text        `db:"draft" permit:"read/update"`
+	ID            mytype.OID         `db:"id" permit:"read"`
+	LabeledAt     pgtype.Timestamptz `db:"labeled_at" permit:"read"`
+	LastEditedAt  pgtype.Timestamptz `db:"last_edited_at" permit:"read"`
+	PublishedAt   pgtype.Timestamptz `db:"published_at" permit:"read/update"`
+	StudyID       mytype.OID         `db:"study_id" permit:"create/read"`
+	Type          pgtype.Text        `db:"type" permit:"create/read"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserID        mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
 type CommentFilterOptions struct {
@@ -597,14 +597,14 @@ func CreateComment(
 	if row.CommentableID.Status != pgtype.Undefined {
 		columns = append(columns, "commentable_id")
 		values = append(values, args.Append(&row.CommentableID))
+		columns = append(columns, "type")
+		values = append(values, args.Append(row.CommentableID.Type))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
 		values = append(values, args.Append(&row.StudyID))
 	}
 	if row.Type.Status != pgtype.Undefined {
-		columns = append(columns, "type")
-		values = append(values, args.Append(&row.Type))
 	}
 	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
@@ -732,8 +732,8 @@ func UpdateComment(
 	if currentComment.PublishedAt.Status == pgtype.Null &&
 		comment.PublishedAt.Status != pgtype.Null {
 		event := &Event{}
-		switch comment.Type.V {
-		case mytype.CommentableTypeLesson:
+		switch comment.CommentableID.Type {
+		case "Lesson":
 			eventPayload, err := NewLessonCommentedPayload(&comment.CommentableID, &comment.ID)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
@@ -744,7 +744,7 @@ func UpdateComment(
 				mylog.Log.WithError(err).Error(util.Trace(""))
 				return nil, err
 			}
-		case mytype.CommentableTypeUserAsset:
+		case "UserAsset":
 			eventPayload, err := NewUserAssetCommentedPayload(&comment.CommentableID, &comment.ID)
 			if err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))

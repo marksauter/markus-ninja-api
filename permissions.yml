@@ -612,6 +612,8 @@ permissions:
   # Everyone can read the following fields for a user asset.
   - operation: Read UserAsset
     fields:
+      - activity_id
+      - activity_number
       - created_at
       - description
       - id

@@ -12,11 +12,11 @@ import (
 )
 
 type Labeled struct {
-	CreatedAt   pgtype.Timestamptz   `db:"created_at" permit:"read"`
-	ID          pgtype.Int4          `db:"id" permit:"read"`
-	LabelID     mytype.OID           `db:"label_id" permit:"read"`
-	LabelableID mytype.OID           `db:"labelable_id" permit:"read"`
-	Type        mytype.LabelableType `db:"type" permit:"read"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	ID          pgtype.Int4        `db:"id" permit:"read"`
+	LabelID     mytype.OID         `db:"label_id" permit:"read"`
+	LabelableID mytype.OID         `db:"labelable_id" permit:"read"`
+	Type        pgtype.Text        `db:"type" permit:"read"`
 }
 
 const countLabeledByLabelSQL = `
@@ -290,9 +290,9 @@ func CreateLabeled(
 	if row.LabelableID.Status != pgtype.Undefined {
 		columns = append(columns, "labelable_id")
 		values = append(values, args.Append(&row.LabelableID))
+		columns = append(columns, "type")
+		values = append(values, args.Append(row.LabelableID.Type))
 	}
-	columns = append(columns, "type")
-	values = append(values, args.Append(row.LabelableID.Type))
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {

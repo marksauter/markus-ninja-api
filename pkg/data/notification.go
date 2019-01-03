@@ -12,17 +12,17 @@ import (
 )
 
 type Notification struct {
-	CreatedAt  pgtype.Timestamptz         `db:"created_at" permit:"read"`
-	ID         mytype.OID                 `db:"id" permit:"read"`
-	LastReadAt pgtype.Timestamptz         `db:"last_read_at" permit:"read"`
-	Reason     pgtype.Text                `db:"reason" permit:"read"`
-	ReasonName pgtype.Varchar             `db:"reason_name" permit:"create"`
-	Subject    mytype.NotificationSubject `db:"subject" permit:"create/read"`
-	SubjectID  mytype.OID                 `db:"subject_id" permit:"create/read"`
-	StudyID    mytype.OID                 `db:"study_id" permit:"create/read"`
-	Unread     pgtype.Bool                `db:"unread" permit:"read"`
-	UpdatedAt  pgtype.Timestamptz         `db:"updated_at" permit:"read"`
-	UserID     mytype.OID                 `db:"user_id" permit:"create/read"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" permit:"read"`
+	ID         mytype.OID         `db:"id" permit:"read"`
+	LastReadAt pgtype.Timestamptz `db:"last_read_at" permit:"read"`
+	Reason     pgtype.Text        `db:"reason" permit:"read"`
+	ReasonName pgtype.Varchar     `db:"reason_name"`
+	Subject    pgtype.Text        `db:"subject" permit:"read"`
+	SubjectID  mytype.OID         `db:"subject_id" permit:"read"`
+	StudyID    mytype.OID         `db:"study_id" permit:"read"`
+	Unread     pgtype.Bool        `db:"unread" permit:"read"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" permit:"read"`
+	UserID     mytype.OID         `db:"user_id" permit:"read"`
 }
 
 const countNotificationByStudySQL = `
@@ -287,7 +287,7 @@ func BatchCreateNotification(
 		notifications[i] = []interface{}{
 			src.ID.String,
 			enrolled.ReasonName.String,
-			src.Subject.String(),
+			src.Subject.String,
 			src.SubjectID.String,
 			src.StudyID.String,
 			enrolled.UserID.String,
@@ -343,15 +343,13 @@ func CreateNotification(
 
 	if row.ReasonName.Status != pgtype.Undefined {
 		columns = append(columns, "reason_name")
-		values = append(values, args.Append(&row.Reason))
-	}
-	if row.Subject.Status != pgtype.Undefined {
-		columns = append(columns, "subject")
-		values = append(values, args.Append(&row.Subject))
+		values = append(values, args.Append(&row.ReasonName))
 	}
 	if row.SubjectID.Status != pgtype.Undefined {
 		columns = append(columns, "subject_id")
 		values = append(values, args.Append(&row.SubjectID))
+		columns = append(columns, "subject")
+		values = append(values, args.Append(row.SubjectID.Type))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")
@@ -427,14 +425,10 @@ func CreateNotificationsFromEvent(
 	}
 
 	var enrolleds []*Enrolled
-	switch event.Type.V {
-	case mytype.LessonEvent:
+	switch event.Type.String {
+	case LessonEvent:
 		payload := &LessonEventPayload{}
 		if err := event.Payload.AssignTo(payload); err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return err
-		}
-		if err := row.Subject.Set(mytype.NotificationSubjectLesson); err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
@@ -470,13 +464,9 @@ func CreateNotificationsFromEvent(
 			)
 			return nil
 		}
-	case mytype.UserAssetEvent:
+	case UserAssetEvent:
 		payload := &UserAssetEventPayload{}
 		if err := event.Payload.AssignTo(payload); err != nil {
-			mylog.Log.WithError(err).Error(util.Trace(""))
-			return err
-		}
-		if err := row.Subject.Set(mytype.NotificationSubjectUserAsset); err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return err
 		}
@@ -486,12 +476,6 @@ func CreateNotificationsFromEvent(
 		}
 
 		switch payload.Action {
-		case UserAssetCommented:
-			enrolleds, err = GetEnrolledByEnrollable(tx, payload.AssetID.String, nil, nil)
-			if err != nil {
-				mylog.Log.WithError(err).Error(util.Trace(""))
-				return err
-			}
 		case UserAssetMentioned:
 			if err := row.ReasonName.Set(MentionReason); err != nil {
 				mylog.Log.WithError(err).Error(util.Trace(""))
