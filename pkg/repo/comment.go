@@ -119,7 +119,7 @@ func (r *CommentPermit) Type() (string, error) {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
-	return r.comment.Type.String(), nil
+	return r.comment.Type.String, nil
 }
 
 func (r *CommentPermit) UserID() (*mytype.OID, error) {

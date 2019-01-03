@@ -880,14 +880,14 @@ func (r *userResolver) Timeline(
 
 	eventTypes := []data.EventTypeFilter{
 		data.EventTypeFilter{
-			Type: mytype.CourseEvent.String(),
+			Type: data.CourseEvent,
 		},
 		data.EventTypeFilter{
 			ActionIs: &[]string{mytype.PublishedAction.String()},
-			Type:     mytype.LessonEvent.String(),
+			Type:     data.LessonEvent,
 		},
 		data.EventTypeFilter{
-			Type: mytype.StudyEvent.String(),
+			Type: data.StudyEvent,
 		},
 	}
 	filters.Types = &eventTypes

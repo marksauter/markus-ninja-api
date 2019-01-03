@@ -85,11 +85,13 @@ func (r *activityConnectionResolver) TotalCount(ctx context.Context) (int32, err
 		return n, nil
 	}
 	switch r.nodeID.Type {
+	case "Lesson":
+		return r.repos.Activity().CountByLesson(ctx, r.nodeID.String, r.filters)
 	case "Study":
 		return r.repos.Activity().CountByStudy(ctx, r.nodeID.String, r.filters)
 	case "User":
 		return r.repos.Activity().CountByUser(ctx, r.nodeID.String, r.filters)
 	default:
-		return n, errors.New("invalid node id for event total count")
+		return n, errors.New("invalid node id for activity total count")
 	}
 }

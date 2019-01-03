@@ -95,6 +95,6 @@ package resolver
 //   case "UserAsset":
 //     return r.repos.Event().CountByUserAsset(ctx, r.nodeID.String, r.filters)
 //   default:
-//     return n, errors.New("invalid node id for event total count")
+//     return n, errors.New("invalid node id for user total count")
 //   }
 // }

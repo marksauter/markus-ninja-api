@@ -344,12 +344,13 @@ func (r *userAssetResolver) Timeline(
 
 	actionIsNot := []string{
 		mytype.CreatedAction.String(),
+		mytype.MentionedAction.String(),
 	}
 	filters := &data.EventFilterOptions{
 		Types: &[]data.EventTypeFilter{
 			data.EventTypeFilter{
 				ActionIsNot: &actionIsNot,
-				Type:        mytype.UserAssetEvent.String(),
+				Type:        data.UserAssetEvent,
 			},
 		},
 	}
@@ -438,10 +439,6 @@ func (r *userAssetResolver) ViewerNewComment(ctx context.Context) (*commentResol
 		}
 		if err := comment.StudyID.Set(studyID); err != nil {
 			mylog.Log.WithError(err).Error("failed to set comment user_id")
-			return nil, myerr.SomethingWentWrongError
-		}
-		if err := comment.Type.Set(mytype.CommentableTypeUserAsset); err != nil {
-			mylog.Log.WithError(err).Error("failed to set comment type")
 			return nil, myerr.SomethingWentWrongError
 		}
 		if err := comment.UserID.Set(&viewer.ID); err != nil {

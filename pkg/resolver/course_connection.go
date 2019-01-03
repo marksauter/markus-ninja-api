@@ -90,6 +90,6 @@ func (r *courseConnectionResolver) TotalCount(ctx context.Context) (int32, error
 	case "User":
 		return r.repos.Course().CountByUser(ctx, r.nodeID.String, r.filters)
 	default:
-		return n, errors.New("invalid node id for event total count")
+		return n, errors.New("invalid node id for course total count")
 	}
 }

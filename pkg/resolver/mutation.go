@@ -401,7 +401,20 @@ func (r *RootResolver) AddComment(
 	if err != nil {
 		return nil, errors.New("comment not found")
 	}
+
 	draft, err := currentCommentPermit.Draft()
+	if err != nil {
+		return nil, err
+	}
+	commentableID, err := currentCommentPermit.CommentableID()
+	if err != nil {
+		return nil, err
+	}
+	studyID, err := currentCommentPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
+	userID, err := currentCommentPermit.UserID()
 	if err != nil {
 		return nil, err
 	}
@@ -421,6 +434,48 @@ func (r *RootResolver) AddComment(
 	if err := comment.PublishedAt.Set(time.Now()); err != nil {
 		mylog.Log.WithError(err).Error("failed to set comment published_at")
 		return nil, myerr.SomethingWentWrongError
+	}
+
+	if commentableID.Type == "Lesson" {
+		err = r.Repos.ParseLessonBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	} else if commentableID.Type == "UserAsset" {
+		err = r.Repos.ParseUserAssetBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
+		ctx,
+		comment.Body,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := comment.Body.Set(body); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	commentPermit, err := r.Repos.Comment().Update(ctx, comment)
@@ -1655,16 +1710,30 @@ func (r *RootResolver) PublishCommentDraft(
 		return nil, myerr.SomethingWentWrongError
 	}
 
-	err = r.Repos.ParseLessonBodyForEvents(
-		ctx,
-		&comment.Body,
-		commentableID,
-		studyID,
-		userID,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+	if commentableID.Type == "Lesson" {
+		err = r.Repos.ParseLessonBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	} else if commentableID.Type == "UserAsset" {
+		err = r.Repos.ParseUserAssetBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(

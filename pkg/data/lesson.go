@@ -280,7 +280,7 @@ const existsLessonByNumberSQL = `
 		SELECT 1
 		FROM lesson_search_index
 		JOIN study ON study.id = $1
-		WHERE lesson.number = $2
+		WHERE lesson_search_index.number = $2
 	)
 `
 
@@ -316,7 +316,7 @@ const existsLessonByOwnerStudyAndNumberSQL = `
 		FROM lesson_search_index
 		JOIN account ON account.login = $1
 		JOIN study ON study.name = $2
-		WHERE lesson.number = $3
+		WHERE lesson_search_index.number = $3
 	)
 `
 

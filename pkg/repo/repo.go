@@ -878,7 +878,73 @@ func (r *Repos) ParseLessonBodyForEvents(
 					mylog.Log.WithError(err).Error(util.Trace(""))
 					return err
 				}
-				event, err := data.NewLessonEvent(payload, studyID, userID, true)
+				event, err := data.NewLessonEvent(payload, studyID, uID, true)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				if _, err = r.Event().Create(ctx, event); err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+			}
+		}
+	}
+
+	if newTx {
+		err = data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Repos) ParseUserAssetBodyForEvents(
+	ctx context.Context,
+	body *mytype.Markdown,
+	assetID,
+	studyID,
+	userID *mytype.OID,
+) error {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	userRefs := body.AtRefs()
+	if len(userRefs) > 0 {
+		names := make([]string, len(userRefs))
+		for i, ref := range userRefs {
+			names[i] = ref.Name
+		}
+		users, err := r.User().BatchGetByLogin(
+			ctx,
+			names,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return err
+		}
+		for _, u := range users {
+			uID, err := u.ID()
+			if err != nil {
+				mylog.Log.WithError(err).Error(util.Trace(""))
+				return err
+			}
+			if uID.String != userID.String {
+				payload, err := data.NewUserAssetMentionedPayload(assetID)
+				if err != nil {
+					mylog.Log.WithError(err).Error(util.Trace(""))
+					return err
+				}
+				event, err := data.NewUserAssetEvent(payload, studyID, uID, true)
 				if err != nil {
 					mylog.Log.WithError(err).Error(util.Trace(""))
 					return err
