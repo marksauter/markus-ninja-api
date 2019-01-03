@@ -513,6 +513,21 @@ func (r *RootResolver) CreateActivity(
 		return nil, errors.New("viewer not found")
 	}
 
+	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("lesson not found")
+	}
+	lessonIsPublished, err := lesson.IsPublished()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	if !lessonIsPublished {
+		return nil, errors.New("lesson must be published")
+	}
+
 	activity := &data.Activity{}
 	if err := activity.Description.Set(args.Input.Description); err != nil {
 		return nil, errors.New("invalid activity description")
@@ -2778,6 +2793,7 @@ func (r *RootResolver) UpdateComment(
 type UpdateActivityInput struct {
 	ActivityID  string
 	Description *string
+	LessonID    *string
 	Name        *string
 }
 
@@ -2793,6 +2809,26 @@ func (r *RootResolver) UpdateActivity(
 	if args.Input.Description != nil {
 		if err := activity.Description.Set(args.Input.Description); err != nil {
 			return nil, errors.New("invalid activity description")
+		}
+	}
+	if args.Input.LessonID != nil {
+		lesson, err := r.Repos.Lesson().Pull(ctx, *args.Input.LessonID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, errors.New("lesson not found")
+		}
+		lessonIsPublished, err := lesson.IsPublished()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
+
+		if !lessonIsPublished {
+			return nil, errors.New("lesson must be published")
+		}
+
+		if err := activity.LessonID.Set(args.Input.LessonID); err != nil {
+			return nil, errors.New("invalid activity lesson_id")
 		}
 	}
 	if args.Input.Name != nil {

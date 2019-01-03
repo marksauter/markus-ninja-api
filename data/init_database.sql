@@ -3305,6 +3305,7 @@ AS $$
       advanced_at = NEW.advanced_at,
       description = NEW.description,
       document = doc,
+      lesson_id = NEW.lesson_id,
       name = NEW.name,
       name_tokens = NEW.name_tokens,
       updated_at = NEW.updated_at

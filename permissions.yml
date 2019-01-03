@@ -20,6 +20,7 @@ permissions:
       - owner
     fields:
       - description
+      - lesson_id
       - name
   - operation: Delete Activity
     authenticated: true
