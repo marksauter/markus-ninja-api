@@ -1,0 +1,11 @@
+# Return type for RemoveActivityAsset.
+type RemoveActivityAssetPayload {
+  # The activity from which the asset was removed.
+  activity: Activity!
+
+  # The ID of the asset removed from the activity.
+  removedAssetId: ID!
+
+  # The edge from the activity study's asset connection.
+  removedAssetEdge: UserAssetEdge!
+}

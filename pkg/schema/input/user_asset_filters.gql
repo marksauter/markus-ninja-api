@@ -1,5 +1,14 @@
 # Ways in which to filter lists of user assets.
 input UserAssetFilters {
+  # List assets that are not part of the activity with this ID.
+  activityNotEqualTo: ID
+
+  # List assets that are part of an activity.
+  isActivityAsset: Boolean
+
+  # List assets where the list of label names exists on the asset.
+  labels: [String!]
+
   # Query to search user assets by.
   search: String
 }

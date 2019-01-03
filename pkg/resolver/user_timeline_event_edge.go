@@ -9,11 +9,11 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
-func NewStudyActivityEventEdgeResolver(
+func NewUserTimelineEventEdgeResolver(
 	event *repo.EventPermit,
 	repos *repo.Repos,
 	conf *myconf.Config,
-) (*studyActivityEventEdgeResolver, error) {
+) (*userTimelineEventEdgeResolver, error) {
 	id, err := event.ID()
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func NewStudyActivityEventEdgeResolver(
 	if err != nil {
 		return nil, err
 	}
-	return &studyActivityEventEdgeResolver{
+	return &userTimelineEventEdgeResolver{
 		conf:   conf,
 		cursor: cursor,
 		event:  event,
@@ -30,25 +30,25 @@ func NewStudyActivityEventEdgeResolver(
 	}, nil
 }
 
-type studyActivityEventEdgeResolver struct {
+type userTimelineEventEdgeResolver struct {
 	conf   *myconf.Config
 	cursor string
 	event  *repo.EventPermit
 	repos  *repo.Repos
 }
 
-func (r *studyActivityEventEdgeResolver) Cursor() string {
+func (r *userTimelineEventEdgeResolver) Cursor() string {
 	return r.cursor
 }
 
-func (r *studyActivityEventEdgeResolver) Node(ctx context.Context) (*studyActivityEventResolver, error) {
+func (r *userTimelineEventEdgeResolver) Node(ctx context.Context) (*userTimelineEventResolver, error) {
 	resolver, err := eventPermitToResolver(ctx, r.event, r.repos, r.conf)
 	if err != nil {
 		return nil, err
 	}
-	event, ok := resolver.(studyActivityEvent)
+	event, ok := resolver.(userTimelineEvent)
 	if !ok {
-		return nil, errors.New("cannot convert resolver to study activity event")
+		return nil, errors.New("cannot convert resolver to user timeline event")
 	}
-	return &studyActivityEventResolver{event}, nil
+	return &userTimelineEventResolver{event}, nil
 }

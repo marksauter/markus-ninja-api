@@ -81,6 +81,8 @@ func (r *userAssetConnectionResolver) PageInfo() (*pageInfoResolver, error) {
 
 func (r *userAssetConnectionResolver) TotalCount(ctx context.Context) (int32, error) {
 	switch r.nodeID.Type {
+	case "Activity":
+		return r.repos.UserAsset().CountByActivity(ctx, r.nodeID.String, r.filters)
 	case "Study":
 		return r.repos.UserAsset().CountByStudy(ctx, r.nodeID.String, r.filters)
 	case "User":

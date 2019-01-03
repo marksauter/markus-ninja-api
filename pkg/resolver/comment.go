@@ -11,7 +11,6 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
 	"github.com/marksauter/markus-ninja-api/pkg/myctx"
 	"github.com/marksauter/markus-ninja-api/pkg/mygql"
-	"github.com/marksauter/markus-ninja-api/pkg/mytype"
 	"github.com/marksauter/markus-ninja-api/pkg/repo"
 )
 
@@ -219,7 +218,7 @@ func (r *commentResolver) ResourcePath(
 ) (mygql.URI, error) {
 	var uri mygql.URI
 
-	commentType, err := r.Type()
+	id, err := r.Comment.ID()
 	if err != nil {
 		return uri, err
 	}
@@ -229,8 +228,8 @@ func (r *commentResolver) ResourcePath(
 		return uri, err
 	}
 	var basePath mygql.URI
-	switch commentType {
-	case mytype.CommentableTypeLesson.String():
+	switch id.Type {
+	case "Lesson":
 		lesson, ok := commentable.ToLesson()
 		if !ok {
 			return uri, errors.New("cannot convert commentable to lesson")
@@ -239,7 +238,7 @@ func (r *commentResolver) ResourcePath(
 		if err != nil {
 			return uri, err
 		}
-	case mytype.CommentableTypeUserAsset.String():
+	case "UserAsset":
 		userAsset, ok := commentable.ToUserAsset()
 		if !ok {
 			return uri, errors.New("cannot convert commentable to user asset")
@@ -272,10 +271,6 @@ func (r *commentResolver) Study(ctx context.Context) (*studyResolver, error) {
 		return nil, err
 	}
 	return &studyResolver{Study: study, Conf: r.Conf, Repos: r.Repos}, nil
-}
-
-func (r *commentResolver) Type() (string, error) {
-	return r.Comment.Type()
 }
 
 func (r *commentResolver) UpdatedAt() (graphql.Time, error) {

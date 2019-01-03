@@ -1,0 +1,100 @@
+# Represents a activity.
+type Activity implements
+  Createable,
+  Node,
+  Searchable,
+  StudyNode,
+  UniformResourceLocatable
+{
+  # Identifies when the activity was advanced at.
+  advancedAt: Time
+
+  # Returns a single asset from the current activity by number.
+  asset(
+    # The number for the asset to be returned.
+    number: Int!  
+  ): UserAsset
+
+  # Returns a list of assets from the current activity.
+  assets(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for assets returned from the connection.
+    filterBy: UserAssetFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for assets returned from the connection.
+    orderBy: UserAssetOrder
+  ): UserAssetConnection!
+
+  # Identifies the date and time when the object was created.
+  createdAt: Time!
+
+  # The description of the activity.
+  description: String!
+
+  # The description of the activity rendered to HTML.
+  descriptionHTML: HTML!
+
+  id: ID!
+
+  # The lesson associated with this activity.
+  lesson: Lesson
+
+  # The name of the activity.
+  name: String!
+
+  # Identifies the activity number.
+  number: Int!
+
+  # The owner of the activity.
+  owner: User!
+
+  # The HTTP path for this activity.
+  resourcePath: URI!
+
+  # The study associated with this activity.
+  study: Study!
+
+  # Identifies when the activity was last updated.
+  updatedAt: Time!
+
+  # The HTTP URL for this activity.
+  url: URI!
+
+  # Can the viewer admin this object?
+  viewerCanAdmin: Boolean!
+}
+
+# An edge type for Activity.
+type ActivityEdge implements Edge {
+  # A cursor for use in pagination.
+  cursor: String!
+
+  # The item at the end of the edge.
+  node: Activity
+}
+
+# A connection type for Activity.
+type ActivityConnection implements Connection {
+  # Information to aid in pagination.
+  pageInfo: PageInfo!
+
+  # A list of edges.
+  edges: [ActivityEdge]
+
+  # A list of nodes.
+  nodes: [Activity]
+
+  # The total count of items in the connection.
+  totalCount: Int!
+}

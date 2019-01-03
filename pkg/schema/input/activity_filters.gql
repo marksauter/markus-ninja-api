@@ -1,0 +1,5 @@
+# Ways in which to filter lists of activities.
+input ActivityFilters {
+  # Query to search activities by.
+  search: String
+}

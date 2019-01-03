@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/loader"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -29,6 +30,27 @@ func (r *UserAssetPermit) Get() *data.UserAsset {
 		}
 	}
 	return userAsset
+}
+
+func (r *UserAssetPermit) ActivityID() (*mytype.OID, error) {
+	if ok := r.checkFieldPermission("activity_id"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &r.userAsset.ActivityID, nil
+}
+
+func (r *UserAssetPermit) ActivityNumber() (*int32, error) {
+	if ok := r.checkFieldPermission("activity_number"); !ok {
+		err := ErrAccessDenied
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if r.userAsset.ActivityNumber.Status == pgtype.Null {
+		return nil, nil
+	}
+	return &r.userAsset.ActivityNumber.Int, nil
 }
 
 func (r *UserAssetPermit) CreatedAt() (time.Time, error) {
@@ -191,6 +213,21 @@ func (r *UserAssetRepo) CountByLabel(
 		return n, err
 	}
 	return data.CountUserAssetByLabel(db, labelID, filters)
+}
+
+func (r *UserAssetRepo) CountByActivity(
+	ctx context.Context,
+	activityID string,
+	filters *data.UserAssetFilterOptions,
+) (int32, error) {
+	var n int32
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return n, err
+	}
+	return data.CountUserAssetByActivity(db, activityID, filters)
 }
 
 func (r *UserAssetRepo) CountBySearch(
@@ -362,6 +399,34 @@ func (r *UserAssetRepo) BatchGetByName(
 	return userAssetPermits, nil
 }
 
+func (r *UserAssetRepo) GetByActivityNumber(
+	ctx context.Context,
+	activityID string,
+	activityNumber int32,
+) (*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	userAsset, err := data.GetUserAssetByActivityNumber(db, activityID, activityNumber)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAsset)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+}
+
 func (r *UserAssetRepo) GetByUserStudyAndName(
 	ctx context.Context,
 	userLogin,
@@ -383,6 +448,41 @@ func (r *UserAssetRepo) GetByUserStudyAndName(
 		return nil, err
 	}
 	return &UserAssetPermit{fieldPermFn, userAsset}, nil
+}
+
+func (r *UserAssetRepo) GetByActivity(
+	ctx context.Context,
+	activityID string,
+	po *data.PageOptions,
+	filters *data.UserAssetFilterOptions,
+) ([]*UserAssetPermit, error) {
+	if err := r.CheckConnection(); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	db, ok := myctx.QueryerFromContext(ctx)
+	if !ok {
+		err := &myctx.ErrNotFound{"queryer"}
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	userAssets, err := data.GetUserAssetByActivity(db, activityID, po, filters)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	userAssetPermits := make([]*UserAssetPermit, len(userAssets))
+	if len(userAssets) > 0 {
+		fieldPermFn, err := r.permit.Check(ctx, mytype.ReadAccess, userAssets[0])
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+		for i, l := range userAssets {
+			userAssetPermits[i] = &UserAssetPermit{fieldPermFn, l}
+		}
+	}
+	return userAssetPermits, nil
 }
 
 func (r *UserAssetRepo) GetByLabel(
@@ -422,7 +522,7 @@ func (r *UserAssetRepo) GetByLabel(
 
 func (r *UserAssetRepo) GetByStudy(
 	ctx context.Context,
-	studyID *mytype.OID,
+	studyID string,
 	po *data.PageOptions,
 	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {
@@ -457,7 +557,7 @@ func (r *UserAssetRepo) GetByStudy(
 
 func (r *UserAssetRepo) GetByUser(
 	ctx context.Context,
-	userID *mytype.OID,
+	userID string,
 	po *data.PageOptions,
 	filters *data.UserAssetFilterOptions,
 ) ([]*UserAssetPermit, error) {

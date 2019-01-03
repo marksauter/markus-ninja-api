@@ -1,0 +1,17 @@
+# Properties by which activity connections can be ordered.
+enum ActivityOrderField {
+  # Order activities by advance time.
+  ADVANCED_AT
+
+  # Order activities by creation time.
+  CREATED_AT
+
+  # Order activities by name.
+  NAME
+
+  # Order activities by number.
+  NUMBER
+
+  # Order activities by update time.
+  UPDATED_AT
+}

@@ -14,6 +14,27 @@ type Lesson implements
   UniformResourceLocatable,
   Updateable
 {
+  # Returns a list of activities associated with this lesson.
+  activities(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Filtering options for activities returned from the connection.
+    filterBy: ActivityFilters
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for activities returned from the connection.
+    orderBy: ActivityOrder
+  ): ActivityConnection!
+
   # The user who authored this lesson. 
   author: User
 

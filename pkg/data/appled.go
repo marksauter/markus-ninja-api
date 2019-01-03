@@ -15,7 +15,7 @@ type Appled struct {
 	AppleableID mytype.OID         `db:"appleable_id" permit:"read"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	ID          pgtype.Int4        `db:"id" permit:"read"`
-	Type        mytype.AppleType   `db:"type" permit:"read"`
+	Type        pgtype.Text        `db:"type" permit:"read"`
 	UserID      mytype.OID         `db:"user_id" permit:"read"`
 }
 
@@ -275,9 +275,9 @@ func CreateAppled(
 	if row.AppleableID.Status != pgtype.Undefined {
 		columns = append(columns, "appleable_id")
 		values = append(values, args.Append(&row.AppleableID))
+		columns = append(columns, "type")
+		values = append(values, args.Append(row.AppleableID.Type))
 	}
-	columns = append(columns, "type")
-	values = append(values, args.Append(row.AppleableID.Type))
 	if row.UserID.Status != pgtype.Undefined {
 		columns = append(columns, "user_id")
 		values = append(values, args.Append(&row.UserID))
@@ -320,8 +320,8 @@ func CreateAppled(
 	}
 
 	event := &Event{}
-	switch appled.Type.V {
-	case mytype.AppleTypeCourse:
+	switch appled.AppleableID.Type {
+	case "Course":
 		eventPayload, err := NewCourseAppledPayload(&appled.AppleableID)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))
@@ -337,7 +337,7 @@ func CreateAppled(
 			mylog.Log.WithError(err).Error(util.Trace(""))
 			return nil, err
 		}
-	case mytype.AppleTypeStudy:
+	case "Study":
 		eventPayload, err := NewStudyAppledPayload(&appled.AppleableID)
 		if err != nil {
 			mylog.Log.WithError(err).Error(util.Trace(""))

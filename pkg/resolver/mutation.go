@@ -22,6 +22,92 @@ import (
 	"github.com/marksauter/markus-ninja-api/pkg/util"
 )
 
+type AddActivityAssetInput struct {
+	ActivityID string
+	AssetID    string
+}
+
+func (r *RootResolver) AddActivityAsset(
+	ctx context.Context,
+	args struct{ Input AddActivityAssetInput },
+) (*addActivityAssetPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err := errors.New("viewer not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	activityAsset := &data.ActivityAsset{}
+	if err := activityAsset.ActivityID.Set(args.Input.ActivityID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("invalid value for activityId")
+	}
+	if err := activityAsset.AssetID.Set(args.Input.AssetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("invalid value for assetId")
+	}
+
+	activity, err := r.Repos.Activity().Pull(ctx, args.Input.ActivityID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("activity not found")
+	}
+
+	_, err = r.Repos.ActivityAsset().Connect(ctx, activityAsset)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	studyID, err := activity.StudyID()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	eventPayload, err := data.NewUserAssetAddedToActivityPayload(
+		&activityAsset.AssetID,
+		&activityAsset.ActivityID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := data.NewUserAssetEvent(eventPayload, studyID, &viewer.ID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	return &addActivityAssetPayloadResolver{
+		ActivityID: &activityAsset.ActivityID,
+		AssetID:    &activityAsset.AssetID,
+		Conf:       r.Conf,
+		Repos:      r.Repos,
+	}, nil
+}
+
 type AddCourseLessonInput struct {
 	CourseID string
 	LessonID string
@@ -315,7 +401,20 @@ func (r *RootResolver) AddComment(
 	if err != nil {
 		return nil, errors.New("comment not found")
 	}
+
 	draft, err := currentCommentPermit.Draft()
+	if err != nil {
+		return nil, err
+	}
+	commentableID, err := currentCommentPermit.CommentableID()
+	if err != nil {
+		return nil, err
+	}
+	studyID, err := currentCommentPermit.StudyID()
+	if err != nil {
+		return nil, err
+	}
+	userID, err := currentCommentPermit.UserID()
 	if err != nil {
 		return nil, err
 	}
@@ -337,6 +436,48 @@ func (r *RootResolver) AddComment(
 		return nil, myerr.SomethingWentWrongError
 	}
 
+	if commentableID.Type == "Lesson" {
+		err = r.Repos.ParseLessonBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	} else if commentableID.Type == "UserAsset" {
+		err = r.Repos.ParseUserAssetBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
+		ctx,
+		comment.Body,
+		studyID.String,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if updated {
+		if err := comment.Body.Set(body); err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
 	commentPermit, err := r.Repos.Comment().Update(ctx, comment)
 	if err != nil {
 		return nil, err
@@ -353,6 +494,67 @@ func (r *RootResolver) AddComment(
 		Conf:    r.Conf,
 		Comment: commentPermit,
 		Repos:   r.Repos,
+	}, nil
+}
+
+type CreateActivityInput struct {
+	Description *string
+	LessonID    string
+	Name        string
+	StudyID     string
+}
+
+func (r *RootResolver) CreateActivity(
+	ctx context.Context,
+	args struct{ Input CreateActivityInput },
+) (*createActivityPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		return nil, errors.New("viewer not found")
+	}
+
+	lesson, err := r.Repos.Lesson().Pull(ctx, args.Input.LessonID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("lesson not found")
+	}
+	lessonIsPublished, err := lesson.IsPublished()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	if !lessonIsPublished {
+		return nil, errors.New("lesson must be published")
+	}
+
+	activity := &data.Activity{}
+	if err := activity.Description.Set(args.Input.Description); err != nil {
+		return nil, errors.New("invalid activity description")
+	}
+	if err := activity.LessonID.Set(args.Input.LessonID); err != nil {
+		return nil, errors.New("invalid activity lesson_id")
+	}
+	if err := activity.Name.Set(args.Input.Name); err != nil {
+		return nil, errors.New("invalid activity name")
+	}
+	if err := activity.StudyID.Set(args.Input.StudyID); err != nil {
+		return nil, errors.New("invalid activity study_id")
+	}
+	if err := activity.UserID.Set(&viewer.ID); err != nil {
+		return nil, errors.New("invalid activity user_id")
+	}
+
+	activityPermit, err := r.Repos.Activity().Create(ctx, activity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createActivityPayloadResolver{
+		Activity: activityPermit,
+		Conf:     r.Conf,
+		StudyID:  &activity.StudyID,
+		Repos:    r.Repos,
 	}, nil
 }
 
@@ -809,6 +1011,47 @@ func (r *RootResolver) DeleteComment(
 	}, nil
 }
 
+type DeleteActivityInput struct {
+	ActivityID string
+}
+
+func (r *RootResolver) DeleteActivity(
+	ctx context.Context,
+	args struct{ Input DeleteActivityInput },
+) (*deleteActivityPayloadResolver, error) {
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	activityPermit, err := r.Repos.Activity().Get(ctx, args.Input.ActivityID)
+	if err != nil {
+		return nil, err
+	}
+	activity := activityPermit.Get()
+
+	if err := r.Repos.Activity().Delete(ctx, activity); err != nil {
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &deleteActivityPayloadResolver{
+		ActivityID: &activity.ID,
+		Conf:       r.Conf,
+		Repos:      r.Repos,
+		StudyID:    &activity.StudyID,
+	}, nil
+}
+
 type DeleteCourseInput struct {
 	CourseID string
 }
@@ -1169,6 +1412,41 @@ func (r *RootResolver) MarkAllStudyNotificationsAsRead(
 	return true, nil
 }
 
+type MoveActivityAssetInput struct {
+	ActivityID   string
+	AfterAssetID string
+	AssetID      string
+}
+
+func (r *RootResolver) MoveActivityAsset(
+	ctx context.Context,
+	args struct{ Input MoveActivityAssetInput },
+) (*moveActivityAssetPayloadResolver, error) {
+	activityAsset := &data.ActivityAsset{}
+	if err := activityAsset.ActivityID.Set(args.Input.ActivityID); err != nil {
+		return nil, errors.New("invalid value for activityId")
+	}
+	if err := activityAsset.AssetID.Set(args.Input.AssetID); err != nil {
+		return nil, errors.New("invalid value for assetId")
+	}
+	afterAssetID, err := mytype.ParseOID(args.Input.AfterAssetID)
+	if err != nil {
+		return nil, errors.New("invalid value for afterAssetId")
+	}
+
+	_, err = r.Repos.ActivityAsset().Move(ctx, activityAsset, afterAssetID.String)
+	if err != nil {
+		return nil, err
+	}
+
+	return &moveActivityAssetPayloadResolver{
+		ActivityID: &activityAsset.ActivityID,
+		AssetID:    &activityAsset.AssetID,
+		Conf:       r.Conf,
+		Repos:      r.Repos,
+	}, nil
+}
+
 type MoveCourseLessonInput struct {
 	AfterLessonID string
 	CourseID      string
@@ -1447,16 +1725,30 @@ func (r *RootResolver) PublishCommentDraft(
 		return nil, myerr.SomethingWentWrongError
 	}
 
-	err = r.Repos.ParseLessonBodyForEvents(
-		ctx,
-		&comment.Body,
-		commentableID,
-		studyID,
-		userID,
-	)
-	if err != nil {
-		mylog.Log.WithError(err).Error(util.Trace(""))
-		return nil, err
+	if commentableID.Type == "Lesson" {
+		err = r.Repos.ParseLessonBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	} else if commentableID.Type == "UserAsset" {
+		err = r.Repos.ParseUserAssetBodyForEvents(
+			ctx,
+			&comment.Body,
+			commentableID,
+			studyID,
+			userID,
+		)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
 	}
 
 	body, err, updated := r.Repos.ReplaceMarkdownRefsWithLinks(
@@ -1489,6 +1781,90 @@ func (r *RootResolver) PublishCommentDraft(
 		Conf:    r.Conf,
 		Comment: commentPermit,
 		Repos:   r.Repos,
+	}, nil
+}
+
+type RemoveActivityAssetInput struct {
+	ActivityID string
+	AssetID    string
+}
+
+func (r *RootResolver) RemoveActivityAsset(
+	ctx context.Context,
+	args struct{ Input RemoveActivityAssetInput },
+) (*removeActivityAssetPayloadResolver, error) {
+	viewer, ok := myctx.UserFromContext(ctx)
+	if !ok {
+		err := errors.New("viewer not found")
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	tx, err, newTx := myctx.TransactionFromContext(ctx)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	} else if newTx {
+		defer data.RollbackTransaction(tx)
+	}
+	ctx = myctx.NewQueryerContext(ctx, tx)
+
+	activityAsset := &data.ActivityAsset{}
+	if err := activityAsset.ActivityID.Set(args.Input.ActivityID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("invalid value for activityId")
+	}
+	if err := activityAsset.AssetID.Set(args.Input.AssetID); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("invalid value for assetId")
+	}
+
+	if err = r.Repos.ActivityAsset().Disconnect(ctx, activityAsset); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	activity, err := r.Repos.Activity().Pull(ctx, args.Input.ActivityID)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, errors.New("activity not found")
+	}
+	studyID, err := activity.StudyID()
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, myerr.SomethingWentWrongError
+	}
+
+	eventPayload, err := data.NewUserAssetRemovedFromActivityPayload(
+		&activityAsset.AssetID,
+		&activityAsset.ActivityID,
+	)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	event, err := data.NewUserAssetEvent(eventPayload, studyID, &viewer.ID, true)
+	if err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+	if _, err := r.Repos.Event().Create(ctx, event); err != nil {
+		mylog.Log.WithError(err).Error(util.Trace(""))
+		return nil, err
+	}
+
+	if newTx {
+		err := data.CommitTransaction(tx)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, err
+		}
+	}
+
+	return &removeActivityAssetPayloadResolver{
+		ActivityID: &activityAsset.ActivityID,
+		AssetID:    &activityAsset.AssetID,
+		Conf:       r.Conf,
+		Repos:      r.Repos,
 	}, nil
 }
 
@@ -2411,6 +2787,64 @@ func (r *RootResolver) UpdateComment(
 		Conf:    r.Conf,
 		Comment: commentPermit,
 		Repos:   r.Repos,
+	}, nil
+}
+
+type UpdateActivityInput struct {
+	ActivityID  string
+	Description *string
+	LessonID    *string
+	Name        *string
+}
+
+func (r *RootResolver) UpdateActivity(
+	ctx context.Context,
+	args struct{ Input UpdateActivityInput },
+) (*activityResolver, error) {
+	activity := &data.Activity{}
+	if err := activity.ID.Set(args.Input.ActivityID); err != nil {
+		return nil, errors.New("invalid activity id")
+	}
+
+	if args.Input.Description != nil {
+		if err := activity.Description.Set(args.Input.Description); err != nil {
+			return nil, errors.New("invalid activity description")
+		}
+	}
+	if args.Input.LessonID != nil {
+		lesson, err := r.Repos.Lesson().Pull(ctx, *args.Input.LessonID)
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, errors.New("lesson not found")
+		}
+		lessonIsPublished, err := lesson.IsPublished()
+		if err != nil {
+			mylog.Log.WithError(err).Error(util.Trace(""))
+			return nil, myerr.SomethingWentWrongError
+		}
+
+		if !lessonIsPublished {
+			return nil, errors.New("lesson must be published")
+		}
+
+		if err := activity.LessonID.Set(args.Input.LessonID); err != nil {
+			return nil, errors.New("invalid activity lesson_id")
+		}
+	}
+	if args.Input.Name != nil {
+		if err := activity.Name.Set(args.Input.Name); err != nil {
+			return nil, errors.New("invalid activity name")
+		}
+	}
+
+	activityPermit, err := r.Repos.Activity().Update(ctx, activity)
+	if err != nil {
+		return nil, err
+	}
+	return &activityResolver{
+		Conf:     r.Conf,
+		Activity: activityPermit,
+		Repos:    r.Repos,
 	}, nil
 }
 

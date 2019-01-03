@@ -21,7 +21,7 @@ func (e DataEndUserError) Error() string {
 // These are unique index names in database, used to create errors that the end
 // user will see. Some errors should not be reported to the end user, so those
 // will return as the generic "something went wrong" error.
-var uniqueUserLogin = "account_unique_login_idx"
+var uniqueUserLogin = "user_search_index_login_idx"
 var ErrUserLoginUnavailable = DataEndUserError{UniqueViolation, "user login unavailable"}
 
 var uniqueEmailValue = "email_unique_value_idx"
@@ -35,15 +35,15 @@ var uniqueRoleName = "role_unique_upper_name_idx"
 var uniquePermissionAccessLevelTypeField = "permission_access_level_type_field_key"
 var uniquePermissionAccessLevelType = "permission_access_level_type_key"
 
-var uniqueStudyUserIDName = "study_unique_user_id_name_key"
+var uniqueStudyUserIDName = "study_search_index_user_id_name_idx"
 var ErrUserStudyNameUnavailable = DataEndUserError{UniqueViolation, "user study name unavailable"}
 
-var uniqueLessonStudyIDNumber = "lesson_study_id_number_idx"
+var uniqueLessonStudyIDNumber = "lesson_search_index_study_id_number_idx"
 
-var uniqueCourseStudyIDName = "course_unique_study_id_name_key"
+var uniqueCourseStudyIDName = "course_search_index_study_id_name_idx"
 var ErrStudyCourseNameUnavailable = DataEndUserError{UniqueViolation, "study course name unavailable"}
 
-var uniqueCourseStudyIDNumber = "course_unique_study_id_number_idx"
+var uniqueCourseStudyIDNumber = "course_search_index_study_id_number_idx"
 
 var uniqueCourseLessonCourseIDNumber = "course_lesson_course_id_number_key"
 
@@ -54,13 +54,13 @@ var ErrStudyLabelNameUnavailable = DataEndUserError{UniqueViolation, "study labe
 
 var uniqueLabeledLabelableIDLabelID = "labeled_unique_labelable_id_label_id_idx"
 
-var uniqueTopicName = "topic_unique_name_idx"
+var uniqueTopicName = "topic_search_index_name_idx"
 
 var uniqueTopicedTopicableIDTopicID = "topiced_unique_topicable_id_topic_id_idx"
 
 var uniqueAssetKey = "asset_key_unique_idx"
 
-var uniqueUserAssetStudyIDName = "user_asset_study_id_name_unique_idx"
+var uniqueUserAssetStudyIDName = "user_asset_search_index_study_id_name_idx"
 var ErrStudyUserAssetNameUnavailable = DataEndUserError{UniqueViolation, "study asset name unavailable"}
 
 var uniqueAppledAppleableIDUserID = "appled_unique_appleable_id_user_id_idx"
@@ -89,7 +89,7 @@ var uniqueUserAssetEventSourceIDReferencedAssetID = "user_asset_event_source_id_
 
 var uniqueLessonNotificationUserIDLessonID = "lesson_notification_user_id_lesson_id_unique_idx"
 
-var uniqueUserAssetSearchIndexStudyIDName = "user_asset_search_index_study_id_name_unique_idx"
+var uniqueUserAssetSearchIndexStudyIDName = "user_asset_search_index_study_id_name_idx"
 
 func handleUniqueViolation(constraintName string) error {
 	switch constraintName {

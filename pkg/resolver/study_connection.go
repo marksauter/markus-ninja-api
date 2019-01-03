@@ -88,6 +88,6 @@ func (r *studyConnectionResolver) TotalCount(ctx context.Context) (int32, error)
 	case "User":
 		return r.repos.Study().CountByUser(ctx, r.nodeID.String, r.filters)
 	default:
-		return n, errors.New("invalid node id for event total count")
+		return n, errors.New("invalid node id for study total count")
 	}
 }

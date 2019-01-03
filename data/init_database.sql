@@ -10,9 +10,6 @@ CREATE TABLE IF NOT EXISTS account(
   updated_at    TIMESTAMPTZ  DEFAULT statement_timestamp()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS account_unique_login_idx
-  ON account (lower(login));
-
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'email_type') THEN
@@ -190,32 +187,6 @@ FROM role r
 JOIN user_role ur ON ur.role = r.name;
 
 
-CREATE OR REPLACE VIEW user_master AS
-SELECT
-  account.updated_at account_updated_at,
-  user_profile.bio,
-  account.created_at,
-  account.id,
-  account.login,
-  user_profile.name,
-  user_profile.updated_at profile_updated_at,
-  user_profile.email_id profile_email_id,
-  ARRAY(
-    SELECT role.name
-    FROM role
-    LEFT JOIN user_role ON user_role.user_id = account.id
-    WHERE role.name = user_role.role
-  ) roles,
-  CASE 
-    WHEN email.verified_at IS NOT NULL THEN
-      true
-    ELSE false
-  END AS verified
-FROM account
-JOIN email ON email.user_id = account.id
-  AND email.type = 'PRIMARY'
-JOIN user_profile ON user_profile.user_id = account.id;
-
 CREATE OR REPLACE VIEW user_credentials AS
 SELECT
   backup_email.value backup_email,
@@ -379,13 +350,6 @@ CREATE TABLE IF NOT EXISTS study(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS study_unique_user_id_name_key
-  ON study (user_id, lower(name));
-CREATE INDEX IF NOT EXISTS study_user_id_advanced_at_idx
-  ON study (user_id, advanced_at);
-CREATE INDEX IF NOT EXISTS study_user_id_updated_at_idx
-  ON study (user_id, updated_at);
-
 CREATE OR REPLACE FUNCTION study_will_update()
   RETURNS TRIGGER 
   SECURITY DEFINER
@@ -442,11 +406,6 @@ CREATE TABLE IF NOT EXISTS lesson(
     REFERENCES account (id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS lesson_study_id_number_idx
-  ON lesson (study_id, number);
-CREATE INDEX IF NOT EXISTS lesson_user_id_idx
-  ON lesson (user_id);
 
 CREATE OR REPLACE FUNCTION lesson_will_insert()
   RETURNS TRIGGER
@@ -602,17 +561,6 @@ CREATE TABLE IF NOT EXISTS course(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS course_unique_study_id_name_key
-  ON course (study_id, lower(name));
-CREATE UNIQUE INDEX IF NOT EXISTS course_study_id_number_idx
-  ON course (study_id, number);
-CREATE INDEX IF NOT EXISTS course_study_id_created_at_idx
-  ON course (study_id, created_at);
-CREATE INDEX IF NOT EXISTS course_study_id_advanced_at_idx
-  ON course (study_id, advanced_at);
-CREATE INDEX IF NOT EXISTS course_user_id_idx
-  ON course (user_id);
-
 CREATE OR REPLACE FUNCTION course_will_insert()
   RETURNS TRIGGER
   SECURITY DEFINER
@@ -721,24 +669,6 @@ IF NOT EXISTS(
 END IF;
 END;
 $$ language 'plpgsql';
-
-CREATE OR REPLACE VIEW lesson_master AS
-SELECT
-  lesson.body,
-  lesson.created_at,
-  course_lesson.course_id,
-  course_lesson.number course_number,
-  lesson.draft,
-  lesson.id,
-  lesson.last_edited_at,
-  lesson.number,
-  lesson.published_at,
-  lesson.study_id,
-  lesson.title,
-  lesson.updated_at,
-  lesson.user_id
-FROM lesson
-LEFT JOIN course_lesson ON course_lesson.lesson_id = lesson.id;
 
 DO $$
 BEGIN
@@ -1001,30 +931,6 @@ CREATE TABLE IF NOT EXISTS comment_labeled(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE OR REPLACE VIEW label_search_index AS
-SELECT
-  label.*,
-  count(labeled) AS labeled_count
-FROM label
-LEFT JOIN labeled ON labeled.label_id = label.id
-GROUP BY label.id;
-
-CREATE OR REPLACE VIEW labelable_label AS
-SELECT
-  label_search_index.*,
-  labeled.labelable_id,
-  labeled.created_at labeled_at
-FROM label_search_index
-JOIN labeled ON labeled.label_id = label_search_index.id;
-
-CREATE OR REPLACE VIEW labeled_comment AS
-SELECT
-  comment.*,
-  labeled.label_id,
-  labeled.created_at labeled_at
-FROM comment
-JOIN labeled ON labeled.labelable_id = comment.id;
-
 CREATE TABLE IF NOT EXISTS topic(
   created_at  TIMESTAMPTZ  DEFAULT statement_timestamp(),
   description TEXT,
@@ -1032,9 +938,6 @@ CREATE TABLE IF NOT EXISTS topic(
   name        VARCHAR(40)  NOT NULL CHECK(name ~ '^[a-z0-9-]{1,39}$'),
   updated_at  TIMESTAMPTZ  DEFAULT statement_timestamp()
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS topic_unique_name_idx
-  ON topic (lower(name));
 
 CREATE OR REPLACE FUNCTION topic_will_insert()
   RETURNS TRIGGER
@@ -1172,30 +1075,6 @@ CREATE TABLE IF NOT EXISTS user_asset(
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS user_asset_study_id_name_unique_idx
-  ON user_asset (study_id, lower(name));
-CREATE INDEX IF NOT EXISTS user_asset_user_id_idx
-  ON user_asset (user_id);
-
-CREATE OR REPLACE VIEW user_asset_master AS
-SELECT
-  asset.id asset_id,
-  asset.created_at,
-  user_asset.description,
-  user_asset.id,
-  asset.key,
-  user_asset.name,
-  user_asset.name_tokens,
-  asset.name original_name,
-  asset.size,
-  user_asset.study_id,
-  asset.subtype,
-  asset.type,
-  user_asset.updated_at,
-  user_asset.user_id
-FROM user_asset
-JOIN asset ON asset.id = user_asset.asset_id;
-
 CREATE OR REPLACE FUNCTION user_asset_will_update()
   RETURNS TRIGGER
   SECURITY DEFINER
@@ -1263,6 +1142,138 @@ IF NOT EXISTS(
   CREATE TRIGGER after_comment_insert
     AFTER INSERT ON comment
     FOR EACH ROW EXECUTE PROCEDURE comment_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS activity(
+  advanced_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ   DEFAULT statement_timestamp(),
+  description   TEXT,
+  id            VARCHAR(100)  PRIMARY KEY,
+  lesson_id     VARCHAR(100)  NOT NULL,
+  name          VARCHAR(40)   NOT NULL,
+  name_tokens   TEXT          NOT NULL,
+  number        INT           CHECK(number > 0),
+  study_id      VARCHAR(100)  NOT NULL,
+  updated_at    TIMESTAMPTZ   DEFAULT statement_timestamp(),
+  user_id       VARCHAR(100)  NOT NULL,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION activity_will_insert()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  SELECT INTO NEW.number count(*)::INT
+  FROM activity
+  WHERE study_id = NEW.study_id;
+  NEW.number = NEW.number + 1;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'before_activity_insert'
+) THEN
+  CREATE TRIGGER before_activity_insert
+    BEFORE INSERT ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_will_insert(); 
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_will_update()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = statement_timestamp();
+  RETURN NEW;
+END
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'before_activity_update'
+) THEN
+  CREATE TRIGGER before_activity_update
+    BEFORE UPDATE ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_will_update();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION advance_activity(_activity_id VARCHAR)
+  RETURNS VOID
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE activity
+  SET advanced_at = statement_timestamp()
+  WHERE activity.id = _activity_id;
+$$;
+
+CREATE TABLE IF NOT EXISTS activity_asset(
+  created_at   TIMESTAMPTZ  DEFAULT statement_timestamp(),
+  activity_id  VARCHAR(100) NOT NULL,
+  asset_id     VARCHAR(100) PRIMARY KEY,
+  number       INT          NOT NULL CHECK(number > 0),
+  UNIQUE (activity_id, number) DEFERRABLE INITIALLY DEFERRED,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (asset_id)
+    REFERENCES user_asset (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION activity_asset_will_insert()
+  RETURNS TRIGGER
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  SELECT INTO NEW.number count(*)::INT
+  FROM activity_asset
+  WHERE activity_id = NEW.activity_id;
+  NEW.number = NEW.number + 1;
+
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'before_activity_asset_insert'
+) THEN
+  CREATE TRIGGER before_activity_asset_insert
+    BEFORE INSERT ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_will_insert(); 
 END IF;
 END;
 $$ language 'plpgsql';
@@ -1425,13 +1436,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS event_type_name_key
 
 INSERT INTO event_type (name, description)
 VALUES
+  ('ActivityEvent', 'Triggered when an activity is created.'),
   ('CourseEvent', 'Triggered when a course is created, appled, or unappled.'),
   ('LessonEvent', 'Triggered when a lesson is created, added to a course, 
     removed from a course, commented, labeled, unlabeled, referenced, or renamed. 
     Also triggered when a user is mentioned in the lesson body.'),
   ('PublicEvent', 'Triggered when a study is made public.'),
-  ('UserAssetEvent', 'Triggered when a user asset is created,
-    commented, labeled, unlabeled, referenced, or renamed.'), 
+  ('UserAssetEvent', 'Triggered when a user asset is created, added to an activity,
+    removed from an activity, commented, labeled, unlabeled, referenced, or renamed.'),
   ('StudyEvent', 'Triggered when a study is created, appled, or unappled.')
 ON CONFLICT (name) DO NOTHING;
 
@@ -1515,11 +1527,31 @@ BEGIN
       END CASE;
     WHEN 'UserAssetEvent' THEN
       CASE NEW.payload->>'action'
+        WHEN 'added_to_activity' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'activity_id' = NEW.payload->>'activity_id'
+            AND payload->>'action' = 'added_to_activity'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
         WHEN 'labeled' THEN
           SELECT INTO ts created_at
           FROM user_asset_event
           WHERE payload->>'label_id' = NEW.payload->>'label_id'
             AND payload->>'action' = 'labeled'
+            AND payload->>'asset_id' = NEW.payload->>'asset_id';
+
+          IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
+            RETURN NULL;
+          END IF;
+        WHEN 'removed_from_activity' THEN
+          SELECT INTO ts created_at
+          FROM user_asset_event
+          WHERE payload->>'activity_id' = NEW.payload->>'activity_id'
+            AND payload->>'action' = 'removed_from_activity'
             AND payload->>'asset_id' = NEW.payload->>'asset_id';
 
           IF FOUND AND ts >= CURRENT_DATE AND ts < CURRENT_DATE + interval '1 day' THEN
@@ -1568,6 +1600,15 @@ CREATE OR REPLACE FUNCTION event_inserted()
 AS $$
 BEGIN
   CASE NEW.type
+    WHEN 'ActivityEvent' THEN
+      INSERT INTO activity_event (action, activity_id, event_id, study_id, user_id)
+      VALUES (
+        (NEW.payload->>'action')::activity_event_action,
+        NEW.payload->>'activity_id',
+        NEW.id,
+        NEW.study_id,
+        NEW.user_id
+      );
     WHEN 'CourseEvent' THEN
       INSERT INTO course_event (action, course_id, event_id, study_id, user_id)
       VALUES (
@@ -1663,6 +1704,49 @@ BEGIN
   RETURN OLD;
 END;
 $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_event_action') THEN
+    CREATE TYPE activity_event_action AS ENUM('created');
+  END IF;
+END
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS activity_event (
+  action     activity_event_action NOT NULL,
+  activity_id  VARCHAR(100)        NOT NULL,
+  event_id   VARCHAR(100)        PRIMARY KEY,
+  study_id    VARCHAR(100)       NOT NULL,
+  user_id    VARCHAR(100)        NOT NULL,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES event (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_event'
+    AND trigger_name = 'after_activity_event_delete'
+) THEN
+  CREATE TRIGGER after_activity_event_delete
+    AFTER DELETE ON activity_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
 
 DO $$
 BEGIN
@@ -2183,11 +2267,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_asset_event_action_unique_lower_name_idx
 
 INSERT INTO user_asset_event_action (name, description)
 VALUES
+  ('added_to_activity', 'The user asset was added to an activity.'),
   ('commented', 'A comment was added to the asset.'),
   ('created', 'The user asset was created.'),
   ('labeled', 'A label was added to the asset.'),
   ('mentioned', 'The user was @mentioned in an asset body.'),
   ('referenced', 'The user asset was referenced from an asset.'),
+  ('removed_from_activity', 'The user asset was removed from an activity'),
   ('renamed', 'The user asset name was changed.'),
   ('unlabeled', 'A label was removed from the asset.')
 ON CONFLICT (name) DO NOTHING;
@@ -2248,6 +2334,12 @@ CREATE OR REPLACE FUNCTION user_asset_event_inserted()
 AS $$
 BEGIN
   CASE NEW.action
+    WHEN 'added_to_activity' THEN
+      INSERT INTO user_asset_added_to_activity_event (activity_id, event_id)
+      VALUES (
+        NEW.payload->>'activity_id',
+        NEW.event_id
+      );
     WHEN 'commented' THEN
       INSERT INTO user_asset_commented_event (comment_id, event_id)
       VALUES (
@@ -2280,12 +2372,19 @@ BEGIN
         NEW.payload->'rename'->>'from',
         NEW.payload->'rename'->>'to'
       );
+    WHEN 'removed_from_activity' THEN
+      INSERT INTO user_asset_removed_from_activity_event (activity_id, event_id)
+      VALUES (
+        NEW.payload->>'activity_id',
+        NEW.event_id
+      );
     WHEN 'unlabeled' THEN
       INSERT INTO user_asset_unlabeled_event (event_id, label_id)
       VALUES (
         NEW.event_id,
         NEW.payload->>'label_id'
       );
+    ELSE
   END CASE;
 
   RETURN NEW;
@@ -2303,6 +2402,32 @@ IF NOT EXISTS(
   CREATE TRIGGER after_user_asset_event_insert
     AFTER INSERT ON user_asset_event
     FOR EACH ROW EXECUTE PROCEDURE user_asset_event_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_added_to_activity_event (
+  activity_id     VARCHAR(100) NOT NULL,
+  event_id        VARCHAR(100) PRIMARY KEY,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_added_to_activity_event'
+    AND trigger_name = 'after_user_asset_added_to_activity_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_added_to_activity_event_delete
+    AFTER DELETE ON user_asset_added_to_activity_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
 END IF;
 END;
 $$ language 'plpgsql';
@@ -2393,6 +2518,47 @@ CREATE TABLE IF NOT EXISTS user_asset_renamed_event (
     REFERENCES user_asset_event (event_id)
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_renamed_event'
+    AND trigger_name = 'after_user_asset_renamed_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_renamed_event_delete
+    AFTER DELETE ON user_asset_renamed_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS user_asset_removed_from_activity_event (
+  activity_id       VARCHAR(100) NOT NULL,
+  event_id        VARCHAR(100) PRIMARY KEY,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (event_id)
+    REFERENCES user_asset_event (event_id)
+    ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'user_asset_removed_from_activity_event'
+    AND trigger_name = 'after_user_asset_removed_from_activity_event_delete'
+) THEN
+  CREATE TRIGGER after_user_asset_removed_from_activity_event_delete
+    AFTER DELETE ON user_asset_removed_from_activity_event
+    FOR EACH ROW EXECUTE PROCEDURE delete_event();
+END IF;
+END;
+$$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS user_asset_unlabeled_event (
   event_id        VARCHAR(100) PRIMARY KEY,
@@ -2600,6 +2766,9 @@ CREATE TABLE IF NOT EXISTS user_search_index (
     ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS user_search_index_login_idx
+  ON user_search_index (lower(login));
+
 CREATE INDEX IF NOT EXISTS user_search_index_fts_idx
   ON user_search_index USING gin(document);
 
@@ -2612,7 +2781,7 @@ CREATE INDEX IF NOT EXISTS user_search_index_enrollee_count_idx
 CREATE INDEX IF NOT EXISTS user_search_index_study_count_idx
   ON user_search_index (study_count DESC);
 
-CREATE OR REPLACE FUNCTION account_will_insert()
+CREATE OR REPLACE FUNCTION account_inserted()
   RETURNS TRIGGER 
   SECURITY DEFINER
   LANGUAGE plpgsql
@@ -2653,7 +2822,7 @@ IF NOT EXISTS(
 ) THEN
   CREATE TRIGGER after_account_insert
     AFTER INSERT ON account
-    FOR EACH ROW EXECUTE PROCEDURE account_will_insert();
+    FOR EACH ROW EXECUTE PROCEDURE account_inserted();
 END IF;
 END;
 $$ language 'plpgsql';
@@ -3001,6 +3170,180 @@ END IF;
 END;
 $$ language 'plpgsql';
 
+CREATE TABLE IF NOT EXISTS activity_search_index (
+  advanced_at   TIMESTAMPTZ,
+  asset_count   BIGINT       NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ  NOT NULL,
+  description   TEXT,
+  document      TSVECTOR     NOT NULL,
+  id            VARCHAR(100) PRIMARY KEY,
+  lesson_id     VARCHAR(100)  NOT NULL,
+  name          VARCHAR(40)  NOT NULL,
+  name_tokens   TEXT         NOT NULL,
+  number        INT          NOT NULL CHECK(number > 0),
+  study_id      VARCHAR(100) NOT NULL,
+  updated_at    TIMESTAMPTZ  NOT NULL,
+  user_id       VARCHAR(100) NOT NULL,
+  FOREIGN KEY (id)
+    REFERENCES activity (id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  FOREIGN KEY (lesson_id)
+    REFERENCES lesson (id)
+    ON UPDATE NO ACTION ON DELETE CASCADE,
+  FOREIGN KEY (study_id)
+    REFERENCES study (id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  FOREIGN KEY (user_id)
+    REFERENCES account (id)
+    ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_fts_idx
+  ON activity_search_index USING gin(document);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_advanced_at_idx
+  ON activity_search_index (advanced_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_created_at_idx
+  ON activity_search_index (created_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_asset_count_idx
+  ON activity_search_index (asset_count);
+
+CREATE UNIQUE INDEX IF NOT EXISTS activity_search_index_study_id_name_key
+  ON activity_search_index (study_id, lower(name));
+
+CREATE UNIQUE INDEX IF NOT EXISTS activity_search_index_study_id_number_idx
+  ON activity_search_index (study_id, number);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_study_id_advanced_at_idx
+  ON activity_search_index (study_id, advanced_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_study_id_created_at_idx
+  ON activity_search_index (study_id, created_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_lesson_id_created_at_idx
+  ON activity_search_index (lesson_id, created_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_study_id_created_at_idx
+  ON activity_search_index (study_id, created_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_study_id_advanced_at_idx
+  ON activity_search_index (study_id, advanced_at);
+
+CREATE INDEX IF NOT EXISTS activity_search_index_user_id_created_at_idx
+  ON activity_search_index (user_id, created_at);
+
+CREATE OR REPLACE FUNCTION activity_inserted()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    INSERT INTO activity_search_index(
+      created_at,
+      description,
+      document,
+      id,
+      lesson_id,
+      name,
+      name_tokens,
+      number,
+      study_id,
+      updated_at,
+      user_id
+    ) VALUES (
+      NEW.created_at,
+      NEW.description,
+      setweight(to_tsvector('simple', NEW.name_tokens), 'A') ||
+      setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B'),
+      NEW.id,
+      NEW.lesson_id,
+      NEW.name,
+      NEW.name_tokens,
+      NEW.number,
+      NEW.study_id,
+      NEW.updated_at,
+      NEW.user_id
+    );
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'after_activity_insert'
+) THEN
+  CREATE TRIGGER after_activity_insert
+    AFTER INSERT ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_updated()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  DECLARE
+    doc TSVECTOR;
+  BEGIN
+    IF NEW.name != OLD.name OR NEW.description != OLD.description THEN
+      doc = setweight(to_tsvector('simple', NEW.name_tokens), 'A') ||
+        setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B');
+    ELSE
+      doc = (SELECT document FROM activity_search_index WHERE id = NEW.id); 
+    END IF;
+
+    UPDATE activity_search_index
+    SET 
+      advanced_at = NEW.advanced_at,
+      description = NEW.description,
+      document = doc,
+      lesson_id = NEW.lesson_id,
+      name = NEW.name,
+      name_tokens = NEW.name_tokens,
+      updated_at = NEW.updated_at
+    WHERE id = NEW.id;
+
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity'
+    AND trigger_name = 'after_activity_update'
+) THEN
+  CREATE TRIGGER after_activity_update
+    AFTER UPDATE ON activity
+    FOR EACH ROW EXECUTE PROCEDURE activity_updated();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION refresh_activity_search_index_asset_count(_activity_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE activity_search_index
+  SET asset_count = (
+    SELECT count(activity_asset) asset_count 
+    FROM activity_asset
+    WHERE activity_asset.activity_id = _activity_id
+  )
+  WHERE id = _activity_id;
+$$;
+
 CREATE TABLE IF NOT EXISTS course_search_index (
   advanced_at   TIMESTAMPTZ,
   apple_count   BIGINT       NOT NULL DEFAULT 0,
@@ -3030,6 +3373,12 @@ CREATE TABLE IF NOT EXISTS course_search_index (
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS course_search_index_study_id_name_idx
+  ON course_search_index (study_id, lower(name));
+
+CREATE UNIQUE INDEX IF NOT EXISTS course_search_index_study_id_number_idx
+  ON course_search_index (study_id, number);
+
 CREATE INDEX IF NOT EXISTS course_search_index_fts_idx
   ON course_search_index USING gin(document);
 
@@ -3047,6 +3396,12 @@ CREATE INDEX IF NOT EXISTS course_search_index_apple_count_idx
 
 CREATE INDEX IF NOT EXISTS course_search_index_lesson_count_idx
   ON course_search_index (lesson_count);
+
+CREATE INDEX IF NOT EXISTS course_search_index_study_id_created_at_idx
+  ON course_search_index (study_id, created_at);
+
+CREATE INDEX IF NOT EXISTS course_search_index_study_id_advanced_at_idx
+  ON course_search_index (study_id, advanced_at);
 
 CREATE INDEX IF NOT EXISTS course_search_index_user_id_created_at_idx
   ON course_search_index (user_id, created_at);
@@ -3238,6 +3593,9 @@ CREATE INDEX IF NOT EXISTS study_search_index_apple_count_idx
 
 CREATE INDEX IF NOT EXISTS study_search_index_lesson_count_idx
   ON study_search_index (lesson_count DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS study_search_index_user_id_name_idx
+  ON study_search_index (user_id, name);
 
 CREATE INDEX IF NOT EXISTS study_search_index_user_id_created_at_idx
   ON study_search_index (user_id, created_at);
@@ -3593,6 +3951,9 @@ CREATE INDEX IF NOT EXISTS lesson_search_index_comment_count_idx
 
 CREATE INDEX IF NOT EXISTS lesson_search_index_course_id_course_number_idx
   ON lesson_search_index (course_id, course_number);
+
+CREATE UNIQUE INDEX IF NOT EXISTS lesson_search_index_study_id_number_idx
+  ON lesson_search_index (study_id, number);
 
 CREATE INDEX IF NOT EXISTS lesson_search_index_study_id_created_at_idx
   ON lesson_search_index (study_id, created_at);
@@ -4049,6 +4410,9 @@ CREATE TABLE IF NOT EXISTS topic_search_index (
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS topic_search_index_name_idx
+  ON topic_search_index (lower(name));
+
 CREATE INDEX IF NOT EXISTS topic_search_index_fts_idx
   ON topic_search_index USING gin(document);
 
@@ -4230,26 +4594,31 @@ END;
 $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS user_asset_search_index (
-  asset_id      BIGINT       NOT NULL,
-  comment_count INT          NOT NULL DEFAULT 0,
-  created_at    TIMESTAMPTZ  NOT NULL,
-  description   TEXT,
-  document      TSVECTOR     NOT NULL,
-  id            VARCHAR(100) PRIMARY KEY,
-  key           TEXT         NOT NULL,
-  labels        TSVECTOR     NOT NULL,
-  name          VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
-  name_tokens   TEXT         NOT NULL,
-  original_name TEXT         NOT NULL, 
-  size          BIGINT       NOT NULL,
-  study_id      VARCHAR(100) NOT NULL,
-  subtype       TEXT         NOT NULL,
-  type          TEXT         NOT NULL,
-  updated_at    TIMESTAMPTZ  NOT NULL,
-  user_id       VARCHAR(100) NOT NULL,
+  activity_id     VARCHAR(100),
+  activity_number INT,
+  asset_id        BIGINT       NOT NULL,
+  comment_count   INT          NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ  NOT NULL,
+  description     TEXT,
+  document        TSVECTOR     NOT NULL,
+  id              VARCHAR(100) PRIMARY KEY,
+  key             TEXT         NOT NULL,
+  labels          TSVECTOR     NOT NULL,   
+  name            VARCHAR(40)  NOT NULL CHECK(name ~ '^[\w\-.]{1,39}$'),
+  name_tokens     TEXT         NOT NULL,
+  original_name   TEXT         NOT NULL, 
+  size            BIGINT       NOT NULL,
+  study_id        VARCHAR(100) NOT NULL,
+  subtype         TEXT         NOT NULL,
+  type            TEXT         NOT NULL,
+  updated_at      TIMESTAMPTZ  NOT NULL,
+  user_id         VARCHAR(100) NOT NULL,
   FOREIGN KEY (asset_id)
     REFERENCES asset (id)
     ON UPDATE CASCADE ON DELETE CASCADE,
+  FOREIGN KEY (activity_id)
+    REFERENCES activity (id)
+    ON UPDATE CASCADE ON DELETE NO ACTION,
   FOREIGN KEY (id)
     REFERENCES user_asset (id)
     ON UPDATE CASCADE ON DELETE CASCADE,
@@ -4273,7 +4642,7 @@ CREATE INDEX IF NOT EXISTS user_asset_search_index_created_at_idx
 CREATE INDEX IF NOT EXISTS user_asset_search_index_comment_count_idx
   ON user_asset_search_index (comment_count DESC);
 
-CREATE UNIQUE INDEX IF NOT EXISTS user_asset_search_index_study_id_name_unique_idx
+CREATE UNIQUE INDEX IF NOT EXISTS user_asset_search_index_study_id_name_idx
   ON user_asset_search_index (study_id, lower(name));
 
 CREATE INDEX IF NOT EXISTS user_asset_search_index_study_id_comment_count_idx
@@ -4402,6 +4771,120 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION refresh_user_asset_search_index_activity_info(_asset_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE user_asset_search_index
+  SET activity_id = activity_asset.activity_id,
+    activity_number = activity_asset.number
+  FROM activity_asset
+  WHERE user_asset_search_index.id = _asset_id
+    AND activity_asset.asset_id = _asset_id;
+$$;
+
+CREATE OR REPLACE FUNCTION refresh_user_asset_search_index_activity_number(_asset_id VARCHAR)
+  RETURNS VOID 
+  SECURITY DEFINER
+  LANGUAGE sql
+AS $$
+  UPDATE user_asset_search_index
+  SET activity_number = activity_asset.number
+  FROM activity_asset
+  WHERE user_asset_search_index.id = _asset_id
+    AND activity_asset.asset_id = _asset_id;
+$$;
+
+CREATE OR REPLACE FUNCTION activity_asset_inserted()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    PERFORM advance_activity(NEW.activity_id);
+    PERFORM refresh_activity_search_index_asset_count(NEW.activity_id);
+    PERFORM refresh_user_asset_search_index_activity_info(NEW.asset_id);
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_insert'
+) THEN
+  CREATE TRIGGER after_activity_asset_insert
+    AFTER INSERT ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_inserted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_asset_deleted()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    UPDATE activity_asset
+    SET number = number - 1
+    WHERE activity_id = OLD.activity_id AND number > OLD.number;
+
+    UPDATE user_asset_search_index
+    SET activity_id = NULL,
+      activity_number = NULL
+    WHERE id = OLD.asset_id;
+
+    PERFORM refresh_activity_search_index_asset_count(NEW.activity_id);
+    RETURN OLD;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_delete'
+) THEN
+  CREATE TRIGGER after_activity_asset_delete
+    AFTER DELETE ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_deleted();
+END IF;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION activity_asset_updated()
+  RETURNS TRIGGER 
+  SECURITY DEFINER
+  LANGUAGE plpgsql
+AS $$
+  BEGIN
+    PERFORM refresh_user_asset_search_index_activity_number(NEW.asset_id);
+    RETURN NEW;
+  END;
+$$;
+
+DO $$
+BEGIN
+IF NOT EXISTS(
+  SELECT *
+    FROM information_schema.triggers
+    WHERE event_object_table = 'activity_asset'
+    AND trigger_name = 'after_activity_asset_update'
+) THEN
+  CREATE TRIGGER after_activity_asset_update
+    AFTER UPDATE ON activity_asset
+    FOR EACH ROW EXECUTE PROCEDURE activity_asset_updated();
+END IF;
+END;
+$$ language 'plpgsql';
+
 CREATE OR REPLACE VIEW apple_giver AS
 SELECT
   user_search_index.*,
@@ -4415,16 +4898,18 @@ SELECT
   course_search_index.*,
   appled.user_id applee_id,
   appled.created_at appled_at
-FROM course_search_index
-JOIN appled ON appled.appleable_id = course_search_index.id;
+FROM appled
+JOIN course_search_index ON course_search_index.id = appled.appleable_id
+WHERE appled.type = 'Course';
 
 CREATE OR REPLACE VIEW appled_study AS
 SELECT
   study_search_index.*,
   appled.user_id applee_id,
   appled.created_at appled_at
-FROM study_search_index
-JOIN appled ON appled.appleable_id = study_search_index.id;
+FROM appled
+JOIN study_search_index ON study_search_index.id = appled.appleable_id
+WHERE appled.type = 'Study';
 
 CREATE OR REPLACE VIEW enrollee AS
 SELECT
@@ -4439,40 +4924,70 @@ SELECT
   lesson_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM lesson_search_index
-JOIN enrolled ON enrolled.enrollable_id = lesson_search_index.id AND enrolled.status = 'ENROLLED'; 
+FROM enrolled
+JOIN lesson_search_index ON lesson_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'Lesson' AND enrolled.status = 'ENROLLED'; 
 
 CREATE OR REPLACE VIEW enrolled_study AS
 SELECT
   study_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM study_search_index
-JOIN enrolled ON enrolled.enrollable_id = study_search_index.id AND enrolled.status = 'ENROLLED'; 
+FROM enrolled
+JOIN study_search_index ON study_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'Study' AND enrolled.status = 'ENROLLED'; 
 
 CREATE OR REPLACE VIEW enrolled_user AS
 SELECT
   user_search_index.*,
   enrolled.created_at enrolled_at,
   enrolled.user_id enrollee_id
-FROM user_search_index
-JOIN enrolled ON enrolled.enrollable_id = user_search_index.id AND enrolled.status = 'ENROLLED';
+FROM enrolled
+JOIN user_search_index ON user_search_index.id = enrolled.enrollable_id
+WHERE enrolled.type = 'User' AND enrolled.status = 'ENROLLED'; 
+
+CREATE OR REPLACE VIEW label_search_index AS
+SELECT
+  label.*,
+  count(labeled) AS labeled_count
+FROM label
+LEFT JOIN labeled ON labeled.label_id = label.id
+GROUP BY label.id;
+
+CREATE OR REPLACE VIEW labelable_label AS
+SELECT
+  label_search_index.*,
+  labeled.labelable_id,
+  labeled.created_at labeled_at
+FROM label_search_index
+JOIN labeled ON labeled.label_id = label_search_index.id;
+
+CREATE OR REPLACE VIEW labeled_comment AS
+SELECT
+  comment.*,
+  labeled.label_id,
+  labeled.created_at labeled_at
+FROM labeled
+JOIN comment ON comment.id = labeled.labelable_id
+WHERE labeled.type = 'Comment';
 
 CREATE OR REPLACE VIEW labeled_lesson AS
 SELECT
   lesson_search_index.*,
   labeled.label_id,
   labeled.created_at labeled_at
-FROM lesson_search_index
-JOIN labeled ON labeled.labelable_id = lesson_search_index.id;
+FROM labeled
+JOIN lesson_search_index ON lesson_search_index.id = labeled.labelable_id
+WHERE labeled.type = 'Lesson';
 
 CREATE OR REPLACE VIEW labeled_user_asset AS
 SELECT
   user_asset_search_index.*,
   labeled.label_id,
   labeled.created_at labeled_at
-FROM user_asset_search_index
-JOIN labeled ON labeled.labelable_id = user_asset_search_index.id;
+FROM labeled
+JOIN user_asset_search_index ON user_asset_search_index.id = labeled.labelable_id
+WHERE labeled.type = 'UserAsset';
 
 CREATE OR REPLACE VIEW topicable_topic AS
 SELECT
@@ -4487,16 +5002,18 @@ SELECT
   course_search_index.*,
   topiced.topic_id,
   topiced.created_at topiced_at
-FROM course_search_index
-JOIN topiced ON topiced.topicable_id = course_search_index.id;
+FROM topiced
+JOIN course_search_index ON course_search_index.id = topiced.topicable_id
+WHERE topiced.type = 'Course';
 
 CREATE OR REPLACE VIEW topiced_study AS
 SELECT
   study_search_index.*,
   topiced.topic_id,
   topiced.created_at topiced_at
-FROM study_search_index
-JOIN topiced ON topiced.topicable_id = study_search_index.id;
+FROM topiced
+JOIN study_search_index ON study_search_index.id = topiced.topicable_id
+WHERE topiced.type = 'Study';
 
 GRANT CONNECT ON DATABASE markusninja TO client;
 GRANT USAGE ON SCHEMA public TO client;
@@ -4506,7 +5023,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON user_profile TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON email TO client;
 GRANT SELECT ON role TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_role TO client;
-GRANT SELECT ON user_master TO client;
 GRANT SELECT ON user_credentials TO client;
 GRANT SELECT ON permission TO client;
 GRANT SELECT ON role_permission TO client;
@@ -4518,7 +5034,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON lesson TO client;
 GRANT SELECT, UPDATE ON lesson_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON course_lesson TO client;
-GRANT SELECT ON lesson_master TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON comment TO client;
 GRANT SELECT, UPDATE ON comment_draft_backup TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON label TO client;
@@ -4534,7 +5049,8 @@ GRANT SELECT ON topiced_course TO client;
 GRANT SELECT ON topiced_study TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON asset TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset TO client;
-GRANT SELECT ON user_asset_master TO client;
+GRANT SELECT, INSERT, UPDATE, DELETE ON activity TO client;
+GRANT SELECT, INSERT, UPDATE, DELETE ON activity_asset TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON appled TO client;
 GRANT SELECT ON apple_giver TO client;
 GRANT SELECT ON appled_course TO client;
@@ -4547,29 +5063,16 @@ GRANT SELECT ON enrolled_study TO client;
 GRANT SELECT ON enrolled_user TO client;
 GRANT SELECT ON event_type TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON received_event TO client;
+GRANT SELECT ON received_event TO client;
 GRANT SELECT ON received_event_master TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON course_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_added_to_course_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_commented_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_labeled_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_referenced_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_removed_from_course_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_renamed_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON lesson_unlabeled_event TO client;
+GRANT SELECT ON lesson_event TO client;
 GRANT SELECT ON lesson_event_master TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON study_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_commented_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_labeled_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_referenced_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_renamed_event TO client;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_asset_unlabeled_event TO client;
+GRANT SELECT ON user_asset_event TO client;
 GRANT SELECT ON user_asset_event_master TO client;
 GRANT SELECT, INSERT, UPDATE, DELETE ON notification TO client;
 GRANT SELECT ON notification_master TO client;
 GRANT SELECT ON user_search_index TO client;
+GRANT SELECT ON activity_search_index TO client;
 GRANT SELECT ON course_search_index TO client;
 GRANT SELECT ON study_search_index TO client;
 GRANT SELECT ON lesson_search_index TO client;

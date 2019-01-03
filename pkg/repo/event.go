@@ -83,7 +83,7 @@ func (r *EventPermit) Type() (string, error) {
 		mylog.Log.WithError(err).Error(util.Trace(""))
 		return "", err
 	}
-	return r.event.Type.String(), nil
+	return r.event.Type.String, nil
 }
 
 func (r *EventPermit) UserID() (*mytype.OID, error) {

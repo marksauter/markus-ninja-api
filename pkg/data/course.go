@@ -17,7 +17,6 @@ type Course struct {
 	AppledAt    pgtype.Timestamptz  `db:"appled_at"`
 	CreatedAt   pgtype.Timestamptz  `db:"created_at" permit:"read"`
 	Description pgtype.Text         `db:"description" permit:"create/read/update"`
-	EnrolledAt  pgtype.Timestamptz  `db:"enrolled_at"`
 	ID          mytype.OID          `db:"id" permit:"read"`
 	Name        pgtype.Text         `db:"name" permit:"create/read"`
 	Number      pgtype.Int4         `db:"number" permit:"read/update"`
@@ -136,10 +135,9 @@ func CountCourseByTopic(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.topic_id = ` + args.Append(topicID) + `
-			AND ` + from + `.type = 'Course'`
+		return from + `.topic_id = ` + args.Append(topicID)
 	}
-	from := "topiced"
+	from := "topiced_course"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countCourseByTopic", sql)
@@ -286,7 +284,7 @@ const getCourseByIDSQL = `
 		study_id,
 		updated_at,
 		user_id
-	FROM course
+	FROM course_search_index
 	WHERE id = $1
 `
 
@@ -317,7 +315,7 @@ const getCourseByNameSQL = `
 		study_id,
 		updated_at,
 		user_id
-	FROM course
+	FROM course_search_index
 	WHERE study_id = $1 AND lower(name) = lower($2)
 `
 
@@ -349,7 +347,7 @@ const getCourseByNumberSQL = `
 		study_id,
 		updated_at,
 		user_id
-	FROM course
+	FROM course_search_index
 	WHERE study_id = $1 AND number = $2
 `
 
@@ -387,7 +385,7 @@ const getCourseByStudyAndNameSQL = `
 		c.study_id,
 		c.updated_at,
 		c.user_id
-	FROM course c
+	FROM course_search_index c
 	JOIN study s ON lower(s.name) = lower($1)
 	WHERE c.study_id = s.id AND lower(c.name) = lower($2)  
 `
@@ -702,10 +700,6 @@ func CreateCourse(
 		nameTokens.Set(strings.Join(util.Split(row.Name.String, courseDelimeter), " "))
 		columns = append(columns, "name_tokens")
 		values = append(values, args.Append(nameTokens))
-	}
-	if row.Number.Status != pgtype.Undefined {
-		columns = append(columns, "number")
-		values = append(values, args.Append(&row.Number))
 	}
 	if row.StudyID.Status != pgtype.Undefined {
 		columns = append(columns, "study_id")

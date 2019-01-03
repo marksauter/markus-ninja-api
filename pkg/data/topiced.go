@@ -12,11 +12,11 @@ import (
 )
 
 type Topiced struct {
-	CreatedAt   pgtype.Timestamptz   `db:"created_at" permit:"read"`
-	ID          pgtype.Int4          `db:"id" permit:"read"`
-	TopicID     mytype.OID           `db:"topic_id" permit:"read"`
-	TopicableID mytype.OID           `db:"topicable_id" permit:"read"`
-	Type        mytype.TopicableType `db:"type" permit:"read"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
+	ID          pgtype.Int4        `db:"id" permit:"read"`
+	TopicID     mytype.OID         `db:"topic_id" permit:"read"`
+	TopicableID mytype.OID         `db:"topicable_id" permit:"read"`
+	Type        pgtype.Text        `db:"type" permit:"read"`
 }
 
 const countTopicedByTopicSQL = `
@@ -288,9 +288,9 @@ func CreateTopiced(
 	if row.TopicableID.Status != pgtype.Undefined {
 		columns = append(columns, "topicable_id")
 		values = append(values, args.Append(&row.TopicableID))
+		columns = append(columns, "type")
+		values = append(values, args.Append(row.TopicableID.Type))
 	}
-	columns = append(columns, "type")
-	values = append(values, args.Append(row.TopicableID.Type))
 
 	tx, err, newTx := BeginTransaction(db)
 	if err != nil {

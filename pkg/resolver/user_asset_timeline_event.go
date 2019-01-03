@@ -11,6 +11,11 @@ type userAssetTimelineEventResolver struct {
 	userAssetTimelineEvent
 }
 
+func (r *userAssetTimelineEventResolver) ToAddedToActivityEvent() (*addedToActivityEventResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*addedToActivityEventResolver)
+	return resolver, ok
+}
+
 func (r *userAssetTimelineEventResolver) ToComment() (*commentResolver, bool) {
 	resolver, ok := r.userAssetTimelineEvent.(*commentResolver)
 	return resolver, ok
@@ -28,6 +33,11 @@ func (r *userAssetTimelineEventResolver) ToReferencedEvent() (*referencedEventRe
 
 func (r *userAssetTimelineEventResolver) ToRenamedEvent() (*renamedEventResolver, bool) {
 	resolver, ok := r.userAssetTimelineEvent.(*renamedEventResolver)
+	return resolver, ok
+}
+
+func (r *userAssetTimelineEventResolver) ToRemovedFromActivityEvent() (*removedFromActivityEventResolver, bool) {
+	resolver, ok := r.userAssetTimelineEvent.(*removedFromActivityEventResolver)
 	return resolver, ok
 }
 

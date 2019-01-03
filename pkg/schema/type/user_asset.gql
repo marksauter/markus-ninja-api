@@ -12,6 +12,12 @@ type UserAsset implements
   UniformResourceLocatable,
   Updateable 
 {
+  # The activity associated with the user asset, if any.
+  activity: Activity
+
+  # Identifies the user asset's number within its associated activity, if any.
+  activityNumber: Int
+
   # Returns a list of comments for the current user asset.
   comments(
     # Returns the elements in the list that come after the specified global ID.
@@ -44,6 +50,9 @@ type UserAsset implements
 
   id: ID!
 
+  # Is this asset part of an activity?
+  isActivityAsset: Boolean!
+
   # Returns a list of labels for the current user asset.
   labels(
     # Returns the elements in the list that come after the specified global ID.
@@ -68,11 +77,17 @@ type UserAsset implements
   # The name of this asset.
   name: String!
 
+  # The next asset within this asset's activity, if any.
+  nextAsset: UserAsset
+
   # The original name of this asset when uploaded.
   originalName: String!
 
   # The owner of this asset.
   owner: User!
+
+  # The previous asset within this asset's activity, if any.
+  previousAsset: UserAsset
 
   # The HTTP path for this asset.
   resourcePath: URI!

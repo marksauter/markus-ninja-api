@@ -12,6 +12,9 @@ type SearchableEdge {
 
 # A list of results that matched against a search query.
 type SearchableConnection {
+  # The number of activities that matched the search query.
+  activityCount: Int!
+
   # The number of courses that matched the search query.
   courseCount: Int!
 

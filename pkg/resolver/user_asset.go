@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/pgtype"
 	graphql "github.com/marksauter/graphql-go"
 	"github.com/marksauter/markus-ninja-api/pkg/data"
 	"github.com/marksauter/markus-ninja-api/pkg/myconf"
@@ -21,6 +22,25 @@ type userAssetResolver struct {
 	Conf      *myconf.Config
 	Repos     *repo.Repos
 	UserAsset *repo.UserAssetPermit
+}
+
+func (r *userAssetResolver) Activity(ctx context.Context) (*activityResolver, error) {
+	activityID, err := r.UserAsset.ActivityID()
+	if err != nil {
+		return nil, err
+	}
+	activity, err := r.Repos.Activity().Get(ctx, activityID.String)
+	if err != nil {
+		if err == data.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &activityResolver{Activity: activity, Conf: r.Conf, Repos: r.Repos}, nil
+}
+
+func (r *userAssetResolver) ActivityNumber() (*int32, error) {
+	return r.UserAsset.ActivityNumber()
 }
 
 func (r *userAssetResolver) Comments(
@@ -122,6 +142,15 @@ func (r *userAssetResolver) ID() (graphql.ID, error) {
 	return graphql.ID(id.String), err
 }
 
+func (r *userAssetResolver) IsActivityAsset() (bool, error) {
+	activityID, err := r.UserAsset.ActivityID()
+	if err != nil {
+		return false, err
+	}
+
+	return activityID.Status != pgtype.Null, nil
+}
+
 func (r *userAssetResolver) Labels(
 	ctx context.Context,
 	args struct {
@@ -180,6 +209,29 @@ func (r *userAssetResolver) Name() (string, error) {
 	return r.UserAsset.Name()
 }
 
+func (r *userAssetResolver) NextAsset(ctx context.Context) (*userAssetResolver, error) {
+	activityID, err := r.UserAsset.ActivityID()
+	if err != nil {
+		return nil, err
+	}
+	activityNumber, err := r.UserAsset.ActivityNumber()
+	if err != nil {
+		return nil, err
+	}
+	if activityNumber == nil {
+		return nil, nil
+	}
+	userAsset, err := r.Repos.UserAsset().GetByActivityNumber(
+		ctx,
+		activityID.String,
+		*activityNumber+1,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAsset, Conf: r.Conf, Repos: r.Repos}, nil
+}
+
 func (r *userAssetResolver) OriginalName() (string, error) {
 	return r.UserAsset.OriginalName()
 }
@@ -194,6 +246,29 @@ func (r *userAssetResolver) Owner(ctx context.Context) (*userResolver, error) {
 		return nil, err
 	}
 	return &userResolver{User: user, Conf: r.Conf, Repos: r.Repos}, nil
+}
+
+func (r *userAssetResolver) PreviousAsset(ctx context.Context) (*userAssetResolver, error) {
+	activityID, err := r.UserAsset.ActivityID()
+	if err != nil {
+		return nil, err
+	}
+	activityNumber, err := r.UserAsset.ActivityNumber()
+	if err != nil {
+		return nil, err
+	}
+	if activityNumber == nil || *activityNumber <= 1 {
+		return nil, nil
+	}
+	userAsset, err := r.Repos.UserAsset().GetByActivityNumber(
+		ctx,
+		activityID.String,
+		*activityNumber-1,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &userAssetResolver{UserAsset: userAsset, Conf: r.Conf, Repos: r.Repos}, nil
 }
 
 func (r *userAssetResolver) ResourcePath(
@@ -269,12 +344,13 @@ func (r *userAssetResolver) Timeline(
 
 	actionIsNot := []string{
 		mytype.CreatedAction.String(),
+		mytype.MentionedAction.String(),
 	}
 	filters := &data.EventFilterOptions{
 		Types: &[]data.EventTypeFilter{
 			data.EventTypeFilter{
 				ActionIsNot: &actionIsNot,
-				Type:        mytype.UserAssetEvent.String(),
+				Type:        data.UserAssetEvent,
 			},
 		},
 	}
@@ -363,10 +439,6 @@ func (r *userAssetResolver) ViewerNewComment(ctx context.Context) (*commentResol
 		}
 		if err := comment.StudyID.Set(studyID); err != nil {
 			mylog.Log.WithError(err).Error("failed to set comment user_id")
-			return nil, myerr.SomethingWentWrongError
-		}
-		if err := comment.Type.Set(mytype.CommentableTypeUserAsset); err != nil {
-			mylog.Log.WithError(err).Error("failed to set comment type")
 			return nil, myerr.SomethingWentWrongError
 		}
 		if err := comment.UserID.Set(&viewer.ID); err != nil {
