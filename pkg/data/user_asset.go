@@ -1030,7 +1030,7 @@ func UpdateUserAsset(
 		sets = append(sets, `name_tokens`+"="+args.Append(nameTokens))
 	}
 
-	if len(sets) > 0 {
+	if len(sets) == 0 {
 		mylog.Log.Info(util.Trace("no updates"))
 		return GetUserAsset(db, row.ID.String)
 	}

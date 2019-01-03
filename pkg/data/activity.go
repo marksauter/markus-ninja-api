@@ -16,7 +16,7 @@ type Activity struct {
 	CreatedAt   pgtype.Timestamptz `db:"created_at" permit:"read"`
 	Description pgtype.Text        `db:"description" permit:"create/read/update"`
 	ID          mytype.OID         `db:"id" permit:"read"`
-	LessonID    mytype.OID         `db:"lesson_id" permit:"create/read"`
+	LessonID    mytype.OID         `db:"lesson_id" permit:"create/read/update"`
 	Name        pgtype.Text        `db:"name" permit:"create/read"`
 	Number      pgtype.Int4        `db:"number" permit:"read/update"`
 	StudyID     mytype.OID         `db:"study_id" permit:"create/read"`
@@ -695,6 +695,9 @@ func UpdateActivity(
 
 	if row.Description.Status != pgtype.Undefined {
 		sets = append(sets, `description`+"="+args.Append(&row.Description))
+	}
+	if row.LessonID.Status != pgtype.Undefined {
+		sets = append(sets, `lesson_id`+"="+args.Append(&row.LessonID))
 	}
 	if row.Name.Status != pgtype.Undefined {
 		sets = append(sets, `name`+"="+args.Append(&row.Name))
