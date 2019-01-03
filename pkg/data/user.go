@@ -198,7 +198,7 @@ func ExistsUser(
 const existsUserByLoginSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM account
+		FROM user_search_index
 		WHERE lower(login) = lower($1)
 	)
 `
@@ -302,7 +302,7 @@ const getUserByIDSQL = `
 		profile_updated_at,
 		roles,
 		verified
-	FROM user_master
+	FROM user_search_index
 	WHERE id = $1
 `
 
@@ -331,7 +331,7 @@ const batchGetUserSQL = `
 		profile_updated_at,
 		roles,
 		verified
-	FROM user_master
+	FROM user_search_index
 	WHERE id = ANY($1)
 `
 
@@ -369,7 +369,7 @@ const getUserByLoginSQL = `
 		profile_updated_at,
 		roles,
 		verified
-	FROM user_master
+	FROM user_search_index
 	WHERE LOWER(login) = LOWER($1)
 `
 
@@ -398,7 +398,7 @@ const batchGetUserByLoginSQL = `
 		profile_updated_at,
 		roles,
 		verified
-	FROM user_master
+	FROM user_search_index
 	WHERE lower(login) = any($1)
 `
 

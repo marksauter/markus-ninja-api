@@ -28,6 +28,12 @@ func nodePermitToResolver(
 		return nil, err
 	}
 	switch id.Type {
+	case "Activity":
+		activity, ok := p.(*repo.ActivityPermit)
+		if !ok {
+			return nil, errors.New("cannot convert permit to activity")
+		}
+		return &activityResolver{Activity: activity, Conf: conf, Repos: repos}, nil
 	case "Comment":
 		comment, ok := p.(*repo.CommentPermit)
 		if !ok {
@@ -109,6 +115,8 @@ func eventPermitToResolver(
 		return nil, err
 	}
 	switch eventType {
+	case data.ActivityEvent:
+		return activityEventPermitToResolver(event, repos, conf)
 	case data.CourseEvent:
 		return courseEventPermitToResolver(event, repos, conf)
 	case data.LessonEvent:
@@ -121,6 +129,32 @@ func eventPermitToResolver(
 		return nil, nil
 	}
 	return nil, nil
+}
+
+func activityEventPermitToResolver(
+	event *repo.EventPermit,
+	repos *repo.Repos,
+	conf *myconf.Config,
+) (interface{}, error) {
+	payload := &data.ActivityEventPayload{}
+	eventPayload, err := event.Payload()
+	if err != nil {
+		return nil, err
+	}
+	if err := eventPayload.AssignTo(payload); err != nil {
+		return nil, err
+	}
+	switch payload.Action {
+	case data.ActivityCreated:
+		return &createdEventResolver{
+			CreateableID: &payload.ActivityID,
+			Conf:         conf,
+			Event:        event,
+			Repos:        repos,
+		}, nil
+	default:
+		return nil, nil
+	}
 }
 
 func courseEventPermitToResolver(
@@ -322,12 +356,41 @@ func userAssetEventPermitToResolver(
 		return nil, err
 	}
 	switch payload.Action {
+	case data.UserAssetAddedToActivity:
+		return &addedToActivityEventResolver{
+			Conf:       conf,
+			ActivityID: &payload.ActivityID,
+			Event:      event,
+			AssetID:    &payload.AssetID,
+			Repos:      repos,
+		}, nil
+	case data.UserAssetCommented:
+		comment, err := repos.Comment().Get(
+			ctx,
+			payload.CommentID.String,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return &commentResolver{
+			Conf:    conf,
+			Comment: comment,
+			Repos:   repos,
+		}, nil
 	case data.UserAssetCreated:
 		return &createdEventResolver{
 			Conf:         conf,
 			CreateableID: &payload.AssetID,
 			Event:        event,
 			Repos:        repos,
+		}, nil
+	case data.UserAssetLabeled:
+		return &labeledEventResolver{
+			Conf:        conf,
+			LabelID:     &payload.LabelID,
+			LabelableID: &payload.AssetID,
+			Event:       event,
+			Repos:       repos,
 		}, nil
 	case data.UserAssetMentioned:
 		return nil, nil
@@ -339,6 +402,14 @@ func userAssetEventPermitToResolver(
 			Repos:           repos,
 			SourceID:        &payload.SourceID,
 		}, nil
+	case data.UserAssetRemovedFromActivity:
+		return &removedFromActivityEventResolver{
+			Conf:       conf,
+			ActivityID: &payload.ActivityID,
+			Event:      event,
+			AssetID:    &payload.AssetID,
+			Repos:      repos,
+		}, nil
 	case data.UserAssetRenamed:
 		return &renamedEventResolver{
 			Conf:         conf,
@@ -346,6 +417,14 @@ func userAssetEventPermitToResolver(
 			RenameableID: &payload.AssetID,
 			Rename:       &payload.Rename,
 			Repos:        repos,
+		}, nil
+	case data.UserAssetUnlabeled:
+		return &unlabeledEventResolver{
+			Conf:        conf,
+			LabelID:     &payload.LabelID,
+			LabelableID: &payload.AssetID,
+			Event:       event,
+			Repos:       repos,
 		}, nil
 	default:
 		return nil, nil

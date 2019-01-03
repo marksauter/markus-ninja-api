@@ -73,6 +73,8 @@ type Query {
 }
 
 type Mutation {
+  # Adds an asset to an activity.
+  addActivityAsset(input: AddActivityAssetInput!): AddActivityAssetPayload
   # Adds a lesson to a course.
   addCourseLesson(input: AddCourseLessonInput!): AddCourseLessonPayload
   # Adds an email to the viewer's account.
@@ -82,6 +84,8 @@ type Mutation {
   # Adds a comment to a lesson.
   addComment(input: AddCommentInput!): AddCommentPayload
 
+  # Creates a new activity.
+  createActivity(input: CreateActivityInput!): CreateActivityPayload
   # Creates a new course.
   createCourse(input: CreateCourseInput!): CreateCoursePayload
   # Creates a new label.
@@ -95,6 +99,8 @@ type Mutation {
   # Creates a new user asset.
   createUserAsset(input: CreateUserAssetInput!): CreateUserAssetPayload
 
+  # Deletes an activity.
+  deleteActivity(input: DeleteActivityInput!): DeleteActivityPayload
   # Deletes a course.
   deleteCourse(input: DeleteCourseInput!): DeleteCoursePayload
   # Deletes an email from the viewer's account.
@@ -126,6 +132,8 @@ type Mutation {
   markAllNotificationsAsRead: Boolean!
   # Mark all viewer's notifications from a study as read.
   markAllStudyNotificationsAsRead(input: MarkAllStudyNotificationAsReadInput!): Boolean!
+  # Move activity asset to another position.
+  moveActivityAsset(input: MoveActivityAssetInput!): MoveActivityAssetPayload
   # Move course lesson to another position.
   moveCourseLesson(input: MoveCourseLessonInput!): MoveCourseLessonPayload
 
@@ -136,6 +144,8 @@ type Mutation {
   # Publishes the body changes proposed in a comment's draft.
   publishCommentDraft(input: PublishCommentDraftInput!): Comment
 
+  # Removes an asset from an activity.
+  removeActivityAsset(input: RemoveActivityAssetInput!): RemoveActivityAssetPayload
   # Removes a lesson from a course.
   removeCourseLesson(input: RemoveCourseLessonInput!): RemoveCourseLessonPayload
   # Removes a label from a labelable.
@@ -154,6 +164,8 @@ type Mutation {
   # Takes an apple from an Appleable.
   takeApple(input: TakeAppleInput!): Appleable
 
+  # Updates the description and/or name of a activity.
+  updateActivity(input: UpdateActivityInput!): Activity
   # Updates the description and/or name of a course.
   updateCourse(input: UpdateCourseInput!): Course
   # Updates an email's type.

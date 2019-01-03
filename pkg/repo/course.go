@@ -78,10 +78,6 @@ func (r *CoursePermit) Description() (string, error) {
 	return r.course.Description.String, nil
 }
 
-func (r *CoursePermit) EnrolledAt() time.Time {
-	return r.course.EnrolledAt.Time
-}
-
 func (r *CoursePermit) ID() (*mytype.OID, error) {
 	if ok := r.checkFieldPermission("id"); !ok {
 		err := ErrAccessDenied

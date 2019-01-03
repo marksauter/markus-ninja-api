@@ -141,7 +141,7 @@ func (r *courseResolver) Lesson(
 	if err != nil {
 		return nil, err
 	}
-	lesson, err := r.Repos.Lesson().GetByNumber(
+	lesson, err := r.Repos.Lesson().GetByCourseNumber(
 		ctx,
 		courseID.String,
 		args.Number,

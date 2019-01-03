@@ -12,6 +12,16 @@ type nodeResolver struct {
 	node
 }
 
+func (r *nodeResolver) ToActivity() (*activityResolver, bool) {
+	resolver, ok := r.node.(*activityResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToAddedToActivityEvent() (*addedToActivityEventResolver, bool) {
+	resolver, ok := r.node.(*addedToActivityEventResolver)
+	return resolver, ok
+}
+
 func (r *nodeResolver) ToAddedToCourseEvent() (*addedToCourseEventResolver, bool) {
 	resolver, ok := r.node.(*addedToCourseEventResolver)
 	return resolver, ok
@@ -74,6 +84,11 @@ func (r *nodeResolver) ToPublishedEvent() (*publishedEventResolver, bool) {
 
 func (r *nodeResolver) ToReferencedEvent() (*referencedEventResolver, bool) {
 	resolver, ok := r.node.(*referencedEventResolver)
+	return resolver, ok
+}
+
+func (r *nodeResolver) ToRemovedFromActivityEvent() (*removedFromActivityEventResolver, bool) {
+	resolver, ok := r.node.(*removedFromActivityEventResolver)
 	return resolver, ok
 }
 

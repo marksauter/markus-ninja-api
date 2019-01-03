@@ -94,6 +94,6 @@ func (r *labelConnectionResolver) TotalCount(ctx context.Context) (int32, error)
 	case "Study":
 		return r.repos.Label().CountByStudy(ctx, r.nodeID.String, r.filters)
 	default:
-		return n, errors.New("invalid node id for event total count")
+		return n, errors.New("invalid node id for label total count")
 	}
 }

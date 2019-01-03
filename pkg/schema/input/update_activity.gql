@@ -1,0 +1,14 @@
+# Input type for UpdateActivity.
+input UpdateActivityInput {
+  # ID of the activity.
+  activityId: ID!
+
+  # The description of the activity.
+  description: String
+
+  # The ID of the lesson associated with this activity.
+  lessonId: ID
+
+  # The name of the activity.
+  name: String
+}

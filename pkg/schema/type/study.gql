@@ -8,13 +8,22 @@ type Study implements
   Topicable,
   UniformResourceLocatable
 {
-  # Returns a list of activity associated with the study.
+  # Returns a single activity from the current study by number.
   activity(
+    # The number for the activity to be returned.
+    number: Int!  
+  ): Activity
+
+  # Returns a list of activities from the current study.
+  activities(
     # Returns the elements in the list that come after the specified global ID.
     after: String
 
     # Returns the elements in the list that come before the specified global ID.
     before: String
+
+    # Filtering options for activities returned from the connection.
+    filterBy: ActivityFilters
 
     # Returns the first n elements form the list.
     first: Int
@@ -22,9 +31,9 @@ type Study implements
     # Returns the last n elements form the list.
     last: Int
 
-    # Ordering options for events returned from the connection.
-    orderBy: EventOrder
-  ): StudyActivityConnection!
+    # Ordering options for activities returned from the connection.
+    orderBy: ActivityOrder
+  ): ActivityConnection!
 
   # Identifies when the study was advanced at.
   advancedAt: Time
@@ -217,6 +226,24 @@ type Study implements
 
   # The HTTP path for this study.
   resourcePath: URI!
+
+  # Returns a list of events associated with the study.
+  timeline(
+    # Returns the elements in the list that come after the specified global ID.
+    after: String
+
+    # Returns the elements in the list that come before the specified global ID.
+    before: String
+
+    # Returns the first n elements form the list.
+    first: Int
+
+    # Returns the last n elements form the list.
+    last: Int
+
+    # Ordering options for events returned from the connection.
+    orderBy: EventOrder
+  ): StudyTimelineConnection!
 
   # Returns a list of topics from the current study.
   topics(

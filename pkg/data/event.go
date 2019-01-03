@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	ActivityEvent  = "ActivityEvent"
 	CourseEvent    = "CourseEvent"
 	LessonEvent    = "LessonEvent"
 	PublicEvent    = "PublicEvent"
@@ -25,7 +26,7 @@ type Event struct {
 	Payload   pgtype.JSONB       `db:"payload" permit:"create/read"`
 	Public    pgtype.Bool        `db:"public" permit:"create/read"`
 	StudyID   mytype.OID         `db:"study_id" permit:"create/read"`
-	Type      mytype.EventType   `db:"type" permit:"create/read"`
+	Type      pgtype.Text        `db:"type" permit:"create/read"`
 	UserID    mytype.OID         `db:"user_id" permit:"create/read"`
 }
 
@@ -48,6 +49,10 @@ func newEvent(eventType string, payload interface{}, studyID, userID *mytype.OID
 	}
 
 	return e, nil
+}
+
+func NewActivityEvent(payload *ActivityEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
+	return newEvent(ActivityEvent, payload, studyID, userID, public)
 }
 
 func NewCourseEvent(payload *CourseEventPayload, studyID, userID *mytype.OID, public bool) (*Event, error) {
@@ -99,7 +104,7 @@ func (src *EventFilterOptions) SQL(from string, args *pgx.QueryArgs) *SQLParts {
 			// TODO: fix how this works. I want one EventFilterOptions type, but I
 			// need it to behave differently when querying lesson events. Perhaps
 			// handle it in the relevant functions.
-			if len(*src.Types) == 1 && t.Type == mytype.LessonEvent.String() {
+			if len(*src.Types) == 1 && t.Type == LessonEvent {
 				withType = false
 			} else {
 				withType = true

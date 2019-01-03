@@ -100,7 +100,7 @@ func CountLabelByStudy(
 	where := func(from string) string {
 		return from + `.study_id = ` + args.Append(studyID)
 	}
-	from := "label_search_index"
+	from := "label"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countLabelByStudy", sql)
@@ -121,7 +121,7 @@ func CountLabelBySearch(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string { return "" }
-	from := "label_search_index"
+	from := "label"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countLabelBySearch", sql)
@@ -512,7 +512,7 @@ func SearchLabel(
 		"study_id",
 		"updated_at",
 	}
-	from := "label_search_index"
+	from := "label"
 	sql := SQL3(selects, from, where, filters, &args, po)
 
 	psName := preparedName("searchLabelIndex", sql)

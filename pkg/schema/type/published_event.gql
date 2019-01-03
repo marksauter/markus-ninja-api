@@ -2,8 +2,8 @@
 type PublishedEvent implements 
   Node,
   LessonTimelineEvent,
-  StudyActivityEvent,
-  UserActivityEvent
+  StudyTimelineEvent,
+  UserTimelineEvent
 {
   # Identifies the date and time when the object was created.
   createdAt: Time!

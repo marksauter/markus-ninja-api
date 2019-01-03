@@ -1,0 +1,8 @@
+# Return type for DeleteActivity.
+type DeleteActivityPayload {
+  # The deleted activity id.
+  deletedActivityId: ID!
+
+  # The parent study of the deleted activity.
+  study: Study!
+}

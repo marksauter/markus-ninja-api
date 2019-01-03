@@ -128,10 +128,9 @@ func CountLessonByLabel(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.label_id = ` + args.Append(labelID) + `
-			AND ` + from + `.type = 'Lesson'`
+		return from + `.label_id = ` + args.Append(labelID)
 	}
-	from := "labeled"
+	from := "labeled_lesson"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countLessonByLabel", sql)
@@ -258,7 +257,7 @@ func existsLesson(
 const existsLessonByIDSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		WHERE id = $1
 	)
 `
@@ -279,9 +278,9 @@ func ExistsLesson(
 const existsLessonByNumberSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		JOIN study ON study.id = $1
-		WHERE lesson.number = $2
+		WHERE lesson_search_index.number = $2
 	)
 `
 
@@ -314,10 +313,10 @@ func ExistsLessonByNumber(
 const existsLessonByOwnerStudyAndNumberSQL = `
 	SELECT exists(
 		SELECT 1
-		FROM lesson
+		FROM lesson_search_index
 		JOIN account ON account.login = $1
 		JOIN study ON study.name = $2
-		WHERE lesson.number = $3
+		WHERE lesson_search_index.number = $3
 	)
 `
 
@@ -567,8 +566,8 @@ func GetLessonByEnrollee(
 			&row.CourseNumber,
 			&row.CreatedAt,
 			&row.Draft,
+			&row.EnrolledAt,
 			&row.ID,
-			&row.LabeledAt,
 			&row.LastEditedAt,
 			&row.Number,
 			&row.PublishedAt,

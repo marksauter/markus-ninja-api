@@ -124,10 +124,9 @@ func CountStudyByTopic(
 ) (int32, error) {
 	args := pgx.QueryArgs(make([]interface{}, 0, 4))
 	where := func(from string) string {
-		return from + `.topic_id = ` + args.Append(topicID) + `
-			AND ` + from + `.type = 'Study'`
+		return from + `.topic_id = ` + args.Append(topicID)
 	}
-	from := "topiced"
+	from := "topiced_study"
 
 	sql := CountSQL(from, where, filters, &args)
 	psName := preparedName("countStudyByTopic", sql)

@@ -166,7 +166,7 @@ const getTopicByIDSQL = `
 		id,
 		name,
 		updated_at
-	FROM topic
+	FROM topic_search_index
 	WHERE id = $1
 `
 
@@ -190,7 +190,7 @@ const getTopicByNameSQL = `
 		id,
 		name,
 		updated_at
-	FROM topic
+	FROM topic_search_index
 	WHERE LOWER(name) = LOWER($1)
 `
 

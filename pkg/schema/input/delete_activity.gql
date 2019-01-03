@@ -1,0 +1,5 @@
+# Input type for DeleteActivity.
+input DeleteActivityInput {
+  # ID of the activity.
+  activityId: ID!
+}
